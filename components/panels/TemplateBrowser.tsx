@@ -4,21 +4,21 @@ import { useStudio, type TemplateId } from '@/store/useStudio';
 import { Icon } from '../icons';
 import { Btn, useT } from '../ui';
 
-type Card = { id: string; nameKey: string; descKey: string; meta: string; category: string; status: 'ready' | 'phaseB' | 'soon' };
+type Card = { id: string; nameKey: string; descKey: string; nodes: number; category: string; status: 'ready' | 'phaseB' | 'soon' };
 const CARDS: Card[] = [
-  { id: 'static-script', nameKey: 'templates.staticScript', descKey: 'templates.staticScriptDesc', meta: '7 nodes · 9:16', category: 'core', status: 'ready' },
-  { id: 'github-showcase', nameKey: 'templates.github', descKey: 'templates.githubDesc', meta: '10 nodes · 9:16', category: 'tech', status: 'phaseB' },
-  { id: 'mobile-app', nameKey: 'Mobile App Promo', descKey: '', meta: '', category: 'tech', status: 'soon' },
-  { id: 'changelog', nameKey: 'Product Changelog', descKey: '', meta: '', category: 'tech', status: 'soon' },
-  { id: 'reddit', nameKey: 'Reddit Storytelling', descKey: '', meta: '', category: 'faceless', status: 'soon' },
-  { id: 'facts', nameKey: 'Daily Facts & Trivia', descKey: '', meta: '', category: 'faceless', status: 'soon' },
-  { id: 'quotes', nameKey: 'Motivational Quotes', descKey: '', meta: '', category: 'faceless', status: 'soon' },
-  { id: 'sale', nameKey: 'Flash Sale Alert', descKey: '', meta: '', category: 'commerce', status: 'soon' },
-  { id: 'compare', nameKey: 'Product Comparison', descKey: '', meta: '', category: 'commerce', status: 'soon' },
-  { id: 'market', nameKey: 'Market Recap & Movers', descKey: '', meta: '', category: 'data', status: 'soon' },
-  { id: 'crypto', nameKey: 'Crypto Trends', descKey: '', meta: '', category: 'data', status: 'soon' },
+  { id: 'static-script', nameKey: 'templates.staticScript', descKey: 'templates.staticScriptDesc', nodes: 7, category: 'core', status: 'ready' },
+  { id: 'github-showcase', nameKey: 'templates.github', descKey: 'templates.githubDesc', nodes: 10, category: 'tech', status: 'phaseB' },
+  { id: 'mobile-app', nameKey: 'Mobile App Promo', descKey: '', nodes: 0, category: 'tech', status: 'soon' },
+  { id: 'changelog', nameKey: 'Product Changelog', descKey: '', nodes: 0, category: 'tech', status: 'soon' },
+  { id: 'reddit', nameKey: 'Reddit Storytelling', descKey: '', nodes: 0, category: 'faceless', status: 'soon' },
+  { id: 'facts', nameKey: 'Daily Facts & Trivia', descKey: '', nodes: 0, category: 'faceless', status: 'soon' },
+  { id: 'quotes', nameKey: 'Motivational Quotes', descKey: '', nodes: 0, category: 'faceless', status: 'soon' },
+  { id: 'sale', nameKey: 'Flash Sale Alert', descKey: '', nodes: 0, category: 'commerce', status: 'soon' },
+  { id: 'compare', nameKey: 'Product Comparison', descKey: '', nodes: 0, category: 'commerce', status: 'soon' },
+  { id: 'market', nameKey: 'Market Recap & Movers', descKey: '', nodes: 0, category: 'data', status: 'soon' },
+  { id: 'crypto', nameKey: 'Crypto Trends', descKey: '', nodes: 0, category: 'data', status: 'soon' },
 ];
-const CATS = [['all', 'templates.all'], ['core', 'templates.core'], ['tech', 'Tech & Product'], ['faceless', 'Faceless Content'], ['commerce', 'Commerce & Ads'], ['data', 'Data & Finance']] as const;
+const CATS = [['all', 'templates.all'], ['core', 'templates.core'], ['tech', 'templates.cat.tech'], ['faceless', 'templates.cat.faceless'], ['commerce', 'templates.cat.commerce'], ['data', 'templates.cat.data']] as const;
 
 /** ComfyUI-style template browser (USER_FLOWS §1.3). Only Static Script and Blank work in Phase A. */
 export const TemplateBrowser: React.FC = () => {
@@ -62,7 +62,7 @@ export const TemplateBrowser: React.FC = () => {
                   <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>{name}{c.status !== 'ready' && <span className="nc-soon" style={{ marginLeft: 'auto' }}>{c.status === 'phaseB' ? t('templates.phaseB') : t('templates.soon')}</span>}</div>
                     {c.descKey && <div style={{ fontSize: 10, color: 'var(--tx-2)', lineHeight: 1.5 }}>{t(c.descKey)}</div>}
-                    {c.meta && <div style={{ fontSize: 8.5, color: 'var(--tx-3)' }}>{c.meta} · 30 fps</div>}
+                    {c.nodes > 0 && <div style={{ fontSize: 8.5, color: 'var(--tx-3)' }}>{t('templates.meta', { n: c.nodes })}</div>}
                   </div>
                 </div>
               );
