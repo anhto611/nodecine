@@ -62,7 +62,9 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ width: '100%', aspectRatio: '9 / 16', background: '#000', border: '1px solid var(--line-2)', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
         {showPlayer ? (
-          <div ref={ref} style={{ position: 'absolute', inset: 0 }} />
+          // Keyed so a new IR gets a fresh container: the previous nested root unmounts asynchronously
+          // and must not share an element with the next createRoot().
+          <div key={irKey} ref={ref} style={{ position: 'absolute', inset: 0 }} />
         ) : (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 22px', textAlign: 'center', color: 'var(--tx-3)', fontSize: 9.5, lineHeight: 1.7 }}>
             {running && step ? (

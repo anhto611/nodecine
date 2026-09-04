@@ -30,7 +30,10 @@ export const mountRemotionPlayer: MountPlayer = (element: HTMLElement, ir: Video
     }),
   );
   return {
-    unmount: () => root.unmount(),
+    // The handle is released from a React effect cleanup of the host tree, i.e. while React is
+    // still rendering; unmounting a nested root synchronously there is a React warning and a
+    // potential race, so defer it to the next macrotask.
+    unmount: () => { setTimeout(() => root.unmount(), 0); },
     seekTo: (frame) => ref.current?.seekTo(frame),
     play: () => ref.current?.play(),
     pause: () => ref.current?.pause(),
