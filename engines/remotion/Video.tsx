@@ -1,9 +1,10 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Sequence } from 'remotion';
+import { AbsoluteFill, Audio, Sequence, continueRender, delayRender } from 'remotion';
 import type { VideoIR } from '@/core/types/ir';
 import { getScene } from '@/core/scenes/registry';
 
 import { REMOTION_ENGINE_ID } from './constants';
+import { loadVideoFonts } from './fonts';
 export { REMOTION_ENGINE_ID, COMPOSITION_ID } from './constants';
 
 export type VideoProps = {
@@ -14,6 +15,15 @@ export type VideoProps = {
 
 /** Generic composition: every scene is looked up in the scene registry — this file knows no scene by name. */
 export const NodeCineVideo: React.FC<VideoProps> = ({ ir, mediaBaseUrl }) => {
+  // Hold the first frame until the web fonts are in place, otherwise the render captures
+  // fallback metrics and the text reflows a few frames in.
+  const [handle] = React.useState(() => delayRender('loading video fonts'));
+  React.useEffect(() => {
+    let cancelled = false;
+    void loadVideoFonts(mediaBaseUrl).then(() => { if (!cancelled) continueRender(handle); });
+    return () => { cancelled = true; continueRender(handle); };
+  }, [handle, mediaBaseUrl]);
+
   return (
     <AbsoluteFill style={{ background: '#000' }}>
       <Audio src={`${mediaBaseUrl}${ir.audioTrack.voiceoverUrl}`} />

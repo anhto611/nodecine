@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
 
+/* JetBrains Mono, bundled locally under public/fonts (SIL OFL 1.1, see public/fonts/OFL.txt).
+   Shared by the Studio and by the video, so previews and renders agree on metrics. */
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono-ExtraBold.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: swap; }
+
 :root {
   --bg-app: #0a0a0b; --bg-canvas: #0c0d10; --bg-panel: #121316; --bg-node: #17191d; --bg-node-hdr: #1d2026; --bg-sunk: #0e0f12; --bg-raise: #22252b;
   --line: #23262c; --line-2: #2f333b; --line-3: #3d424c;
