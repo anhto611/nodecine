@@ -1,0 +1,43 @@
+'use client';
+import React from 'react';
+import { useStudio } from '@/store/useStudio';
+import { Btn, useT } from './ui';
+import { Icon } from './icons';
+
+/** Header keeps only what must always be visible: project name and Run (USER_FLOWS §1.1). */
+export const Header: React.FC = () => {
+  const t = useT();
+  const running = useStudio((s) => s.running);
+  const allIssues = useStudio((s) => s.issues);
+  const issues = React.useMemo(() => allIssues.filter((i) => i.severity === 'error'), [allIssues]);
+  const run = useStudio((s) => s.run);
+  const cancel = useStudio((s) => s.cancel);
+  const projectName = useStudio((s) => s.projectName);
+  const setProjectName = useStudio((s) => s.setProjectName);
+  const [editing, setEditing] = React.useState(false);
+  const disabled = issues.length > 0;
+
+  return (
+    <header style={{ height: 56, flex: '0 0 56px', borderBottom: '1px solid var(--line)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', gap: 14, padding: '0 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <span style={{ width: 22, height: 22, borderRadius: 4, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="2.4" /><circle cx="18" cy="12" r="2.4" /><circle cx="6" cy="18" r="2.4" /><line x1="8.2" y1="7.2" x2="15.8" y2="10.8" /><line x1="8.2" y1="16.8" x2="15.8" y2="13.2" /></svg>
+        </span>
+        <span style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.02em' }}>{t('app.name')}</span>
+      </div>
+      {editing ? (
+        <input className="nc-input" style={{ width: 220, height: 26, fontSize: 12 }} autoFocus value={projectName} onChange={(e) => setProjectName(e.target.value)} onBlur={() => setEditing(false)} onKeyDown={(e) => e.key === 'Enter' && setEditing(false)} />
+      ) : (
+        <span onDoubleClick={() => setEditing(true)} title={t('header.projectName')} style={{ fontSize: 12, color: 'var(--tx-2)', padding: '4px 8px', border: '1px solid transparent', borderRadius: 4, cursor: 'text' }}>{projectName}</span>
+      )}
+      <div style={{ flex: 1 }} />
+      {running ? (
+        <Btn danger onClick={cancel}><Icon.stop /> {t('header.stop')}</Btn>
+      ) : (
+        <Btn primary disabled={disabled} onClick={() => void run()} title={disabled ? t('header.runDisabled', { n: issues.length }) : 'Ctrl+Enter'}>
+          <Icon.play /> {t('header.run')}
+        </Btn>
+      )}
+    </header>
+  );
+};

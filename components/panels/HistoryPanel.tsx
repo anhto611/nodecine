@@ -1,0 +1,39 @@
+'use client';
+import React from 'react';
+import { useStudio } from '@/store/useStudio';
+import { Icon } from '../icons';
+import { useT } from '../ui';
+
+/** In-session run history (USER_FLOWS §1.6): click an entry to load its IR into the player nodes without re-running. */
+export const HistoryPanel: React.FC = () => {
+  const t = useT();
+  const history = useStudio((s) => s.history);
+  const viewing = useStudio((s) => s.viewingRun);
+  const viewRun = useStudio((s) => s.viewRun);
+  const setPanel = useStudio((s) => s.setPanel);
+  return (
+    <aside className="nc-panel">
+      <div className="nc-pn-h">{t('history.title')}<button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => setPanel('history')}><Icon.x size={12} /></button></div>
+      <div style={{ overflowY: 'auto', flex: 1 }}>
+        {history.length === 0 && <div style={{ padding: 14, color: 'var(--tx-3)', fontSize: 10 }}>{t('history.empty')}</div>}
+        {history.map((r) => {
+          const on = viewing === r.seq || (viewing == null && r === history[0]);
+          return (
+            <div key={r.seq} className={`nc-hi ${on ? 'on' : ''}`} onClick={() => viewRun(r.seq)}>
+              <div style={{ width: 40, height: 71, background: '#000', border: '1px solid var(--line-2)', borderRadius: 2, flex: '0 0 40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--tx-3)' }}><Icon.screen size={12} /></div>
+              <div>
+                <div style={{ fontSize: 10 }}>{t('history.run', { n: r.seq })}{on && <span className="nc-soon" style={{ marginLeft: 6, color: 'var(--accent-2)', borderColor: 'var(--accent-sunk)' }}>{t('history.viewing')}</span>}</div>
+                <div style={{ fontSize: 8.5, color: 'var(--tx-3)', lineHeight: 1.6, marginTop: 3 }}>
+                  <span style={{ color: 'var(--tx-2)' }}>{new Date(r.startedAt).toLocaleTimeString()}</span> · {r.engineId ?? '—'}<br />
+                  {r.ir.audioTrack.durationSeconds.toFixed(2)}s · {r.ir.meta.totalDurationInFrames}f · {(r.durationMs / 1000).toFixed(1)}s
+                  {r.exports.map((x) => <div key={x.outputUrl} style={{ color: 'var(--ok)' }}>{x.fileName} · {(x.bytes / 1024 / 1024).toFixed(1)} MB</div>)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ padding: '10px 12px', borderTop: '1px solid var(--line)', fontSize: 8.5, color: 'var(--tx-3)', lineHeight: 1.55 }}>{t('history.footer')}</div>
+    </aside>
+  );
+};

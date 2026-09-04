@@ -1,0 +1,395 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    :root{
+      --bg-app:#0a0a0b; --bg-canvas:#0c0d10; --bg-panel:#121316;
+      --bg-node:#17191d; --bg-node-hdr:#1d2026; --bg-sunk:#0e0f12; --bg-raise:#22252b;
+      --line:#23262c; --line-2:#2f333b; --line-3:#3d424c;
+      --tx:#e4e6ea; --tx-2:#8b909b; --tx-3:#5a5f6a;
+      --accent:#7c5cff; --accent-2:#a78bfa; --accent-sunk:#221a4d;
+      --ok:#3fb950; --run:#58a6ff; --err:#f85149; --warn:#d29922;
+      --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+      --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg-app);color:var(--tx);
+      font-family:var(--sans);-webkit-font-smoothing:antialiased}
+    a{color:var(--accent-2);text-decoration:none} a:hover{color:#c4b5fd}
+    .mono{font-family:var(--mono)}
+    .cap{font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em}
+    .shell{width:1440px;height:900px;display:flex;flex-direction:column;
+      background:var(--bg-app);overflow:hidden}
+
+    /* ---------- Header 56px ---------- */
+    .hdr{height:56px;flex:0 0 56px;border-bottom:1px solid var(--line);
+      background:var(--bg-panel);display:flex;align-items:center;
+      gap:14px;padding:0 14px}
+    .brand{display:flex;align-items:center;gap:9px}
+    .logo{width:22px;height:22px;border-radius:4px;background:var(--accent);
+      display:flex;align-items:center;justify-content:center;color:#fff}
+    .brand-nm{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.02em}
+    .proj{font-family:var(--mono);font-size:12px;color:var(--tx-2);
+      padding:4px 8px;border:1px solid transparent;border-radius:4px}
+    .proj:hover{border-color:var(--line-2)}
+    .hdr-mid{flex:1;display:flex;align-items:center;justify-content:center;gap:10px}
+    .sel{display:flex;align-items:center;gap:8px;height:30px;padding:0 9px;
+      background:var(--bg-sunk);border:1px solid var(--line-2);border-radius:4px;
+      font-family:var(--mono);font-size:11px;color:var(--tx)}
+    .sel .lbl{color:var(--tx-3)}
+    .sel:hover{border-color:var(--line-3)}
+    .btn{height:30px;padding:0 11px;border-radius:4px;border:1px solid var(--line-2);
+      background:var(--bg-raise);color:var(--tx);font-family:var(--mono);
+      font-size:11px;display:flex;align-items:center;gap:7px;letter-spacing:.02em}
+    .btn:hover{border-color:var(--line-3)}
+    .btn-pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+    .btn-stop{background:#2a1416;border-color:#5c2327;color:#ff8b85}
+    .btn-off{opacity:.36}
+    .btn-ico{width:30px;padding:0;justify-content:center}
+
+    /* ---------- Body: dải trái + canvas chiếm trọn ---------- */
+    .body{flex:1;display:flex;min-height:0}
+    .canvas{position:relative;overflow:hidden;background:var(--bg-canvas);
+      background-image:radial-gradient(var(--line) 1px,transparent 1px);
+      background-size:22px 22px;background-position:-1px -1px}
+
+    /* ---------- Node card ---------- */
+    .nd{position:absolute;background:var(--bg-node);border:1px solid var(--line-2);
+      border-radius:5px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+    .nd-h{height:24px;display:flex;align-items:center;gap:5px;padding:0 6px;
+      background:var(--bg-node-hdr);border-bottom:1px solid var(--line)}
+    .nd-h .ic{color:var(--tx-2);display:flex}
+    .nd-t{font-family:var(--mono);font-size:9.5px;font-weight:700;
+      text-transform:uppercase;letter-spacing:.07em;color:var(--tx);white-space:nowrap}
+    .nd-b{padding:6px}
+    .fld{background:var(--bg-sunk);border:1px solid var(--line);border-radius:3px;
+      padding:4px 5px;font-family:var(--mono);font-size:9px;color:var(--tx);
+      line-height:1.5;word-break:break-all}
+    .fld-ph{color:var(--tx-3)}
+    .kv{display:flex;justify-content:space-between;gap:6px;
+      font-family:var(--mono);font-size:9px;line-height:1.75}
+    .kv .k{color:var(--tx-3)} .kv .v{color:var(--tx-2)}
+    .hint{font-family:var(--mono);font-size:8.5px;color:var(--tx-3);margin-top:4px}
+    .bul{font-family:var(--mono);font-size:8.5px;color:var(--tx-2);line-height:1.6;
+      display:flex;gap:4px}
+    .bul i{color:var(--accent-2);font-style:normal}
+
+    /* trạng thái node */
+    .st{margin-left:auto;display:flex;align-items:center;gap:4px;
+      font-family:var(--mono);font-size:8.5px;letter-spacing:.03em}
+    .dot{width:5px;height:5px;border-radius:50%;flex:0 0 5px}
+    .s-idle .dot{background:var(--tx-3)} .s-idle{color:var(--tx-3)}
+    .s-queue .dot{background:var(--tx-3)} .s-queue{color:var(--tx-3)}
+    .s-run .dot{background:var(--run)} .s-run{color:var(--run)}
+    .s-ok .dot{background:var(--ok)} .s-ok{color:var(--ok)}
+    .s-err .dot{background:var(--err)} .s-err{color:var(--err)}
+    .nd.n-run{border-color:var(--run);box-shadow:0 0 0 1px rgba(88,166,255,.22),0 4px 16px rgba(0,0,0,.5)}
+    .nd.n-ok{border-color:#215c2c}
+    .nd.n-err{border-color:var(--err);box-shadow:0 0 0 1px rgba(248,81,73,.2),0 4px 16px rgba(0,0,0,.5)}
+    .nd.n-idle{opacity:.9}
+    .nd.n-block{opacity:.44}
+    .nd.n-stale{border-style:dashed;border-color:var(--line-3);opacity:.72}
+    .nd.n-byp{border-style:dashed;border-color:var(--line-3)}
+    .nd.n-byp .nd-b{opacity:.62}
+    .s-byp{color:var(--tx-3)} .s-byp .dot{background:var(--tx-3)}
+    .nd.n-warn{border-color:var(--warn);box-shadow:0 0 0 1px rgba(210,153,34,.22),0 4px 18px rgba(0,0,0,.5)}
+
+    /* cổng */
+    .p{position:absolute;width:7px;height:7px;border-radius:50%;
+      background:var(--bg-node);border:1.5px solid var(--line-3)}
+    .p-in{left:-4px} .p-out{right:-4px}
+    .p.on{border-color:var(--accent);background:var(--accent-sunk)}
+    .plab{position:absolute;font-family:var(--mono);font-size:8px;
+      color:var(--tx-3);white-space:nowrap}
+
+    /* ---------- công cụ canvas ---------- */
+    .tools{position:absolute;left:12px;bottom:12px;display:flex;
+      flex-direction:column;gap:8px;align-items:flex-start}
+    .mmap{width:150px;height:88px;background:rgba(10,10,11,.86);
+      border:1px solid var(--line-2);border-radius:4px;position:relative;overflow:hidden}
+    .mmap .mn{position:absolute;background:var(--line-3);border-radius:1px}
+    .mmap .vp{position:absolute;border:1px solid var(--accent);
+      background:rgba(124,92,255,.09);border-radius:2px}
+    .tbar{display:flex;background:rgba(10,10,11,.86);border:1px solid var(--line-2);
+      border-radius:4px;overflow:hidden}
+    .tbtn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+      color:var(--tx-2);border-right:1px solid var(--line)}
+    .tbtn:last-child{border-right:0}
+    .tbtn:hover{background:var(--bg-raise);color:var(--tx)}
+    .zoom{font-family:var(--mono);font-size:10px;color:var(--tx-3);
+      padding:0 9px;display:flex;align-items:center;border-right:1px solid var(--line)}
+
+    /* ---------- Cụm điều khiển trình phát (nằm trong khối Video Output) ---------- */
+    .pbtn{width:28px;height:28px;border-radius:4px;border:1px solid var(--line-2);
+      background:var(--bg-raise);color:var(--tx);display:flex;
+      align-items:center;justify-content:center}
+    .scrub{flex:1;height:4px;background:var(--bg-sunk);border-radius:2px;
+      position:relative;border:1px solid var(--line)}
+    .scrub .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);
+      border-radius:2px}
+    .scrub .head{position:absolute;top:-4px;width:2px;height:10px;
+      background:#fff;border-radius:1px}
+    .cnt{font-family:var(--mono);font-size:9.5px;color:var(--tx-2);
+      display:flex;flex-direction:column;align-items:flex-end;line-height:1.45}
+    .cnt em{font-style:normal;color:var(--tx-3)}
+
+    /* thanh tra phân cảnh */
+    .insp{display:flex;gap:3px;margin-top:11px}
+    .sc{background:var(--bg-sunk);border:1px solid var(--line);border-radius:3px;
+      padding:6px 7px;min-width:0}
+    .sc.act{border-color:var(--accent);background:var(--accent-sunk)}
+    .sc-n{font-family:var(--mono);font-size:8px;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--tx);white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis}
+    .sc-f{font-family:var(--mono);font-size:7.5px;color:var(--tx-3);margin-top:2px}
+
+
+    /* ---------- nội dung video giả lập ---------- */
+    .vs{position:absolute;inset:0;display:flex;flex-direction:column;
+      background:linear-gradient(#0b0c10,#08090c)}
+    .vs-grid{position:absolute;inset:0;
+      background-image:linear-gradient(rgba(124,92,255,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(124,92,255,.05) 1px,transparent 1px);
+      background-size:20px 20px}
+
+    .rail{width:44px;flex:0 0 44px;background:var(--bg-panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+    .rail .sp{flex:1}
+    .rail .rt.b{margin-top:auto}
+    .rt{width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--tx-3);border-radius:4px;position:relative}
+    .rt.on{color:var(--accent-2);background:var(--accent-sunk)}
+    .rt.on::before{content:"";position:absolute;left:-4px;top:8px;bottom:8px;width:2px;background:var(--accent);border-radius:1px}
+    .rt .rd{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--err);border:1.5px solid var(--bg-panel)}
+    .panel{width:280px;flex:0 0 280px;background:var(--bg-panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+    .pn-h{height:36px;flex:0 0 36px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--tx-2)}
+    .pn-h .x{margin-left:auto;color:var(--tx-3);font-size:14px;text-transform:none;letter-spacing:0}
+    .srch{margin:10px 12px 4px;height:28px;background:var(--bg-sunk);border:1px solid var(--line-2);border-radius:4px;display:flex;align-items:center;gap:7px;padding:0 9px;font-family:var(--mono);font-size:10px;color:var(--tx-3)}
+    .grp{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.13em;color:var(--tx-3);padding:10px 12px 4px}
+    .li{display:flex;gap:9px;padding:6px 12px;align-items:flex-start}
+    .li .lic{width:22px;height:22px;border-radius:4px;background:var(--bg-node-hdr);border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--tx-2);flex:0 0 22px}
+    .li .lin{font-family:var(--mono);font-size:10px;color:var(--tx);display:flex;align-items:center;gap:6px}
+    .li .lid{font-family:var(--sans);font-size:9.5px;color:var(--tx-2);margin-top:2px;line-height:1.45}
+    .li .lip{font-family:var(--mono);font-size:8px;color:var(--tx-3);margin-top:3px}
+    .li .lip b{color:var(--accent-2);font-weight:500}
+    .pn-f{margin-top:auto;padding:10px 12px;border-top:1px solid var(--line);font-family:var(--mono);font-size:8.5px;color:var(--tx-3);line-height:1.55}
+    .hi{display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);align-items:flex-start}
+    .hi.on{background:var(--accent-sunk);box-shadow:inset 2px 0 0 var(--accent)}
+    .hi .th{width:40px;height:71px;background:#000;border:1px solid var(--line-2);border-radius:2px;overflow:hidden;position:relative;flex:0 0 40px}
+    .hi .hn{font-family:var(--mono);font-size:10px;color:var(--tx)}
+    .hi .hm{font-family:var(--mono);font-size:8.5px;color:var(--tx-3);line-height:1.6;margin-top:3px}
+    .hi .hm b{color:var(--tx-2);font-weight:500}
+    .cvcol{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+    .logs{height:220px;flex:0 0 220px;background:var(--bg-sunk);border-top:1px solid var(--line-2);display:flex;flex-direction:column}
+    .lg-h{height:32px;flex:0 0 32px;display:flex;align-items:center;gap:6px;padding:0 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9px}
+    .lg-h .t{text-transform:uppercase;letter-spacing:.1em;color:var(--tx-2);margin-right:6px}
+    .chipf{padding:2px 7px;border:1px solid var(--line-2);border-radius:3px;color:var(--tx-3);font-size:8.5px}
+    .chipf.on{border-color:var(--accent);color:var(--accent-2);background:var(--accent-sunk)}
+    .lg-b{flex:1;overflow:hidden;padding:6px 0;font-family:var(--mono);font-size:9.5px;line-height:1.7}
+    .ll{display:flex;gap:14px;padding:0 12px;white-space:nowrap}
+    .ll .ts{color:var(--tx-3);flex:0 0 96px} .ll .nn{flex:0 0 108px} .ll .ms{color:var(--tx-2)}
+    .ghost{position:absolute;opacity:.72;pointer-events:none;box-shadow:0 0 0 1px var(--accent),0 12px 30px rgba(0,0,0,.6)}
+    .soon{font-family:var(--mono);font-size:7.5px;letter-spacing:.06em;color:var(--warn);border:1px solid #4a3a12;border-radius:3px;padding:1px 5px}
+</style>
+</helmet>
+<div class="shell">
+  
+  <div class="hdr">
+    <div class="brand"><span class="logo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"></circle><circle cx="18" cy="12" r="2.4"></circle><circle cx="6" cy="18" r="2.4"></circle><line x1="8.2" y1="7.2" x2="15.8" y2="10.8"></line><line x1="8.2" y1="16.8" x2="15.8" y2="13.2"></line></svg></span><span class="brand-nm">NodeCine</span></div>
+    <span class="proj mono">nodecine-launch-video</span>
+    <div class="hdr-mid"></div>
+    <span class="btn btn-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg> Chạy Luồng</span>
+  </div>
+  <div class="body">
+    <div class="rail">
+    <span class="rt "><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg></span>
+    <span class="rt "><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><line x1="17.5" y1="14" x2="17.5" y2="21"></line><line x1="14" y1="17.5" x2="21" y2="17.5"></line></svg></span>
+    <span class="rt "><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15.5 14"></polyline></svg></span>
+    <span class="rt on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></span>
+    <span class="sp"></span>
+    <span class="rt "><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.88 1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.88V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"></path></svg></span></div>
+    <div class="cvcol">
+      <div class="canvas" style="flex:1;width:auto">
+        <div style="position:absolute;inset:0;transform:scale(0.74);transform-origin:0 0">
+  <svg width="1440" height="844" style="position:absolute;inset:0;pointer-events:none;overflow:visible">
+    <defs><marker id="ah" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><polygon points="0 0.6, 6.4 3.5, 0 6.4" fill="currentColor"></polygon></marker></defs>
+    <path d="M210,358 C222,358 218,370 230,370" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M420,370 C460,370 420,200 440,200" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M420,370 C480,370 480,340 560,340 C700,340 800,270 860,270" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M420,180 C460,180 420,232 440,232" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M630,216 C670,216 630,440 650,440" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M630,216 C700,216 790,305 860,305" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M630,500 C642,500 638,472 650,472" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M840,456 C880,456 840,340 860,340" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M1050,305 C1080,305 1070,120 1100,120" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M1050,305 C1076,305 1074,728 1100,728" fill="none" stroke="#2f333b" stroke-width="1.3" marker-end="url(#ah)" color="#2f333b" opacity="0.85"></path><path d="M840,660 C980,660 1088,620 1088,420 C1088,200 1070,150 1100,150" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah)" color="#7c5cff"></path><path d="M840,660 C950,660 1000,758 1100,758" fill="none" stroke="#2f333b" stroke-width="1.3" marker-end="url(#ah)" color="#2f333b" opacity="0.85"></path>
+  </svg>
+    <div class="nd n-ok" style="left:20px;top:300px;width:190px;height:116px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span><span class="nd-t">Input Trigger</span><span class="st s-ok"><span class="dot"></span>0.1s</span></div>
+      <div class="nd-b"><div class="fld">github.com/anhto611/nodecine</div><div class="hint">27 ký tự · không diễn giải</div></div>
+      
+      <div class="p p-out on" style="top:54.5px"></div>
+      <div class="plab" style="top:54px;right:11px">Dữ liệu Nguồn</div>
+    </div>
+    <div class="nd n-ok" style="left:230px;top:300px;width:190px;height:140px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg></span><span class="nd-t">GitHub Fetcher</span><span class="st s-ok"><span class="dot"></span>0.8s</span></div>
+      <div class="nd-b"><div class="kv"><span class="k">nguồn</span><span class="v">github-url</span></div>
+       <div class="kv"><span class="k">stars</span><span class="v" style="color:var(--warn)"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.6 22 9.6 17 14.5 18.2 21.5 12 18.2 5.8 21.5 7 14.5 2 9.6 8.91 8.6 12 2"></polygon></svg> 1.284</span></div>
+       <div class="kv"><span class="k">install</span><span class="v">npm i nodecine</span></div>
+       <div class="hint">chụp 21:04 · làm mới</div></div>
+      
+      <div class="p p-in on" style="top:66.5px"></div>
+      <div class="plab" style="top:66px;left:11px"></div>
+      <div class="p p-out on" style="top:66.5px"></div>
+      <div class="plab" style="top:66px;right:11px">Dữ kiện</div>
+    </div>
+    <div class="nd n-ok" style="left:230px;top:120px;width:190px;height:124px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></span><span class="nd-t">Claude Code Provider</span><span class="st s-ok"><span class="dot"></span>sẵn sàng</span></div>
+      <div class="nd-b"><div class="kv"><span class="k">công cụ</span><span class="v">claude 2.1.260</span></div>
+       <div class="kv"><span class="k">trạng thái</span><span class="v" style="color:var(--ok)">● đã đăng nhập</span></div>
+       <div class="kv"><span class="k">probe</span><span class="v" style="color:var(--tx-3)">mỗi lần Chạy Luồng</span></div>
+       <div class="kv"><span class="k">model</span><span class="v" style="color:var(--tx-3)">mặc định</span></div></div>
+      
+      <div class="p p-out on" style="top:56.5px"></div>
+      <div class="plab" style="top:56px;right:11px">Mô hình ngôn ngữ</div>
+    </div>
+    <div class="nd n-ok" style="left:440px;top:440px;width:190px;height:124px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0"></path><line x1="12" y1="17" x2="12" y2="22"></line><line x1="8" y1="22" x2="16" y2="22"></line></svg></span><span class="nd-t">System TTS Provider</span><span class="st s-ok"><span class="dot"></span>sẵn sàng</span></div>
+      <div class="nd-b"><div class="kv"><span class="k">bộ tổng hợp</span><span class="v">macOS say</span></div>
+       <div class="kv"><span class="k">ffmpeg</span><span class="v" style="color:var(--ok)">● tìm thấy</span></div>
+       <div class="kv"><span class="k">giọng</span><span class="v">Samantha · en-US <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></div>
+       <div class="kv"><span class="k">trạng thái</span><span class="v" style="color:var(--ok)">● sẵn sàng · offline</span></div></div>
+      
+      <div class="p p-out on" style="top:56.5px"></div>
+      <div class="plab" style="top:56px;right:11px">Giọng đọc</div>
+    </div>
+    <div class="nd n-ok" style="left:440px;top:120px;width:190px;height:196px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"></rect><line x1="12" y1="3" x2="12" y2="9"></line><circle cx="12" cy="3" r="1" fill="currentColor"></circle><line x1="9" y1="14" x2="9" y2="15"></line><line x1="15" y1="14" x2="15" y2="15"></line><line x1="1.5" y1="13" x2="4" y2="13"></line><line x1="20" y1="13" x2="22.5" y2="13"></line></svg></span><span class="nd-t">AI Director</span><span class="st s-ok"><span class="dot"></span>4.2s</span></div>
+      <div class="nd-b"><div class="kv"><span class="k">ngôn ngữ</span><span class="v">English <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></div>
+       <div class="kv"><span class="k">model</span><span class="v">claude-opus-5</span></div>
+       <div class="kv"><span class="k">theme</span><span class="v">developer-dark</span></div>
+       <div style="margin-top:7px;display:flex;flex-direction:column;gap:4px">
+         <div class="bul"><i>1</i><span>SHIP VIDEO FROM A REPO</span></div>
+         <div class="bul"><i>2</i><span>nodecine · 3 features</span></div>
+         <div class="bul"><i>3</i><span>Star on GitHub</span></div></div></div>
+      
+      <div class="p p-in on" style="top:76.5px"></div>
+      <div class="plab" style="top:76px;left:11px"></div>
+      <div class="p p-in on" style="top:108.5px"></div>
+      <div class="plab" style="top:108px;left:11px"></div>
+      <div class="p p-out on" style="top:92.5px"></div>
+      <div class="plab" style="top:92px;right:11px">Kịch bản · Lời thoại</div>
+    </div>
+    <div class="nd n-ok" style="left:650px;top:380px;width:190px;height:150px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="10" x2="3" y2="14"></line><line x1="7.5" y1="6" x2="7.5" y2="18"></line><line x1="12" y1="3" x2="12" y2="21"></line><line x1="16.5" y1="7" x2="16.5" y2="17"></line><line x1="21" y1="10" x2="21" y2="14"></line></svg></span><span class="nd-t">TTS Engine</span><span class="st s-ok"><span class="dot"></span>2.6s</span></div>
+      <div class="nd-b"><div class="kv"><span class="k">giọng</span><span class="v">Samantha · en-US</span></div>
+       <div class="kv"><span class="k">tốc độ</span><span class="v">1.00x</span></div>
+       <div style="margin-top:7px;display:flex;align-items:flex-end;gap:2px;height:20px">
+         <span style="flex:1;height:7.199999999999999px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:13.2px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:8.4px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:16.8px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:10.799999999999999px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:19.2px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:12px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:15.6px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:7.199999999999999px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:14.399999999999999px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:9.6px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:18px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:8.4px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:12px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:6px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:15.6px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:10.799999999999999px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:7.199999999999999px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:13.2px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:8.4px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:16.8px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:9.6px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:14.399999999999999px;background:var(--accent);opacity:.65;border-radius:1px"></span><span style="flex:1;height:10.799999999999999px;background:var(--accent);opacity:.65;border-radius:1px"></span></div>
+       <div class="hint">khớp ngôn ngữ kịch bản: en · 11.20 giây</div></div>
+      
+      <div class="p p-in on" style="top:56.5px"></div>
+      <div class="plab" style="top:56px;left:11px"></div>
+      <div class="p p-in on" style="top:88.5px"></div>
+      <div class="plab" style="top:88px;left:11px"></div>
+      <div class="p p-out on" style="top:72.5px"></div>
+      <div class="plab" style="top:72px;right:11px">Âm thanh</div>
+    </div>
+    <div class="nd n-ok" style="left:860px;top:230px;width:190px;height:150px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span><span class="nd-t">Timeline Assembler</span><span class="st s-ok"><span class="dot"></span>0.0s</span></div>
+      <div class="nd-b"><div class="kv"><span class="k">tổng</span><span class="v">336 frames</span></div>
+       <div class="kv"><span class="k">fps</span><span class="v">30 · 1080×1920</span></div>
+       <div style="display:flex;gap:2px;margin-top:8px;height:10px">
+         <div style="width:25%;background:var(--accent);border-radius:2px 0 0 2px"></div>
+         <div style="width:50%;background:var(--accent-2)"></div>
+         <div style="width:25%;background:var(--ok);border-radius:0 2px 2px 0"></div></div>
+       <div class="kv" style="margin-top:4px"><span class="k">84 · w1</span><span class="k">168 · w2</span><span class="k">84 · w1</span></div></div>
+      
+      <div class="p p-in on" style="top:36.5px"></div>
+      <div class="plab" style="top:36px;left:11px">Dữ kiện</div>
+      <div class="p p-in on" style="top:71.5px"></div>
+      <div class="plab" style="top:71px;left:11px"></div>
+      <div class="p p-in on" style="top:106.5px"></div>
+      <div class="plab" style="top:106px;left:11px"></div>
+      <div class="p p-out on" style="top:71.5px"></div>
+      <div class="plab" style="top:71px;right:11px">Bản đặc tả IR</div>
+    </div>
+    <div class="nd n-ok" style="left:650px;top:600px;width:190px;height:124px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"></rect><rect x="9.5" y="9.5" width="5" height="5"></rect><line x1="9" y1="2" x2="9" y2="5"></line><line x1="15" y1="2" x2="15" y2="5"></line><line x1="9" y1="19" x2="9" y2="22"></line><line x1="15" y1="19" x2="15" y2="22"></line><line x1="2" y1="9" x2="5" y2="9"></line><line x1="2" y1="15" x2="5" y2="15"></line><line x1="19" y1="9" x2="22" y2="9"></line><line x1="19" y1="15" x2="22" y2="15"></line></svg></span><span class="nd-t">Remotion Engine</span><span class="st s-ok"><span class="dot"></span>sẵn sàng</span></div>
+      <div class="nd-b"><div class="kv"><span class="k">adapter</span><span class="v">remotion 4.0</span></div>
+       <div class="kv"><span class="k">trạng thái</span><span class="v" style="color:var(--ok)">● sẵn sàng</span></div>
+       <div class="kv"><span class="k">song song</span><span class="v">4</span></div>
+       <div class="kv"><span class="k">backend</span><span class="v">angle</span></div></div>
+      
+      <div class="p p-out on" style="top:56.5px"></div>
+      <div class="plab" style="top:56px;right:11px">Động cơ</div>
+    </div>
+    <div class="nd n-ok" style="left:1100px;top:60px;width:284px;height:584px">
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><polygon points="10 7.5 15 10 10 12.5 10 7.5" fill="currentColor" stroke="none"></polygon><line x1="8" y1="21" x2="16" y2="21"></line></svg></span><span class="nd-t">Video Output</span><span class="st s-ok"><span class="dot"></span>0.3s</span></div>
+      <div class="nd-b"><div style="width:252px;height:448px;background:#000;border:1px solid var(--line-2);border-radius:3px;overflow:hidden;position:relative;">
+  <div class="vs"><div class="vs-grid"></div>
+    <div style="position:relative;padding:26px 18px 0;text-align:center">
+      <div style="font-family:var(--mono);font-size:7px;letter-spacing:.22em;color:#a78bfa;text-transform:uppercase">Core features</div>
+      <div style="font-family:var(--mono);font-size:15.5px;font-weight:700;color:#fff;margin-top:9px;line-height:1.32">nodecine<br><span style="color:#a78bfa">AI + Remotion</span></div></div>
+    <div style="position:relative;margin:19px 14px 0;background:#0e1015;border:1px solid #2b2f38;border-radius:5px;overflow:hidden">
+      <div style="height:16px;background:#171a20;border-bottom:1px solid #2b2f38;display:flex;align-items:center;gap:3.5px;padding:0 7px">
+        <span style="width:5px;height:5px;border-radius:50%;background:#f85149"></span>
+        <span style="width:5px;height:5px;border-radius:50%;background:#d29922"></span>
+        <span style="width:5px;height:5px;border-radius:50%;background:#3fb950"></span>
+        <span style="font-family:var(--mono);font-size:6.2px;color:#5a5f6a;margin-left:5px">bash</span></div>
+      <div style="padding:9px 8px;font-family:var(--mono);font-size:8.2px;line-height:1.95">
+        <div><span style="color:#3fb950">$</span> <span style="color:#e4e6ea">npm i nodecine</span></div>
+        <div style="height:6px"></div>
+        <div style="color:#8b909b"><span style="color:#a78bfa">▸</span> Node graph, no timeline</div>
+        <div style="color:#8b909b"><span style="color:#a78bfa">▸</span> AI writes a 3-scene script</div>
+        <div style="color:#8b909b"><span style="color:#a78bfa">▸</span> Export MP4 on your machine</div></div></div>
+    <div style="position:relative;margin-top:auto;padding:0 14px 22px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:var(--mono);font-size:6.8px;color:#5a5f6a">github.com/anhto611/nodecine</div>
+      <div style="display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:6.8px;color:#d29922"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.6 22 9.6 17 14.5 18.2 21.5 12 18.2 5.8 21.5 7 14.5 2 9.6 8.91 8.6 12 2"></polygon></svg> 1.284</div></div>
+  </div></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
+      <span class="pbtn " style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20" fill="currentColor"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg></span>
+      <span class="pbtn " style="width:24px;height:24px;background:var(--accent);border-color:var(--accent);color:#fff"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></span>
+      <div class="scrub" style="flex:1"><div class="fill" style="width:41%"></div><div class="head" style="left:41%"></div></div>
+      <div class="cnt" style="font-size:8.5px"><span>138 <em>/ 336</em></span><span><em>4.60 / 11.20s</em></span></div></div>
+    <div class="insp" style="margin-top:8px">
+      
+        <div class="sc " style="flex:25;padding:5px 6px"><div class="sc-n" style="font-size:8.5px;">Hook</div><div class="sc-f" style="font-size:8px">0–84</div></div>
+        <div class="sc act" style="flex:50;padding:5px 6px"><div class="sc-n" style="font-size:8.5px;">Feature</div><div class="sc-f" style="font-size:8px">84–252</div></div>
+        <div class="sc " style="flex:25;padding:5px 6px"><div class="sc-n" style="font-size:8.5px;">CTA</div><div class="sc-f" style="font-size:8px">252–336</div></div></div><div class="kv" style="margin-top:8px;padding-top:7px;border-top:1px solid var(--line)"><span class="k" style="">336 frames · 30fps</span><span class="k">1080×1920</span></div></div>
+      
+      <div class="p p-in on" style="top:56.5px"></div>
+      <div class="plab" style="top:56px;left:11px">Bản đặc tả IR</div>
+      <div class="p p-in on" style="top:86.5px"></div>
+      <div class="plab" style="top:86px;left:11px">Động cơ</div>
+    </div>
+    <div class="nd n-byp" style="left:1100px;top:684px;width:284px;height:136px">
+      <div class="nd-h"><span class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span><span class="nd-t">MP4 Export</span><span class="st s-byp"><span class="dot"></span>bỏ qua</span></div>
+      <div class="nd-b">
+      <div class="kv"><span class="k">codec</span><span class="v">H.264</span></div>
+      <div class="kv"><span class="k">chất lượng</span><span class="v">cao · crf 18</span></div>
+      <div class="kv"><span class="k">tên tệp</span><span class="v">nodecine-launch-video.mp4</span></div>
+      <span class="btn btn-pri" style="height:24px;margin-top:8px;justify-content:center;font-size:9px;width:100%"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg> Kết xuất</span></div>
+      
+      <div class="p p-in " style="top:40.5px"></div>
+      <div class="plab" style="top:40px;left:11px">Bản đặc tả IR</div>
+      <div class="p p-in " style="top:70.5px"></div>
+      <div class="plab" style="top:70px;left:11px">Động cơ</div>
+    </div></div>
+        
+  <div class="tools">
+    <div class="mmap" style="width:172px;height:96px">
+      <div class="mn" style="left:18px;top:40px;width:15px;height:10px"></div><div class="mn" style="left:37px;top:38px;width:15px;height:12px"></div><div class="mn" style="left:56px;top:28px;width:16px;height:14px"></div><div class="mn" style="left:76px;top:54px;width:16px;height:11px"></div><div class="mn" style="left:96px;top:38px;width:16px;height:13px"></div><div class="mn" style="left:76px;top:76px;width:16px;height:10px"></div><div class="mn" style="left:122px;top:12px;width:26px;height:52px"></div><div class="mn" style="left:122px;top:70px;width:26px;height:12px"></div>
+      <div class="vp" style="left:8px;top:8px;width:154px;height:80px"></div></div>
+    <div class="tbar"><span class="zoom">65%</span><span class="tbtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span><span class="tbtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></span><span class="tbtn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"></path><path d="M16 3h3a2 2 0 0 1 2 2v3"></path><path d="M21 16v3a2 2 0 0 1-2 2h-3"></path><path d="M8 21H5a2 2 0 0 1-2-2v-3"></path></svg></span><span class="tbtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span></div>
+  </div>
+      </div><div class="logs">
+    <div class="lg-h"><span class="t">Nhật ký</span>
+      <span class="chipf on">Tất cả</span><span class="chipf ">GitHub Fetcher</span><span class="chipf ">AI Director</span><span class="chipf ">TTS Engine</span><span class="chipf ">MP4 Export</span>
+      <span class="srch" style="margin:0 0 0 auto;height:22px;width:170px">Tìm trong nhật ký…</span>
+      <span class="btn" style="height:22px;padding:0 8px;font-size:8.5px">Sao chép toàn bộ</span>
+      <span class="btn" style="height:22px;padding:0 8px;font-size:8.5px">Xóa</span>
+      <span style="color:var(--tx-3);font-size:13px;margin-left:4px">×</span></div>
+    <div class="lg-b"><div class="ll"><span class="ts">21:04:02.118</span><span class="nn" style="color:var(--ok)">Input Trigger</span><span class="ms">nhận diện github-url → github.com/anhto611/nodecine</span></div><div class="ll"><span class="ts">21:04:02.131</span><span class="nn" style="color:var(--ok)">GitHub Fetcher</span><span class="ms">GET /repos/anhto611/nodecine → 200 · 412ms</span></div><div class="ll"><span class="ts">21:04:02.540</span><span class="nn" style="color:var(--ok)">GitHub Fetcher</span><span class="ms">README 3.9k ký tự · stars=1284 · lang=TypeScript · install=npm i nodecine</span></div><div class="ll"><span class="ts">21:04:02.902</span><span class="nn" style="color:var(--ok)">GitHub Fetcher</span><span class="ms">hoàn thành 0.8s · hash 9f3a2c</span></div><div class="ll"><span class="ts">21:04:02.903</span><span class="nn" style="color:var(--ok)">Claude Code Provider</span><span class="ms">probe → claude 2.1.260 · đã đăng nhập · hash không đổi, phía sau dùng lại</span></div><div class="ll"><span class="ts">21:04:02.905</span><span class="nn" style="color:var(--ok)">AI Director</span><span class="ms">claude -p --output-format json · lời nhắc 1.4k ký tự qua stdin</span></div><div class="ll"><span class="ts">21:04:07.118</span><span class="nn" style="color:var(--ok)">AI Director</span><span class="ms">kiểm định DirectorPlan ✓ · language=en ✓ · 3 cảnh · hoàn thành 4.2s</span></div><div class="ll"><span class="ts">21:04:07.119</span><span class="nn" style="color:var(--ok)">System TTS Provider</span><span class="ms">probe → say · ffmpeg 7.1 · 4 giọng · hash không đổi</span></div><div class="ll"><span class="ts">21:04:07.120</span><span class="nn" style="color:var(--ok)">TTS Engine</span><span class="ms">chọn giọng khớp en → Samantha · say → aiff → ffmpeg → mp3 · speed=1.00</span></div><div class="ll"><span class="ts">21:04:09.702</span><span class="nn" style="color:var(--ok)">TTS Engine</span><span class="ms">voice_9f3a2c.mp3 · đo được 11.20s · hoàn thành 2.6s</span></div><div class="ll"><span class="ts">21:04:09.703</span><span class="nn" style="color:var(--ok)">Assembler</span><span class="ms">336 frames = ceil(11.20 × 30) · ≥ 270 ✓ · padTail 0 · phân bổ 84 / 168 / 84</span></div><div class="ll"><span class="ts">21:04:09.705</span><span class="nn" style="color:var(--ok)">Remotion Engine</span><span class="ms">probe → preview ready · render ready · hash không đổi</span></div><div class="ll"><span class="ts">21:04:09.706</span><span class="nn" style="color:var(--ok)">Video Output</span><span class="ms">irVersion=1 · engine=remotion · player sẵn sàng 0.3s</span></div><div class="ll"><span class="ts">21:04:09.706</span><span class="nn" style="color:var(--tx-3)">MP4 Export</span><span class="ms">bỏ qua</span></div><div class="ll"><span class="ts">21:04:10.011</span><span class="nn" style="color:var(--accent-2)">Luồng</span><span class="ms">hoàn thành 9/10 khối (1 bỏ qua) · 8.0s</span></div></div></div>
+    </div>
+  </div>
+</div></x-dc>
+</body>
+</html>

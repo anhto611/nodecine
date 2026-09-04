@@ -1,0 +1,18 @@
+/** UI-only metadata per core node type: icon and library group. Packs register their own. */
+export type IconKey = 'bolt' | 'doc' | 'term' | 'mic' | 'wave' | 'layers' | 'chip' | 'screen' | 'down' | 'branch' | 'bot';
+export type LibraryGroup = 'source' | 'provider' | 'process' | 'engine' | 'output';
+
+export const NODE_META: Record<string, { icon: IconKey; group: LibraryGroup; soon?: boolean }> = {
+  'core/input-trigger': { icon: 'bolt', group: 'source' },
+  'core/static-script': { icon: 'doc', group: 'source' },
+  'core/claude-code-provider': { icon: 'term', group: 'provider' },
+  'core/system-tts-provider': { icon: 'mic', group: 'provider' },
+  'core/tts-engine': { icon: 'wave', group: 'process' },
+  'core/timeline-assembler': { icon: 'layers', group: 'process' },
+  'core/remotion-engine': { icon: 'chip', group: 'engine' },
+  'core/hyperframes-engine': { icon: 'chip', group: 'engine', soon: true },
+  'core/video-output': { icon: 'screen', group: 'output' },
+  'core/mp4-export': { icon: 'down', group: 'output' },
+};
+
+export const GROUP_ORDER: LibraryGroup[] = ['source', 'provider', 'process', 'engine', 'output'];
