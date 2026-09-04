@@ -13,6 +13,23 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 * { box-sizing: border-box; }
 ::selection { background: var(--accent-sunk); }
 
+/* scrollbars: thin, no track, thumb in the line palette; brightens on hover, accent while dragging */
+* { scrollbar-width: thin; scrollbar-color: var(--line-3) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--line-3); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: var(--tx-3); }
+*::-webkit-scrollbar-thumb:active { background-color: var(--accent-2); }
+*::-webkit-scrollbar-corner { background: transparent; }
+/* inside node cards and inputs the bar is even slimmer so it does not fight the 10px type */
+.nc-node *::-webkit-scrollbar, .nc-textarea::-webkit-scrollbar { width: 6px; height: 6px; }
+.nc-node *::-webkit-scrollbar-thumb, .nc-textarea::-webkit-scrollbar-thumb { background-color: var(--line-2); border-width: 1px; }
+.nc-node *::-webkit-scrollbar-thumb:hover, .nc-textarea::-webkit-scrollbar-thumb:hover { background-color: var(--line-3); }
+/* number fields: no native spinner, it does not match the flat inputs */
+.nc-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.nc-input[type=number]::-webkit-inner-spin-button, .nc-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.nc-textarea::-webkit-resizer { background: linear-gradient(135deg, transparent 0 55%, var(--line-3) 55% 65%, transparent 65% 75%, var(--line-3) 75% 85%, transparent 85%); }
+
 /* controls */
 .nc-btn { height: 30px; padding: 0 11px; border-radius: 4px; border: 1px solid var(--line-2); background: var(--bg-raise); color: var(--tx); font: inherit; font-size: 11px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; letter-spacing: .02em; }
 .nc-btn:hover:not(:disabled) { border-color: var(--line-3); }
