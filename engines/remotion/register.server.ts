@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { stat } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { registerEngine } from '@/core/adapters/registry';
 import type { ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
 import type { VideoIR } from '@/core/types/ir';
@@ -14,8 +14,40 @@ import { COMPOSITION_ID, REMOTION_ENGINE_ID } from './constants';
  */
 
 let bundlePromise: Promise<string> | null = null;
+let bundleKey = '';
+
+/**
+ * Fingerprint of everything the Remotion bundle is built from. In development the process outlives
+ * many edits, and a cached bundle silently renders the code from when the server started: the trap
+ * costs an hour before anyone suspects the cache. In production the sources cannot change, so the
+ * fingerprint is computed once and the bundle is built once.
+ */
+async function sourceKey(): Promise<string> {
+  if (process.env.NODE_ENV === 'production') return 'production';
+  const roots = ['engines/remotion', 'packs', 'core/scenes'];
+  const stamps: string[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name !== '__tests__' && e.name !== 'node_modules') await walk(full);
+      } else if (/\.(tsx?|css|woff2?)$/.test(e.name)) {
+        const st = await stat(full).catch(() => null);
+        if (st) stamps.push(`${full}:${st.mtimeMs}:${st.size}`);
+      }
+    }
+  };
+  for (const r of roots) await walk(path.resolve(process.cwd(), r));
+  return contentHash(stamps.sort());
+}
 
 async function getBundle(): Promise<string> {
+  const key = await sourceKey();
+  if (key !== bundleKey) {
+    bundlePromise = null;
+    bundleKey = key;
+  }
   if (!bundlePromise) {
     bundlePromise = (async () => {
       const { bundle } = await import('@remotion/bundler');
@@ -29,7 +61,7 @@ async function getBundle(): Promise<string> {
           resolve: { ...config.resolve, alias: { ...(config.resolve?.alias as Record<string, string> | undefined), '@': path.resolve(process.cwd()) } },
         }),
       });
-    })().catch((e) => { bundlePromise = null; throw e; });
+    })().catch((e) => { bundlePromise = null; bundleKey = ''; throw e; });
   }
   return bundlePromise;
 }

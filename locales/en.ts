@@ -167,6 +167,7 @@ export const en = {
   'error.TTS_UPSTREAM': 'The speech service failed',
   'error.TTS_AUDIO_UNREADABLE': 'Could not read the generated audio',
   'error.TTS_VOICE_LANGUAGE_MISMATCH': 'No voice for this language; used a fallback voice',
+  'error.FACTS_NOT_CONNECTED': 'Fact bindings have no source; connect a Fact Sheet',
   'error.REPO_NOT_FOUND': 'No public repository at this link',
   'error.REPO_RATE_LIMITED': 'GitHub API rate limit exceeded; try again in a few minutes',
   'error.REPO_NETWORK': 'Could not reach GitHub',

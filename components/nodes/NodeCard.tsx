@@ -46,7 +46,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
   const caps = ref ? (ref as { capabilities: Record<string, unknown> }).capabilities : undefined;
   const notReady = caps ? Object.keys(caps).some((k) => readCapability(ref, k)?.status === 'unavailable') : false;
 
-  const stateClass = `s-${rt.state}${rt.blockedBy?.kind === 'capability' ? ' by-capability' : ''}${issues.length ? ' has-issue' : ''}${notReady && rt.state === 'success' ? ' not-ready' : ''}`;
+  const stateClass = `s-${rt.state}${rt.blockedBy?.kind === 'capability' ? ' by-capability' : ''}${issues.length || rt.warnings?.length ? ' has-issue' : ''}${notReady && rt.state === 'success' ? ' not-ready' : ''}`;
   const badge = renderBadge(rt, notReady, t);
   const hasRetry = rt.state === 'error' || (def.kind === 'resource' && rt.state === 'success');
 
@@ -75,6 +75,9 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
       <div className="nc-body">
         {Body ? <Body nodeId={node.id} /> : null}
         {issues.length > 0 && <div className="nc-hint" style={{ color: 'var(--warn)' }}>{issues.map((i) => t(`issue.${i.code}`)).join(' · ')}</div>}
+        {rt.warnings?.map((w, i) => (
+          <div key={i} className="nc-hint" style={{ color: 'var(--warn)' }}>{w.code ? t(`error.${w.code}`) : w.message}</div>
+        ))}
         {rt.blockedBy && (
           <div className="nc-hint" style={{ color: rt.blockedBy.kind === 'capability' ? 'var(--warn)' : 'var(--tx-3)' }}>
             {rt.blockedBy.kind === 'capability' ? t(`error.${rt.blockedBy.code}`) : t(`error.${rt.blockedBy.code}`)}

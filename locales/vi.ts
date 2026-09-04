@@ -169,6 +169,7 @@ export const vi: Record<DictKey, string> = {
   'error.TTS_UPSTREAM': 'Dịch vụ giọng đọc gặp sự cố',
   'error.TTS_AUDIO_UNREADABLE': 'Không đọc được tệp âm thanh vừa tạo',
   'error.TTS_VOICE_LANGUAGE_MISMATCH': 'Không có giọng cho ngôn ngữ này, đã dùng giọng dự phòng',
+  'error.FACTS_NOT_CONNECTED': 'Ràng buộc dữ kiện không có nguồn; hãy nối một Hồ Sơ Dữ Kiện',
   'error.REPO_NOT_FOUND': 'Không tìm thấy repo công khai tại đường dẫn này',
   'error.REPO_RATE_LIMITED': 'Đã vượt hạn mức GitHub API, thử lại sau ít phút',
   'error.REPO_NETWORK': 'Không kết nối được tới GitHub',

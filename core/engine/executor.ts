@@ -293,7 +293,8 @@ export class Executor {
 
     const signal = this.abort!.signal;
     const startedAt = this.services.now();
-    this.setState(nodeId, { state: 'running', reused: false, progress: undefined });
+    this.setState(nodeId, { state: 'running', reused: false, progress: undefined, warnings: undefined });
+    const warnings: { code?: string; message: string }[] = [];
     try {
       const raw = await def.run({
         nodeId,
@@ -301,7 +302,10 @@ export class Executor {
         inputs: gathered.inputs,
         signal,
         services: this.services,
-        log: (level, message, code) => this.log(nodeId, level, message, code),
+        log: (level, message, code) => {
+          if (level === 'warn') warnings.push({ code, message });
+          this.log(nodeId, level, message, code);
+        },
         progress: (fraction, message) => this.setState(nodeId, { progress: { fraction, message } }),
       });
       if (signal.aborted) throw new NodeError(ErrorCode.RUN_CANCELLED, 'cancelled');
@@ -319,7 +323,7 @@ export class Executor {
       }
       const result = def.outputs.length === 0 ? raw : undefined;
       const durationMs = this.services.now() - startedAt;
-      this.setState(nodeId, { state: 'success', outputs, signature, durationMs, reused: false, result, progress: undefined });
+      this.setState(nodeId, { state: 'success', outputs, signature, durationMs, reused: false, result, progress: undefined, warnings: warnings.length ? warnings : undefined });
       this.log(nodeId, 'info', `done in ${durationMs}ms`);
       return 'success';
     } catch (err) {

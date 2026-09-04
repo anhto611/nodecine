@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { buildIR, DEFAULT_ASSEMBLER_PARAMS } from '../assembler/build-ir';
 import type { DirectorPlan, FactSheet, Voiceover } from '../types/payloads';
 import type { NodeDefinition } from './definition';
+import { ErrorCode } from '../errors';
 
 const Params = z.object({
   fps: z.number().int().positive().default(30),
@@ -31,6 +32,11 @@ export const timelineAssembler: NodeDefinition<typeof Params> = {
     const facts = inputs.facts?.payload as FactSheet | undefined;
     const ir = buildIR({ plan, voiceover, facts, params });
     const bound = plan.scenes.reduce((n, s) => n + Object.keys(s.factBindings ?? {}).length, 0);
+    // The facts port is optional because a hand-written plan needs no facts. But a plan that *does*
+    // bind facts with nothing wired in renders a video quietly missing those values, so say it out loud.
+    if (bound > 0 && !facts) {
+      log('warn', `${bound} fact bindings have no source; connect a Fact Sheet to the facts port`, ErrorCode.FACTS_NOT_CONNECTED);
+    }
     log('info', `${ir.meta.totalDurationInFrames} frames · ${ir.timeline.map((s) => s.durationInFrames).join('/')} · padTail ${ir.audioTrack.padTailFrames}${facts ? ` · ${bound} facts bound` : ''}`);
     return { ir };
   },

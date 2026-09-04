@@ -23,6 +23,8 @@ export interface NodeRuntime {
   reused: boolean;
   durationMs?: number;
   error?: { code: string; message: string; retryable: boolean; details?: unknown };
+  /** Warnings the node raised during its last run: it produced a result, but a degraded one. */
+  warnings?: { code?: string; message: string }[];
   blockedBy?: BlockReason;
   progress?: { fraction: number; message?: string };
   /** On-demand nodes (MP4 Export) keep their non-packet result here. */
