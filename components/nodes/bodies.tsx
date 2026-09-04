@@ -18,7 +18,6 @@ function useParams<T extends Record<string, unknown>>(nodeId: string): [T, (patc
   return [(node?.params ?? {}) as T, (patch) => setParams(nodeId, patch as Record<string, unknown>)];
 }
 
-const LANGS = ['en', 'vi', 'ja', 'ko', 'zh', 'es', 'fr', 'de', 'pt', 'id', 'th'];
 
 /* ---------- Input Trigger ---------- */
 const InputTriggerBody: React.FC<BodyProps> = ({ nodeId }) => {
@@ -36,14 +35,13 @@ const InputTriggerBody: React.FC<BodyProps> = ({ nodeId }) => {
 type SceneRow = { sceneType: string; weight: number; props: Record<string, unknown> };
 const StaticScriptBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const [p, set] = useParams<{ language: string; theme: string; script: string; scenes: SceneRow[] }>(nodeId);
+  const [p, set] = useParams<{ theme: string; script: string; scenes: SceneRow[] }>(nodeId);
   const scenes = listScenes();
   const update = (i: number, patch: Partial<SceneRow>) => set({ scenes: p.scenes.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
   const remove = (i: number) => set({ scenes: p.scenes.filter((_, j) => j !== i) });
   const add = () => set({ scenes: [...p.scenes, { sceneType: 'core/title-card', weight: 1, props: { headline: 'New scene' } }] });
   return (
     <>
-      <Kv k={t('node.language')} v={<select className={`nc-select ${stopFlow}`} style={{ width: 90 }} value={p.language} onChange={(e) => set({ language: e.target.value })}>{LANGS.map((l) => <option key={l} value={l}>{l}</option>)}</select>} />
       <Kv k={t('node.theme')} v={p.theme} dim />
       <div className="nc-k" style={{ marginTop: 4 }}>{t('node.script')}</div>
       <textarea className={`nc-textarea ${stopFlow}`} value={p.script} onChange={(e) => set({ script: e.target.value })} />

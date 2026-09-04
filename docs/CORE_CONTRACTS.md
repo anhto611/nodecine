@@ -136,8 +136,8 @@ Lõi ship đúng những khối cần để dựng được video từ một k�
 
 Khối duy nhất của lõi phát cả `DirectorPlan` lẫn `AudioScript`, dành cho việc dựng video hoàn toàn bằng tay và để kiểm thử khung. Tham số:
 
-- `language` (mặc định `en`), `theme` (mặc định `core/dark`).
-- `script` (Chuỗi nhiều dòng): Lời thoại, phát ra `AudioScript`.
+- `theme` (mặc định `core/dark`).
+- `script` (Chuỗi nhiều dòng): Lời thoại, phát ra `AudioScript`. Không có tham số ngôn ngữ: người dùng đã dán lời thoại cuối cùng nên ngôn ngữ của văn bản chính là ngôn ngữ của video. Khối nhận diện bằng hàm thuần `detectLanguage(text)` của lõi (theo hệ chữ viết; chữ Latinh có dấu riêng của tiếng Việt thì là `vi`, chữ Latinh khác coi là `en`) và điền vào `DirectorPlan.language` lẫn `AudioScript.language`. Đoán sai thì người dùng chọn giọng tay trên Giọng Đọc; ngôn ngữ đầu ra khác ngôn ngữ nguồn là việc của khối đạo diễn trong gói, không phải của khối này.
 - `scenes` (Danh sách chỉnh sửa trực tiếp trên thân khối): mỗi mục gồm `sceneType` chọn từ registry, `weight`, và các trường `props` sinh ra từ lược đồ của kiểu cảnh đã chọn. Mặc định là ba cảnh `core/title-card` trọng số 1, 2, 1.
 
 Không có `factBindings` vì không có nguồn dữ kiện; người dùng gõ thẳng giá trị.

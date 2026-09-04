@@ -74,12 +74,12 @@ Gọi GitHub REST API ẩn danh, hạn mức theo địa chỉ IP. Máy chủ ch
 
 ## 3. Khối AI Đạo Diễn (AI Director)
 
-Nhận `FactSheet` và `LLMRef`, phát `DirectorPlan` và `AudioScript`. Tham số: `language` (mặc định `en`). Chủ đề thị giác cố định `github-showcase/developer-dark`, không chọn được ở v0.1.
+Nhận `FactSheet` và `LLMRef`, phát `DirectorPlan` và `AudioScript`. Tham số: `outputLanguage` (mặc định `auto`: bằng ngôn ngữ nguồn do lõi nhận diện từ văn bản của `FactSheet`; chọn `vi` để mô hình viết toàn bộ lời thoại và tiêu đề bằng tiếng Việt dù nguồn là tiếng Anh). Dữ kiện đi qua cổng Dữ kiện không bị dịch. Chủ đề thị giác cố định `github-showcase/developer-dark`, không chọn được ở v0.1.
 
 ### 3.1. Lược đồ kết quả mô hình phải trả về
 
-- `language`: Phải bằng tham số; khác thì thử lại một lần với chỉ dẫn siết chặt, vẫn khác thì lỗi `LLM_LANGUAGE_MISMATCH`.
-- `audioScript`: Lời thoại 10 đến 15 giây đọc, viết bằng `language`.
+- `language`: Phải bằng `outputLanguage` đã phân giải; khác thì thử lại một lần với chỉ dẫn siết chặt, vẫn khác thì lỗi `LLM_LANGUAGE_MISMATCH`.
+- `audioScript`: Lời thoại 10 đến 15 giây đọc, viết bằng `outputLanguage` đã phân giải.
 - `scenes`: Đúng ba mục theo thứ tự:
   1. Hook: `headline` (in hoa, tối đa 6 từ), `subline` (tối đa 10 từ), `badgeText`, `accentColor` (Hex).
   2. Mockup: `headline`, `featureHighlights` (đúng 3 chuỗi ngắn), `accentColor`.
@@ -151,7 +151,7 @@ Ba kiểu cảnh đăng ký vào scene registry, mỗi kiểu có renderer Remot
 
 ### Kịch bản 3b: Đổi Ngôn Ngữ của Video
 
-1. Trên Khối AI Đạo Diễn chọn Tiếng Việt; khối đó và phía sau chuyển sang cũ.
+1. Trên Khối AI Đạo Diễn đặt `outputLanguage` là Tiếng Việt; khối đó và phía sau chuyển sang cũ.
 2. Bấm Chạy Luồng. Nhập Liệu, Truy Xuất Repo và ba khối tài nguyên dùng lại; AI Đạo Diễn chạy lại, sinh lời thoại và tiêu đề tiếng Việt, thử lại một lần nếu mô hình sai ngôn ngữ.
 3. Giọng Đọc nhận `language` là `vi`, tự chọn giọng tiếng Việt; không có thì dùng giọng dự phòng kèm huy hiệu vàng.
 4. Video mới có chữ và tiếng tiếng Việt. Ngôn ngữ giao diện không đổi.

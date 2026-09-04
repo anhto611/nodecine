@@ -149,7 +149,7 @@ Toàn bộ mệnh đề sau đúng trên đồ thị Kịch Bản Tĩnh, không 
 11. Thay Remotion Engine bằng Hyperframes Engine: Xuất Bản Video chuyển viền vàng kèm lớp phủ, không khối nào phía trước chạy lại.
 12. Gỡ ffmpeg rồi chạy: System TTS Provider vàng nêu lệnh cài, Giọng Đọc `blocked` viền vàng cùng lý do, không tiến trình nào được sinh ra.
 13. Đổi ngôn ngữ giao diện trong Cài đặt: mọi chuỗi đổi ngay, lựa chọn giữ sau khi tải lại.
-14. Đổi `language` trên Kịch Bản Tĩnh sang `vi` rồi chạy lại: Giọng Đọc tự chọn giọng tiếng Việt, hoặc dùng giọng dự phòng kèm huy hiệu vàng nếu máy không có.
+14. Dán lời thoại tiếng Việt vào Kịch Bản Tĩnh rồi chạy lại: khối tự nhận diện `vi`, Giọng Đọc tự chọn giọng tiếng Việt, hoặc dùng giọng dự phòng kèm huy hiệu vàng nếu máy không có.
 15. Một kiểu cảnh không có renderer cho engine đang nối làm Xuất Bản Video `blocked` viền vàng nêu tên kiểu cảnh, không vỡ.
 
 ### 6.2. Pha B — gói GitHub Repo Showcase
@@ -164,7 +164,7 @@ Tiêu chí riêng của gói nằm tại `packs/github-showcase.md` mục 7, ch�
 - Thời gian kết xuất tham chiếu: một video 12 giây ở độ phân giải 1080x1920 nên hoàn tất kết xuất trong khoảng dưới 90 giây trên máy tính xách tay đời mới. Đây là chỉ tiêu tham chiếu để phát hiện suy giảm hiệu năng, không phải cam kết với người dùng.
 - Ngôn ngữ giao diện: đa ngôn ngữ ngay từ v0.1, mặc định tiếng Anh, kèm sẵn tiếng Việt. Toàn bộ chuỗi hiển thị nằm trong tệp từ điển theo mã ngôn ngữ, không có chuỗi nào mã hóa cứng trong thành phần giao diện. Người dùng đổi trong Cài đặt, lựa chọn lưu cục bộ. Ngôn ngữ giao diện và ngôn ngữ của video là hai thứ độc lập.
 - Font chữ: JetBrains Mono (SIL OFL 1.1) cho cả video lẫn giao diện Studio, đóng gói cục bộ trong kho mã, không tải từ mạng lúc chạy. Đây là điều kiện để kết xuất tất định và để ứng dụng chạy được khi ngắt mạng. Font phải có đủ dấu tiếng Việt, đã kiểm tra với JetBrains Mono.
-- Ngôn ngữ của video: mặc định tiếng Anh, chọn trên khối phát Kịch bản Phân cảnh (Kịch Bản Tĩnh, hoặc khối đạo diễn của gói). Danh sách ngôn ngữ có thể chọn là giao của những gì mô hình ngôn ngữ viết được và những gì nhà cung cấp giọng đọc có giọng; ngôn ngữ không có giọng vẫn chọn được nhưng Khối Giọng Đọc sẽ cảnh báo và dùng giọng dự phòng.
+- Ngôn ngữ của video: với Kịch Bản Tĩnh là ngôn ngữ của lời thoại đã dán, tự nhận diện; với khối đạo diễn của gói là tham số `outputLanguage` (mặc định `auto` bằng ngôn ngữ nguồn), vì chỉ ở đó mới có bước viết lại lời. Danh sách ngôn ngữ có thể chọn là giao của những gì mô hình ngôn ngữ viết được và những gì nhà cung cấp giọng đọc có giọng; ngôn ngữ không có giọng vẫn chọn được nhưng Khối Giọng Đọc sẽ cảnh báo và dùng giọng dự phòng.
 
 ## 8. Định hướng Sau v0.1 (Ngoài Phạm vi Hiện tại)
 

@@ -99,9 +99,9 @@ describe('Phase A run', () => {
     expect(executor.runtime('output').reused).toBe(false);
   });
 
-  it('Static Script language "vi" picks a Vietnamese voice with no extra input', async () => {
+  it('a Vietnamese script is detected and picks a Vietnamese voice with no extra input', async () => {
     const { executor, graph, services } = setup();
-    graph.nodes.find((n) => n.id === 'script')!.params.language = 'vi';
+    graph.nodes.find((n) => n.id === 'script')!.params.script = 'Gặp NodeCine. Dựng video ngắn từ đồ thị khối.';
     await executor.run();
     const synth = services.calls.find((c) => c.name === 'synthesize')!;
     expect(synth.args[1]).toBe('linh');
@@ -109,7 +109,7 @@ describe('Phase A run', () => {
 
   it('missing voice for the language falls back and logs TTS_VOICE_LANGUAGE_MISMATCH without failing', async () => {
     const { executor, graph } = setup({ voices: [{ id: 'samantha', displayName: 'Samantha', language: 'en-US' }] });
-    graph.nodes.find((n) => n.id === 'script')!.params.language = 'ja';
+    graph.nodes.find((n) => n.id === 'script')!.params.script = 'ノードグラフから短い動画を作る。';
     const { ok } = await executor.run();
     expect(ok).toBe(true);
     expect(executor.logs.all().some((l) => l.code === 'TTS_VOICE_LANGUAGE_MISMATCH')).toBe(true);

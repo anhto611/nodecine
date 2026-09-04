@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getScene } from '../scenes/registry';
 import { TITLE_CARD } from '../scenes/title-card';
+import { detectLanguage } from '../text/detect-language';
 import type { NodeDefinition } from './definition';
 
 const SceneRow = z.object({
@@ -10,14 +11,12 @@ const SceneRow = z.object({
 });
 
 const Params = z.object({
-  language: z.string().min(2).default('en'),
   theme: z.string().min(1).default('core/dark'),
   script: z.string(),
   scenes: z.array(SceneRow).min(1),
 });
 
 export const DEFAULT_STATIC_SCRIPT = {
-  language: 'en',
   theme: 'core/dark',
   script:
     'Meet NodeCine. Build short videos from a node graph, not a timeline. Wire a source to a script, a voice, and an engine, and press run.',
@@ -55,8 +54,15 @@ export const staticScript: NodeDefinition<typeof Params> = {
     });
     return issues;
   },
-  run: async ({ params }) => ({
-    plan: { language: params.language, theme: params.theme, scenes: params.scenes.map((s) => ({ ...s })) },
-    script: { text: params.script.trim(), language: params.language },
-  }),
+  run: async ({ params, log }) => {
+    // The user pastes the final narration, so its language *is* the video's language: detect it
+    // from the text instead of asking. Voice choice can still be overridden on the TTS Engine.
+    const text = params.script.trim();
+    const language = detectLanguage(text);
+    log('info', `language detected: ${language}`);
+    return {
+      plan: { language, theme: params.theme, scenes: params.scenes.map((s) => ({ ...s })) },
+      script: { text, language },
+    };
+  },
 };

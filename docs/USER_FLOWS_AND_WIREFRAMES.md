@@ -141,7 +141,7 @@ Khối Xuất MP4 (MP4 Export):
 Khối duy nhất của lõi cho phép dựng video hoàn toàn bằng tay, và là đồ thị nghiệm thu của Pha A.
 
 - Hai cổng phát: "Kịch bản Phân cảnh" và "Lời thoại". Không cổng nhận.
-- Thân khối: hộp chọn ngôn ngữ (mặc định English), ô văn bản nhiều dòng cho lời thoại, và danh sách cảnh. Mỗi cảnh là một hàng gồm hộp chọn kiểu cảnh (lấy từ scene registry, mặc định `core/title-card`), ô trọng số, và các ô nội dung sinh ra từ lược đồ của kiểu cảnh đã chọn. Nút thêm và xóa cảnh; kéo để đổi thứ tự.
+- Thân khối: ô văn bản nhiều dòng cho lời thoại (ngôn ngữ tự nhận diện từ văn bản, không có hộp chọn), và danh sách cảnh. Mỗi cảnh là một hàng gồm hộp chọn kiểu cảnh (lấy từ scene registry, mặc định `core/title-card`), ô trọng số, và các ô nội dung sinh ra từ lược đồ của kiểu cảnh đã chọn. Nút thêm và xóa cảnh; kéo để đổi thứ tự.
 - Mặc định ba cảnh `core/title-card` trọng số 1, 2, 1 với nội dung mẫu, để người dùng bấm Chạy Luồng là có video ngay.
 
 ## 2. Quy chuẩn Cấu trúc Khối Chức Năng (Node Anatomy)
