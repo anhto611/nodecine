@@ -7,7 +7,7 @@ import { Btn, useT } from '../ui';
 type Card = { id: string; nameKey: string; descKey: string; nodes: number; category: string; status: 'ready' | 'phaseB' | 'soon' };
 const CARDS: Card[] = [
   { id: 'static-script', nameKey: 'templates.staticScript', descKey: 'templates.staticScriptDesc', nodes: 7, category: 'core', status: 'ready' },
-  { id: 'github-showcase', nameKey: 'templates.github', descKey: 'templates.githubDesc', nodes: 10, category: 'tech', status: 'phaseB' },
+  { id: 'github-showcase', nameKey: 'templates.github', descKey: 'templates.githubDesc', nodes: 10, category: 'tech', status: 'ready' },
   { id: 'mobile-app', nameKey: 'Mobile App Promo', descKey: '', nodes: 0, category: 'tech', status: 'soon' },
   { id: 'changelog', nameKey: 'Product Changelog', descKey: '', nodes: 0, category: 'tech', status: 'soon' },
   { id: 'reddit', nameKey: 'Reddit Storytelling', descKey: '', nodes: 0, category: 'faceless', status: 'soon' },
