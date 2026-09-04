@@ -264,8 +264,9 @@ Trên macOS: `say` ghi AIFF vào thư mục tệp tạm, ffmpeg chuyển sang MP
 Một gói bản mẫu là một thư mục tự đăng ký lúc khởi động, gồm:
 
 - Các **khối** riêng của gói, dùng đúng chín kiểu cổng của lõi. Thường là một khối truy xuất phát `FactSheet` và một khối đạo diễn nhận `FactSheet` cùng `LLMRef`, phát `DirectorPlan` và `AudioScript`.
-- Các **kiểu cảnh** kèm lược đồ `props` và renderer cho từng engine hỗ trợ.
-- Một hoặc nhiều **đồ thị mẫu** nối sẵn, xuất hiện trong Trình duyệt Bản mẫu.
+- Các **kiểu cảnh** kèm lược đồ `props` và renderer cho từng engine hỗ trợ. Lược đồ đăng ký ở phần đẳng hình của gói (chạy cả trên máy khách lẫn máy chủ) để bản kế hoạch kiểm định được ngay cả khi chưa có renderer; renderer đăng ký qua `registerSceneRenderer(sceneType, engineId, renderer)`. Gói không nhập Adapter của engine; ngược lại, danh sách renderer của engine gọi vào hàm đăng ký của gói, vì trình phát và bundle kết xuất là hai đồ thị mô-đun tách biệt, mỗi bên phải tự đăng ký.
+- Một hoặc nhiều **đồ thị mẫu** nối sẵn, đăng ký qua `registerTemplate(id, () => Graph)` trong `core/templates/registry`; Trình duyệt Bản mẫu đọc từ registry đó nên lõi không biết tên gói nào. Lõi tự đăng ký đồ thị Kịch Bản Tĩnh theo đúng cơ chế này.
 - Bài kiểm thử riêng, tối thiểu là bài "dữ kiện trong IR bằng đúng dữ kiện trong `FactSheet`".
+- **Handler máy chủ** khi khối của gói cần mạng hay hệ tệp. Khối vẫn chạy trên máy khách như mọi khối; nó gọi `services.packRequest(pack, op, input, signal)`, ứng dụng chuyển tiếp tới `POST /api/packs/<pack>/<op>`, và route tra handler mà gói đã đăng ký qua `registerPackHandler(pack, op, fn)` trong `core/packs/handlers`. Lõi chỉ giữ registry rỗng và kênh chuyển tiếp chung; không có phương thức riêng cho gói nào trong `NodeServices`. Kiểm thử thay handler bằng hàm giả.
 
 Gói không được: thêm kiểu cổng, sửa lược đồ IR, nhập trực tiếp một engine thay vì đăng ký renderer, hay giữ trạng thái ngoài các khối của nó. Gói đầu tiên là `github-showcase`, đặc tả tại `packs/github-showcase.md`.

@@ -59,7 +59,7 @@ nodecine/
 │  ├─ page.tsx                    Trang Studio duy nhất
 │  ├─ layout.tsx
 │  └─ api/
-│     ├─ github/route.ts          Truy xuất Hồ Sơ Repo
+│     ├─ packs/[pack]/[op]/route.ts  RPC chung cho gói: chuyển tiếp tới handler mà gói đã đăng ký (Truy Xuất Repo đi qua đây)
 │     ├─ director/route.ts        Gọi nhà cung cấp mô hình ngôn ngữ theo LLMRef
 │     ├─ tts/route.ts             Gọi nhà cung cấp giọng đọc theo TTSRef
 │     ├─ providers/probe/route.ts Kiểm tra sẵn sàng cho các khối tài nguyên
@@ -71,6 +71,9 @@ nodecine/
 │  ├─ engine/                     Bộ máy thực thi đồ thị, chữ ký khối, bộ nhớ đệm
 │  ├─ assembler/                  Phân bổ khung hình theo trọng số, đè dữ kiện, kiểm định IR
 │  ├─ scenes/                     Scene registry rỗng + kiểu cảnh core/title-card (lược đồ props)
+│  ├─ packs/handlers.ts           Registry rỗng cho handler máy chủ của gói: (pack, op) → hàm
+│  ├─ templates/registry.ts       Registry đồ thị mẫu: templateId → hàm tạo Graph; lõi đăng ký Kịch Bản Tĩnh, gói đăng ký của gói
+│  ├─ text/detect-language.ts     Nhận diện ngôn ngữ theo hệ chữ, dùng bởi Kịch Bản Tĩnh
 │  ├─ adapters/                   CHỈ giao diện Adapter và registry rỗng; không có lớp cài đặt nào ở đây
 │  │  ├─ types.ts                 EngineAdapter, probe / mountPlayer / render
 │  │  └─ registry.ts              engineId → factory; các gói engines/ tự đăng ký lúc khởi động
@@ -89,9 +92,15 @@ nodecine/
 │  └─ system-tts/index.ts         macOS say + ffmpeg
 ├─ packs/                         Gói bản mẫu, mỗi gói tự đăng ký lúc khởi động (Pha B trở đi)
 │  └─ github-showcase/
+│     ├─ index.ts                 Đăng ký khối (đẳng hình, chạy cả hai phía)
+│     ├─ constants.ts             PACK_ID, phiên bản; không nhập gì
+│     ├─ parse-source.ts, facts.ts  Nhận diện link repo, dựng dữ kiện; hàm thuần, có test
 │     ├─ nodes/{github-fetcher,ai-director}.ts
-│     ├─ scenes/{hook,mockup,cta}/ Lược đồ props + renderer Remotion
-│     └─ template.ts              Đồ thị mẫu 10 khối
+│     ├─ server/                  Handler máy chủ (gọi GitHub), đăng ký vào core/packs/handlers
+│     ├─ ui/                      Thân khối và metadata thư viện, đăng ký lúc khởi động máy khách
+│     ├─ scenes/schemas.ts        Lược đồ props ba kiểu cảnh, đăng ký vào scene registry
+│     ├─ remotion/{Hook,Mockup,Cta}.tsx  Renderer Remotion, đăng ký qua registerSceneRenderer; engines/remotion/renderers.ts gọi vào
+│     └─ template.ts              Đồ thị mẫu 10 khối, đăng ký vào core/templates/registry
 ├─ components/                    Thành phần giao diện Studio
 ├─ locales/                       Từ điển chuỗi hiển thị
 └─ docs/
@@ -140,8 +149,8 @@ Quy tắc ghi nhật ký, áp dụng ngay từ v0.1: mọi thông báo lỗi chu
 
 Tầng máy chủ nhận đường dẫn từ máy khách rồi đi gọi ra ngoài, nên nó là một điểm cần phòng vệ ngay cả khi chỉ chạy trên máy cá nhân. Nếu người dùng mở một đồ thị do người khác chia sẻ, đường dẫn trong đồ thị đó là dữ liệu không đáng tin.
 
-- Điểm cuối truy xuất repo chỉ chấp nhận đường dẫn thuộc đúng miền GitHub. Đường dẫn tới địa chỉ nội bộ, địa chỉ vòng lặp cục bộ và địa chỉ dải riêng bị từ chối thẳng.
-- Máy chủ tự dựng lại đường dẫn gọi ra từ cặp tên chủ sở hữu và tên repo đã tách được, thay vì chuyển tiếp nguyên văn chuỗi người dùng đưa vào.
+- Máy khách không bao giờ gửi đường dẫn: khối Truy Xuất Repo tách cặp tên chủ sở hữu và tên repo ngay trên máy khách, chỉ cặp đó đi qua `POST /api/packs/github-showcase/fetch-repo`. Máy chủ kiểm tra lại cặp này bằng biểu thức chính quy rồi tự dựng mọi đường dẫn gọi ra trên hai máy chủ cố định `api.github.com` và `raw.githubusercontent.com`; vì thế không tồn tại cách nào để một đồ thị chia sẻ khiến máy này gọi tới địa chỉ nội bộ hay dải riêng.
+- Điểm cuối RPC của gói (`/api/packs/<pack>/<op>`) chỉ nhận hai đoạn đường dẫn chữ thường và gạch ngang, tra trong registry `core/packs/handlers`; gói chưa đăng ký thì 404. Lỗi `NodeError` được trả về nguyên mã, thông báo và cờ thử lại để khối hiện đúng.
 - Điểm cuối kết xuất chỉ nhận Bản Đặc Tả Video Trung Gian đã qua kiểm định lược đồ, và chỉ chấp nhận đường dẫn âm thanh trỏ vào chính thư mục tệp tạm của ứng dụng.
 - Các điểm cuối sinh tiến trình con tuân thủ quy tắc tại Hợp đồng Lõi mục 9: đối số dạng mảng, nội dung qua đầu vào chuẩn, đường dẫn tệp thực thi không lấy từ tệp dự án.
 

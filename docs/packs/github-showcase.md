@@ -45,7 +45,7 @@ Nhận `SourceRef`, phát `FactSheet`. Khối duy nhất của gói gọi ra m�
 
 ### 2.1. Nhận diện nguồn
 
-Giá trị được coi là đường dẫn repo khi khớp mẫu GitHub gồm tên chủ sở hữu và tên repo. Mọi trường hợp còn lại là văn bản thô, khi đó khối **đi qua** (passthrough): không gọi mạng, đóng gói văn bản vào `facts.readmeExcerpt` và để trống các dữ kiện khác. Không có tham số nào ép khối đi qua với một đường dẫn hỏng, vì như thế sẽ đưa chính đường dẫn đó vào `readmeExcerpt`.
+Giá trị được coi là đường dẫn repo khi khớp mẫu GitHub gồm tên chủ sở hữu và tên repo: `https://github.com/owner/name` (chấp nhận `www.`, `.git`, dấu gạch cuối, đuôi `/tree/...`, `/blob/...`, tham số truy vấn), `github.com/owner/name`, hoặc đúng chuỗi `owner/name` không kèm gì khác. Mọi trường hợp còn lại là văn bản thô, khi đó khối **đi qua** (passthrough): không gọi mạng, đóng gói văn bản vào `facts.readmeExcerpt` và để trống các dữ kiện khác. Không có tham số nào ép khối đi qua với một đường dẫn hỏng, vì như thế sẽ đưa chính đường dẫn đó vào `readmeExcerpt`.
 
 ### 2.2. Các khóa trong `facts`
 
@@ -68,7 +68,7 @@ Xét theo thứ tự, lấy kết quả khớp đầu tiên: tệp khai báo gó
 
 ### 2.4. Mạng và hạn mức
 
-Gọi GitHub REST API ẩn danh, hạn mức theo địa chỉ IP. Máy chủ chỉ chấp nhận miền GitHub và tự dựng lại đường dẫn từ cặp owner và name đã tách, theo Kiến trúc Hệ thống mục 5. Thời gian chờ 10 giây, tự thử lại 2 lần với lỗi tạm thời, không thử lại với `REPO_NOT_FOUND` và `REPO_RATE_LIMITED`.
+Gọi GitHub REST API ẩn danh, hạn mức theo địa chỉ IP; đặt `GITHUB_TOKEN` trong `.env` để nâng hạn mức. Mỗi lần truy xuất tốn tối đa ba lượt API (thông tin repo, README thô, cây tệp gốc); các tệp khai báo gói lấy qua `raw.githubusercontent.com`, không tính vào hạn mức. Khối tách cặp owner/name trên máy khách và chỉ gửi cặp đó lên máy chủ qua kênh RPC của gói (Hợp đồng Lõi mục 10). Máy chủ chỉ chấp nhận miền GitHub và tự dựng lại đường dẫn từ cặp owner và name đã tách, theo Kiến trúc Hệ thống mục 5. Thời gian chờ 10 giây, tự thử lại 2 lần với lỗi tạm thời, không thử lại với `REPO_NOT_FOUND` và `REPO_RATE_LIMITED`.
 
 ---
 
@@ -104,13 +104,15 @@ Trọng số 1, 2, 1 cho phân bổ 25%, 50%, 25% theo quy tắc của lõi, v�
 
 ### 3.3. Lời nhắc
 
-Lời nhắc gửi cho mô hình chứa: `readmeExcerpt`, `description`, `topics`, `primaryLanguage`, và `name`; **không** chứa `stars`, `installCommand`, `url`, để mô hình không có gì để chép sai. Lời nhắc đi qua đầu vào chuẩn của tiến trình con theo Hợp đồng Lõi mục 9. Thời gian chờ 120 giây, cộng thời gian khởi động tiến trình.
+Lời nhắc gửi cho mô hình chứa: `readmeExcerpt`, `description`, `topics`, `primaryLanguage`, và `name`; **không** chứa `stars`, `installCommand`, `url`, để mô hình không có gì để chép sai. Lời nhắc đi qua đầu vào chuẩn của tiến trình con theo Hợp đồng Lõi mục 9. Thời gian chờ 120 giây, cộng thời gian khởi động tiến trình. Lời nhắc yêu cầu 25 đến 35 từ cho lời thoại (đo thực tế: 43 từ đọc bằng giọng hệ thống mất 19 giây, vượt mục tiêu 10 đến 15 giây) và ghi rõ hình dạng JSON mong đợi.
+
+Đường đi của lệnh gọi: khối gọi `services.complete(ref, prompt, schema)`; máy khách gửi `POST /api/director` với `providerId`, `settings`, `prompt`; route chỉ đảm bảo "một object JSON hợp lệ" và trả nguyên văn; khối kiểm định lược đồ mục 3.1 trên máy khách để giữ trọn quy tắc thử lại và nội dung thô trong khối. Mô hình trả về `en-US` khi được yêu cầu `en` vẫn được chấp nhận (so sánh phần chính của mã ngôn ngữ).
 
 ---
 
 ## 4. Kiểu Cảnh của Gói
 
-Ba kiểu cảnh đăng ký vào scene registry, mỗi kiểu có renderer Remotion ở v0.1; renderer Hyperframes để v0.2. Chủ đề `github-showcase/developer-dark`: nền tối, font JetBrains Mono, hiệu ứng cửa sổ Terminal.
+Ba kiểu cảnh đăng ký vào scene registry, mỗi kiểu có renderer Remotion ở v0.1; renderer Hyperframes để v0.2. Chủ đề `github-showcase/developer-dark`: nền tối, font JetBrains Mono, hiệu ứng cửa sổ Terminal. Lược đồ `props` gồm hai phần: các trường mô hình viết (`HookModelSchema` và hai lược đồ tương ứng, dùng lại làm lược đồ đầu ra của AI Đạo Diễn) và các trường đè từ dữ kiện, khai báo tùy chọn để bản kế hoạch vẫn hợp lệ trước khi Đóng Gói Timeline đè vào.
 
 ### 4.1. `github-showcase/hook`
 

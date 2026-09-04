@@ -10,6 +10,8 @@ export function makeFakeServices(overrides: Partial<{
   remotionRender: boolean;
   claudeAuthenticated: boolean;
   secondsPerChar: number;
+  packHandlers: Record<string, (input: unknown) => Promise<unknown>>;
+  complete: (prompt: string) => Promise<unknown>;
 }> = {}) {
   const o = {
     ttsInstalled: true,
@@ -21,6 +23,8 @@ export function makeFakeServices(overrides: Partial<{
     remotionRender: true,
     claudeAuthenticated: true,
     secondsPerChar: 0.07,
+    packHandlers: {} as Record<string, (input: unknown) => Promise<unknown>>,
+    complete: (async () => { throw new Error('not used in core tests'); }) as (prompt: string) => Promise<unknown>,
     ...overrides,
   };
   const calls: { name: string; args: unknown[] }[] = [];
@@ -32,6 +36,12 @@ export function makeFakeServices(overrides: Partial<{
     calls,
     setOptions: (p) => Object.assign(o, p),
     now: () => (clock += 7),
+    async packRequest(pack, op, input) {
+      calls.push({ name: 'packRequest', args: [pack, op, input] });
+      const h = o.packHandlers[`${pack}/${op}`];
+      if (!h) throw Object.assign(new Error(`no fake handler for ${pack}/${op}`), { code: 'NODE_TYPE_UNKNOWN' });
+      return h(input);
+    },
     async probeLLM(providerId, settings): Promise<LLMRef> {
       calls.push({ name: 'probeLLM', args: [providerId, settings] });
       return {
@@ -77,9 +87,9 @@ export function makeFakeServices(overrides: Partial<{
       const durationSeconds = Math.round(((text.length * o.secondsPerChar) / speed) * 100) / 100;
       return { audioUrl: `/api/media/${contentHash({ text, voice: voice.id, speed })}.mp3`, durationSeconds, voiceName: voice.id, language: voice.language, speed };
     },
-    async complete() {
-      calls.push({ name: 'complete', args: [] });
-      throw new Error('not used in core tests');
+    async complete(_ref, prompt, schema) {
+      calls.push({ name: 'complete', args: [prompt] });
+      return schema.parse(await o.complete(prompt));
     },
     async render(_ref, ir, settings, onProgress, signal) {
       calls.push({ name: 'render', args: [settings] });

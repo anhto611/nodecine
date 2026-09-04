@@ -6,6 +6,7 @@ import type { NodeRuntime } from '@/core/engine/state';
 import { RunHistory, type RunRecord } from '@/core/engine/history';
 import { getNodeType } from '@/core/nodes/definition';
 import { staticScriptTemplate } from '@/core/templates/static-script';
+import { getTemplate } from '@/core/templates/registry';
 import type { VideoIR } from '@/core/types/ir';
 import type { EngineRef } from '@/core/types/payloads';
 import { clientServices } from '@/lib/services.client';
@@ -14,7 +15,8 @@ import { loadProject, loadUiPrefs, saveProject, saveUiPrefs, PROJECT_SCHEMA_VERS
 import type { Locale } from '@/lib/i18n';
 
 export type Panel = 'library' | 'history' | null;
-export type TemplateId = 'static-script' | 'blank';
+/** A registered template id (core/templates/registry) or 'blank'. */
+export type TemplateId = string;
 
 export interface StudioState {
   ready: boolean;
@@ -242,7 +244,7 @@ export const useStudio = create<StudioState>((set, get) => {
     },
 
     loadTemplate(id) {
-      const graph = id === 'static-script' ? staticScriptTemplate() : { nodes: [], edges: [] };
+      const graph = id === 'blank' ? { nodes: [], edges: [] } : (getTemplate(id)?.() ?? { nodes: [], edges: [] });
       const executor = get().executor;
       executor?.setGraph(graph);
       refresh(graph);

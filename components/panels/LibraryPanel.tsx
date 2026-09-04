@@ -36,7 +36,7 @@ export const LibraryPanel: React.FC = () => {
           if (!items.length) return null;
           return (
             <div key={g}>
-              <div className="nc-grp">{(GROUP_ORDER as string[]).includes(g) ? t(`library.group.${g}`) : g}</div>
+              <div className="nc-grp">{t(`library.group.${g}`)}</div>
               {items.map((d) => <LibraryItem key={d.type} def={d} onAdd={addNode} />)}
             </div>
           );

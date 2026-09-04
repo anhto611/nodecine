@@ -238,3 +238,8 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/timeline-assembler': AssemblerBody,
   'core/mp4-export': ExportBody,
 };
+
+/** Packs register bodies for their own node types. */
+export function registerNodeBody(type: string, body: React.FC<BodyProps>): void {
+  NODE_BODIES[type] = body;
+}

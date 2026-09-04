@@ -2,7 +2,9 @@
 export type IconKey = 'bolt' | 'doc' | 'term' | 'mic' | 'wave' | 'layers' | 'chip' | 'screen' | 'down' | 'branch' | 'bot';
 export type LibraryGroup = 'source' | 'provider' | 'process' | 'engine' | 'output';
 
-export const NODE_META: Record<string, { icon: IconKey; group: LibraryGroup; soon?: boolean }> = {
+export type NodeMeta = { icon: IconKey; group: LibraryGroup | string; soon?: boolean };
+
+export const NODE_META: Record<string, NodeMeta> = {
   'core/input-trigger': { icon: 'bolt', group: 'source' },
   'core/static-script': { icon: 'doc', group: 'source' },
   'core/claude-code-provider': { icon: 'term', group: 'provider' },
@@ -16,3 +18,8 @@ export const NODE_META: Record<string, { icon: IconKey; group: LibraryGroup; soo
 };
 
 export const GROUP_ORDER: LibraryGroup[] = ['source', 'provider', 'process', 'engine', 'output'];
+
+/** Packs call this from their client registration so their nodes get an icon and a library group. */
+export function registerNodeMeta(type: string, meta: NodeMeta): void {
+  NODE_META[type] = meta;
+}

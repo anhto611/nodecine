@@ -119,6 +119,7 @@ Ranh giới trách nhiệm:
 
 Khung phải chạy được và qua nghiệm thu trước khi bất kỳ gói nào bắt đầu. Lý do: mọi quyết định của gói đều xây trên hợp đồng lõi, và lỗi ở lõi phát hiện sau khi có gói sẽ tốn gấp nhiều lần.
 
+- **Pha B — gói đầu tiên.** Gói `github-showcase` gồm Truy Xuất Repo, AI Đạo Diễn, ba kiểu cảnh kèm renderer Remotion và đồ thị mẫu mười khối; kênh RPC chung cho gói và registry đồ thị mẫu nằm ở lõi. Hoàn thành 2026-09-05, nghiệm thu bằng một lần chạy thật từ đường dẫn repo tới MP4.
 - **Pha A — khung lõi.** Tầng lõi, ba registry, bộ khối lõi, giao diện Studio, đa ngôn ngữ, Remotion Adapter, Hyperframes khung xương. Đồ thị nghiệm thu là **đồ thị Kịch Bản Tĩnh** bảy khối: Kịch Bản Tĩnh, System TTS Provider, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Xuất Bản Video, Xuất MP4. Không mạng, không mô hình ngôn ngữ, không khóa. Đây là bản mẫu "Canvas trống có sẵn ví dụ" trong Trình duyệt Bản mẫu.
 - **Pha B — gói GitHub Repo Showcase.** Hai khối, ba kiểu cảnh, đồ thị mẫu mười khối, theo `packs/github-showcase.md`. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
 

@@ -21,5 +21,10 @@ export interface NodeServices {
     onProgress: (p: RenderProgress) => void,
     signal: AbortSignal,
   ): Promise<RenderResult>;
+  /**
+   * Call a server-side handler a pack registered under (pack, op) (CORE_CONTRACTS §10).
+   * The app forwards it to POST /api/packs/<pack>/<op>; tests stub it.
+   */
+  packRequest(pack: string, op: string, input: unknown, signal: AbortSignal): Promise<unknown>;
   now(): number;
 }
