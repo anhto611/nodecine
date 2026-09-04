@@ -13,6 +13,7 @@ import {
   type NodeChange,
   type EdgeChange,
   type IsValidConnection,
+  applyNodeChanges,
 } from '@xyflow/react';
 import { getNodeType } from '@/core/nodes/definition';
 import { useStudio } from '@/store/useStudio';
@@ -21,6 +22,16 @@ import { Icon } from './icons';
 import { useT } from './ui';
 
 const nodeTypes = { nc: NodeCard };
+
+type GraphNode = { id: string; position: { x: number; y: number } };
+function syncNodes(prev: NcNode[], graphNodes: GraphNode[]): NcNode[] {
+  const byId = new Map(prev.map((n) => [n.id, n]));
+  return graphNodes.map((n) => {
+    const p = byId.get(n.id);
+    if (p && p.position.x === n.position.x && p.position.y === n.position.y) return p;
+    return { ...(p ?? { data: { nodeId: n.id } }), id: n.id, type: 'nc' as const, position: n.position, dragHandle: '.nc-hdr' };
+  });
+}
 
 /** The graph canvas: React Flow bound to the store's graph; edges glow once their source has a result. */
 function CanvasInner() {
@@ -37,10 +48,13 @@ function CanvasInner() {
   const rf = useReactFlow();
   const [zoom, setZoom] = React.useState(1);
 
-  const nodes: NcNode[] = React.useMemo(
-    () => graph.nodes.map((n) => ({ id: n.id, type: 'nc' as const, position: n.position, data: { nodeId: n.id }, dragHandle: '.nc-hdr' })),
-    [graph.nodes],
-  );
+  // React Flow owns node positions while a drag is in progress (so the node follows the pointer
+  // every frame); the store is only written on drop. `syncNodes` reuses node objects whose
+  // position did not change so untouched cards do not re-render.
+  const [nodes, setNodes] = React.useState<NcNode[]>(() => syncNodes([], graph.nodes));
+  React.useEffect(() => {
+    setNodes((prev) => syncNodes(prev, graph.nodes));
+  }, [graph.nodes]);
   const edges: Edge[] = React.useMemo(
     () =>
       graph.edges.map((e) => ({
@@ -55,6 +69,7 @@ function CanvasInner() {
   );
 
   const onNodesChange = (changes: NodeChange<Node>[]) => {
+    setNodes((ns) => applyNodeChanges(changes, ns as Node[]) as NcNode[]);
     const removed: string[] = [];
     for (const c of changes) {
       if (c.type === 'position' && c.position && !c.dragging) setNodePosition(c.id, c.position);
