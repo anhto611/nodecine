@@ -1,6 +1,6 @@
 # Hợp đồng Lõi (Core Contracts)
 
-Tài liệu này định nghĩa phần **khung** của NodeCine: những hợp đồng mà mọi khối, mọi gói bản mẫu và mọi engine đều phải tuân theo, và không chứa bất kỳ chi tiết nào của một bản mẫu cụ thể. Chi tiết của bản mẫu đầu tiên nằm ở `packs/github-showcase.md`.
+Tài liệu này định nghĩa phần **khung** của NodeCine: những hợp đồng mà mọi khối, mọi gói khối và mọi engine đều phải tuân theo, và không chứa bất kỳ chi tiết nào của một bản mẫu cụ thể. Chi tiết của bản mẫu đầu tiên nằm ở `packs/github-showcase.md`.
 
 Nguyên tắc phân tầng: **lõi định nghĩa hình dạng, gói định nghĩa nội dung.** Lõi biết có "cảnh" nhưng không biết cảnh Hook là gì; biết có "dữ kiện" nhưng không biết số sao GitHub là gì. Mọi thứ lõi không biết đều được tra qua registry, cùng một pattern cho engine, nhà cung cấp và kiểu cảnh.
 
@@ -12,7 +12,7 @@ Tài liệu liên quan: Kiến trúc Hệ thống mô tả nơi từng phần th
 
 ### 1.1. Kiểu cổng
 
-Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ được phép tạo khi định danh kiểu ở cổng xuất trùng khớp tuyệt đối với định danh kiểu ở cổng nhận. Không có cơ chế ép kiểu ngầm. Lõi định nghĩa chín kiểu; gói bản mẫu không được thêm kiểu cổng mới, chỉ được định nghĩa hình dạng cụ thể của `payload` bên trong các kiểu có sẵn.
+Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ được phép tạo khi định danh kiểu ở cổng xuất trùng khớp tuyệt đối với định danh kiểu ở cổng nhận. Không có cơ chế ép kiểu ngầm. Lõi định nghĩa chín kiểu; gói khối không được thêm kiểu cổng mới, chỉ được định nghĩa hình dạng cụ thể của `payload` bên trong các kiểu có sẵn.
 
 | Định danh kiểu | Nhãn hiển thị | Ý nghĩa | Khối lõi phát | Khối lõi nhận |
 | --- | --- | --- | --- | --- |
@@ -81,7 +81,7 @@ Quy ước cốt lõi: mọi giá trị trong `facts` có nguồn gốc xác đ�
 
 ## 3. Bản Đặc Tả Video Trung Gian (Universal Video IR)
 
-Cấu trúc duy nhất do Khối Đóng Gói Timeline tạo ra, độc lập với engine **và độc lập với gói bản mẫu**. Đây là ranh giới giữa phần dựng nội dung và phần kết xuất.
+Cấu trúc duy nhất do Khối Đóng Gói Timeline tạo ra, độc lập với engine **và độc lập với gói khối**. Đây là ranh giới giữa phần dựng nội dung và phần kết xuất.
 
 - `irVersion` (Số nguyên): Phiên bản lược đồ, hiện là `1`. Adapter từ chối nạp phiên bản không hỗ trợ.
 - `meta`:
@@ -117,7 +117,7 @@ Lõi có một hàm kiểm định IR chạy ở Khối Đóng Gói Timeline tr�
 
 Cùng pattern với registry của Adapter và Provider: tầng lõi giữ một bảng rỗng `sceneType → { engineId → renderer }`, các gói tự đăng ký lúc khởi động.
 
-- Mỗi gói bản mẫu khai báo các kiểu cảnh của nó cùng lược đồ `props` (Zod) và một renderer cho mỗi engine nó hỗ trợ. Renderer cho Remotion là một component React; cho Hyperframes là một hàm vẽ Canvas.
+- Mỗi gói khối khai báo các kiểu cảnh của nó cùng lược đồ `props` (Zod) và một renderer cho mỗi engine nó hỗ trợ. Renderer cho Remotion là một component React; cho Hyperframes là một hàm vẽ Canvas.
 - Lõi có sẵn một kiểu cảnh tối thiểu để khung chạy được mà không cần gói nào: `core/title-card` với `props` gồm `headline` (bắt buộc), `subline` và `accentColor` (tùy chọn). Kiểu cảnh này có renderer cho mọi engine mà lõi ship.
 - Khối Xuất Bản Video và Khối Xuất MP4, trước khi nạp, tra từng `sceneType` trong `timeline` với `engineId` của tham chiếu đang nối vào. Thiếu renderer nào thì khối chuyển `blocked` với viền vàng và mã lý do `ENGINE_SCENE_UNSUPPORTED` kèm danh sách kiểu cảnh thiếu. Đây là cách một gói chỉ hỗ trợ Remotion vẫn sống chung với một engine khác mà không vỡ.
 - Thêm bản mẫu mới không bao giờ đụng tới lược đồ IR, Adapter hay khối lõi: chỉ thêm kiểu cảnh vào registry và khối vào Thư viện.
@@ -261,16 +261,18 @@ Ví dụ với bộ tổng hợp của hệ điều hành trên macOS: `say` ghi
 
 ---
 
-## 10. Gói Bản Mẫu (Template Pack) Là Gì
+## 10. Gói Khối (Node Pack) Là Gì
 
-Một gói bản mẫu là một thư mục tự đăng ký lúc khởi động, gồm:
+Một gói khối là một thư mục tự đăng ký lúc khởi động. **Gói được định nghĩa bằng các khối nó đăng ký**, đúng như một custom node pack của ComfyUI được định nghĩa bằng `NODE_CLASS_MAPPINGS` — module thiếu thứ đó thì ComfyUI không nạp. Đồ thị mẫu là phần kèm thêm tùy chọn, tương ứng thư mục `example_workflows` của ComfyUI: đồ thị gọi tên khối, khối không bao giờ thuộc về một đồ thị. Gói không có đồ thị mẫu nào vẫn là gói bình thường.
 
-- Các **khối** riêng của gói, dùng đúng chín kiểu cổng của lõi. Thường là một khối truy xuất phát `FactSheet` và một khối đạo diễn nhận `FactSheet` cùng `LLMRef`, phát `DirectorPlan` và `AudioScript`.
+Một gói gồm:
+
+- Các **khối** riêng của gói, dùng đúng chín kiểu cổng của lõi. Đây là phần bắt buộc. Thường là một khối truy xuất phát `FactSheet` và một khối đạo diễn nhận `FactSheet` cùng `LLMRef`, phát `DirectorPlan` và `AudioScript` — nhưng cổng vào của khối đạo diễn là do gói chọn, `quote-cards` nhận thẳng `SourceRef`.
 - Các **kiểu cảnh** kèm lược đồ `props` và renderer cho từng engine hỗ trợ. Lược đồ đăng ký ở phần đẳng hình của gói (chạy cả trên máy khách lẫn máy chủ) để bản kế hoạch kiểm định được ngay cả khi chưa có renderer; renderer đăng ký qua `registerSceneRenderer(sceneType, engineId, renderer)`. Gói không nhập Adapter của engine; ngược lại, danh sách renderer của engine gọi vào hàm đăng ký của gói, vì trình phát và bundle kết xuất là hai đồ thị mô-đun tách biệt, mỗi bên phải tự đăng ký.
-- Một hoặc nhiều **đồ thị mẫu** nối sẵn, đăng ký qua `registerTemplate(id, () => Graph)` trong `core/templates/registry`; Trình duyệt Bản mẫu đọc từ registry đó nên lõi không biết tên gói nào. Lõi tự đăng ký đồ thị Kịch Bản Tĩnh theo đúng cơ chế này.
+- **Tùy chọn:** một hoặc nhiều **đồ thị mẫu** nối sẵn, khai trong trường `exampleGraphs` của `PackDefinition` như dữ liệu, không phải bằng lời gọi bên trong `register()`. `installPack()` đưa chúng vào `core/templates/registry`; Trình duyệt Bản mẫu đọc từ registry đó nên lõi không biết tên gói nào. Lõi tự đăng ký đồ thị Kịch Bản Tĩnh vào cùng registry mà không qua gói nào — bằng chứng rằng đồ thị mẫu và gói là hai thứ độc lập.
 - Bài kiểm thử riêng, tối thiểu là bài "dữ kiện trong IR bằng đúng dữ kiện trong `FactSheet`".
 - **Handler máy chủ** khi khối của gói cần mạng hay hệ tệp. Khối vẫn chạy trên máy khách như mọi khối; nó gọi `services.packRequest(pack, op, input, signal)`, ứng dụng chuyển tiếp tới `POST /api/packs/<pack>/<op>`, và route tra handler mà gói đã đăng ký qua `registerPackHandler(pack, op, fn)` trong `core/packs/handlers`. Lõi chỉ giữ registry rỗng và kênh chuyển tiếp chung; không có phương thức riêng cho gói nào trong `NodeServices`. Kiểm thử thay handler bằng hàm giả.
 
-Gói khai báo mình bằng một `PackDefinition` (`core/packs/definition.ts`): định danh, hàm `register()` đẳng hình cho kiểu cảnh, khối và đồ thị mẫu, hàm `registerServer()` tùy chọn cho handler, và từ điển chuỗi riêng. Ứng dụng cài gói qua `installPack()` và đọc **một danh sách duy nhất** trong `packs/installed.ts`; ngoài thư mục `packs/` không có tệp nào gọi tên một gói cụ thể. Renderer theo engine và thân khối cho Studio nằm ở hai danh sách bên cạnh, vì máy chủ không được nhập React và bundle kết xuất là đồ thị mô-đun riêng.
+Gói khai báo mình bằng một `PackDefinition` (`core/packs/definition.ts`): định danh, hàm `register()` đẳng hình cho kiểu cảnh và khối, hàm `registerServer()` tùy chọn cho handler, từ điển chuỗi riêng, và trường `exampleGraphs` tùy chọn. Ứng dụng cài gói qua `installPack()` và đọc **một danh sách duy nhất** trong `packs/installed.ts`; ngoài thư mục `packs/` không có tệp nào gọi tên một gói cụ thể. Renderer theo engine và thân khối cho Studio nằm ở hai danh sách bên cạnh, vì máy chủ không được nhập React và bundle kết xuất là đồ thị mô-đun riêng.
 
-Gói không được: thêm kiểu cổng, sửa lược đồ IR, nhập trực tiếp một engine thay vì đăng ký renderer, hay giữ trạng thái ngoài các khối của nó. Gói đầu tiên là `github-showcase`, đặc tả tại `packs/github-showcase.md`.
+Gói không được: thêm kiểu cổng, sửa lược đồ IR, nhập trực tiếp một engine thay vì đăng ký renderer, hay giữ trạng thái ngoài các khối của nó. Hai gói hiện có là `github-showcase` và `quote-cards`, đặc tả tại `packs/`.

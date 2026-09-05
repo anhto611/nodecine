@@ -16,15 +16,16 @@ Lý do tách: trước đây mỗi lần thêm một provider là phải sửa c
 |---|---|---|---|
 | Kịch Bản Tĩnh (lõi) | 7 | Không | Không |
 | GitHub Repo Showcase (gói) | 10 | Có | Có |
+| Thẻ Trích Dẫn (gói) | 8 | Không | Có |
 | Canvas trống | 0 | — | — |
 
-Các thẻ còn lại trong trình duyệt hiển thị mờ kèm nhãn "Sắp có". Chúng được liệt kê để lộ tầm nhìn sản phẩm, không phải việc đang làm dở.
+Trình duyệt Bản mẫu chỉ liệt kê đúng những mục này. Thêm một bản mẫu là đăng ký nó vào registry, không phải sửa giao diện.
 
 **Khối lõi** — mười loại: Nhập Liệu, Kịch Bản Tĩnh, Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Hyperframes Engine, Xuất Bản Video, Xuất MP4.
 
 Hai khối nhà cung cấp theo mẫu Load Checkpoint của ComfyUI: **một khối cho mỗi loại cổng**, chọn nhà cung cấp trong khối, không phải một khối cho mỗi hãng.
 
-**Khối của gói** — `github-showcase`: Truy Xuất Repo, AI Đạo Diễn.
+**Khối của gói** — `github-showcase`: Truy Xuất Repo, AI Đạo Diễn. `quote-cards`: Đạo Diễn Trích Dẫn.
 
 **Engine**
 
@@ -46,7 +47,7 @@ Hyperframes tồn tại để chứng minh Bản Đặc Tả Video Trung Gian th
 
 Không cái nào bắt buộc phải có. Thiếu thì khối nhà cung cấp vẫn `success` màu vàng, ghi rõ thiếu gì và câu lệnh cài; khối tiêu thụ phía sau tự chặn.
 
-**Kiểu cảnh và renderer** — bốn kiểu, cả bốn có renderer cho cả hai engine:
+**Kiểu cảnh và renderer** — năm kiểu, cả năm có renderer cho cả hai engine:
 
 | Kiểu cảnh | Remotion | Hyperframes |
 |---|---|---|
@@ -54,6 +55,7 @@ Không cái nào bắt buộc phải có. Thiếu thì khối nhà cung cấp v�
 | `github-showcase/hook` | ✅ | ✅ |
 | `github-showcase/mockup` | ✅ | ✅ |
 | `github-showcase/cta` | ✅ | ✅ |
+| `quote-cards/quote` | ✅ | ✅ |
 
 **Ngôn ngữ giao diện** — English và Tiếng Việt, hai từ điển khớp khóa.
 
@@ -70,6 +72,7 @@ Những chỗ này đã định nghĩa trong tài liệu và có sẵn trong ki�
 - **Hai engine cùng phát một lúc.** Bố cục cho phép đặt hai Khối Xuất Bản Video cạnh nhau; hiện chỉ một cái phát được tại một thời điểm.
 - **Chạy song song.** Bộ máy chạy tuần tự theo thứ tự tô-pô. Đồ thị cỡ mười khối và nút thắt nằm ở lệnh gọi ra ngoài nên song song chưa đáng đánh đổi độ phức tạp báo tiến độ.
 - **Dọn tệp tạm nền.** Chỉ dọn tệp cũ hơn 24 giờ lúc khởi động, không có tiến trình nền.
+- **`theme` trên `DirectorPlan`.** Trường này có trong lược đồ IR và mỗi gói đặt một giá trị, nhưng **chưa renderer nào đọc nó** — mỗi kiểu cảnh tự mã hóa cứng bảng màu của mình. Hệ quả thấy được ở `quote-cards`: bản kế hoạch mở đầu bằng `core/title-card` (nền tối) rồi tới các thẻ trích dẫn (nền giấy), và hai bên không ăn nhập. Xem `packs/quote-cards.md` mục 4.
 
 ---
 

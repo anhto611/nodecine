@@ -22,7 +22,7 @@ export const HistoryPanel: React.FC = () => {
             <div key={r.seq} className={`nc-hi ${on ? 'on' : ''}`} onClick={() => viewRun(r.seq)}>
               <div style={{ width: 40, height: 71, background: '#000', border: '1px solid var(--line-2)', borderRadius: 2, flex: '0 0 40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--tx-3)' }}><Icon.screen size={12} /></div>
               <div>
-                <div style={{ fontSize: 10 }}>{t('history.run', { n: r.seq })}{on && <span className="nc-soon" style={{ marginLeft: 6, color: 'var(--accent-2)', borderColor: 'var(--accent-sunk)' }}>{t('history.viewing')}</span>}</div>
+                <div style={{ fontSize: 10 }}>{t('history.run', { n: r.seq })}{on && <span className="nc-tag" style={{ marginLeft: 6, color: 'var(--accent-2)', borderColor: 'var(--accent-sunk)' }}>{t('history.viewing')}</span>}</div>
                 <div style={{ fontSize: 8.5, color: 'var(--tx-3)', lineHeight: 1.6, marginTop: 3 }}>
                   <span style={{ color: 'var(--tx-2)' }}>{new Date(r.startedAt).toLocaleTimeString()}</span> · {r.engineId ?? '—'}<br />
                   {r.ir.audioTrack.durationSeconds.toFixed(2)}s · {r.ir.meta.totalDurationInFrames}f · {(r.durationMs / 1000).toFixed(1)}s

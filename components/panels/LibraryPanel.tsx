@@ -61,7 +61,7 @@ const LibraryItem: React.FC<{ def: AnyNodeDefinition; onAdd: (type: string, pos:
     <div className="nc-li" draggable onDragStart={(e) => { e.dataTransfer.setData('application/nodecine-node', def.type); e.dataTransfer.effectAllowed = 'copy'; }} onDoubleClick={drop}>
       <span className="nc-lic"><IconC size={12} /></span>
       <div>
-        <div className="nc-lin">{t(`node.${def.type}`)}{meta?.soon && <span className="nc-soon">{t('library.soon')}</span>}</div>
+        <div className="nc-lin">{t(`node.${def.type}`)}</div>
         <div className="nc-lid">{t(`node.desc.${def.type}`)}</div>
         <div className="nc-lip">{ports}</div>
       </div>

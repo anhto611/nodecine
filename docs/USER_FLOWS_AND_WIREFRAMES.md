@@ -1,6 +1,6 @@
 # Đặc tả Luồng Trải nghiệm Người dùng & Giao diện NodeCine (UI/UX Specification)
 
-Tài liệu này mô tả giao diện của **khung lõi**: bố cục, dải trái, giải phẫu khối, và các kịch bản chỉ dùng khối lõi. Kịch bản riêng của từng gói bản mẫu nằm trong tài liệu của gói đó (`packs/github-showcase.md` mục 5). Tài liệu liên quan: Hợp đồng Lõi định nghĩa kiểu cổng và dữ liệu chảy qua dây nối; Đặc tả Bộ Máy Thực Thi định nghĩa thứ tự chạy, cơ chế chạy lại từng phần và bảng mã lỗi.
+Tài liệu này mô tả giao diện của **khung lõi**: bố cục, dải trái, giải phẫu khối, và các kịch bản chỉ dùng khối lõi. Kịch bản riêng của từng gói khối nằm trong tài liệu của gói đó (`packs/github-showcase.md` mục 5). Tài liệu liên quan: Hợp đồng Lõi định nghĩa kiểu cổng và dữ liệu chảy qua dây nối; Đặc tả Bộ Máy Thực Thi định nghĩa thứ tự chạy, cơ chế chạy lại từng phần và bảng mã lỗi.
 
 ## 1. Cấu trúc Bố cục Màn hình (Studio Layout)
 
@@ -30,7 +30,7 @@ Thanh điều hướng chỉ giữ những gì phải luôn nhìn thấy. Mọi 
 Cửa sổ dạng modal theo mô hình trình duyệt workflow của ComfyUI, mở từ tab "Bản mẫu" ở đầu dải trái.
 
 - Đầu cửa sổ: tiêu đề, một dòng phụ, ô tìm kiếm theo tên, nút đóng.
-- Cột bên trái: danh sách danh mục kèm số lượng bản mẫu trong mỗi danh mục. Gồm "Tất cả" và bốn nhóm: Tech & Product, Faceless Content, Commerce & Ads, Dữ liệu & Tài chính. Cuối cột là mục "Canvas trống" và một ghi chú ngắn về bản mẫu nào đang mở được.
+- Cột bên trái: danh sách danh mục kèm số lượng bản mẫu trong mỗi danh mục. Gồm "Tất cả" và bốn nhóm: Tech & Product, Faceless Content, Commerce & Ads, Dữ liệu & Tài chính. Cuối cột là mục "Canvas trống".
 - Vùng chính: lưới thẻ ba cột. Mỗi thẻ gồm ảnh xem trước dạng khung dọc 9:16 thu nhỏ, tên bản mẫu, một câu mô tả, và dòng thông số gồm số khối cùng tỷ lệ khung hình và tốc độ khung hình.
 - Danh sách bản mẫu theo danh mục:
   - Lõi: Kịch Bản Tĩnh.
@@ -38,7 +38,7 @@ Cửa sổ dạng modal theo mô hình trình duyệt workflow của ComfyUI, m�
   - Faceless Content: Reddit Storytelling, Daily Facts & Trivia, Motivational Quotes.
   - Commerce & Ads: Flash Sale Alert, Product Comparison (A vs B).
   - Dữ liệu & Tài chính: Market Recap & Movers, Crypto Trends.
-- Thẻ nào chọn được là do registry bản mẫu quyết định, không mã hóa cứng ở đây (danh sách hiện tại: `STATUS.md`). Thẻ chưa có bản mẫu hiển thị mờ, không nhận thao tác, kèm nhãn "Sắp có" ngay cạnh tên. Chúng vẫn được liệt kê nhằm bộc lộ tầm nhìn sản phẩm, không phải do sót việc.
+- Mọi thẻ trong lưới đều mở được: danh sách đến từ registry bản mẫu, không mã hóa cứng ở đây (xem `STATUS.md`). Không có thẻ giữ chỗ cho thứ chưa dựng.
 - Chân cửa sổ: dòng cảnh báo "Mở bản mẫu sẽ thay toàn bộ đồ thị hiện tại", nút Hủy và nút hành động chính ghi rõ tên bản mẫu sắp mở.
 
 ### 1.4. Khối Video Output là Trình phát (Player Node)

@@ -2,7 +2,7 @@
 export type IconKey = 'bolt' | 'doc' | 'term' | 'mic' | 'wave' | 'layers' | 'chip' | 'screen' | 'down' | 'branch' | 'bot';
 export type LibraryGroup = 'source' | 'provider' | 'process' | 'engine' | 'output';
 
-export type NodeMeta = { icon: IconKey; group: LibraryGroup | string; soon?: boolean };
+export type NodeMeta = { icon: IconKey; group: LibraryGroup | string };
 
 export const NODE_META: Record<string, NodeMeta> = {
   'core/input-trigger': { icon: 'bolt', group: 'source' },

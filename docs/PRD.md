@@ -62,12 +62,12 @@ NodeCine phục vụ 4 nhóm người dùng trọng tâm tương ứng với cá
 - Cho phép kéo kết nối các dây nối dữ liệu từ cổng xuất sang cổng nhận tương thích giữa các khối. Tính tương thích được quyết định bởi hệ thống kiểu cổng mô tả tại tài liệu Hợp đồng Lõi, mục 1.
 - Dải công cụ bên trái theo mô hình ComfyUI, gom mọi điều hướng: Bản mẫu, Thư viện khối để kéo thả khối lên canvas, Lịch sử chạy trong phiên để xem lại các bản dựng trước mà không chạy lại, Nhật ký để đọc và sao chép nhật ký từng khối cùng nhật ký kết xuất, và Cài đặt ghim ở đáy. Thanh điều hướng chỉ còn tên dự án và nút Chạy Luồng.
 
-### 4.2. Khung Lõi và Gói Bản Mẫu
+### 4.2. Khung Lõi và Gói Khối
 
-NodeCine v0.1 gồm hai tầng tách bạch, theo đúng mô hình core nodes và custom node packs của ComfyUI:
+NodeCine v0.1 gồm hai tầng tách bạch, theo mô hình core nodes và custom node packs của ComfyUI:
 
 - **Khung lõi** (Hợp đồng Lõi): hệ thống kiểu cổng, bộ máy thực thi, Bản Đặc Tả Video Trung Gian generic, ba registry (engine, nhà cung cấp, kiểu cảnh), giao diện Studio, và bộ khối lõi đủ để dựng video từ kịch bản gõ tay mà không cần mạng hay mô hình ngôn ngữ.
-- **Gói bản mẫu**: thêm khối, kiểu cảnh và đồ thị mẫu cho một loại video cụ thể, không sửa gì ở lõi. Gói đầu tiên là GitHub Repo Showcase, đặc tả tại `packs/github-showcase.md`.
+- **Gói khối**: thêm khối và kiểu cảnh cho một loại video cụ thể, không sửa gì ở lõi. Gói *có thể* kèm theo đồ thị mẫu dùng chính các khối đó, nhưng đồ thị là phần thêm chứ không phải thứ định nghĩa gói — giống `example_workflows` trong một custom node pack của ComfyUI. Hai gói đầu tiên là GitHub Repo Showcase và Thẻ Trích Dẫn, đặc tả tại `packs/`.
 
 Nguyên tắc phân chia khối, theo mô hình ComfyUI: mỗi khối một trách nhiệm; mọi khối gọi ra ngoài tiến trình đứng riêng để thử lại độc lập; mọi tài nguyên hay hành động có tham số riêng là một khối chứ không phải cài đặt toàn cục.
 
@@ -99,9 +99,8 @@ Ranh giới trách nhiệm:
 
 ### 4.5. Trình duyệt Bản Mẫu (Template Browser)
 
-- Bản mẫu được chọn qua một cửa sổ modal mở từ tab đầu tiên trên dải trái, theo mô hình trình duyệt workflow của ComfyUI: cột danh mục bên trái, lưới thẻ có ảnh xem trước bên phải. Cửa sổ hiển thị đầy đủ 4 danh mục và toàn bộ tên bản mẫu dự kiến, nhằm bộc lộ tầm nhìn sản phẩm cho người dùng ngay từ lần đầu mở ứng dụng.
-- Bản mẫu nào mở được thì đọc từ registry, không mã hóa cứng trong giao diện; danh sách hiện tại ở `STATUS.md`.
-- Thẻ chưa có bản mẫu tương ứng thì làm mờ, không bấm được, kèm nhãn "Sắp có". Chúng vẫn được liệt kê để bộc lộ tầm nhìn sản phẩm.
+- Bản mẫu được chọn qua một cửa sổ modal mở từ tab đầu tiên trên dải trái, theo mô hình trình duyệt workflow của ComfyUI: cột danh mục bên trái, lưới thẻ có ảnh xem trước bên phải.
+- Trình duyệt chỉ liệt kê bản mẫu thật, đọc từ registry chứ không mã hóa cứng trong giao diện; danh sách hiện tại ở `STATUS.md`. Không quảng cáo thứ chưa dựng: một cái tên không mở được thì không có mặt ở đây.
 
 ### 4.6. Xem Trước Thời Gian Thực & Xuất Tệp Cục Bộ
 

@@ -25,7 +25,6 @@ const CSS2 = `
     .card{background:var(--bg-node);border:1px solid var(--line-2);border-radius:6px;
       overflow:hidden;display:flex;flex-direction:column}
     .card.on{border-color:var(--accent);box-shadow:0 0 0 1px rgba(124,92,255,.32)}
-    .card.off{opacity:.42}
     .thumb{height:152px;background:#08090c;border-bottom:1px solid var(--line);
       display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
     .ph{width:86px;height:152px;background:#0b0c10;border-left:1px solid #23262c;
@@ -37,8 +36,6 @@ const CSS2 = `
     .card-d{font-family:var(--sans);font-size:11px;color:var(--tx-2);line-height:1.55}
     .card-m{font-family:var(--mono);font-size:8.5px;color:var(--tx-3);
       display:flex;gap:9px;margin-top:2px}
-    .soon{font-family:var(--mono);font-size:8px;letter-spacing:.07em;color:var(--tx-3);
-      border:1px solid var(--line-2);border-radius:3px;padding:1.5px 6px;margin-left:auto}
     .mo-f{flex:0 0 auto;border-top:1px solid var(--line);padding:13px 18px;
       display:flex;align-items:center;gap:10px}
     .menu{background:var(--bg-node);border:1px solid var(--line-3);border-radius:6px;
@@ -115,17 +112,11 @@ const THUMB = {
       fill="none" stroke="#2f333b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>`,
 };
 
+/* Chỉ những bản mẫu thật sự mở được. Không liệt kê thứ chưa dựng. */
 const TPL = [
-  ['title', 'Kịch Bản Tĩnh', 'Gõ tay lời thoại và cảnh. Đồ thị lõi bảy khối, không mạng.', '7 khối · 9:16', 1],
-  ['github', 'GitHub Repo Showcase', 'Biến link repo thành video dọc 9:16 phong cách terminal.', '10 khối · 9:16', 1],
-  ['phone', 'Mobile App Promo', 'Khoe tính năng ứng dụng trên khung điện thoại.', '10 khối · 9:16', 0],
-  ['list', 'Product Changelog', 'Tóm tắt bản phát hành thành video điểm tin.', '10 khối · 9:16', 0],
-  ['reddit', 'Reddit Storytelling', 'Đọc truyện diễn đàn trên nền gameplay.', '11 khối · 9:16', 0],
-  ['facts', 'Daily Facts & Trivia', 'Chuỗi sự thật ngắn kèm phụ đề từng từ.', '10 khối · 9:16', 0],
-  ['quote', 'Motivational Quotes', 'Trích dẫn truyền cảm hứng trên nền cinematic.', '9 khối · 9:16', 0],
-  ['sale', 'Flash Sale Alert', 'Đếm ngược khuyến mãi kèm giá và lời kêu gọi.', '10 khối · 9:16', 0],
-  ['vs', 'Product Comparison', 'So sánh hai sản phẩm theo từng tiêu chí.', '11 khối · 9:16', 0],
-  ['bars', 'Market Recap & Movers', 'Biểu đồ động cho biến động thị trường trong ngày.', '11 khối · 9:16', 0],
+  ['title', 'Kịch Bản Tĩnh', 'Gõ tay lời thoại và cảnh. Đồ thị lõi bảy khối, không mạng.', '7 khối · 9:16'],
+  ['github', 'GitHub Repo Showcase', 'Biến link repo thành video dọc 9:16 phong cách terminal.', '10 khối · 9:16'],
+  ['quote', 'Thẻ Trích Dẫn Truyền Cảm Hứng', 'Biến một chủ đề thành loạt thẻ trích dẫn dọc 9:16. Không cần mạng.', '8 khối · 9:16'],
 ];
 
 const RAIL_MINI = (on) => `<div style="position:absolute;left:0;top:0;bottom:0;width:44px;background:var(--bg-panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px">
@@ -150,23 +141,19 @@ writeFileSync('TemplateBrowser.dc.html', wrap(1200, 800, `
       </div>
       <div class="mo-b">
         <div class="side">
-          ${[['Tất cả', 11, 1], ['Lõi', 1, 0], ['Tech &amp; Product', 3, 0], ['Faceless Content', 3, 0],
-             ['Commerce &amp; Ads', 2, 0], ['Dữ liệu &amp; Tài chính', 2, 0]]
+          ${[['Tất cả', 3, 1], ['Lõi', 1, 0], ['Tech &amp; Product', 1, 0], ['Faceless Content', 1, 0]]
             .map(([n, c, on]) => `<div class="cat ${on ? 'on' : ''}">
               <span style="display:flex;opacity:.75">${I.screen}</span><span>${n}</span><span class="n">${c}</span></div>`).join('')}
           <div style="height:1px;background:var(--line);margin:9px 2px"></div>
           <div class="cat"><span style="display:flex;opacity:.75">${I.plus}</span><span>Canvas trống</span></div>
-          <div style="margin-top:auto;padding:10px 10px 2px">
-            <div class="cap2">v0.1: Kịch Bản Tĩnh (Pha A), GitHub Repo Showcase (Pha B) và Canvas trống.
-              Phần còn lại liệt kê để lộ tầm nhìn sản phẩm.</div></div>
         </div>
         <div class="gridwrap">
           <div class="cards">
-            ${TPL.map(([th, nm, desc, meta, on]) => `
-              <div class="card ${on ? 'on' : 'off'}">
+            ${TPL.map(([th, nm, desc, meta], i) => `
+              <div class="card ${i === 0 ? 'on' : ''}">
                 <div class="thumb"><div class="ph">${THUMB[th]}</div></div>
                 <div class="card-b">
-                  <div class="card-t">${nm}${on ? '' : '<span class="soon">Sắp có</span>'}</div>
+                  <div class="card-t">${nm}</div>
                   <div class="card-d">${desc}</div>
                   <div class="card-m"><span>${meta}</span><span>30 fps</span></div>
                 </div>

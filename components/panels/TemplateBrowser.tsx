@@ -5,83 +5,101 @@ import { useStudio, type TemplateId } from '@/store/useStudio';
 import { Icon } from '../icons';
 import { Btn, useT } from '../ui';
 
-type Card = { id: string; nameKey: string; descKey: string; nodes: number; category: string; status: 'ready' | 'soon' };
+type Card = { id: string; nameKey: string; descKey: string; nodes: number; category: string };
 
 /**
- * Ideas with no graph behind them yet. Everything that can actually be opened comes from the
- * template registry instead, so a pack's templates appear here by being installed.
+ * Cards share the row and always use all of it: a readable floor, then they grow to fill. Capping
+ * their width instead would leave whatever the cap refused as dead space on the right.
  */
-const PLANNED: Card[] = [
-  { id: 'mobile-app', nameKey: 'Mobile App Promo', descKey: '', nodes: 0, category: 'tech', status: 'soon' },
-  { id: 'changelog', nameKey: 'Product Changelog', descKey: '', nodes: 0, category: 'tech', status: 'soon' },
-  { id: 'reddit', nameKey: 'Reddit Storytelling', descKey: '', nodes: 0, category: 'faceless', status: 'soon' },
-  { id: 'facts', nameKey: 'Daily Facts & Trivia', descKey: '', nodes: 0, category: 'faceless', status: 'soon' },
-  { id: 'quotes', nameKey: 'Motivational Quotes', descKey: '', nodes: 0, category: 'faceless', status: 'soon' },
-  { id: 'sale', nameKey: 'Flash Sale Alert', descKey: '', nodes: 0, category: 'commerce', status: 'soon' },
-  { id: 'compare', nameKey: 'Product Comparison', descKey: '', nodes: 0, category: 'commerce', status: 'soon' },
-  { id: 'market', nameKey: 'Market Recap & Movers', descKey: '', nodes: 0, category: 'data', status: 'soon' },
-  { id: 'crypto', nameKey: 'Crypto Trends', descKey: '', nodes: 0, category: 'data', status: 'soon' },
-];
-const CATS = [['all', 'templates.all'], ['core', 'templates.core'], ['tech', 'templates.cat.tech'], ['faceless', 'templates.cat.faceless'], ['commerce', 'templates.cat.commerce'], ['data', 'templates.cat.data']] as const;
+const CARD = { flex: '1 1 240px' } as const;
 
-/** ComfyUI-style template browser (USER_FLOWS §1.3). Only Static Script and Blank work in Phase A. */
+/**
+ * The height budget belongs to the picture, not the card. A square picture is as tall as the card
+ * is wide, so on a short window a full-width card scrolls taller than the area holding it and never
+ * shows whole. Capped here, the picture narrows and centres while the card still fills its row;
+ * 250px covers the modal's own chrome and the caption underneath.
+ */
+const PICTURE_MAX_HEIGHT = 'calc(90vh - 250px)';
+const SPACERS = Array.from({ length: 5 });
+
+/** Every category the app can name; which of them appear is decided by what is installed. */
+const CATS = [['core', 'templates.core'], ['tech', 'templates.cat.tech'], ['faceless', 'templates.cat.faceless'], ['commerce', 'templates.cat.commerce'], ['data', 'templates.cat.data']] as const;
+
+/** ComfyUI-style template browser (USER_FLOWS §1.3). It lists templates that exist, and nothing else. */
 export const TemplateBrowser: React.FC = () => {
   const t = useT();
   const close = useStudio((s) => s.setTemplatesOpen);
   const load = useStudio((s) => s.loadTemplate);
   const [cat, setCat] = React.useState('all');
+  // Only consulted under the breakpoint; above it the CSS shows the list whatever this says.
+  const [sideOpen, setSideOpen] = React.useState(false);
+  const pick = (id: string) => { setCat(id); setSideOpen(false); };
   const [sel, setSel] = React.useState<string>('static-script');
-  const cards = React.useMemo(() => {
-    const ready: Card[] = listTemplates().map((tpl) => ({
-      id: tpl.id,
-      nameKey: tpl.nameKey,
-      descKey: tpl.descriptionKey ?? '',
-      nodes: tpl.nodeCount,
-      category: tpl.category,
-      status: 'ready',
-    }));
-    return [...ready, ...PLANNED].filter((c) => cat === 'all' || c.category === cat);
-  }, [cat]);
-  const CARDS = cards;
+  const all = React.useMemo<Card[]>(() => listTemplates().map((tpl) => ({
+    id: tpl.id,
+    nameKey: tpl.nameKey,
+    descKey: tpl.descriptionKey ?? '',
+    nodes: tpl.nodeCount,
+    category: tpl.category,
+  })), []);
+  // A category nobody has a template for would open onto an empty grid, so it is not offered.
+  const cats = React.useMemo(() => CATS.filter(([id]) => all.some((c) => c.category === id)), [all]);
+  const CARDS = React.useMemo(() => all.filter((c) => cat === 'all' || c.category === cat), [all, cat]);
   const selected = CARDS.find((c) => c.id === sel);
-  const canOpen = selected?.status === 'ready' || sel === 'blank';
-  const open = () => { if (sel === 'blank') load('blank'); else if (selected?.status === 'ready') load(selected.id as TemplateId); };
+  const canOpen = !!selected || sel === 'blank';
+  const open = () => { if (sel === 'blank') load('blank'); else if (selected) load(selected.id as TemplateId); };
   return (
     <div className="nc-modal-bg" onClick={() => close(false)}>
-      <div className="nc-modal" style={{ width: 1000, height: 640 }} onClick={(e) => e.stopPropagation()}>
+      {/* Grows with the window and stays inside it. The app's floor is a 1280×800 screen; the
+          card row adapts to whatever width this lands on. */}
+      <div className="nc-modal" style={{ width: 'min(1400px, 94vw)', height: 'min(820px, 90vh)' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ height: 52, display: 'flex', alignItems: 'center', gap: 12, padding: '0 18px', borderBottom: '1px solid var(--line)' }}>
+          <button className="nc-chip nc-tpl-sidebtn" style={{ border: 0, padding: '5px 7px' }} onClick={() => setSideOpen((v) => !v)} title={t('templates.categories')}><Icon.layers size={13} /></button>
           <span style={{ color: 'var(--accent-2)' }}><Icon.tpl size={15} /></span>
           <span style={{ fontWeight: 700, fontSize: 13 }}>{t('templates.title')}</span>
           <span style={{ fontSize: 9, color: 'var(--tx-3)' }}>{t('templates.subtitle')}</span>
           <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => close(false)}><Icon.x /></button>
         </div>
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-          <div style={{ width: 200, borderRight: '1px solid var(--line)', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {CATS.map(([id, key]) => (
-              <button key={id} className={`nc-chip ${cat === id ? 'on' : ''}`} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 11, border: 0 }} onClick={() => setCat(id)}>{key.startsWith('templates.') ? t(key) : key}</button>
+          <div className={`nc-tpl-side ${sideOpen ? 'open' : ''}`}>
+            {[['all', 'templates.all'] as const, ...cats].map(([id, key]) => (
+              <button key={id} className={`nc-chip ${cat === id ? 'on' : ''}`} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 11, border: 0 }} onClick={() => pick(id)}>{key.startsWith('templates.') ? t(key) : key}</button>
             ))}
             <div style={{ height: 1, background: 'var(--line)', margin: '9px 2px' }} />
-            <button className={`nc-chip ${sel === 'blank' ? 'on' : ''}`} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 11, border: 0 }} onClick={() => setSel('blank')}><Icon.plus size={10} /> {t('templates.blank')}</button>
+            <button className={`nc-chip ${sel === 'blank' ? 'on' : ''}`} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 11, border: 0 }} onClick={() => { setSel('blank'); setSideOpen(false); }}><Icon.plus size={10} /> {t('templates.blank')}</button>
           </div>
-          <div style={{ flex: 1, padding: 16, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, alignContent: 'start' }}>
-            {cards.map((c) => {
+          {/* Columns follow the width instead of always being three: cards keep a readable floor
+              and share out whatever is left. Flex rather than grid, because a grid row is sized
+              from its items' content and does not count a height that `aspect-ratio` derived — a
+              square picture ended up taller than its row and the card, stretched to that row,
+              clipped it. A flex line has no such height to agree on. */}
+          <div style={{ flex: 1, padding: 16, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', gap: 14 }} onClick={() => sideOpen && setSideOpen(false)}>
+            {CARDS.map((c) => {
               const name = c.nameKey.startsWith('templates.') ? t(c.nameKey) : c.nameKey;
               return (
-                <div key={c.id} className={`nc-card ${sel === c.id ? 'on' : ''} ${c.status === 'soon' ? 'off' : ''}`} onClick={() => c.status !== 'soon' && setSel(c.id)} onDoubleClick={() => c.status === 'ready' && load(c.id as TemplateId)}>
-                  <div style={{ height: 120, background: '#08090c', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 66, height: 118, background: '#0b0c10', borderLeft: '1px solid #23262c', borderRight: '1px solid #23262c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                      <div style={{ width: 14, height: 2, background: c.status === 'ready' ? '#a78bfa' : '#39404d' }} />
-                      <div style={{ fontSize: 6, color: c.status === 'ready' ? '#fff' : '#39404d', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>{name.split(' ').slice(0, 3).join('\n')}</div>
+                <div key={c.id} className={`nc-card ${sel === c.id ? 'on' : ''}`} style={CARD} onClick={() => setSel(c.id)} onDoubleClick={() => load(c.id as TemplateId)}>
+                  {/* `overflow: hidden` keeps this square: without it a long template name wraps to
+                      an extra line and pushes the box past the height aspect-ratio gave it. */}
+                  <div style={{ aspectRatio: '1 / 1', width: '100%', maxHeight: PICTURE_MAX_HEIGHT, alignSelf: 'center', flexShrink: 0, overflow: 'hidden', background: '#08090c', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {/* The 9:16 frame the template renders, edge to edge in the square. Sized
+                        relative to it rather than in pixels, so it keeps filling it whatever the
+                        column width becomes. */}
+                    <div style={{ height: '100%', aspectRatio: '9 / 16', overflow: 'hidden', background: '#0b0c10', borderLeft: '1px solid #23262c', borderRight: '1px solid #23262c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 8px' }}>
+                      <div style={{ width: 24, height: 2, background: '#a78bfa' }} />
+                      <div style={{ fontSize: 10, color: '#fff', fontWeight: 700, textAlign: 'center', lineHeight: 1.35 }}>{name.split(' ').slice(0, 3).join('\n')}</div>
                     </div>
                   </div>
                   <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>{name}{c.status !== 'ready' && <span className="nc-soon" style={{ marginLeft: 'auto' }}>{t('templates.soon')}</span>}</div>
+                    <div style={{ fontSize: 11 }}>{name}</div>
                     {c.descKey && <div style={{ fontSize: 10, color: 'var(--tx-2)', lineHeight: 1.5 }}>{t(c.descKey)}</div>}
                     {c.nodes > 0 && <div style={{ fontSize: 8.5, color: 'var(--tx-3)' }}>{t('templates.meta', { n: c.nodes })}</div>}
                   </div>
                 </div>
               );
             })}
+            {/* A short last row would otherwise share the leftover width among its own cards and
+                come out wider than the rows above. These take that width instead and draw nothing. */}
+            {SPACERS.map((_, i) => <div key={`spacer-${i}`} style={{ ...CARD, height: 0 }} aria-hidden />)}
           </div>
         </div>
         <div style={{ borderTop: '1px solid var(--line)', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>

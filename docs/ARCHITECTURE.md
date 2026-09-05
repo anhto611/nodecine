@@ -1,6 +1,6 @@
 # Kiến trúc Hệ thống NodeCine (System Architecture)
 
-Tài liệu này mô tả phần khung lõi; gói bản mẫu chỉ xuất hiện ở cây thư mục. Nó trả lời câu hỏi mà các tài liệu còn lại không trả lời: mã nguồn chạy ở đâu, ranh giới giữa máy khách và máy chủ nằm chỗ nào, và tại sao một sản phẩm tuyên bố Zero-Auth vẫn cần phần máy chủ.
+Tài liệu này mô tả phần khung lõi; gói khối chỉ xuất hiện ở cây thư mục. Nó trả lời câu hỏi mà các tài liệu còn lại không trả lời: mã nguồn chạy ở đâu, ranh giới giữa máy khách và máy chủ nằm chỗ nào, và tại sao một sản phẩm tuyên bố Zero-Auth vẫn cần phần máy chủ.
 
 ---
 
@@ -97,7 +97,7 @@ nodecine/
 │  ├─ claude-code/index.ts        Gọi CLI đã đăng nhập
 │  ├─ piper/index.ts             Giọng máy học chạy cục bộ, chung một đường trên mọi hệ điều hành
 │  └─ system-tts/index.ts         macOS say + ffmpeg
-├─ packs/                         Gói bản mẫu và toàn bộ dây nối tới chúng
+├─ packs/                         Gói khối và toàn bộ dây nối tới chúng
 │  ├─ installed.ts                Danh sách gói duy nhất mà ứng dụng đọc
 │  ├─ installed.client.ts         Thân khối và renderer cho Studio
 │  ├─ installed.remotion.ts       Renderer mà bundle kết xuất cần nạp lại

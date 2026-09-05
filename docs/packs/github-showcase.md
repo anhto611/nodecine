@@ -1,6 +1,6 @@
-# Gói Bản Mẫu: GitHub Repo Showcase
+# Gói Khối: GitHub Repo Showcase
 
-Gói bản mẫu đầu tiên của NodeCine, và là bằng chứng rằng khung lõi chạy được với dữ liệu thật. Mọi thứ trong tài liệu này xây trên Hợp đồng Lõi và **không sửa gì ở lõi**: gói chỉ thêm hai khối, ba kiểu cảnh, một đồ thị mẫu và bài kiểm thử của riêng nó.
+Gói khối đầu tiên của NodeCine, và là bằng chứng rằng khung lõi chạy được với dữ liệu thật. Mọi thứ trong tài liệu này xây trên Hợp đồng Lõi và **không sửa gì ở lõi**: gói chỉ thêm hai khối, ba kiểu cảnh, một đồ thị mẫu và bài kiểm thử của riêng nó.
 
 Thứ tự triển khai: gói này thuộc **Pha B**, chỉ bắt đầu sau khi Pha A (khung lõi với Kịch Bản Tĩnh) đã qua nghiệm thu. Xem Tài liệu Yêu cầu Sản phẩm mục 4.8.
 

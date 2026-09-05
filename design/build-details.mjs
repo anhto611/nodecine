@@ -139,13 +139,13 @@ writeFileSync('NodeAnatomy.dc.html', sheet(1240, 1980, `
            <div class="bul"><i>2</i><span style="color:var(--tx-3)">core/title-card</span> <span style="color:var(--accent-2)">w2</span></div>
            <div class="bul"><i>3</i><span style="color:var(--tx-3)">core/title-card</span> <span style="color:var(--accent-2)">w1</span></div></div>`,
         null,[[46,'Kịch bản'],[70,'Lời thoại']],'Khối lõi duy nhất phát cả Kịch bản lẫn Lời thoại. Dựng video bằng tay, không mạng. Đồ thị nghiệm thu Pha A.')}
-      ${anat('branch','GitHub Fetcher <span class="soon" style="margin-left:6px">gói</span>',okB('0.8s'),
+      ${anat('branch','GitHub Fetcher <span class="tag" style="margin-left:6px">gói</span>',okB('0.8s'),
         `<div class="kv"><span class="k">repo</span><span class="v">anhto611/nodecine</span></div>
          <div class="kv"><span class="k">stars</span><span class="v" style="color:var(--warn)">${I.star} 1.284</span></div>
          <div class="kv"><span class="k">install</span><span class="v">npm i nodecine</span></div>
          <div class="hint">chụp 21:04 · làm mới</div>`,
         [[46,'']],[[46,'Dữ kiện']],'Khối của gói. Gọi GitHub API ẩn danh, phát FactSheet ra <b>hai</b> dây: tới AI Director và thẳng tới Timeline Assembler.')}
-      ${anat('bot','AI Director <span class="soon" style="margin-left:6px">gói</span>',okB('4.2s'),
+      ${anat('bot','AI Director <span class="tag" style="margin-left:6px">gói</span>',okB('4.2s'),
         `<div class="kv"><span class="k">ngôn ngữ</span><span class="v">English ${I.chev}</span></div>
          <div class="kv"><span class="k">model</span><span class="v">claude-opus-5</span></div>
          <div class="kv"><span class="k">theme</span><span class="v">developer-dark</span></div>

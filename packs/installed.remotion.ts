@@ -1,4 +1,5 @@
 import { registerGithubShowcaseRemotion } from './github-showcase/remotion';
+import { registerQuoteCardsRemotion } from './quote-cards/remotion';
 
 /**
  * Scene renderers the Remotion bundle needs. The bundle is its own module graph, so it cannot reuse
@@ -6,4 +7,5 @@ import { registerGithubShowcaseRemotion } from './github-showcase/remotion';
  */
 export function installRemotionBundlePacks(): void {
   registerGithubShowcaseRemotion();
+  registerQuoteCardsRemotion();
 }

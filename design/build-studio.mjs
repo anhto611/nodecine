@@ -226,6 +226,7 @@ const RAIL_CSS = `
     .pn-h .x{margin-left:auto;color:var(--tx-3);font-size:14px;text-transform:none;letter-spacing:0}
     .srch{margin:10px 12px 4px;height:28px;background:var(--bg-sunk);border:1px solid var(--line-2);border-radius:4px;display:flex;align-items:center;gap:7px;padding:0 9px;font-family:var(--mono);font-size:10px;color:var(--tx-3)}
     .grp{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.13em;color:var(--tx-3);padding:10px 12px 4px}
+    .tag{font-family:var(--mono);font-size:7.5px;letter-spacing:.06em;color:var(--tx-3);border:1px solid var(--line-2);border-radius:3px;padding:1px 5px}
     .li{display:flex;gap:9px;padding:6px 12px;align-items:flex-start}
     .li .lic{width:22px;height:22px;border-radius:4px;background:var(--bg-node-hdr);border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--tx-2);flex:0 0 22px}
     .li .lin{font-family:var(--mono);font-size:10px;color:var(--tx);display:flex;align-items:center;gap:6px}
@@ -249,7 +250,6 @@ const RAIL_CSS = `
     .ll{display:flex;gap:14px;padding:0 12px;white-space:nowrap}
     .ll .ts{color:var(--tx-3);flex:0 0 96px} .ll .nn{flex:0 0 108px} .ll .ms{color:var(--tx-2)}
     .ghost{position:absolute;opacity:.72;pointer-events:none;box-shadow:0 0 0 1px var(--accent),0 12px 30px rgba(0,0,0,.6)}
-    .soon{font-family:var(--mono);font-size:7.5px;letter-spacing:.06em;color:var(--warn);border:1px solid #4a3a12;border-radius:3px;padding:1px 5px}
 `;
 const RI = {
   tpl:`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`,
@@ -289,22 +289,21 @@ const tools = (zoom) => `
     <div class="tbar"><span class="zoom">${zoom}</span><span class="tbtn">${I.plus}</span><span class="tbtn">${I.minus}</span><span class="tbtn">${I.fit}</span><span class="tbtn">${I.plus}</span></div>
   </div>`;
 
-/* panel thư viện: 5 nhóm, 9 khối */
+/* panel thư viện: 6 nhóm, 12 khối — đúng những gì bản dựng có, không liệt kê thứ chưa dựng */
 const LIB = [
-  ['Lõi · Nguồn',      [['bolt','Input Trigger','Ô văn bản, không diễn giải.','— → <b>SourceRef</b>'],
-                        ['doc','Static Script','Gõ tay lời thoại và danh sách cảnh. Không mạng.','— → <b>DirectorPlan</b> · <b>AudioScript</b>']]],
-  ['Lõi · Nhà cung cấp',[['term','Claude Code Provider','Dùng phiên Claude Code đã đăng nhập. Không cần khóa.','— → <b>LLMRef</b>'],
-                        ['mic','System TTS Provider','Giọng của hệ điều hành + ffmpeg. Offline.','— → <b>TTSRef</b>'],
-                        ['term','Anthropic API Provider <span class="soon">v0.2</span>','Qua khóa API trong Cài đặt.','— → <b>LLMRef</b>'],
-                        ['mic','ElevenLabs Provider <span class="soon">v0.2</span>','Giọng đám mây qua khóa API.','— → <b>TTSRef</b>']]],
-  ['Lõi · Xử lý',      [['wave','TTS Engine','Đọc lời thoại thành MP3, đo thời lượng.','<b>AudioScript</b> · <b>TTSRef</b> → <b>Voiceover</b>'],
-                        ['layers','Timeline Assembler','Chia khung theo trọng số, đè dữ kiện, kiểm định IR.','<b>DirectorPlan</b> · <b>Voiceover</b> · <b>FactSheet?</b> → <b>VideoIR</b>']]],
+  ['Lõi · Nguồn',      [['bolt','Nhập Liệu','Ô văn bản, không diễn giải.','— → <b>SourceRef</b>'],
+                        ['doc','Kịch Bản Tĩnh','Gõ tay lời thoại và danh sách cảnh. Không mạng.','— → <b>DirectorPlan</b> · <b>AudioScript</b>']]],
+  ['Lõi · Nhà cung cấp',[['term','Mô Hình Ngôn Ngữ','Chọn nhà cung cấp ngay trong khối. Không cần khóa.','— → <b>LLMRef</b>'],
+                        ['mic','Giọng Đọc Nguồn','Chọn nhà cung cấp giọng, khối liệt kê giọng tìm được.','— → <b>TTSRef</b>']]],
+  ['Lõi · Xử lý',      [['wave','Giọng Đọc','Đọc lời thoại thành MP3, đo thời lượng.','<b>AudioScript</b> · <b>TTSRef</b> → <b>Voiceover</b>'],
+                        ['layers','Đóng Gói Timeline','Chia khung theo trọng số, đè dữ kiện, kiểm định IR.','<b>DirectorPlan</b> · <b>Voiceover</b> · <b>FactSheet?</b> → <b>VideoIR</b>']]],
   ['Lõi · Động cơ',    [['chip','Remotion Engine','React DOM / Chromium. Xem trước và kết xuất.','— → <b>EngineRef</b>'],
-                        ['chip','Hyperframes Engine <span class="soon">v0.2</span>','Canvas runtime nhẹ. Chưa sẵn sàng.','— → <b>EngineRef</b>']]],
-  ['Lõi · Xuất',       [['screen','Video Output','Trình phát 9:16 ngay trên canvas.','<b>VideoIR</b> · <b>EngineRef</b> → —'],
-                        ['down','MP4 Export','Kết xuất theo yêu cầu, bỏ qua mặc định.','<b>VideoIR</b> · <b>EngineRef</b> → —']]],
-  ['Gói · GitHub Showcase',[['branch','GitHub Fetcher','Gọi GitHub API lấy sao, README, lệnh cài.','<b>SourceRef</b> → <b>FactSheet</b>'],
-                        ['bot','AI Director','Sáng tác lời thoại và 3 cảnh hook / mockup / cta.','<b>FactSheet</b> · <b>LLMRef</b> → <b>DirectorPlan</b> · <b>AudioScript</b>']]],
+                        ['chip','Hyperframes Engine','Canvas 2D. Xem trước, chưa kết xuất tệp.','— → <b>EngineRef</b>']]],
+  ['Lõi · Xuất',       [['screen','Xuất Bản Video','Trình phát 9:16 ngay trên canvas.','<b>VideoIR</b> · <b>EngineRef</b> → —'],
+                        ['down','Xuất MP4','Kết xuất theo yêu cầu, bỏ qua mặc định.','<b>VideoIR</b> · <b>EngineRef</b> → —']]],
+  ['Gói · GitHub Showcase',[['branch','Truy Xuất Repo','Gọi GitHub API lấy sao, README, lệnh cài.','<b>SourceRef</b> → <b>FactSheet</b>'],
+                        ['bot','AI Đạo Diễn','Sáng tác lời thoại và 3 cảnh hook / mockup / cta.','<b>FactSheet</b> · <b>LLMRef</b> → <b>DirectorPlan</b> · <b>AudioScript</b>']]],
+  ['Gói · Thẻ Trích Dẫn',[['bot','Đạo Diễn Trích Dẫn','Một chủ đề thành thẻ mở đầu và N thẻ trích dẫn.','<b>SourceRef</b> · <b>LLMRef</b> → <b>DirectorPlan</b> · <b>AudioScript</b>']]],
 ];
 const libPanel = () => `<div class="panel">
     <div class="pn-h">Thư viện khối<span class="x">×</span></div>
