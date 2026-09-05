@@ -1,6 +1,7 @@
 import { registerNodeType, type AnyNodeDefinition } from './definition';
 import { inputTrigger } from './input-trigger';
 import { staticScript } from './static-script';
+import { aiDirector } from './ai-director';
 import { hyperframesEngine, llmProvider, remotionEngine, ttsProvider } from './resources';
 import { ttsEngine } from './tts-engine';
 import { timelineAssembler } from './timeline-assembler';
@@ -11,6 +12,7 @@ export const CORE_NODES: AnyNodeDefinition[] = [
   llmProvider,
   ttsProvider,
   staticScript,
+  aiDirector,
   ttsEngine,
   timelineAssembler,
   remotionEngine,
@@ -24,6 +26,7 @@ export function registerCoreNodes(): void {
 }
 
 export * from './definition';
-export { inputTrigger, staticScript, llmProvider, ttsProvider, ttsEngine, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
+export { inputTrigger, staticScript, aiDirector, llmProvider, ttsProvider, ttsEngine, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
 export { pickVoice } from './tts-engine';
 export { DEFAULT_STATIC_SCRIPT } from './static-script';
+export { AI_DIRECTOR, DEFAULT_AI_DIRECTOR } from './ai-director';

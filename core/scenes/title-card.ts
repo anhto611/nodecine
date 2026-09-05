@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerScene } from './registry';
 
-/** The core's minimal scene type (CORE_CONTRACTS §4) — lets the framework run without any pack. */
+/** The core's minimal scene type (CORE_CONTRACTS §4) — lets the framework run with nothing installed beyond the core. */
 export const TITLE_CARD = 'core/title-card' as const;
 
 export const TitleCardPropsSchema = z.object({

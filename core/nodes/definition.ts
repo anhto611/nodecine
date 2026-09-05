@@ -4,7 +4,7 @@ import type { Packet } from '../types/packet';
 import type { NodeServices } from '../engine/services';
 
 /**
- * Node type definition (CORE_CONTRACTS §5, §10). Both core nodes and pack nodes use this shape.
+ * Node type definition (CORE_CONTRACTS §5, §10). Core nodes and the extras use the same shape.
  * `run` returns outputs keyed by output port name; the executor wraps them into packets.
  */
 
@@ -64,7 +64,8 @@ export interface NodeDefinition<S extends ZodTypeAny = ZodTypeAny> {
   type: string;
   /** Bumped when run() semantics change, so cached results are invalidated (EXECUTION_ENGINE §3). */
   version: number;
-  pack: string;
+  /** The `<namespace>/` prefix of `type`: `core`, or the extra that ships the node. Groups the library. */
+  namespace: string;
   kind: NodeKind;
   inputs: PortDef[];
   outputs: PortDef[];

@@ -1,0 +1,43 @@
+{
+  "id": "github-showcase",
+  "name": { "en": "GitHub Repo Showcase", "vi": "GitHub Repo Showcase" },
+  "description": { "en": "Turn a repo link into a 9:16 terminal-style video. Stars and the install command come from GitHub, not from the model.", "vi": "Biến link repo thành video dọc 9:16 phong cách terminal. Số sao và lệnh cài lấy từ GitHub, không qua mô hình." },
+  "category": "tech",
+  "graph": {
+    "nodes": [
+      { "id": "input", "type": "core/input-trigger", "params": { "value": "" }, "bypassed": false, "position": { "x": 40, "y": 40 } },
+      { "id": "fetcher", "type": "github-showcase/github-fetcher", "params": {}, "bypassed": false, "position": { "x": 40, "y": 300 } },
+      { "id": "llm-provider", "type": "core/llm-provider", "params": { "providerId": "claude-code", "settings": {} }, "bypassed": false, "position": { "x": 320, "y": 40 } },
+      { "id": "director", "type": "core/ai-director", "params": {
+        "prompt": "A 12-second showcase of this software project for developers scrolling past. Open with a hook that says what it is in one line, show what it does, then invite them to star or contribute. Confident, specific, no hype. The install command, the star count and the link are added later from GitHub — do not write them.",
+        "outputLanguage": "auto",
+        "theme": "github-showcase/developer-dark",
+        "scenes": [
+          { "sceneType": "github-showcase/hook", "weight": 1, "count": 1, "factBindings": { "stars": "stars" } },
+          { "sceneType": "github-showcase/mockup", "weight": 2, "count": 1, "factBindings": { "installCommand": "installCommand", "repoName": "name" } },
+          { "sceneType": "github-showcase/cta", "weight": 1, "count": 1, "factBindings": { "brandName": "url" } }
+        ]
+      }, "bypassed": false, "position": { "x": 320, "y": 360 } },
+      { "id": "tts-provider", "type": "core/tts-provider", "params": { "providerId": "system-tts", "settings": { "rate": 1 } }, "bypassed": false, "position": { "x": 320, "y": 900 } },
+      { "id": "tts", "type": "core/tts-engine", "params": { "speed": 1 }, "bypassed": false, "position": { "x": 600, "y": 540 } },
+      { "id": "assembler", "type": "core/timeline-assembler", "params": { "fps": 30, "width": 1080, "height": 1920, "minTotalFrames": 270, "title": "GitHub showcase" }, "bypassed": false, "position": { "x": 880, "y": 300 } },
+      { "id": "remotion", "type": "core/remotion-engine", "params": { "glBackend": "angle" }, "bypassed": false, "position": { "x": 880, "y": 660 } },
+      { "id": "output", "type": "core/video-output", "params": {}, "bypassed": false, "position": { "x": 1160, "y": 40 } },
+      { "id": "export", "type": "core/mp4-export", "params": { "codec": "h264", "quality": "high", "fileName": "github-showcase.mp4" }, "bypassed": true, "position": { "x": 1160, "y": 720 } }
+    ],
+    "edges": [
+      { "id": "e1", "source": "input", "sourcePort": "source", "target": "fetcher", "targetPort": "source" },
+      { "id": "e2", "source": "fetcher", "sourcePort": "facts", "target": "director", "targetPort": "facts" },
+      { "id": "e3", "source": "llm-provider", "sourcePort": "llm", "target": "director", "targetPort": "llm" },
+      { "id": "e4", "source": "director", "sourcePort": "script", "target": "tts", "targetPort": "script" },
+      { "id": "e5", "source": "tts-provider", "sourcePort": "tts", "target": "tts", "targetPort": "tts" },
+      { "id": "e6", "source": "director", "sourcePort": "plan", "target": "assembler", "targetPort": "plan" },
+      { "id": "e7", "source": "tts", "sourcePort": "voiceover", "target": "assembler", "targetPort": "voiceover" },
+      { "id": "e8", "source": "fetcher", "sourcePort": "facts", "target": "assembler", "targetPort": "facts" },
+      { "id": "e9", "source": "assembler", "sourcePort": "ir", "target": "output", "targetPort": "ir" },
+      { "id": "e10", "source": "assembler", "sourcePort": "ir", "target": "export", "targetPort": "ir" },
+      { "id": "e11", "source": "remotion", "sourcePort": "engine", "target": "output", "targetPort": "engine" },
+      { "id": "e12", "source": "remotion", "sourcePort": "engine", "target": "export", "targetPort": "engine" }
+    ]
+  }
+}

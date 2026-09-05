@@ -26,7 +26,7 @@ const OutputParams = z.object({});
 export const videoOutput: NodeDefinition<typeof OutputParams> = {
   type: 'core/video-output',
   version: 1,
-  pack: 'core',
+  namespace: 'core',
   kind: 'sink',
   inputs: [
     { name: 'ir', type: 'VideoIR' },
@@ -54,7 +54,7 @@ const ExportParams = z.object({
 export const mp4Export: NodeDefinition<typeof ExportParams> = {
   type: 'core/mp4-export',
   version: 1,
-  pack: 'core',
+  namespace: 'core',
   kind: 'ondemand',
   inputs: [
     { name: 'ir', type: 'VideoIR' },

@@ -1,12 +1,16 @@
 'use client';
 import type { Graph } from '@/core/engine/graph';
+import githubShowcaseJson from '@/templates/github-showcase.json';
+import quoteCardsJson from '@/templates/quote-cards.json';
 import type { Locale } from './i18n';
 
 /** Two localStorage keys today. EXECUTION_ENGINE §7.1 specifies a third for API keys; nothing
  *  needs one yet, so it is not created. See docs/STATUS.md. */
 const PROJECT_KEY = 'nodecine.project';
 const UI_KEY = 'nodecine.ui';
-export const PROJECT_SCHEMA_VERSION = 2;
+/** Templates the user saved from the canvas or pasted in. Data only, same shape as a shipped one. */
+const TEMPLATES_KEY = 'nodecine.templates';
+export const PROJECT_SCHEMA_VERSION = 3;
 
 export interface ProjectDoc {
   schemaVersion: number;
@@ -55,7 +59,27 @@ const PROVIDER_NODE_V2: Record<string, { type: string; providerId: string }> = {
   'core/claude-code-provider': { type: 'core/llm-provider', providerId: 'claude-code' },
 };
 
-function migrateProject(doc: ProjectDoc): ProjectDoc {
+/**
+ * Version 3: the two per-video directors became parameters of the one core director. What each had
+ * hardcoded — brief, theme, scene slots, fact bindings — is read from the shipped template that
+ * replaced it, so a saved graph ends up exactly where a fresh one would.
+ */
+const directorParamsFrom = (template: { graph: { nodes: { type: string; params: Record<string, unknown> }[] } }) =>
+  template.graph.nodes.find((n) => n.type === 'core/ai-director')!.params;
+const DIRECTOR_V3: Record<string, (old: Record<string, unknown>) => Record<string, unknown>> = {
+  'github-showcase/ai-director': (old) => ({
+    ...directorParamsFrom(githubShowcaseJson),
+    outputLanguage: (old.outputLanguage as string | undefined) ?? 'auto',
+  }),
+  'quote-cards/quote-director': (old) => {
+    const base = directorParamsFrom(quoteCardsJson);
+    const scenes = (base.scenes as { sceneType: string; count: number }[]).map((s) =>
+      s.sceneType === 'quote-cards/quote' && typeof old.count === 'number' ? { ...s, count: old.count } : { ...s });
+    return { ...base, scenes, outputLanguage: (old.outputLanguage as string | undefined) ?? 'auto' };
+  },
+};
+
+export function migrateProject(doc: ProjectDoc): ProjectDoc {
   let graph = doc.graph;
   if (doc.schemaVersion < 2) {
     graph = {
@@ -70,11 +94,36 @@ function migrateProject(doc: ProjectDoc): ProjectDoc {
       }),
     };
   }
+  if (doc.schemaVersion < 3) {
+    const quoteDirectors = new Set(graph.nodes.filter((n) => n.type === 'quote-cards/quote-director').map((n) => n.id));
+    graph = {
+      nodes: graph.nodes.map((n) => {
+        const convert = DIRECTOR_V3[n.type];
+        return convert ? { ...n, type: 'core/ai-director', params: convert(n.params) } : n;
+      }),
+      // The quote director took its subject on `topic`; the core director calls that port `source`.
+      edges: graph.edges.map((e) => (quoteDirectors.has(e.target) && e.targetPort === 'topic' ? { ...e, targetPort: 'source' } : e)),
+    };
+  }
   return { ...doc, graph, schemaVersion: PROJECT_SCHEMA_VERSION };
 }
 
 export function saveProject(doc: ProjectDoc): void {
   safeSet(PROJECT_KEY, JSON.stringify(doc));
+}
+
+export function loadUserTemplates(): unknown[] {
+  try {
+    const raw = safeGet(TEMPLATES_KEY);
+    const list: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveUserTemplates(list: unknown[]): void {
+  safeSet(TEMPLATES_KEY, JSON.stringify(list));
 }
 
 export function loadUiPrefs(): Partial<UiPrefs> {

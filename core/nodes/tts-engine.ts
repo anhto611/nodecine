@@ -25,7 +25,7 @@ export function pickVoice(ref: TTSRef, language: string, preferred?: string): { 
 export const ttsEngine: NodeDefinition<typeof Params> = {
   type: 'core/tts-engine',
   version: 1,
-  pack: 'core',
+  namespace: 'core',
   kind: 'process',
   inputs: [
     { name: 'script', type: 'AudioScript' },

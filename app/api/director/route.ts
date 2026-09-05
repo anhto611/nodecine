@@ -13,7 +13,7 @@ const Body = z.object({
 /**
  * One structured completion through the provider named by an LLMRef (CORE_CONTRACTS §7).
  * The server only guarantees "valid JSON object"; the calling node validates the shape, so
- * every pack can bring its own schema without the route knowing it.
+ * every director can bring its own schema without the route knowing it.
  */
 export async function POST(req: Request) {
   ensureServerRegistrations();

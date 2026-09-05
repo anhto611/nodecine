@@ -17,7 +17,7 @@ export const LibraryPanel: React.FC = () => {
   const defs = listNodeTypes();
   const groups = new Map<LibraryGroup | string, AnyNodeDefinition[]>();
   for (const d of defs) {
-    const g = NODE_META[d.type]?.group ?? d.pack;
+    const g = NODE_META[d.type]?.group ?? d.namespace;
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g)!.push(d);
   }

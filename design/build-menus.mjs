@@ -114,9 +114,9 @@ const THUMB = {
 
 /* Chỉ những bản mẫu thật sự mở được. Không liệt kê thứ chưa dựng. */
 const TPL = [
-  ['title', 'Kịch Bản Tĩnh', 'Gõ tay lời thoại và cảnh. Đồ thị lõi bảy khối, không mạng.', '7 khối · 9:16'],
-  ['github', 'GitHub Repo Showcase', 'Biến link repo thành video dọc 9:16 phong cách terminal.', '10 khối · 9:16'],
-  ['quote', 'Thẻ Trích Dẫn Truyền Cảm Hứng', 'Biến một chủ đề thành loạt thẻ trích dẫn dọc 9:16. Không cần mạng.', '8 khối · 9:16'],
+  ['title', 'Kịch Bản Tĩnh', 'Gõ tay lời thoại và cảnh. Đồ thị lõi bảy node, không mạng.', '7 node · 9:16'],
+  ['github', 'GitHub Repo Showcase', 'Biến link repo thành video dọc 9:16 phong cách terminal.', '10 node · 9:16'],
+  ['quote', 'Thẻ Trích Dẫn Truyền Cảm Hứng', 'Biến một chủ đề thành loạt thẻ trích dẫn dọc 9:16. Không cần mạng.', '8 node · 9:16'],
 ];
 
 const RAIL_MINI = (on) => `<div style="position:absolute;left:0;top:0;bottom:0;width:44px;background:var(--bg-panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px">
@@ -170,7 +170,7 @@ writeFileSync('TemplateBrowser.dc.html', wrap(1200, 800, `
     </div>
   </div>`));
 
-/* ============ Engine là khối: Remotion sẵn sàng, Hyperframes chưa ============ */
+/* ============ Engine là node: Remotion sẵn sàng, Hyperframes chưa ============ */
 const nd = (x,y,w,h,ic,title,badgeHtml,body,pin,pout,ncls) => `
   <div class="nd ${ncls||''}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">
     <div class="nd-h"><span class="ic">${I[ic]}</span><span class="nd-t">${title}</span>${badgeHtml}</div>
@@ -188,24 +188,24 @@ writeFileSync('EngineNode.dc.html', wrap(1180, 820, `
       <path d="M400,120 C430,120 430,120 460,120" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah2)" color="#7c5cff"></path>
       <path d="M400,120 C440,120 420,728 460,728" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah2)" color="#7c5cff"></path>
     </svg>
-    <div style="position:absolute;left:40px;top:40px;font-family:var(--mono);font-size:9px;color:var(--tx-3);letter-spacing:.1em;text-transform:uppercase">Khối Động Cơ · dây vàng = engine chưa sẵn sàng</div>
+    <div style="position:absolute;left:40px;top:40px;font-family:var(--mono);font-size:9px;color:var(--tx-3);letter-spacing:.1em;text-transform:uppercase">Node Động Cơ · dây vàng = engine chưa sẵn sàng</div>
     ${nd(70,80,196,124,'chip','Remotion Engine',`<span class="st s-ok"><span class="dot"></span>sẵn sàng</span>`,B.engine('ready'),null,[[60,'Động cơ']],'n-ok')}
     <div style="position:absolute;left:70px;top:214px;width:196px;font-family:var(--mono);font-size:8.5px;color:var(--tx-3);line-height:1.6">Dây mờ: đã bị thay khi người dùng nối engine mới vào Video Output.</div>
     ${nd(70,302,196,124,'chip','Hyperframes Engine',`<span class="st" style="color:var(--warn)"><span class="dot" style="background:var(--warn)"></span>v0.2</span>`,B.engine('notready'),null,[[60,'Động cơ']],'n-warn')}
-    <div style="position:absolute;left:70px;top:436px;width:196px;font-family:var(--mono);font-size:8.5px;color:var(--tx-3);line-height:1.6">Trạng thái do Adapter tự khai báo qua probe(). Không khối nào mã hóa cứng tên engine.</div>
+    <div style="position:absolute;left:70px;top:436px;width:196px;font-family:var(--mono);font-size:8.5px;color:var(--tx-3);line-height:1.6">Trạng thái do Adapter tự khai báo qua probe(). Không node nào mã hóa cứng tên engine.</div>
     <div class="nd" style="position:absolute;left:300px;top:60px;width:100px;height:0;opacity:0"></div>
     <div style="position:absolute;left:330px;top:100px;font-family:var(--mono);font-size:8.5px;color:var(--tx-3);transform:rotate(-90deg);transform-origin:left top;white-space:nowrap">← từ Assembler (VideoIR)</div>
     ${nd(460,60,284,584,'screen','Video Output',`<span class="st s-idle"><span class="dot"></span></span>`,outBody('notready'),[[60,'Bản đặc tả IR'],[90,'Động cơ · <span style="color:var(--warn)">Hyperframes</span>']],null,'n-warn')}
     ${nd(460,684,284,124,'down','MP4 Export',`<span class="st s-byp"><span class="dot"></span>bỏ qua</span>`,B.export('off'),[[44,'Bản đặc tả IR'],[74,'Động cơ · <span style="color:var(--warn)">Hyperframes</span>']],null,'n-byp')}
     <div style="position:absolute;left:800px;top:60px;width:330px;display:flex;flex-direction:column;gap:14px">
-      <div class="h1">Engine là khối, không phải cài đặt</div>
-      <div class="cap2" style="font-size:11px;color:var(--tx-2);line-height:1.7">Giống Load Checkpoint của ComfyUI: khối tài nguyên không có cổng nhận, phát <b style="color:var(--accent-2)">EngineRef</b> cho mọi khối cần. Tham số của engine (song song, backend) ở đây. Tham số của một lần kết xuất (codec, chất lượng, tên tệp) ở khối MP4 Export.</div>
+      <div class="h1">Engine là node, không phải cài đặt</div>
+      <div class="cap2" style="font-size:11px;color:var(--tx-2);line-height:1.7">Giống Load Checkpoint của ComfyUI: node tài nguyên không có cổng nhận, phát <b style="color:var(--accent-2)">EngineRef</b> cho mọi node cần. Tham số của engine (song song, backend) ở đây. Tham số của một lần kết xuất (codec, chất lượng, tên tệp) ở node MP4 Export.</div>
       <div class="note"><span style="color:var(--warn);flex:0 0 auto;margin-top:2px">${I.warn}</span>
-        <span class="nt">Nối Hyperframes vào: Video Output chuyển viền vàng kèm lớp phủ, MP4 Export khóa nút Kết xuất kèm lý do. Năm khối đầu luồng <b style="color:var(--tx)">không chạy lại</b> — chỉ chữ ký của hai khối nhận EngineRef đổi.</span></div>
+        <span class="nt">Nối Hyperframes vào: Video Output chuyển viền vàng kèm lớp phủ, MP4 Export khóa nút Kết xuất kèm lý do. Năm node đầu luồng <b style="color:var(--tx)">không chạy lại</b> — chỉ chữ ký của hai node nhận EngineRef đổi.</span></div>
       <div class="note"><span style="color:var(--accent-2);flex:0 0 auto;margin-top:2px">${I.plus}</span>
-        <span class="nt">So sánh hai engine (v0.2): hai khối Engine, hai khối Video Output, cùng một Bản đặc tả IR. Không cần thêm giao diện nào — chỉ thêm khối.</span></div>
+        <span class="nt">So sánh hai engine (v0.2): hai node Engine, hai node Video Output, cùng một Bản đặc tả IR. Không cần thêm giao diện nào — chỉ thêm node.</span></div>
       <div class="note"><span style="color:var(--tx-2);flex:0 0 auto;margin-top:2px">${I.down}</span>
-        <span class="nt">Không còn Engine Switcher lẫn nút Xuất MP4 trên header. Header chỉ còn: Bản mẫu · Chạy Luồng · Cài đặt.</span></div>
+        <span class="nt">Không còn Engine Switcher lẫn node Xuất MP4 trên header. Header chỉ còn: Bản mẫu · Chạy Luồng · Cài đặt.</span></div>
     </div>
   </div>`));
 
@@ -224,14 +224,14 @@ writeFileSync('Settings.dc.html', wrap(840, 720, `
       <div class="dlg-b">
         <div class="note"><span style="color:var(--ok);flex:0 0 auto;margin-top:2px">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg></span>
-          <span class="nt"><b style="color:var(--tx)">v0.1 không cần khóa API nào.</b> Mô hình ngôn ngữ đi qua Claude Code đã đăng nhập trên máy, giọng đọc đi qua bộ tổng hợp của macOS, kết xuất chạy cục bộ. Khi có Provider qua API ở v0.2, khóa sẽ được giữ ở đây và khối chỉ trỏ tới nó.</span></div>
-        ${row('Claude Code — tệp thực thi','~/.local/bin/claude · 2.1.260',true,'Ghi đè nếu tự phát hiện sai. Trạng thái đăng nhập xem trên khối Claude Code Provider.')}
+          <span class="nt"><b style="color:var(--tx)">v0.1 không cần khóa API nào.</b> Mô hình ngôn ngữ đi qua Claude Code đã đăng nhập trên máy, giọng đọc đi qua bộ tổng hợp của macOS, kết xuất chạy cục bộ. Khi có Provider qua API ở v0.2, khóa sẽ được giữ ở đây và node chỉ trỏ tới nó.</span></div>
+        ${row('Claude Code — tệp thực thi','~/.local/bin/claude · 2.1.260',true,'Ghi đè nếu tự phát hiện sai. Trạng thái đăng nhập xem trên node Claude Code Provider.')}
         ${row('ffmpeg — tệp thực thi','/opt/homebrew/bin/ffmpeg · 7.1',true,'Dùng để chuyển AIFF sang MP3 và đo thời lượng.')}
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
           ${row('Thư mục tệp tạm','./.nodecine/tmp',false,'Dọn tệp cũ hơn 24 giờ lúc khởi động.')}
           <div class="field"><span class="flab">Ngôn ngữ giao diện</span>
             <div class="inp" style="justify-content:space-between"><span>Tiếng Việt</span>${I.chev}</div>
-            <span class="cap2">Mặc định: English. Độc lập với ngôn ngữ của video (chọn trên khối AI Director).</span></div>
+            <span class="cap2">Mặc định: English. Độc lập với ngôn ngữ của video (chọn trên node AI Director).</span></div>
         </div>
       </div>
       <div class="dlg-f"><span class="cap2">Mọi thứ lưu trong trình duyệt này. Không tài khoản, không máy chủ tập trung.</span>

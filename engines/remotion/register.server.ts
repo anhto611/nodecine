@@ -24,7 +24,7 @@ let bundleKey = '';
  */
 async function sourceKey(): Promise<string> {
   if (process.env.NODE_ENV === 'production') return 'production';
-  const roots = ['engines/remotion', 'packs', 'core/scenes'];
+  const roots = ['engines/remotion', 'extras', 'core/scenes'];
   const stamps: string[] = [];
   const walk = async (dir: string): Promise<void> => {
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);

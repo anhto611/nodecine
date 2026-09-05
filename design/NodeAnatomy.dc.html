@@ -127,7 +127,7 @@
     .zoom{font-family:var(--mono);font-size:10px;color:var(--tx-3);
       padding:0 9px;display:flex;align-items:center;border-right:1px solid var(--line)}
 
-    /* ---------- Cụm điều khiển trình phát (nằm trong khối Video Output) ---------- */
+    /* ---------- Cụm điều khiển trình phát (nằm trong node Video Output) ---------- */
     .pbtn{width:28px;height:28px;border-radius:4px;border:1px solid var(--line-2);
       background:var(--bg-raise);color:var(--tx);display:flex;
       align-items:center;justify-content:center}
@@ -199,11 +199,11 @@
 </style>
 </helmet><div style="width:1240px;height:1980px;background:var(--bg-app);overflow:hidden">
   <div class="sheet">
-    <div><div class="h1">Giải phẫu khối: 9 lõi + 2 gói GitHub Showcase</div>
+    <div><div class="h1">Giải phẫu node: 9 lõi + 2 gói GitHub Showcase</div>
       <div class="sub" style="margin-top:8px">Cổng nhận ở mép trái, cổng phát ở mép phải, nhãn dùng đúng tên
-        trong bảng kiểu cổng. Ba khối xử lý gọi ra ngoài (Truy Xuất Repo, AI Đạo Diễn, Giọng Đọc) có nút thử lại;
-        khối tài nguyên có nút Kiểm tra lại; MP4 Export có nút thử lại khi kết xuất hỏng — cùng một thao tác chạy riêng khối. Ba khối tài nguyên (hai Provider và Engine) cùng một khuôn mẫu như Load Checkpoint;
-        Export là khối chạy theo yêu cầu (như SaveImage, nhưng bỏ qua mặc định). v0.1 không cần khóa API nào.</div></div>
+        trong bảng kiểu cổng. Ba node xử lý gọi ra ngoài (Truy Xuất Repo, AI Đạo Diễn, Giọng Đọc) có nút thử lại;
+        node tài nguyên có nút Kiểm tra lại; MP4 Export có nút thử lại khi kết xuất hỏng — cùng một thao tác chạy riêng node. Ba node tài nguyên (hai Provider và Engine) cùng một khuôn mẫu như Load Checkpoint;
+        Export là node chạy theo yêu cầu (như SaveImage, nhưng bỏ qua mặc định). v0.1 không cần khóa API nào.</div></div>
     <div class="rule"></div>
     <div class="grid3">
       
@@ -229,7 +229,7 @@
       
       <div class="p p-out on" style="top:46px"></div><div class="plab" style="top:42px;right:12px">Kịch bản</div><div class="p p-out on" style="top:70px"></div><div class="plab" style="top:66px;right:12px">Lời thoại</div>
     </div>
-    <div class="cellnote">Khối lõi duy nhất phát cả Kịch bản lẫn Lời thoại. Dựng video bằng tay, không mạng. Đồ thị nghiệm thu Pha A.</div>
+    <div class="cellnote">Node lõi duy nhất phát cả Kịch bản lẫn Lời thoại. Dựng video bằng tay, không mạng. Đồ thị nghiệm thu Pha A.</div>
   </div>
       
   <div>
@@ -242,12 +242,12 @@
       <div class="p p-in on" style="top:46px"></div><div class="plab" style="top:42px;left:12px"></div>
       <div class="p p-out on" style="top:46px"></div><div class="plab" style="top:42px;right:12px">Dữ kiện</div>
     </div>
-    <div class="cellnote">Khối của gói. Gọi GitHub API ẩn danh, phát FactSheet ra <b>hai</b> dây: tới AI Director và thẳng tới Timeline Assembler.</div>
+    <div class="cellnote">Node của gói. Gọi GitHub API ẩn danh, phát FactSheet ra <b>hai</b> dây: tới AI Director và thẳng tới Timeline Assembler.</div>
   </div>
       
   <div>
     <div class="nd big " style="position:relative;border-color:var(--line-2)">
-      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"></rect><line x1="12" y1="3" x2="12" y2="9"></line><circle cx="12" cy="3" r="1" fill="currentColor"></circle><line x1="9" y1="14" x2="9" y2="15"></line><line x1="15" y1="14" x2="15" y2="15"></line><line x1="1.5" y1="13" x2="4" y2="13"></line><line x1="20" y1="13" x2="22.5" y2="13"></line></svg></span><span class="nd-t">AI Director <span class="tag" style="margin-left:6px">gói</span></span><span class="st s-ok"><span class="dot"></span>4.2s</span></div>
+      <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"></rect><line x1="12" y1="3" x2="12" y2="9"></line><circle cx="12" cy="3" r="1" fill="currentColor"></circle><line x1="9" y1="14" x2="9" y2="15"></line><line x1="15" y1="14" x2="15" y2="15"></line><line x1="1.5" y1="13" x2="4" y2="13"></line><line x1="20" y1="13" x2="22.5" y2="13"></line></svg></span><span class="nd-t">AI Director</span><span class="st s-ok"><span class="dot"></span>4.2s</span></div>
       <div class="nd-b"><div class="kv"><span class="k">ngôn ngữ</span><span class="v">English <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></div>
          <div class="kv"><span class="k">model</span><span class="v">claude-opus-5</span></div>
          <div class="kv"><span class="k">theme</span><span class="v">developer-dark</span></div>
@@ -258,7 +258,7 @@
       <div class="p p-in on" style="top:40px"></div><div class="plab" style="top:36px;left:12px">Dữ kiện</div><div class="p p-in on" style="top:66px"></div><div class="plab" style="top:62px;left:12px">Mô hình ngôn ngữ</div>
       <div class="p p-out on" style="top:40px"></div><div class="plab" style="top:36px;right:12px">Kịch bản</div><div class="p p-out on" style="top:62px"></div><div class="plab" style="top:58px;right:12px">Lời thoại</div>
     </div>
-    <div class="cellnote">Khối của gói. Gắn sceneType, weight và factBindings vào từng cảnh. Số sao, lệnh cài đặt không đi qua mô hình.</div>
+    <div class="cellnote">Node của gói. Gắn sceneType, weight và factBindings vào từng cảnh. Số sao, lệnh cài đặt không đi qua mô hình.</div>
   </div>
       
   <div>
@@ -288,7 +288,7 @@
       <div class="p p-in on" style="top:36px"></div><div class="plab" style="top:32px;left:12px">Dữ kiện · tùy chọn</div><div class="p p-in on" style="top:62px"></div><div class="plab" style="top:58px;left:12px">Kịch bản</div><div class="p p-in on" style="top:88px"></div><div class="plab" style="top:84px;left:12px">Âm thanh</div>
       <div class="p p-out on" style="top:62px"></div><div class="plab" style="top:58px;right:12px">Bản đặc tả IR</div>
     </div>
-    <div class="cellnote">Khối lõi, generic: chia theo trọng số, đè dữ kiện theo factBindings, kiểm định 5 bất biến IR. Không biết cảnh là gì.</div>
+    <div class="cellnote">Node lõi, generic: chia theo trọng số, đè dữ kiện theo factBindings, kiểm định 5 bất biến IR. Không biết cảnh là gì.</div>
   </div>
       
   <div>
@@ -331,7 +331,7 @@
       <div class="p p-in on" style="top:46px"></div><div class="plab" style="top:42px;left:12px">Bản đặc tả IR</div><div class="p p-in on" style="top:74px"></div><div class="plab" style="top:70px;left:12px">Động cơ</div>
       
     </div>
-    <div class="cellnote">Chính là player. Hai cổng nhận, không có cổng phát, không có nút xuất.</div>
+    <div class="cellnote">Chính là player. Hai cổng nhận, không có cổng phát, không có node xuất.</div>
   </div>
       
   <div>
@@ -357,7 +357,7 @@
       
       <div class="p p-out on" style="top:52px"></div><div class="plab" style="top:48px;right:12px">Giọng đọc</div>
     </div>
-    <div class="cellnote">macOS <code>say</code> → AIFF → ffmpeg → MP3. Offline, không khóa. Hệ điều hành chưa hỗ trợ thì probe() báo và khối tiêu thụ tự khóa.</div>
+    <div class="cellnote">macOS <code>say</code> → AIFF → ffmpeg → MP3. Offline, không khóa. Hệ điều hành chưa hỗ trợ thì probe() báo và node tiêu thụ tự khóa.</div>
   </div>
       
   <div>
@@ -370,7 +370,7 @@
       
       <div class="p p-out on" style="top:52px"></div><div class="plab" style="top:48px;right:12px">Động cơ</div>
     </div>
-    <div class="cellnote">Khối tài nguyên, không có cổng nhận. Tham số của engine ở đây; tham số của một lần kết xuất thì không.</div>
+    <div class="cellnote">Node tài nguyên, không có cổng nhận. Tham số của engine ở đây; tham số của một lần kết xuất thì không.</div>
   </div>
       
   <div>
@@ -384,7 +384,7 @@
       <div class="p p-in on" style="top:40px"></div><div class="plab" style="top:36px;left:12px">Bản đặc tả IR</div><div class="p p-in on" style="top:70px"></div><div class="plab" style="top:66px;left:12px">Động cơ</div>
       
     </div>
-    <div class="cellnote">Bỏ qua mặc định: Chạy Luồng không chạm tới. Bấm Kết xuất để chạy riêng khối này.</div>
+    <div class="cellnote">Bỏ qua mặc định: Chạy Luồng không chạm tới. Bấm Kết xuất để chạy riêng node này.</div>
   </div>
     </div>
     <div class="rule"></div>
@@ -394,13 +394,13 @@
             <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span><span class="nd-t">Sẵn sàng</span><span class="st s-idle"><span class="dot"></span></span></div>
             <div class="cap-note">Chưa chạy lần nào trong phiên</div></div><div class="chip ">
             <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span><span class="nd-t">Đang chờ lượt</span><span class="st s-queue"><span class="dot"></span>chờ</span></div>
-            <div class="cap-note">Khối phía trước chưa xong</div></div><div class="chip n-run">
+            <div class="cap-note">Node phía trước chưa xong</div></div><div class="chip n-run">
             <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span><span class="nd-t">Đang chạy</span><span class="st s-run"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3a9 9 0 0 1 9 9" opacity=".95"></path><circle cx="12" cy="12" r="9" opacity=".18"></circle></svg></span></div>
             <div class="cap-note">Viền xanh dương, vòng xoay</div></div><div class="chip n-ok">
             <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span><span class="nd-t">Hoàn thành</span><span class="st s-ok"><span class="dot"></span>0.8s</span></div>
             <div class="cap-note">Viền xanh lá, kèm thời gian</div></div><div class="chip n-ok">
             <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span><span class="nd-t">Dùng lại</span><span class="st s-ok"><span class="dot"></span>dùng lại</span></div>
-            <div class="cap-note">Chữ ký khối không đổi</div></div><div class="chip n-stale">
+            <div class="cap-note">Chữ ký node không đổi</div></div><div class="chip n-stale">
             <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span><span class="nd-t">Cũ</span><span class="st s-idle"><span class="dot"></span></span></div>
             <div class="cap-note">Viền đứt nét: cấu hình đã đổi, hoặc bị hủy</div></div><div class="chip n-err">
             <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span><span class="nd-t">Lỗi</span><span class="st s-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span></div>
@@ -414,13 +414,13 @@
         <div>Định danh kiểu</div><div>Nhãn hiển thị</div><div>Đường đi</div>
         <div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>SourceRef</div>
             <div style="color:var(--tx)">Dữ liệu Nguồn</div><div style="color:var(--tx-2)">Nhập Liệu → Truy Xuất Repo</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>FactSheet</div>
-            <div style="color:var(--tx)">Dữ kiện</div><div style="color:var(--tx-2)">Khối truy xuất của gói → khối đạo diễn của gói <b>và</b> → Timeline Assembler</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>DirectorPlan</div>
-            <div style="color:var(--tx)">Kịch bản Phân cảnh</div><div style="color:var(--tx-2)">Static Script / khối đạo diễn → Timeline Assembler</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>AudioScript</div>
-            <div style="color:var(--tx)">Lời thoại</div><div style="color:var(--tx-2)">Static Script / khối đạo diễn → TTS Engine</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>Voiceover</div>
+            <div style="color:var(--tx)">Dữ kiện</div><div style="color:var(--tx-2)">Node truy xuất của gói → node đạo diễn của gói <b>và</b> → Timeline Assembler</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>DirectorPlan</div>
+            <div style="color:var(--tx)">Kịch bản Phân cảnh</div><div style="color:var(--tx-2)">Static Script / node đạo diễn → Timeline Assembler</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>AudioScript</div>
+            <div style="color:var(--tx)">Lời thoại</div><div style="color:var(--tx-2)">Static Script / node đạo diễn → TTS Engine</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>Voiceover</div>
             <div style="color:var(--tx)">Âm thanh & Thời lượng</div><div style="color:var(--tx-2)">TTS Engine → Timeline Assembler</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>VideoIR</div>
             <div style="color:var(--tx)">Bản đặc tả IR</div><div style="color:var(--tx-2)">Timeline Assembler → Video Output <b>và</b> → MP4 Export</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>EngineRef</div>
             <div style="color:var(--tx)">Động cơ</div><div style="color:var(--tx-2)">Remotion Engine → Video Output <b>và</b> → MP4 Export</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>LLMRef</div>
-            <div style="color:var(--tx)">Mô hình ngôn ngữ</div><div style="color:var(--tx-2)">Claude Code Provider → khối đạo diễn của gói</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>TTSRef</div>
+            <div style="color:var(--tx)">Mô hình ngôn ngữ</div><div style="color:var(--tx-2)">Claude Code Provider → node đạo diễn của gói</div><div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>TTSRef</div>
             <div style="color:var(--tx)">Giọng đọc</div><div style="color:var(--tx-2)">System TTS Provider → TTS Engine</div>
       </div>
       <div class="cellnote" style="margin-top:11px">Dây chỉ nối được khi hai định danh kiểu trùng khớp tuyệt đối.

@@ -31,7 +31,7 @@ export const DEFAULT_STATIC_SCRIPT = {
 export const staticScript: NodeDefinition<typeof Params> = {
   type: 'core/static-script',
   version: 1,
-  pack: 'core',
+  namespace: 'core',
   kind: 'source',
   inputs: [],
   outputs: [

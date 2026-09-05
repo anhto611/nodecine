@@ -15,8 +15,8 @@ async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Pr
 
 export const clientServices: NodeServices = {
   now: () => Date.now(),
-  async packRequest(pack, op, input, signal) {
-    return postJson<unknown>(`/api/packs/${encodeURIComponent(pack)}/${encodeURIComponent(op)}`, input, signal);
+  async serverOp(op, input, signal) {
+    return postJson<unknown>(`/api/ops/${encodeURIComponent(op)}`, input, signal);
   },
 
   async probeLLM(providerId, settings) {

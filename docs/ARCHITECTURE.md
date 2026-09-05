@@ -1,6 +1,6 @@
 # Kiến trúc Hệ thống NodeCine (System Architecture)
 
-Tài liệu này mô tả phần khung lõi; gói khối chỉ xuất hiện ở cây thư mục. Nó trả lời câu hỏi mà các tài liệu còn lại không trả lời: mã nguồn chạy ở đâu, ranh giới giữa máy khách và máy chủ nằm chỗ nào, và tại sao một sản phẩm tuyên bố Zero-Auth vẫn cần phần máy chủ.
+Tài liệu này mô tả phần khung lõi; nội dung kèm app và bản mẫu chỉ xuất hiện ở cây thư mục. Nó trả lời câu hỏi mà các tài liệu còn lại không trả lời: mã nguồn chạy ở đâu, ranh giới giữa máy khách và máy chủ nằm chỗ nào, và tại sao một sản phẩm tuyên bố Zero-Auth vẫn cần phần máy chủ.
 
 ---
 
@@ -11,7 +11,7 @@ NodeCine v0.1 là một ứng dụng Next.js duy nhất, người dùng tự t�
 ```
 Máy của người dùng
 ├─ Trình duyệt (Chromium)
-│   └─ Studio UI: canvas đồ thị, bộ máy thực thi, trình phát trong khối,
+│   └─ Studio UI: canvas đồ thị, bộ máy thực thi, trình phát trong node,
 │                 (kho khóa API, khi có nhà cung cấp cần khóa)
 │        │
 │        │  HTTP trên localhost
@@ -43,11 +43,11 @@ Có đúng ba việc trình duyệt không làm được, và đó là toàn b�
 | Logic đóng gói Bản Đặc Tả Video Trung Gian | Máy khách | Hàm thuần, không có tác dụng phụ |
 | Lệnh gọi GitHub | Máy chủ cục bộ | Lớp chuyển tiếp, không giữ trạng thái |
 | Gọi Claude Code CLI, gọi bộ tổng hợp giọng nói | Máy chủ cục bộ | Sinh tiến trình con theo quy tắc an toàn tại Hợp đồng Lõi mục 9 |
-| `probe()` của các khối tài nguyên | Máy chủ cục bộ | Kiểm tra tệp thực thi, phiên đăng nhập, ffmpeg |
-| Kết xuất MP4, do Khối Xuất MP4 kích hoạt | Máy chủ cục bộ | Tiến trình chạy dài, có báo tiến độ và hủy |
-| Remotion Player trong Khối Video Output | Máy khách | Không tiêu tốn tài nguyên kết xuất |
+| `probe()` của các node tài nguyên | Máy chủ cục bộ | Kiểm tra tệp thực thi, phiên đăng nhập, ffmpeg |
+| Kết xuất MP4, do Node Xuất MP4 kích hoạt | Máy chủ cục bộ | Tiến trình chạy dài, có báo tiến độ và hủy |
+| Remotion Player trong Node Video Output | Máy khách | Không tiêu tốn tài nguyên kết xuất |
 
-Bộ máy thực thi nằm ở phía máy khách là một quyết định có chủ đích. Nó cho phép trạng thái từng khối phản ánh tức thời lên giao diện mà không cần một kênh đồng bộ ngược từ máy chủ, và giữ cho tầng máy chủ hoàn toàn không có trạng thái, nhờ đó dễ kiểm thử và dễ thay thế.
+Bộ máy thực thi nằm ở phía máy khách là một quyết định có chủ đích. Nó cho phép trạng thái từng node phản ánh tức thời lên giao diện mà không cần một kênh đồng bộ ngược từ máy chủ, và giữ cho tầng máy chủ hoàn toàn không có trạng thái, nhờ đó dễ kiểm thử và dễ thay thế.
 
 ---
 
@@ -59,21 +59,22 @@ nodecine/
 │  ├─ page.tsx                    Trang Studio duy nhất
 │  ├─ layout.tsx
 │  └─ api/
-│     ├─ packs/[pack]/[op]/route.ts  RPC chung cho gói: chuyển tiếp tới handler mà gói đã đăng ký (Truy Xuất Repo đi qua đây)
+│     ├─ ops/[op]/route.ts        Thao tác máy chủ: chuyển tiếp tới hàm đã đăng ký trong core/server-ops (Truy Xuất Repo đi qua đây)
 │     ├─ director/route.ts        Gọi nhà cung cấp mô hình ngôn ngữ theo LLMRef
 │     ├─ tts/route.ts             Gọi nhà cung cấp giọng đọc theo TTSRef
-│     ├─ providers/probe/route.ts Kiểm tra sẵn sàng cho các khối tài nguyên
+│     ├─ providers/probe/route.ts Kiểm tra sẵn sàng cho các node tài nguyên
 │     ├─ media/[...path]/route.ts Phục vụ tệp trong thư mục tệp tạm, chỉ đọc
 │     └─ render/route.ts          Kết xuất MP4 và báo tiến độ
 ├─ core/                          Tầng lõi, không phụ thuộc React và engine
 │  ├─ types/                      Kiểu cổng, lược đồ dữ liệu, Bản đặc tả IR
-│  ├─ nodes/                      Chín khối lõi: cổng, tham số, hàm chạy
-│  ├─ engine/                     Bộ máy thực thi đồ thị, chữ ký khối, bộ nhớ đệm
+│  ├─ nodes/                      Mười một node lõi: cổng, tham số, hàm chạy — gồm Đạo Diễn AI
+│  ├─ engine/                     Bộ máy thực thi đồ thị, chữ ký node, bộ nhớ đệm
 │  ├─ assembler/                  Phân bổ khung hình theo trọng số, đè dữ kiện, kiểm định IR
 │  ├─ scenes/                     Scene registry rỗng + kiểu cảnh core/title-card (lược đồ props)
-│  ├─ packs/handlers.ts           Registry rỗng cho handler máy chủ của gói: (pack, op) → hàm
-│  ├─ templates/registry.ts       Registry đồ thị mẫu: templateId → hàm tạo Graph; lõi đăng ký Kịch Bản Tĩnh, gói đăng ký của gói
-│  ├─ text/detect-language.ts     Nhận diện ngôn ngữ theo hệ chữ, dùng bởi Kịch Bản Tĩnh
+│  ├─ director/                   Ruột của Đạo Diễn AI: slot → lược đồ đầu ra, prompt, vòng gọi mô hình
+│  ├─ server-ops.ts               Registry rỗng cho thao tác máy chủ: tên → hàm
+│  ├─ templates/registry.ts       Registry bản mẫu: kiểm định JSON, trả bản sao đồ thị; rỗng ở lõi
+│  ├─ text/                       Nhận diện ngôn ngữ theo hệ chữ; chính sách ngôn ngữ đầu ra
 │  ├─ adapters/                   CHỈ giao diện Adapter và registry rỗng; không có lớp cài đặt nào ở đây
 │  │  ├─ types.ts                 EngineAdapter, probe / mountPlayer / render
 │  │  └─ registry.ts              engineId → factory; các gói engines/ tự đăng ký lúc khởi động
@@ -97,20 +98,14 @@ nodecine/
 │  ├─ claude-code/index.ts        Gọi CLI đã đăng nhập
 │  ├─ piper/index.ts             Giọng máy học chạy cục bộ, chung một đường trên mọi hệ điều hành
 │  └─ system-tts/index.ts         macOS say + ffmpeg
-├─ packs/                         Gói khối và toàn bộ dây nối tới chúng
-│  ├─ installed.ts                Danh sách gói duy nhất mà ứng dụng đọc
-│  ├─ installed.client.ts         Thân khối và renderer cho Studio
+├─ extras/                        Node và kiểu cảnh app kèm theo, ngoài khung; luôn được cài lúc khởi động
+│  ├─ installed.ts                Danh sách đẳng hình duy nhất: đăng ký node, kiểu cảnh, chuỗi
+│  ├─ installed.client.ts         Thân node và renderer cho Studio
 │  ├─ installed.remotion.ts       Renderer mà bundle kết xuất cần nạp lại
-│  └─ github-showcase/
-│     ├─ index.ts                 Đăng ký khối (đẳng hình, chạy cả hai phía)
-│     ├─ constants.ts             PACK_ID, phiên bản; không nhập gì
-│     ├─ parse-source.ts, facts.ts  Nhận diện link repo, dựng dữ kiện; hàm thuần, có test
-│     ├─ nodes/{github-fetcher,ai-director}.ts
-│     ├─ server/                  Handler máy chủ (gọi GitHub), đăng ký vào core/packs/handlers
-│     ├─ ui/                      Thân khối và metadata thư viện, đăng ký lúc khởi động máy khách
-│     ├─ scenes/schemas.ts        Lược đồ props ba kiểu cảnh, đăng ký vào scene registry
-│     ├─ remotion/{Hook,Mockup,Cta}.tsx  Renderer Remotion, đăng ký qua registerSceneRenderer; engines/remotion/renderers.ts gọi vào
-│     └─ template.ts              Đồ thị mẫu 10 khối, đăng ký vào core/templates/registry
+│  ├─ installed.server.ts         Thao tác máy chủ, đăng ký vào core/server-ops
+│  ├─ github/                     Truy Xuất Repo + ba kiểu cảnh hook/mockup/cta (Remotion và Hyperframes)
+│  └─ quotes/                     Một kiểu cảnh quote (Remotion và Hyperframes); không có node
+├─ templates/                     Bản mẫu = đồ thị JSON, cùng hình dạng tệp dự án; index.ts đăng ký cả ba
 ├─ components/                    Thành phần giao diện Studio
 ├─ locales/                       Từ điển chuỗi hiển thị
 └─ docs/
@@ -120,10 +115,10 @@ Quy ước ngôn ngữ trong kho mã: mã nguồn, chú thích, tên kiểm th�
 
 Quy tắc phụ thuộc bắt buộc, kiểm tra được bằng công cụ phân tích tĩnh:
 
-- `core/` không được phép nhập bất cứ thứ gì từ `engines/`, `providers/`, `packs/`, `app/` hay `components/`. Nó chỉ chứa giao diện Adapter, Provider, kiểu cảnh cùng ba registry rỗng; các lớp cài đặt cụ thể nằm ngoài lõi và tự đăng ký vào registry ở thời điểm khởi động ứng dụng. Nếu quy tắc này bị vi phạm, tuyên bố độc lập engine trở thành lời nói suông và Hyperframes Adapter sẽ không bao giờ cài đặt được.
-- `engines/*`, `providers/*` và `packs/*` được nhập giao diện và kiểu từ `core/`, và được nhập thư viện của riêng chúng như Remotion hay React; `core/` không bao giờ nhập ngược lại. Một gói đăng ký renderer cho một engine qua scene registry, không nhập Adapter của engine đó.
+- `core/` không được phép nhập bất cứ thứ gì từ `engines/`, `providers/`, `extras/`, `templates/`, `app/` hay `components/`. Nó chỉ chứa giao diện Adapter, Provider, kiểu cảnh cùng ba registry rỗng; các lớp cài đặt cụ thể nằm ngoài lõi và tự đăng ký vào registry ở thời điểm khởi động ứng dụng. Nếu quy tắc này bị vi phạm, tuyên bố độc lập engine trở thành lời nói suông và Hyperframes Adapter sẽ không bao giờ cài đặt được.
+- `engines/*`, `providers/*` và `extras/*` được nhập giao diện và kiểu từ `core/`, và được nhập thư viện của riêng chúng như Remotion hay React; `core/` không bao giờ nhập ngược lại. Một kiểu cảnh đăng ký renderer cho một engine qua scene registry, không nhập Adapter của engine đó. `templates/` chỉ chứa JSON và một tệp đăng ký; nó không import node nào.
 - `components/` được nhập từ `core/`, nhưng `core/` không bao giờ nhập ngược lại. Trình phát Remotion là một component do `engines/remotion/` cung cấp qua `mountPlayer()`, tầng giao diện chỉ gọi hàm đó chứ không nhập Remotion trực tiếp.
-- Chỉ `app/api/` được phép thực hiện lệnh gọi mạng ra ngoài. Các hàm chạy khối trong `core/nodes/` gọi tới điểm cuối cục bộ của chính ứng dụng, không gọi thẳng nhà cung cấp.
+- Chỉ `app/api/` được phép thực hiện lệnh gọi mạng ra ngoài. Các hàm chạy node trong `core/nodes/` gọi tới điểm cuối cục bộ của chính ứng dụng, không gọi thẳng nhà cung cấp.
 
 ---
 
@@ -142,15 +137,15 @@ Quy tắc phụ thuộc bắt buộc, kiểm tra được bằng công cụ phâ
 
 Ứng dụng không giữ thông tin đăng nhập của nhà cung cấp nào:
 
-- Khối Claude Code Provider gọi tệp thực thi `claude` đang có trên máy. Phiên đăng nhập thuộc về công cụ đó, nằm ở nơi công cụ đó tự lưu; NodeCine không đọc, không sao chép, không chuyển tiếp nó. `probe()` chỉ hỏi công cụ "có đăng nhập chưa" và nhận câu trả lời có hoặc không.
-- Khối System TTS Provider gọi bộ tổng hợp của hệ điều hành, không có khái niệm đăng nhập.
+- Node Claude Code Provider gọi tệp thực thi `claude` đang có trên máy. Phiên đăng nhập thuộc về công cụ đó, nằm ở nơi công cụ đó tự lưu; NodeCine không đọc, không sao chép, không chuyển tiếp nó. `probe()` chỉ hỏi công cụ "có đăng nhập chưa" và nhận câu trả lời có hoặc không.
+- Node System TTS Provider gọi bộ tổng hợp của hệ điều hành, không có khái niệm đăng nhập.
 - GitHub API dùng hạn mức ẩn danh theo địa chỉ IP. Người dùng có thể đặt biến môi trường chứa mã thông báo GitHub để nâng hạn mức; đây là tùy chọn, không bắt buộc.
 
 Khi có nhà cung cấp cần khóa API, quy tắc sau áp dụng:
 
 1. Người dùng nhập khóa trong cửa sổ Cài đặt. Khóa được ghi vào bộ nhớ cục bộ của trình duyệt, tách khỏi tài liệu dự án.
-2. Khối Nhà Cung Cấp chỉ giữ một định danh trỏ tới khóa, không giữ khóa. Tệp dự án chia sẻ ra ngoài vì thế không bao giờ chứa khóa.
-3. Khi một khối cần khóa, bộ máy thực thi đọc khóa ra và gửi kèm trong phần thân yêu cầu tới điểm cuối cục bộ tương ứng. Điểm cuối loại bỏ khóa ngay khi yêu cầu kết thúc, không ghi nhật ký, không ghi ra đĩa.
+2. Node Nhà Cung Cấp chỉ giữ một định danh trỏ tới khóa, không giữ khóa. Tệp dự án chia sẻ ra ngoài vì thế không bao giờ chứa khóa.
+3. Khi một node cần khóa, bộ máy thực thi đọc khóa ra và gửi kèm trong phần thân yêu cầu tới điểm cuối cục bộ tương ứng. Điểm cuối loại bỏ khóa ngay khi yêu cầu kết thúc, không ghi nhật ký, không ghi ra đĩa.
 4. Khóa lấy từ biến môi trường của tiến trình máy chủ được ưu tiên hơn khóa gửi từ máy khách.
 
 Quy tắc ghi nhật ký, áp dụng luôn: mọi thông báo lỗi chuyển ngược về máy khách phải được lọc bỏ chuỗi giống khóa hoặc mã thông báo trước khi gửi, kể cả khi tiến trình con vô tình in chúng ra.
@@ -159,8 +154,8 @@ Quy tắc ghi nhật ký, áp dụng luôn: mọi thông báo lỗi chuyển ng�
 
 Tầng máy chủ nhận đường dẫn từ máy khách rồi đi gọi ra ngoài, nên nó là một điểm cần phòng vệ ngay cả khi chỉ chạy trên máy cá nhân. Nếu người dùng mở một đồ thị do người khác chia sẻ, đường dẫn trong đồ thị đó là dữ liệu không đáng tin.
 
-- Máy khách không bao giờ gửi đường dẫn: khối Truy Xuất Repo tách cặp tên chủ sở hữu và tên repo ngay trên máy khách, chỉ cặp đó đi qua `POST /api/packs/github-showcase/fetch-repo`. Máy chủ kiểm tra lại cặp này bằng biểu thức chính quy rồi tự dựng mọi đường dẫn gọi ra trên hai máy chủ cố định `api.github.com` và `raw.githubusercontent.com`; vì thế không tồn tại cách nào để một đồ thị chia sẻ khiến máy này gọi tới địa chỉ nội bộ hay dải riêng.
-- Điểm cuối RPC của gói (`/api/packs/<pack>/<op>`) chỉ nhận hai đoạn đường dẫn chữ thường và gạch ngang, tra trong registry `core/packs/handlers`; gói chưa đăng ký thì 404. Lỗi `NodeError` được trả về nguyên mã, thông báo và cờ thử lại để khối hiện đúng.
+- Máy khách không bao giờ gửi đường dẫn: node Truy Xuất Repo tách cặp tên chủ sở hữu và tên repo ngay trên máy khách, chỉ cặp đó đi qua `POST /api/ops/github-fetch-repo`. Máy chủ kiểm tra lại cặp này bằng biểu thức chính quy rồi tự dựng mọi đường dẫn gọi ra trên hai máy chủ cố định `api.github.com` và `raw.githubusercontent.com`; vì thế không tồn tại cách nào để một đồ thị chia sẻ khiến máy này gọi tới địa chỉ nội bộ hay dải riêng.
+- Điểm cuối thao tác máy chủ (`/api/ops/<op>`) chỉ nhận một đoạn đường dẫn chữ thường và gạch ngang, tra trong `core/server-ops`; op chưa đăng ký thì 404. Lỗi `NodeError` được trả về nguyên mã, thông báo và cờ thử lại để node hiện đúng.
 - Điểm cuối kết xuất chỉ nhận Bản Đặc Tả Video Trung Gian đã qua kiểm định lược đồ, và chỉ chấp nhận đường dẫn âm thanh trỏ vào chính thư mục tệp tạm của ứng dụng.
 - Các điểm cuối sinh tiến trình con tuân thủ quy tắc tại Hợp đồng Lõi mục 9: đối số dạng mảng, nội dung qua đầu vào chuẩn, đường dẫn tệp thực thi không lấy từ tệp dự án.
 
@@ -178,11 +173,11 @@ Tầng máy chủ nhận đường dẫn từ máy khách rồi đi gọi ra ngo
 
 ## 7. Kết xuất MP4: Trình tự Chi tiết
 
-1. Người dùng bấm Kết xuất trên Khối Xuất MP4; máy khách gửi Bản Đặc Tả Video Trung Gian, định danh engine và tham số kết xuất tới điểm cuối kết xuất.
+1. Người dùng bấm Kết xuất trên Node Xuất MP4; máy khách gửi Bản Đặc Tả Video Trung Gian, định danh engine và tham số kết xuất tới điểm cuối kết xuất.
 2. Máy chủ kiểm định lược đồ và số hiệu phiên bản của bản đặc tả, từ chối sớm nếu không khớp.
 3. Máy chủ đóng gói mã nguồn Remotion, khởi chạy headless Chromium, và kết xuất Composition với bản đặc tả làm thuộc tính đầu vào.
-4. Tiến độ được đẩy ngược về máy khách theo dòng sự kiện, hiển thị dưới dạng phần trăm trên thân Khối Xuất MP4, kèm dòng nhật ký đổ vào Panel Nhật ký.
-5. Khi hoàn tất, máy chủ trả về đường dẫn tệp và dung lượng; máy khách kích hoạt tải xuống và hiện nút Tải xuống trên khối.
+4. Tiến độ được đẩy ngược về máy khách theo dòng sự kiện, hiển thị dưới dạng phần trăm trên thân Node Xuất MP4, kèm dòng nhật ký đổ vào Panel Nhật ký.
+5. Khi hoàn tất, máy chủ trả về đường dẫn tệp và dung lượng; máy khách kích hoạt tải xuống và hiện node Tải xuống trên node.
 6. Nếu thất bại, máy chủ trả về mã lỗi kèm phần đuôi nhật ký kết xuất. Bản Đặc Tả Video Trung Gian ở phía máy khách được giữ nguyên để thử lại ngay mà không phải chạy lại luồng.
 
 Điểm cần lưu ý khi cài đặt: bước đóng gói mã nguồn Remotion mất vài giây và có thể dùng lại giữa các lần kết xuất. Nên giữ kết quả đóng gói trong bộ nhớ đệm theo mã băm của mã nguồn để lần kết xuất thứ hai trở đi nhanh hơn đáng kể.
@@ -193,7 +188,7 @@ Tầng máy chủ nhận đường dẫn từ máy khách rồi đi gọi ra ngo
 
 Những điểm dưới đây không đổi thiết kế nhưng sẽ chặn tiến độ nếu không dự trù.
 
-1. **Trình phát Remotion bên trong khối React Flow.** React Flow áp `transform: translate() scale()` lên toàn bộ viewport, nên mọi thao tác kéo trong thân khối (thanh trượt, nút phát) phải nằm trong phần tử mang các lớp `nodrag`, `nopan` và `nowheel` của React Flow; nếu không, kéo thanh trượt sẽ kéo cả canvas và cuộn để tua sẽ thu phóng. Khung phát giữ tỷ lệ 9:16 bằng CSS `aspect-ratio`, kích thước bố cục cố định, để trình phát tự co theo mức thu phóng của canvas mà không phải tính lại. Trình phát được mount vào một React root lồng riêng (adapter không phụ thuộc cây React của Studio); root lồng phải được gỡ **bất đồng bộ** (`setTimeout`) vì cleanup của effect chạy khi React đang render, và phần tử chứa phải đổi `key` theo IR để root mới không dùng chung phần tử với root cũ chưa kịp gỡ.
+1. **Trình phát Remotion bên trong node React Flow.** React Flow áp `transform: translate() scale()` lên toàn bộ viewport, nên mọi thao tác kéo trong thân node (thanh trượt, node phát) phải nằm trong phần tử mang các lớp `nodrag`, `nopan` và `nowheel` của React Flow; nếu không, kéo thanh trượt sẽ kéo cả canvas và cuộn để tua sẽ thu phóng. Khung phát giữ tỷ lệ 9:16 bằng CSS `aspect-ratio`, kích thước bố cục cố định, để trình phát tự co theo mức thu phóng của canvas mà không phải tính lại. Trình phát được mount vào một React root lồng riêng (adapter không phụ thuộc cây React của Studio); root lồng phải được gỡ **bất đồng bộ** (`setTimeout`) vì cleanup của effect chạy khi React đang render, và phần tử chứa phải đổi `key` theo IR để root mới không dùng chung phần tử với root cũ chưa kịp gỡ.
 2. **`@remotion/bundler` và `@remotion/renderer` trong route handler của Next.js.** Hai gói này mang webpack riêng và tệp nhị phân gốc; nếu để Next.js đóng gói chúng sẽ gặp lỗi không tìm thấy module hoặc xung đột nhị phân. Bắt buộc khai báo `serverExternalPackages: ['@remotion/bundler', '@remotion/renderer']` trong `next.config`. Turbopack ở chế độ dev có thể không tương thích; nếu gặp, chạy `next dev --webpack`. Kết quả đóng gói giữ trong bộ nhớ đệm theo mã băm mã nguồn như mục 7.
 3. **Claude Code CLI có quyền đọc tệp và dùng công cụ.** Chạy `claude -p` trong thư mục dự án nghĩa là mô hình có thể đọc mã nguồn và gọi công cụ. Provider `claude-code` bắt buộc sinh tiến trình với thư mục làm việc là một thư mục tạm rỗng, tắt toàn bộ công cụ qua tham số dòng lệnh, giới hạn một lượt, và chỉ đọc trường kết quả. Đây là phần bổ sung cho quy tắc an toàn tiến trình con tại Hợp đồng Lõi mục 9.
 4. **Giấy phép Remotion.** Remotion là mã nguồn mở có điều kiện: miễn phí cho cá nhân và tổ chức nhỏ, tổ chức lớn hơn cần giấy phép công ty. NodeCine là mã nguồn mở và không phân phối lại Remotion, nhưng người dùng là công ty tự chịu trách nhiệm về giấy phép của họ; ghi rõ trong tệp README của kho mã.
@@ -201,5 +196,5 @@ Những điểm dưới đây không đổi thiết kế nhưng sẽ chặn ti�
 6. **Bộ đóng gói Remotion không biết bí danh `@/` của Next.js.** `@remotion/bundler` dùng webpack riêng, không đọc `tsconfig.paths`, nên mọi `import '@/core/...'` bên trong entry của video sẽ lỗi "module not found" lúc kết xuất dù `next dev` chạy bình thường. Adapter phía máy chủ phải truyền `webpackOverride` thêm `resolve.alias['@'] = process.cwd()` khi gọi `bundle()`; kiểm thử kết xuất thật (không chỉ typecheck) là cách duy nhất bắt được lỗi này.
 7. **Mã máy chủ của Remotion không được kéo React vào route handler.** `@remotion/renderer` chạy trong Node và không cần React, nhưng nếu route handler nhập gián tiếp một tệp có `import { ... } from 'remotion'` (ví dụ để lấy hằng số `COMPOSITION_ID`), Next.js sẽ báo "Remotion requires React.createContext". Hằng số dùng chung phải nằm trong một mô-đun không nhập `remotion`/`react`; phần đăng ký trình kết xuất cảnh chỉ chạy ở máy khách và bên trong bundle.
 8. **Phông chữ của video phải đóng gói cục bộ.** Ba kiểu cảnh và cảnh lõi đều khai JetBrains Mono. Nếu chỉ khai tên phông, máy nào không cài sẽ kết xuất bằng phông monospace mặc định và ra khung hình khác, tức là kết quả không tái lập được. Tệp `woff2` nằm trong `public/fonts` kèm giấy phép OFL 1.1, được phục vụ như tệp âm thanh: trình phát nạp theo đường dẫn tương đối, bản kết xuất không đầu nạp theo `mediaBaseUrl` tuyệt đối. Thành phần video giữ khung đầu bằng `delayRender` cho tới khi phông sẵn sàng, nếu không chữ sẽ nhảy vài khung đầu.
-9. **Bản đóng gói Remotion bị nhớ suốt đời tiến trình.** Kết quả `bundle()` được giữ trong một biến cấp mô-đun để không phải dựng lại mỗi lần kết xuất. Ở chế độ phát triển, tiến trình sống lâu hơn nhiều lần sửa mã, nên bản đóng gói cũ vẫn được dùng và video ra đúng như mã lúc khởi động máy chủ, không có dấu hiệu nào báo. Vì thế ở chế độ phát triển bộ nhớ đệm được đánh khóa theo dấu vân tay thời gian sửa và kích thước của mọi tệp trong `engines/remotion`, `packs` và `core/scenes`; ở bản production mã nguồn không đổi nên vẫn dựng một lần.
-10. **Trình phát Remotion và cảnh mờ dần từ đen.** Khung 0 của một cảnh mở đầu bằng fade-in là màn đen, nên ảnh đại diện của trình phát sẽ trống. Khối Xuất Bản Video mount trình phát với `initialFrame` lùi vài khung (giới hạn dưới tổng số khung) để khung đầu hiển thị nội dung.
+9. **Bản đóng gói Remotion bị nhớ suốt đời tiến trình.** Kết quả `bundle()` được giữ trong một biến cấp mô-đun để không phải dựng lại mỗi lần kết xuất. Ở chế độ phát triển, tiến trình sống lâu hơn nhiều lần sửa mã, nên bản đóng gói cũ vẫn được dùng và video ra đúng như mã lúc khởi động máy chủ, không có dấu hiệu nào báo. Vì thế ở chế độ phát triển bộ nhớ đệm được đánh khóa theo dấu vân tay thời gian sửa và kích thước của mọi tệp trong `engines/remotion`, `extras` và `core/scenes`; ở bản production mã nguồn không đổi nên vẫn dựng một lần.
+10. **Trình phát Remotion và cảnh mờ dần từ đen.** Khung 0 của một cảnh mở đầu bằng fade-in là màn đen, nên ảnh đại diện của trình phát sẽ trống. Node Xuất Bản Video mount trình phát với `initialFrame` lùi vài khung (giới hạn dưới tổng số khung) để khung đầu hiển thị nội dung.

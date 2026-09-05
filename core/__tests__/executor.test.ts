@@ -5,7 +5,8 @@ import { _resetNodeRegistry } from '../nodes/definition';
 import { registerCoreNodes } from '../nodes';
 import { _resetSceneRegistry, registerSceneRenderer } from '../scenes/registry';
 import { registerCoreScenes, TITLE_CARD } from '../scenes/title-card';
-import { staticScriptTemplate } from '../templates/static-script';
+import staticScriptJson from '@/templates/static-script.json';
+const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
 import { validateIR } from '../assembler/validate-ir';
 import type { VideoIR } from '../types/ir';
 import { makeFakeServices } from './fakes';
@@ -101,7 +102,7 @@ describe('Phase A run', () => {
 
   it('a Vietnamese script is detected and picks a Vietnamese voice with no extra input', async () => {
     const { executor, graph, services } = setup();
-    graph.nodes.find((n) => n.id === 'script')!.params.script = 'Gặp NodeCine. Dựng video ngắn từ đồ thị khối.';
+    graph.nodes.find((n) => n.id === 'script')!.params.script = 'Gặp NodeCine. Dựng video ngắn từ đồ thị node.';
     await executor.run();
     const synth = services.calls.find((c) => c.name === 'synthesize')!;
     expect(synth.args[1]).toBe('linh');

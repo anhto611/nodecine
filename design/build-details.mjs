@@ -87,25 +87,25 @@ writeFileSync('VideoOutputNode.dc.html', sheet(960, 860, `
       <span class="co" style="left:4px;top:${VH + 162}px">7</span>
     </div>
     <div class="col" style="padding-top:8px;max-width:400px">
-      <div class="h1">Khối Video Output là player</div>
-      <div class="sub">Không còn khung xem trước riêng, không có hộp chọn engine, không có nút xuất.
-        Khung 9:16, nút phát, thanh trượt và thanh tra phân cảnh nằm trọn trong thân khối, giống
-        PreviewImage của ComfyUI. Engine đến từ cổng nhận thứ hai; kết xuất là việc của khối MP4 Export.</div>
+      <div class="h1">Node Video Output là player</div>
+      <div class="sub">Không còn khung xem trước riêng, không có hộp chọn engine, không có node xuất.
+        Khung 9:16, node phát, thanh trượt và thanh tra phân cảnh nằm trọn trong thân node, giống
+        PreviewImage của ComfyUI. Engine đến từ cổng nhận thứ hai; kết xuất là việc của node MP4 Export.</div>
       <div class="rule"></div>
       ${[
-        ['Cổng Động cơ', 'Nhận EngineRef từ một khối Engine. Nhãn mờ cạnh cổng hiện tên engine đang nối. Đổi engine = nối dây khác, không khối nào phía trước chạy lại.'],
+        ['Cổng Động cơ', 'Nhận EngineRef từ một node Engine. Nhãn mờ cạnh cổng hiện tên engine đang nối. Đổi engine = nối dây khác, không node nào phía trước chạy lại.'],
         ['Khung 9:16', 'Remotion Player chạy phía máy khách, không tốn tài nguyên kết xuất. Tỷ lệ cố định 1080×1920, co theo mức thu phóng canvas.'],
         ['Nhảy về đầu · Phát / Tạm dừng', 'Phím Space phát và tạm dừng khi tiêu điểm không nằm trong ô nhập liệu.'],
         ['Thanh trượt theo từng khung', 'Vạch vàng đánh dấu thời điểm âm thanh kết thúc khi ngưỡng 270 khung được kích hoạt (đuôi lặng).'],
         ['Bộ đếm kép', 'Khung hình hiện tại trên tổng số, và giây hiện tại trên tổng số giây.'],
         ['Thanh tra phân cảnh', 'Bề rộng mỗi thẻ tỷ lệ với số khung hình của cảnh. Bấm để nhảy tới khung đầu tiên của cảnh đó.'],
-        ['Tóm tắt Bản đặc tả IR', 'Tổng khung, fps, đuôi lặng và độ phân giải, để đối chiếu nhanh với khối Assembler. Không có nút xuất ở đây.'],
+        ['Tóm tắt Bản đặc tả IR', 'Tổng khung, fps, đuôi lặng và độ phân giải, để đối chiếu nhanh với node Assembler. Không có node xuất ở đây.'],
       ].map(([t, d], i) => `<div class="ci"><span class="co">${i + 1}</span>
         <div><div class="t">${t}</div><div class="d">${d}</div></div></div>`).join('')}
     </div>
   </div>`));
 
-/* ============ Giải phẫu 6 khối ============ */
+/* ============ Giải phẫu 6 node ============ */
 const anat = (ic, title, badgeHtml, body, inPorts, outPorts, note, extraHdr, ncls) => `
   <div>
     <div class="nd big ${ncls||''}" style="position:relative;${ncls?'':'border-color:var(--line-2)'}">
@@ -121,11 +121,11 @@ const bars = [6,11,7,14,9,16,10,13,6,12,8,15,7,10,5,13,9,6,11,7,14,8];
 
 writeFileSync('NodeAnatomy.dc.html', sheet(1240, 1980, `
   <div class="sheet">
-    <div><div class="h1">Giải phẫu khối: 9 lõi + 2 gói GitHub Showcase</div>
+    <div><div class="h1">Giải phẫu node: 9 lõi + 2 gói GitHub Showcase</div>
       <div class="sub" style="margin-top:8px">Cổng nhận ở mép trái, cổng phát ở mép phải, nhãn dùng đúng tên
-        trong bảng kiểu cổng. Ba khối xử lý gọi ra ngoài (Truy Xuất Repo, AI Đạo Diễn, Giọng Đọc) có nút thử lại;
-        khối tài nguyên có nút Kiểm tra lại; MP4 Export có nút thử lại khi kết xuất hỏng — cùng một thao tác chạy riêng khối. Ba khối tài nguyên (hai Provider và Engine) cùng một khuôn mẫu như Load Checkpoint;
-        Export là khối chạy theo yêu cầu (như SaveImage, nhưng bỏ qua mặc định). v0.1 không cần khóa API nào.</div></div>
+        trong bảng kiểu cổng. Ba node xử lý gọi ra ngoài (Truy Xuất Repo, AI Đạo Diễn, Giọng Đọc) có nút thử lại;
+        node tài nguyên có nút Kiểm tra lại; MP4 Export có nút thử lại khi kết xuất hỏng — cùng một thao tác chạy riêng node. Ba node tài nguyên (hai Provider và Engine) cùng một khuôn mẫu như Load Checkpoint;
+        Export là node chạy theo yêu cầu (như SaveImage, nhưng bỏ qua mặc định). v0.1 không cần khóa API nào.</div></div>
     <div class="rule"></div>
     <div class="grid3">
       ${anat('bolt','Input Trigger',okB('0.1s'),
@@ -138,14 +138,14 @@ writeFileSync('NodeAnatomy.dc.html', sheet(1240, 1980, `
            <div class="bul"><i>1</i><span style="color:var(--tx-3)">core/title-card</span> <span style="color:var(--accent-2)">w1</span></div>
            <div class="bul"><i>2</i><span style="color:var(--tx-3)">core/title-card</span> <span style="color:var(--accent-2)">w2</span></div>
            <div class="bul"><i>3</i><span style="color:var(--tx-3)">core/title-card</span> <span style="color:var(--accent-2)">w1</span></div></div>`,
-        null,[[46,'Kịch bản'],[70,'Lời thoại']],'Khối lõi duy nhất phát cả Kịch bản lẫn Lời thoại. Dựng video bằng tay, không mạng. Đồ thị nghiệm thu Pha A.')}
+        null,[[46,'Kịch bản'],[70,'Lời thoại']],'Node lõi duy nhất phát cả Kịch bản lẫn Lời thoại. Dựng video bằng tay, không mạng. Đồ thị nghiệm thu Pha A.')}
       ${anat('branch','GitHub Fetcher <span class="tag" style="margin-left:6px">gói</span>',okB('0.8s'),
         `<div class="kv"><span class="k">repo</span><span class="v">anhto611/nodecine</span></div>
          <div class="kv"><span class="k">stars</span><span class="v" style="color:var(--warn)">${I.star} 1.284</span></div>
          <div class="kv"><span class="k">install</span><span class="v">npm i nodecine</span></div>
          <div class="hint">chụp 21:04 · làm mới</div>`,
-        [[46,'']],[[46,'Dữ kiện']],'Khối của gói. Gọi GitHub API ẩn danh, phát FactSheet ra <b>hai</b> dây: tới AI Director và thẳng tới Timeline Assembler.')}
-      ${anat('bot','AI Director <span class="tag" style="margin-left:6px">gói</span>',okB('4.2s'),
+        [[46,'']],[[46,'Dữ kiện']],'Node của gói. Gọi GitHub API ẩn danh, phát FactSheet ra <b>hai</b> dây: tới AI Director và thẳng tới Timeline Assembler.')}
+      ${anat('bot','AI Director',okB('4.2s'),
         `<div class="kv"><span class="k">ngôn ngữ</span><span class="v">English ${I.chev}</span></div>
          <div class="kv"><span class="k">model</span><span class="v">claude-opus-5</span></div>
          <div class="kv"><span class="k">theme</span><span class="v">developer-dark</span></div>
@@ -153,7 +153,7 @@ writeFileSync('NodeAnatomy.dc.html', sheet(1240, 1980, `
            <div class="bul"><i>1</i><span>SHIP VIDEO FROM A REPO</span></div>
            <div class="bul"><i>2</i><span>nodecine · 3 features</span></div>
            <div class="bul"><i>3</i><span>Star on GitHub</span></div></div>`,
-        [[40,'Dữ kiện'],[66,'Mô hình ngôn ngữ']],[[40,'Kịch bản'],[62,'Lời thoại']],'Khối của gói. Gắn sceneType, weight và factBindings vào từng cảnh. Số sao, lệnh cài đặt không đi qua mô hình.')}
+        [[40,'Dữ kiện'],[66,'Mô hình ngôn ngữ']],[[40,'Kịch bản'],[62,'Lời thoại']],'Node của gói. Gắn sceneType, weight và factBindings vào từng cảnh. Số sao, lệnh cài đặt không đi qua mô hình.')}
       ${anat('wave','TTS Engine',okB('2.6s'),
         `<div class="kv"><span class="k">giọng</span><span class="v">Rachel · EN</span></div>
          <div class="kv"><span class="k">tốc độ</span><span class="v">1.00x</span></div>
@@ -170,7 +170,7 @@ writeFileSync('NodeAnatomy.dc.html', sheet(1240, 1980, `
            <div style="width:25%;background:var(--ok);border-radius:0 2px 2px 0"></div></div>
          <div class="kv" style="margin-top:4px"><span class="k">84 · w1</span><span class="k">168 · w2</span><span class="k">84 · w1</span></div>`,
         [[36,'Dữ kiện · tùy chọn'],[62,'Kịch bản'],[88,'Âm thanh']],[[62,'Bản đặc tả IR']],
-        'Khối lõi, generic: chia theo trọng số, đè dữ kiện theo factBindings, kiểm định 5 bất biến IR. Không biết cảnh là gì.')}
+        'Node lõi, generic: chia theo trọng số, đè dữ kiện theo factBindings, kiểm định 5 bất biến IR. Không biết cảnh là gì.')}
       ${anat('screen','Video Output',okB('0.3s'),
         `<div style="display:flex;gap:10px">
            <div style="width:88px;height:156px;background:#000;border:1px solid var(--line-2);
@@ -186,28 +186,28 @@ writeFileSync('NodeAnatomy.dc.html', sheet(1240, 1980, `
              <div class="hint" style="margin:0">138 / 336 · 4.60s</div>
            </div>
          </div>`,
-        [[46,'Bản đặc tả IR'],[74,'Động cơ']],null,'Chính là player. Hai cổng nhận, không có cổng phát, không có nút xuất.')}
+        [[46,'Bản đặc tả IR'],[74,'Động cơ']],null,'Chính là player. Hai cổng nhận, không có cổng phát, không có node xuất.')}
       ${anat('term','Claude Code Provider',okB('đã đăng nhập'),
         B.llm('ready'),
         null,[[52,'Mô hình ngôn ngữ']],'Gọi <code>claude -p</code> với phiên đã đăng nhập trên máy. Không có ô nhập khóa. Lượt gọi tính vào tài khoản Claude Code của người dùng.')}
       ${anat('mic','System TTS Provider',okB('sẵn sàng'),
         B.ttsp(),
-        null,[[52,'Giọng đọc']],'macOS <code>say</code> → AIFF → ffmpeg → MP3. Offline, không khóa. Hệ điều hành chưa hỗ trợ thì probe() báo và khối tiêu thụ tự khóa.')}
+        null,[[52,'Giọng đọc']],'macOS <code>say</code> → AIFF → ffmpeg → MP3. Offline, không khóa. Hệ điều hành chưa hỗ trợ thì probe() báo và node tiêu thụ tự khóa.')}
       ${anat('chip','Remotion Engine',okB('sẵn sàng'),
         B.engine('ready'),
-        null,[[52,'Động cơ']],'Khối tài nguyên, không có cổng nhận. Tham số của engine ở đây; tham số của một lần kết xuất thì không.')}
+        null,[[52,'Động cơ']],'Node tài nguyên, không có cổng nhận. Tham số của engine ở đây; tham số của một lần kết xuất thì không.')}
       ${anat('down','MP4 Export',`<span class="st s-byp"><span class="dot"></span>bỏ qua</span>`,
         B.export('byp'),
-        [[40,'Bản đặc tả IR'],[70,'Động cơ']],null,'Bỏ qua mặc định: Chạy Luồng không chạm tới. Bấm Kết xuất để chạy riêng khối này.','','n-byp')}
+        [[40,'Bản đặc tả IR'],[70,'Động cơ']],null,'Bỏ qua mặc định: Chạy Luồng không chạm tới. Bấm Kết xuất để chạy riêng node này.','','n-byp')}
     </div>
     <div class="rule"></div>
     <div><div class="h2">Chín trạng thái, bảy huy hiệu (blocked dùng chung với chờ lượt, cancelled dùng chung với cũ)</div>
       <div class="chiprow" style="margin-top:14px">
         ${[['Sẵn sàng','s-idle','<span class="dot"></span>','','Chưa chạy lần nào trong phiên'],
-           ['Đang chờ lượt','s-queue','<span class="dot"></span>chờ','','Khối phía trước chưa xong'],
+           ['Đang chờ lượt','s-queue','<span class="dot"></span>chờ','','Node phía trước chưa xong'],
            ['Đang chạy','s-run',I.spin,'n-run','Viền xanh dương, vòng xoay'],
            ['Hoàn thành','s-ok','<span class="dot"></span>0.8s','n-ok','Viền xanh lá, kèm thời gian'],
-           ['Dùng lại','s-ok','<span class="dot"></span>dùng lại','n-ok','Chữ ký khối không đổi'],
+           ['Dùng lại','s-ok','<span class="dot"></span>dùng lại','n-ok','Chữ ký node không đổi'],
            ['Cũ','s-idle','<span class="dot"></span>','n-stale','Viền đứt nét: cấu hình đã đổi, hoặc bị hủy'],
            ['Lỗi','s-err',I.warn,'n-err','Viền đỏ, có nút thử lại riêng'],
            ['Bỏ qua','s-byp','<span class="dot"></span>bỏ qua','n-byp','Chạy Luồng không chạm tới. Ctrl+B']]
@@ -220,13 +220,13 @@ writeFileSync('NodeAnatomy.dc.html', sheet(1240, 1980, `
       <div class="ptbl" style="margin-top:14px">
         <div>Định danh kiểu</div><div>Nhãn hiển thị</div><div>Đường đi</div>
         ${[['SourceRef','Dữ liệu Nguồn','Nhập Liệu → Truy Xuất Repo'],
-           ['FactSheet','Dữ kiện','Khối truy xuất của gói → khối đạo diễn của gói <b>và</b> → Timeline Assembler'],
-           ['DirectorPlan','Kịch bản Phân cảnh','Static Script / khối đạo diễn → Timeline Assembler'],
-           ['AudioScript','Lời thoại','Static Script / khối đạo diễn → TTS Engine'],
+           ['FactSheet','Dữ kiện','Node truy xuất của gói → node đạo diễn của gói <b>và</b> → Timeline Assembler'],
+           ['DirectorPlan','Kịch bản Phân cảnh','Static Script / node đạo diễn → Timeline Assembler'],
+           ['AudioScript','Lời thoại','Static Script / node đạo diễn → TTS Engine'],
            ['Voiceover','Âm thanh & Thời lượng','TTS Engine → Timeline Assembler'],
            ['VideoIR','Bản đặc tả IR','Timeline Assembler → Video Output <b>và</b> → MP4 Export'],
            ['EngineRef','Động cơ','Remotion Engine → Video Output <b>và</b> → MP4 Export'],
-           ['LLMRef','Mô hình ngôn ngữ','Claude Code Provider → khối đạo diễn của gói'],
+           ['LLMRef','Mô hình ngôn ngữ','Claude Code Provider → node đạo diễn của gói'],
            ['TTSRef','Giọng đọc','System TTS Provider → TTS Engine']]
           .map(([a,b,c])=>`<div style="color:var(--accent-2)"><span class="swatch" style="background:var(--accent)"></span>${a}</div>
             <div style="color:var(--tx)">${b}</div><div style="color:var(--tx-2)">${c}</div>`).join('')}

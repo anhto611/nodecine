@@ -8,7 +8,7 @@ describe('detectLanguage', () => {
   });
 
   it('recognises Vietnamese by its unique letters and tone marks', () => {
-    expect(detectLanguage('Gặp NodeCine. Dựng video ngắn từ đồ thị khối, không phải timeline.')).toBe('vi');
+    expect(detectLanguage('Gặp NodeCine. Dựng video ngắn từ đồ thị node, không phải timeline.')).toBe('vi');
     expect(detectLanguage('Hà Nội mùa thu')).toBe('vi');
   });
 

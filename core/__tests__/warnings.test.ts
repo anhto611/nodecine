@@ -9,14 +9,14 @@ import { registerCoreScenes, TITLE_CARD } from '../scenes/title-card';
 import { makeFakeServices } from './fakes';
 
 /**
- * A stand-in for a pack's director: emits a plan that binds facts, which the core's own
+ * A stand-in director: emits a plan that binds facts, which the core's own
  * Static Script cannot do (its params schema has no factBindings).
  */
 const Params = z.object({ bindFacts: z.boolean().default(true) });
 const fakeDirector: NodeDefinition<typeof Params> = {
   type: 'test/director',
   version: 1,
-  pack: 'test',
+  namespace: 'test',
   kind: 'source',
   inputs: [],
   outputs: [
@@ -89,7 +89,7 @@ describe('run warnings surface on the node', () => {
     registerNodeType({
       type: 'test/facts',
       version: 1,
-      pack: 'test',
+      namespace: 'test',
       kind: 'source',
       inputs: [],
       outputs: [{ name: 'facts', type: 'FactSheet' }],

@@ -1,4 +1,4 @@
-/** The nine core port types (CORE_CONTRACTS §1.1). Template packs may not add port types in v0.1. */
+/** The nine core port types (CORE_CONTRACTS §1.1). Nothing outside the core may add a port type. */
 export const PORT_TYPES = [
   'SourceRef',
   'FactSheet',

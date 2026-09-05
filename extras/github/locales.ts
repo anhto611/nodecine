@@ -1,0 +1,41 @@
+/** Display strings these nodes and scenes contribute. Merged into the dictionaries at startup. */
+
+export const en: Record<string, string> = {
+  'library.group.github-showcase': 'Extra · GitHub',
+  'node.github-showcase/github-fetcher': 'GitHub Fetcher',
+  'node.desc.github-showcase/github-fetcher': 'Turns a repo link into facts: stars, language, README. Plain text passes through.',
+  'error.REPO_NOT_FOUND': 'No public repository at this link',
+  'error.REPO_RATE_LIMITED': 'GitHub API rate limit exceeded; try again in a few minutes',
+  'error.REPO_NETWORK': 'Could not reach GitHub',
+  'fetcher.mode': 'source',
+  'fetcher.noInput': 'connect Input Trigger',
+  'fetcher.willFetch': '{repo}',
+  'fetcher.willPassthrough': 'plain text → passthrough',
+  'fetcher.fetched': 'fetched from GitHub · {at}',
+  'fetcher.passthrough': 'passthrough · no network call',
+  'fetcher.stars': 'stars',
+  'fetcher.language': 'language',
+  'fetcher.topics': 'topics',
+  'fetcher.install': 'install',
+  'fetcher.readme': 'README excerpt · {n} chars',
+};
+
+export const vi: Record<string, string> = {
+  'library.group.github-showcase': 'Mở rộng · GitHub',
+  'node.github-showcase/github-fetcher': 'Truy Xuất Repo',
+  'node.desc.github-showcase/github-fetcher': 'Biến link repo thành dữ kiện: sao, ngôn ngữ, README. Văn bản thường đi qua nguyên vẹn.',
+  'error.REPO_NOT_FOUND': 'Không tìm thấy repo công khai tại đường dẫn này',
+  'error.REPO_RATE_LIMITED': 'Đã vượt hạn mức GitHub API, thử lại sau ít phút',
+  'error.REPO_NETWORK': 'Không kết nối được tới GitHub',
+  'fetcher.mode': 'nguồn',
+  'fetcher.noInput': 'nối Nhập Liệu',
+  'fetcher.willFetch': '{repo}',
+  'fetcher.willPassthrough': 'văn bản thường → đi qua',
+  'fetcher.fetched': 'đã lấy từ GitHub · {at}',
+  'fetcher.passthrough': 'đi qua · không gọi mạng',
+  'fetcher.stars': 'sao',
+  'fetcher.language': 'ngôn ngữ',
+  'fetcher.topics': 'chủ đề',
+  'fetcher.install': 'cài đặt',
+  'fetcher.readme': 'trích README · {n} ký tự',
+};

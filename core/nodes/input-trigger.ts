@@ -8,7 +8,7 @@ const Params = z.object({ value: z.string() });
 export const inputTrigger: NodeDefinition<typeof Params> = {
   type: 'core/input-trigger',
   version: 1,
-  pack: 'core',
+  namespace: 'core',
   kind: 'source',
   inputs: [],
   outputs: [{ name: 'source', type: 'SourceRef' }],

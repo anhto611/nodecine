@@ -16,7 +16,7 @@ const Params = z.object({
 export const timelineAssembler: NodeDefinition<typeof Params> = {
   type: 'core/timeline-assembler',
   version: 1,
-  pack: 'core',
+  namespace: 'core',
   kind: 'process',
   inputs: [
     { name: 'plan', type: 'DirectorPlan' },

@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { dcOpen, dcClose, ICONS as I } from './tokens.mjs';
 
-/* 10 khối trên canvas 1396 x 844 (đã trừ dải trái 44px) */
+/* 10 node trên canvas 1396 x 844 (đã trừ dải trái 44px) */
 const N = {
   input:  { x:20,   y:300, w:190, h:116, ic:'bolt',   t:'Input Trigger'        },
   llm:    { x:230,  y:120, w:190, h:124, ic:'term',   t:'Claude Code Provider' },
@@ -62,7 +62,7 @@ const mk = (key, state, meta, body, on, extraHdr, pOverride) => {
     </div>`;
 };
 
-/* ---------------- thân các khối ---------------- */
+/* ---------------- thân các node ---------------- */
 const B = {
   input: (f) => f
     ? `<div class="fld">github.com/anhto611/nodecine</div><div class="hint">27 ký tự · không diễn giải</div>`
@@ -289,25 +289,24 @@ const tools = (zoom) => `
     <div class="tbar"><span class="zoom">${zoom}</span><span class="tbtn">${I.plus}</span><span class="tbtn">${I.minus}</span><span class="tbtn">${I.fit}</span><span class="tbtn">${I.plus}</span></div>
   </div>`;
 
-/* panel thư viện: 6 nhóm, 12 khối — đúng những gì bản dựng có, không liệt kê thứ chưa dựng */
+/* panel thư viện: 6 nhóm, 12 node — đúng những gì bản dựng có */
 const LIB = [
   ['Lõi · Nguồn',      [['bolt','Nhập Liệu','Ô văn bản, không diễn giải.','— → <b>SourceRef</b>'],
                         ['doc','Kịch Bản Tĩnh','Gõ tay lời thoại và danh sách cảnh. Không mạng.','— → <b>DirectorPlan</b> · <b>AudioScript</b>']]],
-  ['Lõi · Nhà cung cấp',[['term','Mô Hình Ngôn Ngữ','Chọn nhà cung cấp ngay trong khối. Không cần khóa.','— → <b>LLMRef</b>'],
-                        ['mic','Giọng Đọc Nguồn','Chọn nhà cung cấp giọng, khối liệt kê giọng tìm được.','— → <b>TTSRef</b>']]],
-  ['Lõi · Xử lý',      [['wave','Giọng Đọc','Đọc lời thoại thành MP3, đo thời lượng.','<b>AudioScript</b> · <b>TTSRef</b> → <b>Voiceover</b>'],
+  ['Lõi · Nhà cung cấp',[['term','Mô Hình Ngôn Ngữ','Chọn nhà cung cấp ngay trong node. Không cần khóa.','— → <b>LLMRef</b>'],
+                        ['mic','Giọng Đọc Nguồn','Chọn nhà cung cấp giọng, node liệt kê giọng tìm được.','— → <b>TTSRef</b>']]],
+  ['Lõi · Xử lý',      [['bot','Đạo Diễn AI','Đề bài + slot cảnh; lược đồ sinh từ cảnh; dữ kiện không qua mô hình.','<b>SourceRef?</b> · <b>FactSheet?</b> · <b>LLMRef</b> → <b>DirectorPlan</b> · <b>AudioScript</b>'],
+                        ['wave','Giọng Đọc','Đọc lời thoại thành MP3, đo thời lượng.','<b>AudioScript</b> · <b>TTSRef</b> → <b>Voiceover</b>'],
                         ['layers','Đóng Gói Timeline','Chia khung theo trọng số, đè dữ kiện, kiểm định IR.','<b>DirectorPlan</b> · <b>Voiceover</b> · <b>FactSheet?</b> → <b>VideoIR</b>']]],
   ['Lõi · Động cơ',    [['chip','Remotion Engine','React DOM / Chromium. Xem trước và kết xuất.','— → <b>EngineRef</b>'],
                         ['chip','Hyperframes Engine','Canvas 2D. Xem trước, chưa kết xuất tệp.','— → <b>EngineRef</b>']]],
   ['Lõi · Xuất',       [['screen','Xuất Bản Video','Trình phát 9:16 ngay trên canvas.','<b>VideoIR</b> · <b>EngineRef</b> → —'],
                         ['down','Xuất MP4','Kết xuất theo yêu cầu, bỏ qua mặc định.','<b>VideoIR</b> · <b>EngineRef</b> → —']]],
-  ['Gói · GitHub Showcase',[['branch','Truy Xuất Repo','Gọi GitHub API lấy sao, README, lệnh cài.','<b>SourceRef</b> → <b>FactSheet</b>'],
-                        ['bot','AI Đạo Diễn','Sáng tác lời thoại và 3 cảnh hook / mockup / cta.','<b>FactSheet</b> · <b>LLMRef</b> → <b>DirectorPlan</b> · <b>AudioScript</b>']]],
-  ['Gói · Thẻ Trích Dẫn',[['bot','Đạo Diễn Trích Dẫn','Một chủ đề thành thẻ mở đầu và N thẻ trích dẫn.','<b>SourceRef</b> · <b>LLMRef</b> → <b>DirectorPlan</b> · <b>AudioScript</b>']]],
+  ['Mở rộng · GitHub',  [['branch','Truy Xuất Repo','Gọi GitHub API lấy sao, README, lệnh cài.','<b>SourceRef</b> → <b>FactSheet</b>']]],
 ];
 const libPanel = () => `<div class="panel">
-    <div class="pn-h">Thư viện khối<span class="x">×</span></div>
-    <div class="srch"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>Tìm khối…</div>
+    <div class="pn-h">Thư viện node<span class="x">×</span></div>
+    <div class="srch"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>Tìm node…</div>
     ${LIB.map(([g,items])=>`<div class="grp">${g}</div>`+items.map(([ic,n,d,p])=>`<div class="li"><span class="lic">${I[ic]}</span><div><div class="lin">${n}</div><div class="lid">${d}</div><div class="lip">${p}</div></div></div>`).join('')).join('')}
     <div class="pn-f">Kéo thả lên canvas, hoặc nhấp đúp để thả vào giữa vùng đang nhìn.</div></div>`;
 const histPanel = () => `<div class="panel">
@@ -334,7 +333,7 @@ const LOG_RUN = [
   ['21:04:09.705','Remotion Engine','var(--ok)','probe → preview ready · render ready · hash không đổi'],
   ['21:04:09.706','Video Output','var(--ok)','irVersion=1 · engine=remotion · player sẵn sàng 0.3s'],
   ['21:04:09.706','MP4 Export','var(--tx-3)','bỏ qua'],
-  ['21:04:10.011','Luồng','var(--accent-2)','hoàn thành 9/10 khối (1 bỏ qua) · 8.0s'],
+  ['21:04:10.011','Luồng','var(--accent-2)','hoàn thành 9/10 node (1 bỏ qua) · 8.0s'],
 ];
 const LOG_EXPORT = [
   ['21:07:12.004','MP4 Export','var(--run)','bắt đầu · h264 · crf 18 · nodecine-launch-video.mp4'],
@@ -403,7 +402,7 @@ writeFileSync('Loi.dc.html', screen({ hdr:{running:false}, edges:['e1'], errDot:
 
 const ghost = `<div class="nd ghost" style="left:560px;top:154px;width:196px;height:120px">
     <div class="nd-h"><span class="ic">${I.bot}</span><span class="nd-t">AI Director</span></div>
-    <div class="nd-b"><div class="kv"><span class="k">ngôn ngữ</span><span class="v">English</span></div><div class="hint">thả để tạo khối</div></div></div>
+    <div class="nd-b"><div class="kv"><span class="k">ngôn ngữ</span><span class="v">English</span></div><div class="hint">thả để tạo node</div></div></div>
   <svg width="18" height="22" viewBox="0 0 18 22" style="position:absolute;left:556px;top:146px"><path d="M2 2 L2 17 L6 13 L9 20 L11.5 19 L8.5 12.5 L14 12.5 Z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"></path></svg>`;
 writeFileSync('ThuVienKhoi.dc.html', screen({ hdr:{running:false}, railOn:'lib', panel:libPanel(), edges:['e1'], edgeList:[EDGES[0]],
   nodes:[ mk('input','idle','',B.input(false)), mk('fetch','idle','',B.fetch('idle')), ghost ].join(''), zoom:'100%' }));
@@ -418,7 +417,7 @@ writeFileSync('KetXuat.dc.html', screen({ hdr:{running:false}, railOn:'logs', bo
   edges:[...RUN_EDGES,'e8','e10'], nodes:doneNodes('run'), scale:.74, zoom:'65%' }));
 
 
-/* ================= Pha A: đồ thị Kịch Bản Tĩnh, 7 khối, không mạng ================= */
+/* ================= Pha A: đồ thị Kịch Bản Tĩnh, 7 node, không mạng ================= */
 const NA = {
   static: { x:60,   y:200, w:230, h:236, ic:'doc',    t:'Static Script'      },
   ttsp:   { x:330,  y:520, w:190, h:124, ic:'mic',    t:'System TTS Provider'},
@@ -493,4 +492,4 @@ writeFileSync('PhaA.dc.html', screen({ hdr:{running:false}, edges:['a1','a2','a3
     mkA('export','byp','',B.export('byp')) ].join('') }));
 
 export { N, P, EDGES, B, outBody, videoInner, mk, badge, cls, ports, VW, VH };
-console.log('8 màn hình studio · 10 khối · 12 dây');
+console.log('8 màn hình studio · 10 node · 12 dây');

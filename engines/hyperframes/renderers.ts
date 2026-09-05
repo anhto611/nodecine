@@ -4,7 +4,7 @@ import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { drawTitleCard } from './scenes/title-card';
 
 /**
- * The core scenes this engine can draw. Packs register their own from `packs/installed.client.ts`.
+ * The core scenes this engine can draw. The extras register their own from `extras/installed.client.ts`.
  */
 export function registerHyperframesRenderers(): void {
   registerCoreScenes();

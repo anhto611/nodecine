@@ -3,9 +3,9 @@ import { _resetSceneRegistry, getScene, hasRenderer, missingRenderers } from '@/
 import { TITLE_CARD } from '@/core/scenes/title-card';
 import { createHyperframesAdapter } from './adapter';
 import { registerHyperframesRenderers } from './renderers';
-import { registerGithubShowcaseHyperframes } from '@/packs/github-showcase/hyperframes';
+import { registerGithubShowcaseHyperframes } from '@/extras/github/hyperframes';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
-import { CTA, HOOK, MOCKUP } from '@/packs/github-showcase/scenes/schemas';
+import { CTA, HOOK, MOCKUP } from '@/extras/github/scenes/schemas';
 import { wrapText, ramp, easeOut, alpha } from './draw';
 
 describe('Hyperframes adapter', () => {
@@ -31,11 +31,11 @@ describe('Hyperframes scene renderers', () => {
   beforeEach(() => {
     _resetSceneRegistry();
     registerHyperframesRenderers();
-    // The engine no longer knows any pack; a pack registers its own renderers, as the app does.
+    // The engine knows no extra; each registers its own renderers, as the app does.
     registerGithubShowcaseHyperframes();
   });
 
-  it('draws the core scene and every scene the pack adds', () => {
+  it('draws the core scene and every scene the GitHub extra adds', () => {
     for (const type of [TITLE_CARD, HOOK, MOCKUP, CTA]) {
       expect(hasRenderer(type, HYPERFRAMES_ENGINE_ID)).toBe(true);
       expect(typeof getScene(type)?.renderers[HYPERFRAMES_ENGINE_ID]).toBe('function');

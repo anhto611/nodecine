@@ -5,14 +5,14 @@ import { vi } from '@/locales/vi';
 export type Locale = 'en' | 'vi';
 export const LOCALES: Locale[] = ['en', 'vi'];
 
-/** Core strings, plus whatever installed packs contribute. */
+/** Core strings, plus whatever the installed extras contribute. */
 const DICTS: Record<Locale, Record<string, string>> = { en: { ...en }, vi: { ...vi } };
 
 /**
- * Merge a pack's strings in. Packs own the wording for their own nodes, scenes and errors, so the
- * core dictionaries never grow a line for a pack that may not be installed.
+ * Merge strings in from outside the core: the nodes and scenes under `extras/` own the wording for
+ * themselves, so the core dictionaries stay about the framework.
  */
-export function addPackLocales(locales: Record<string, Record<string, string>>): void {
+export function addLocales(locales: Record<string, Record<string, string>>): void {
   for (const [locale, entries] of Object.entries(locales)) {
     if (!LOCALES.includes(locale as Locale)) continue;
     Object.assign(DICTS[locale as Locale], entries);

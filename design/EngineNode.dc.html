@@ -127,7 +127,7 @@
     .zoom{font-family:var(--mono);font-size:10px;color:var(--tx-3);
       padding:0 9px;display:flex;align-items:center;border-right:1px solid var(--line)}
 
-    /* ---------- Cụm điều khiển trình phát (nằm trong khối Video Output) ---------- */
+    /* ---------- Cụm điều khiển trình phát (nằm trong node Video Output) ---------- */
     .pbtn{width:28px;height:28px;border-radius:4px;border:1px solid var(--line-2);
       background:var(--bg-raise);color:var(--tx);display:flex;
       align-items:center;justify-content:center}
@@ -229,7 +229,7 @@
       <path d="M400,120 C430,120 430,120 460,120" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah2)" color="#7c5cff"></path>
       <path d="M400,120 C440,120 420,728 460,728" fill="none" stroke="#7c5cff" stroke-width="1.7" marker-end="url(#ah2)" color="#7c5cff"></path>
     </svg>
-    <div style="position:absolute;left:40px;top:40px;font-family:var(--mono);font-size:9px;color:var(--tx-3);letter-spacing:.1em;text-transform:uppercase">Khối Động Cơ · dây vàng = engine chưa sẵn sàng</div>
+    <div style="position:absolute;left:40px;top:40px;font-family:var(--mono);font-size:9px;color:var(--tx-3);letter-spacing:.1em;text-transform:uppercase">Node Động Cơ · dây vàng = engine chưa sẵn sàng</div>
     
   <div class="nd n-ok" style="left:70px;top:80px;width:196px;height:124px">
     <div class="nd-h"><span class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"></rect><rect x="9.5" y="9.5" width="5" height="5"></rect><line x1="9" y1="2" x2="9" y2="5"></line><line x1="15" y1="2" x2="15" y2="5"></line><line x1="9" y1="19" x2="9" y2="22"></line><line x1="15" y1="19" x2="15" y2="22"></line><line x1="2" y1="9" x2="5" y2="9"></line><line x1="2" y1="15" x2="5" y2="15"></line><line x1="19" y1="9" x2="22" y2="9"></line><line x1="19" y1="15" x2="22" y2="15"></line></svg></span><span class="nd-t">Remotion Engine</span><span class="st s-ok"><span class="dot"></span>sẵn sàng</span></div>
@@ -251,7 +251,7 @@
     
     <div class="p p-out on" style="top:56.5px"></div><div class="plab" style="top:56px;right:11px">Động cơ</div>
   </div>
-    <div style="position:absolute;left:70px;top:436px;width:196px;font-family:var(--mono);font-size:8.5px;color:var(--tx-3);line-height:1.6">Trạng thái do Adapter tự khai báo qua probe(). Không khối nào mã hóa cứng tên engine.</div>
+    <div style="position:absolute;left:70px;top:436px;width:196px;font-family:var(--mono);font-size:8.5px;color:var(--tx-3);line-height:1.6">Trạng thái do Adapter tự khai báo qua probe(). Không node nào mã hóa cứng tên engine.</div>
     <div class="nd" style="position:absolute;left:300px;top:60px;width:100px;height:0;opacity:0"></div>
     <div style="position:absolute;left:330px;top:100px;font-family:var(--mono);font-size:8.5px;color:var(--tx-3);transform:rotate(-90deg);transform-origin:left top;white-space:nowrap">← từ Assembler (VideoIR)</div>
     
@@ -284,14 +284,14 @@
     
   </div>
     <div style="position:absolute;left:800px;top:60px;width:330px;display:flex;flex-direction:column;gap:14px">
-      <div class="h1">Engine là khối, không phải cài đặt</div>
-      <div class="cap2" style="font-size:11px;color:var(--tx-2);line-height:1.7">Giống Load Checkpoint của ComfyUI: khối tài nguyên không có cổng nhận, phát <b style="color:var(--accent-2)">EngineRef</b> cho mọi khối cần. Tham số của engine (song song, backend) ở đây. Tham số của một lần kết xuất (codec, chất lượng, tên tệp) ở khối MP4 Export.</div>
+      <div class="h1">Engine là node, không phải cài đặt</div>
+      <div class="cap2" style="font-size:11px;color:var(--tx-2);line-height:1.7">Giống Load Checkpoint của ComfyUI: node tài nguyên không có cổng nhận, phát <b style="color:var(--accent-2)">EngineRef</b> cho mọi node cần. Tham số của engine (song song, backend) ở đây. Tham số của một lần kết xuất (codec, chất lượng, tên tệp) ở node MP4 Export.</div>
       <div class="note"><span style="color:var(--warn);flex:0 0 auto;margin-top:2px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
-        <span class="nt">Nối Hyperframes vào: Video Output chuyển viền vàng kèm lớp phủ, MP4 Export khóa nút Kết xuất kèm lý do. Năm khối đầu luồng <b style="color:var(--tx)">không chạy lại</b> — chỉ chữ ký của hai khối nhận EngineRef đổi.</span></div>
+        <span class="nt">Nối Hyperframes vào: Video Output chuyển viền vàng kèm lớp phủ, MP4 Export khóa nút Kết xuất kèm lý do. Năm node đầu luồng <b style="color:var(--tx)">không chạy lại</b> — chỉ chữ ký của hai node nhận EngineRef đổi.</span></div>
       <div class="note"><span style="color:var(--accent-2);flex:0 0 auto;margin-top:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
-        <span class="nt">So sánh hai engine (v0.2): hai khối Engine, hai khối Video Output, cùng một Bản đặc tả IR. Không cần thêm giao diện nào — chỉ thêm khối.</span></div>
+        <span class="nt">So sánh hai engine (v0.2): hai node Engine, hai node Video Output, cùng một Bản đặc tả IR. Không cần thêm giao diện nào — chỉ thêm node.</span></div>
       <div class="note"><span style="color:var(--tx-2);flex:0 0 auto;margin-top:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
-        <span class="nt">Không còn Engine Switcher lẫn nút Xuất MP4 trên header. Header chỉ còn: Bản mẫu · Chạy Luồng · Cài đặt.</span></div>
+        <span class="nt">Không còn Engine Switcher lẫn node Xuất MP4 trên header. Header chỉ còn: Bản mẫu · Chạy Luồng · Cài đặt.</span></div>
     </div>
   </div></div></x-dc>
 </body>

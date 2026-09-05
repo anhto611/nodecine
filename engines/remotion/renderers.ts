@@ -6,8 +6,8 @@ import { TitleCard } from './scenes/TitleCard';
 /**
  * Registers every Remotion renderer this build ships. Imported both by the app (player) and by the
  * Remotion bundle entry (headless render) — the two run in separate module graphs, so each must register.
- * Only the core scenes: packs register their own renderers from `packs/installed.*`, so the engine
- * never names a pack.
+ * Only the core scenes: the extras register their own renderers from `extras/installed.*`, so the engine
+ * never names an extra.
  */
 export function registerRemotionRenderers(): void {
   registerCoreScenes();

@@ -16,7 +16,7 @@
   "artboards": [
     {
       "file": "PhaA.dc.html",
-      "title": "Pha A · Kịch Bản Tĩnh (7 khối, không mạng)",
+      "title": "Pha A · Kịch Bản Tĩnh (7 node, không mạng)",
       "page": "page-0",
       "x": 0,
       "y": 0,
@@ -70,7 +70,7 @@
     },
     {
       "file": "VideoOutputNode.dc.html",
-      "title": "Khối Video Output = player",
+      "title": "Node Video Output = player",
       "page": "page-2",
       "x": 1280,
       "y": 0,
@@ -79,7 +79,7 @@
     },
     {
       "file": "NodeAnatomy.dc.html",
-      "title": "Giải phẫu khối: 9 lõi + 2 gói",
+      "title": "Giải phẫu node: 11 lõi + 1 mở rộng",
       "page": "page-2",
       "x": 0,
       "y": 980,
@@ -88,7 +88,7 @@
     },
     {
       "file": "EngineNode.dc.html",
-      "title": "Engine là khối",
+      "title": "Engine là node",
       "page": "page-2",
       "x": 1320,
       "y": 980,
@@ -106,7 +106,7 @@
     },
     {
       "file": "ThuVienKhoi.dc.html",
-      "title": "5 · Thư viện khối (Canvas trống)",
+      "title": "5 · Thư viện node (Canvas trống)",
       "page": "page-1",
       "x": 0,
       "y": 2040,
@@ -133,7 +133,7 @@
     },
     {
       "file": "KetXuat.dc.html",
-      "title": "8 · Kết xuất MP4 (chạy riêng khối)",
+      "title": "8 · Kết xuất MP4 (chạy riêng node)",
       "page": "page-1",
       "x": 1520,
       "y": 3060,
@@ -148,7 +148,7 @@
       "x": 0,
       "y": -150,
       "w": 700,
-      "text": "Pha A — đồ thị nghiệm thu của khung lõi: Static Script → TTS → Timeline Assembler → Video Output, không mạng, không LLM, không khóa.\nKiểu cảnh core/title-card. Cổng Dữ kiện trên Assembler để trống (tùy chọn). Pha B (trang sau) chỉ thêm 2 khối của gói."
+      "text": "Pha A — đồ thị nghiệm thu của khung lõi: Static Script → TTS → Timeline Assembler → Video Output, không mạng, không LLM, không khóa.\nKiểu cảnh core/title-card. Cổng Dữ kiện trên Assembler để trống (tùy chọn). Pha B (trang sau) thêm một node truy xuất và ba kiểu cảnh; đạo diễn là node lõi."
     },
     {
       "id": "note-flow",
@@ -156,7 +156,7 @@
       "x": 0,
       "y": -150,
       "w": 660,
-      "text": "Tám trạng thái của cùng một màn hình Studio, đọc theo số 1→8.\nĐồ thị 10 khối, 12 dây, Zero-Key. Header chỉ còn tên dự án và Chạy Luồng; mọi điều hướng nằm trên dải trái: Bản mẫu · Thư viện · Lịch sử · Nhật ký · (đáy) Cài đặt."
+      "text": "Tám trạng thái của cùng một màn hình Studio, đọc theo số 1→8.\nĐồ thị 10 node, 12 dây, Zero-Key. Header chỉ còn tên dự án và Chạy Luồng; mọi điều hướng nằm trên dải trái: Bản mẫu · Thư viện · Lịch sử · Nhật ký · (đáy) Cài đặt."
     },
     {
       "id": "note-detail",
@@ -164,7 +164,7 @@
       "x": 0,
       "y": -150,
       "w": 660,
-      "text": "Bản mẫu chọn qua trình duyệt kiểu ComfyUI. Video Output không còn chip engine lẫn nút xuất — engine đến từ cổng nhận thứ hai.\nCác thành phần phóng to ở tỷ lệ 100%; trên canvas chính đang ở 88% (Fit View)."
+      "text": "Bản mẫu chọn qua trình duyệt kiểu ComfyUI. Video Output không còn chip engine lẫn node xuất — engine đến từ cổng nhận thứ hai.\nCác thành phần phóng to ở tỷ lệ 100%; trên canvas chính đang ở 88% (Fit View)."
     }
   ],
   "launch": {

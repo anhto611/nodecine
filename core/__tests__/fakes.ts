@@ -10,7 +10,7 @@ export function makeFakeServices(overrides: Partial<{
   remotionRender: boolean;
   claudeAuthenticated: boolean;
   secondsPerChar: number;
-  packHandlers: Record<string, (input: unknown) => Promise<unknown>>;
+  serverOps: Record<string, (input: unknown) => Promise<unknown>>;
   complete: (prompt: string) => Promise<unknown>;
 }> = {}) {
   const o = {
@@ -23,7 +23,7 @@ export function makeFakeServices(overrides: Partial<{
     remotionRender: true,
     claudeAuthenticated: true,
     secondsPerChar: 0.07,
-    packHandlers: {} as Record<string, (input: unknown) => Promise<unknown>>,
+    serverOps: {} as Record<string, (input: unknown) => Promise<unknown>>,
     complete: (async () => { throw new Error('not used in core tests'); }) as (prompt: string) => Promise<unknown>,
     ...overrides,
   };
@@ -36,10 +36,10 @@ export function makeFakeServices(overrides: Partial<{
     calls,
     setOptions: (p) => Object.assign(o, p),
     now: () => (clock += 7),
-    async packRequest(pack, op, input) {
-      calls.push({ name: 'packRequest', args: [pack, op, input] });
-      const h = o.packHandlers[`${pack}/${op}`];
-      if (!h) throw Object.assign(new Error(`no fake handler for ${pack}/${op}`), { code: 'NODE_TYPE_UNKNOWN' });
+    async serverOp(op, input) {
+      calls.push({ name: 'serverOp', args: [op, input] });
+      const h = o.serverOps[op];
+      if (!h) throw Object.assign(new Error(`no fake server op ${op}`), { code: 'NODE_TYPE_UNKNOWN' });
       return h(input);
     },
     async probeLLM(providerId, settings): Promise<LLMRef> {

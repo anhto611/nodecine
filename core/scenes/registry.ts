@@ -3,7 +3,7 @@ import type { ZodTypeAny } from 'zod';
 /**
  * Scene registry (CORE_CONTRACTS §4): the core keeps an empty table
  * `sceneType → { schema, renderers }`. Renderers are `unknown` at this layer —
- * the core imports neither React nor any engine. Packs and engines register
+ * the core imports neither React nor any engine. The extras and the engines register
  * themselves at startup.
  */
 

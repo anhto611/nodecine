@@ -10,6 +10,7 @@ import { Icon } from '@/components/icons';
 import { useInputPayload, useNode, useRuntime, useStudio } from '@/store/useStudio';
 import { z } from 'zod';
 import { findProvider, providersOfKind } from '@/providers/installed';
+import { AiDirectorBody } from './AiDirectorBody';
 
 export type BodyProps = { nodeId: string };
 
@@ -290,6 +291,7 @@ const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
 export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/input-trigger': InputTriggerBody,
   'core/static-script': StaticScriptBody,
+  'core/ai-director': AiDirectorBody,
   'core/llm-provider': LlmProviderBody,
   'core/tts-provider': TtsProviderBody,
   'core/remotion-engine': EngineBody,
@@ -299,7 +301,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/mp4-export': ExportBody,
 };
 
-/** Packs register bodies for their own node types. */
+/** Extras register bodies for their own node types. */
 export function registerNodeBody(type: string, body: React.FC<BodyProps>): void {
   NODE_BODIES[type] = body;
 }

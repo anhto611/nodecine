@@ -7,8 +7,8 @@ import { registerCoreNodes } from '@/core/nodes';
 import { installProviders } from '@/providers/installed.server';
 import { registerRemotionServer } from '@/engines/remotion/register.server';
 import { registerHyperframesServer } from '@/engines/hyperframes/register.server';
-import { installPack } from '@/core/packs/definition';
-import { INSTALLED_PACKS } from '@/packs/installed';
+import { installExtras } from '@/extras/installed';
+import { installServerExtras } from '@/extras/installed.server';
 
 let done = false;
 export function ensureServerRegistrations(): void {
@@ -19,8 +19,6 @@ export function ensureServerRegistrations(): void {
   installProviders();
   registerRemotionServer();
   registerHyperframesServer();
-  for (const pack of INSTALLED_PACKS) {
-    installPack(pack);
-    pack.registerServer?.();
-  }
+  installExtras();
+  installServerExtras();
 }

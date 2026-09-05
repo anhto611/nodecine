@@ -19,7 +19,7 @@ export const FactSheetSchema = z.object({
 export type FactSheet = z.infer<typeof FactSheetSchema>;
 
 export const SceneSpecSchema = z.object({
-  sceneType: z.string().regex(/^[a-z0-9-]+\/[a-z0-9-]+$/, 'sceneType must look like <pack>/<name>'),
+  sceneType: z.string().regex(/^[a-z0-9-]+\/[a-z0-9-]+$/, 'sceneType must look like <namespace>/<name>'),
   weight: z.number().positive(),
   props: z.record(z.string(), z.unknown()),
   factBindings: z.record(z.string(), z.string()).optional(),

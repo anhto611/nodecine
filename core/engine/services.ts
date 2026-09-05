@@ -22,9 +22,9 @@ export interface NodeServices {
     signal: AbortSignal,
   ): Promise<RenderResult>;
   /**
-   * Call a server-side handler a pack registered under (pack, op) (CORE_CONTRACTS §10).
-   * The app forwards it to POST /api/packs/<pack>/<op>; tests stub it.
+   * Call a server-side operation registered under `op` (CORE_CONTRACTS §9). The app forwards it to
+   * POST /api/ops/<op>; tests stub it. One flat namespace, like the node registry itself.
    */
-  packRequest(pack: string, op: string, input: unknown, signal: AbortSignal): Promise<unknown>;
+  serverOp(op: string, input: unknown, signal: AbortSignal): Promise<unknown>;
   now(): number;
 }

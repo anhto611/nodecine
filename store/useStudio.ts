@@ -5,13 +5,13 @@ import { validateGraph, type Graph, type GraphIssue, type NodeInstance, GraphInv
 import type { NodeRuntime } from '@/core/engine/state';
 import { RunHistory, type RunRecord } from '@/core/engine/history';
 import { getNodeType } from '@/core/nodes/definition';
-import { staticScriptTemplate } from '@/core/templates/static-script';
-import { getTemplate } from '@/core/templates/registry';
+import staticScriptJson from '@/templates/static-script.json';
+import { _resetTemplates, getTemplate, listTemplates, registerTemplate, templateGraph, type TemplateDefinition } from '@/core/templates/registry';
 import type { VideoIR } from '@/core/types/ir';
 import type { EngineRef } from '@/core/types/payloads';
 import { clientServices } from '@/lib/services.client';
 import { bootstrapClient } from '@/lib/bootstrap.client';
-import { loadProject, loadUiPrefs, saveProject, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
+import { loadUserTemplates, saveUserTemplates, loadProject, loadUiPrefs, saveProject, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 import type { Locale } from '@/lib/i18n';
 
 export type Panel = 'library' | 'history' | null;
@@ -34,6 +34,8 @@ export interface StudioState {
   panel: Panel;
   logsOpen: boolean;
   templatesOpen: boolean;
+  /** Bumped whenever the template list changes, so the browser re-reads the registry. */
+  templatesTick: number;
   settingsOpen: boolean;
   selectedNodeId: string | null;
   executor: Executor | null;
@@ -50,6 +52,11 @@ export interface StudioState {
   cancel(): void;
   runNode(nodeId: string): Promise<void>;
   loadTemplate(id: TemplateId): void;
+  /** Package the current graph as a template the browser lists and a file that can be shared. */
+  saveAsTemplate(meta: { name: string; description?: string }): TemplateDefinition;
+  /** Add a template from JSON text; returns a message when it is not one, else null. */
+  importTemplate(json: string): string | null;
+  removeUserTemplate(id: string): void;
   viewRun(seq: number | null): void;
   setLocale(locale: Locale): void;
   setProjectName(name: string): void;
@@ -59,6 +66,11 @@ export interface StudioState {
   setSettingsOpen(open: boolean): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
+}
+
+function _rebuildTemplates(keep: TemplateDefinition[]): void {
+  _resetTemplates();
+  for (const t of keep) registerTemplate(t);
 }
 
 let uid = 0;
@@ -100,6 +112,7 @@ export const useStudio = create<StudioState>((set, get) => {
     panel: null,
     logsOpen: false,
     templatesOpen: false,
+    templatesTick: 0,
     settingsOpen: false,
     selectedNodeId: null,
     executor: null,
@@ -109,7 +122,8 @@ export const useStudio = create<StudioState>((set, get) => {
       bootstrapClient();
       const saved = loadProject();
       const prefs = loadUiPrefs();
-      const graph = saved?.graph ?? staticScriptTemplate();
+      // First open with nothing saved: the core template, as data, so no registry has to be ready yet.
+      const graph = saved?.graph ?? (structuredClone(staticScriptJson.graph) as Graph);
       const executor = new Executor(graph, clientServices, {
         onStateChange: (nodeId, runtime) => set((s) => ({ runtimes: { ...s.runtimes, [nodeId]: runtime } })),
         onRunStart: ({ stepTotal }) => set({ running: true, step: { nodeId: '', step: 0, total: stepTotal }, viewingRun: null }),
@@ -243,8 +257,49 @@ export const useStudio = create<StudioState>((set, get) => {
       }
     },
 
+    saveAsTemplate(meta) {
+      const base = meta.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'template';
+      const id = `${base}-${Date.now().toString(36)}`;
+      const def = registerTemplate({
+        id,
+        name: meta.name.trim(),
+        ...(meta.description?.trim() ? { description: meta.description.trim() } : {}),
+        category: 'mine',
+        graph: structuredClone(get().graph),
+      });
+      saveUserTemplates([...loadUserTemplates(), def]);
+      set({ templatesTick: get().templatesTick + 1 });
+      return def;
+    },
+
+    importTemplate(json) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(json);
+      } catch {
+        return 'not JSON';
+      }
+      try {
+        const def = registerTemplate({ ...(parsed as object), category: 'mine' });
+        saveUserTemplates([...loadUserTemplates().filter((t) => (t as { id?: string }).id !== def.id), def]);
+        set({ templatesTick: get().templatesTick + 1 });
+        return null;
+      } catch (e) {
+        return e instanceof Error ? e.message : String(e);
+      }
+    },
+
+    removeUserTemplate(id) {
+      saveUserTemplates(loadUserTemplates().filter((t) => (t as { id?: string }).id !== id));
+      // The registry has no remove: rebuild it from what is left, keeping the shipped ones.
+      const keep = listTemplates().filter((t) => t.id !== id);
+      _rebuildTemplates(keep);
+      set({ templatesTick: get().templatesTick + 1 });
+    },
+
     loadTemplate(id) {
-      const graph = id === 'blank' ? { nodes: [], edges: [] } : (getTemplate(id)?.build() ?? { nodes: [], edges: [] });
+      const def = id === 'blank' ? undefined : getTemplate(id);
+      const graph = def ? templateGraph(def) : { nodes: [], edges: [] };
       const executor = get().executor;
       executor?.setGraph(graph);
       refresh(graph);

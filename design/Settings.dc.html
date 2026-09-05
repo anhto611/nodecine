@@ -127,7 +127,7 @@
     .zoom{font-family:var(--mono);font-size:10px;color:var(--tx-3);
       padding:0 9px;display:flex;align-items:center;border-right:1px solid var(--line)}
 
-    /* ---------- Cụm điều khiển trình phát (nằm trong khối Video Output) ---------- */
+    /* ---------- Cụm điều khiển trình phát (nằm trong node Video Output) ---------- */
     .pbtn{width:28px;height:28px;border-radius:4px;border:1px solid var(--line-2);
       background:var(--bg-raise);color:var(--tx);display:flex;
       align-items:center;justify-content:center}
@@ -231,13 +231,13 @@
       <div class="dlg-b">
         <div class="note"><span style="color:var(--ok);flex:0 0 auto;margin-top:2px">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg></span>
-          <span class="nt"><b style="color:var(--tx)">v0.1 không cần khóa API nào.</b> Mô hình ngôn ngữ đi qua Claude Code đã đăng nhập trên máy, giọng đọc đi qua bộ tổng hợp của macOS, kết xuất chạy cục bộ. Khi có Provider qua API ở v0.2, khóa sẽ được giữ ở đây và khối chỉ trỏ tới nó.</span></div>
+          <span class="nt"><b style="color:var(--tx)">v0.1 không cần khóa API nào.</b> Mô hình ngôn ngữ đi qua Claude Code đã đăng nhập trên máy, giọng đọc đi qua bộ tổng hợp của macOS, kết xuất chạy cục bộ. Khi có Provider qua API ở v0.2, khóa sẽ được giữ ở đây và node chỉ trỏ tới nó.</span></div>
         
   <div class="field"><span class="flab">Claude Code — tệp thực thi</span>
     <div class="inp" style="justify-content:space-between"><span>~/.local/bin/claude · 2.1.260</span>
       <span style="color:var(--ok);display:flex;align-items:center;gap:5px;font-size:10px">
         <span class="dot" style="width:5px;height:5px;border-radius:50%;background:var(--ok)"></span>tự phát hiện</span></div>
-    <span class="cap2">Ghi đè nếu tự phát hiện sai. Trạng thái đăng nhập xem trên khối Claude Code Provider.</span></div>
+    <span class="cap2">Ghi đè nếu tự phát hiện sai. Trạng thái đăng nhập xem trên node Claude Code Provider.</span></div>
         
   <div class="field"><span class="flab">ffmpeg — tệp thực thi</span>
     <div class="inp" style="justify-content:space-between"><span>/opt/homebrew/bin/ffmpeg · 7.1</span>
@@ -253,7 +253,7 @@
     <span class="cap2">Dọn tệp cũ hơn 24 giờ lúc khởi động.</span></div>
           <div class="field"><span class="flab">Ngôn ngữ giao diện</span>
             <div class="inp" style="justify-content:space-between"><span>Tiếng Việt</span><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
-            <span class="cap2">Mặc định: English. Độc lập với ngôn ngữ của video (chọn trên khối AI Director).</span></div>
+            <span class="cap2">Mặc định: English. Độc lập với ngôn ngữ của video (chọn trên node AI Director).</span></div>
         </div>
       </div>
       <div class="dlg-f"><span class="cap2">Mọi thứ lưu trong trình duyệt này. Không tài khoản, không máy chủ tập trung.</span>
