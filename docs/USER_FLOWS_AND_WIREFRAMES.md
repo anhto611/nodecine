@@ -124,7 +124,7 @@ Khối Động Cơ (ví dụ Remotion Engine):
 
 - Không có cổng nhận. Một cổng phát duy nhất "Động cơ".
 - Thân khối: tên và phiên bản Adapter; dòng trạng thái lấy từ `probe()` với chấm xanh "sẵn sàng" hoặc chấm vàng kèm lý do; các tham số riêng của engine. Với Remotion là mức song song và backend đồ họa.
-- Khối Hyperframes Engine ở v0.1 hiện chấm vàng "chưa sẵn sàng, v0.2" ngay trên thân, và mọi khối nối vào nó tự khóa theo khai báo đó.
+- Khối Hyperframes Engine hiện `preview` sẵn sàng và `render` chưa sẵn sàng ngay trên thân. Khối Xuất Bản Video nối vào nó vẫn chạy và vẽ bằng Canvas; chỉ Khối Xuất MP4 tự khóa vàng kèm câu gợi ý dùng Remotion Engine.
 - Đổi engine: kéo Khối Động Cơ khác từ Thư viện khối, nối dây "Động cơ" vào Khối Xuất Bản Video. Không có hộp chọn nào khác.
 
 Khối Xuất MP4 (MP4 Export):

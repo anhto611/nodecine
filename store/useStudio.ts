@@ -244,7 +244,7 @@ export const useStudio = create<StudioState>((set, get) => {
     },
 
     loadTemplate(id) {
-      const graph = id === 'blank' ? { nodes: [], edges: [] } : (getTemplate(id)?.() ?? { nodes: [], edges: [] });
+      const graph = id === 'blank' ? { nodes: [], edges: [] } : (getTemplate(id)?.build() ?? { nodes: [], edges: [] });
       const executor = get().executor;
       executor?.setGraph(graph);
       refresh(graph);

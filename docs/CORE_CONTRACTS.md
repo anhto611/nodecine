@@ -198,14 +198,14 @@ Adapter nhận IR generic và tra scene registry để lấy renderer cho từng
 
 - `engineId`, `displayName`, `adapterVersion`.
 - `capabilities`: Kết quả `probe()`.
-- `settings`: Tham số riêng của engine. Remotion: `concurrency` (mặc định nửa số lõi), `glBackend` (`angle` hoặc `swiftshader`). Hyperframes: rỗng ở v0.1.
+- `settings`: Tham số riêng của engine. Remotion: `concurrency` (mặc định nửa số lõi), `glBackend` (`angle` hoặc `swiftshader`). Hyperframes: rỗng.
 
 Tham chiếu là dữ liệu, không phải đối tượng: không bao giờ chứa instance Adapter. Khối tiêu thụ tra `engineId` trong adapter registry của lõi để lấy instance. Registry khởi đầu rỗng; các gói `engines/*` tự đăng ký lúc khởi động, nhờ vậy lõi không nhập Remotion hay React. Chữ ký của Khối Động Cơ chỉ phụ thuộc `engineId` và `settings`.
 
 ### 6.3. Mức hỗ trợ ở v0.1
 
 - Remotion: xem trước và kết xuất đầy đủ. Ánh xạ: `meta` vào Composition, `voiceoverUrl` vào thẻ Audio, mỗi cảnh vào một Sequence gọi renderer tra từ registry.
-- Hyperframes: khung xương, `probe()` khai báo cả hai năng lực `unavailable` với lý do "v0.2". Adapter không ném lỗi. Khối tiêu thụ tự khóa theo khai báo.
+- Hyperframes: bộ chạy trên Canvas 2D. `probe()` khai báo `preview` sẵn sàng và `render` không sẵn sàng kèm mã `ENGINE_NOT_READY`, lý do và cách khắc phục. Xem trước dựng một canvas, một thẻ âm thanh và một vòng lặp khung hình; thẻ âm thanh làm đồng hồ khi đang phát nên hình và tiếng không lệch nhau. Không React, không Remotion: đây là bằng chứng cho tuyên bố IR không phụ thuộc engine, chứ không phải lời hứa. Khối Xuất MP4 nối vào nó tự khóa vàng theo khai báo năng lực, không phải bằng cách ném lỗi lúc chạy.
 - Dự phòng hiệu ứng: khi Adapter gặp hiệu ứng không dựng được, tự thay bằng mờ dần hoặc trượt và phát cảnh báo mức thông tin để giao diện hiện huy hiệu vàng. Định nghĩa sẵn, chưa Adapter nào kích hoạt ở v0.1.
 
 ---
@@ -268,5 +268,7 @@ Một gói bản mẫu là một thư mục tự đăng ký lúc khởi động,
 - Một hoặc nhiều **đồ thị mẫu** nối sẵn, đăng ký qua `registerTemplate(id, () => Graph)` trong `core/templates/registry`; Trình duyệt Bản mẫu đọc từ registry đó nên lõi không biết tên gói nào. Lõi tự đăng ký đồ thị Kịch Bản Tĩnh theo đúng cơ chế này.
 - Bài kiểm thử riêng, tối thiểu là bài "dữ kiện trong IR bằng đúng dữ kiện trong `FactSheet`".
 - **Handler máy chủ** khi khối của gói cần mạng hay hệ tệp. Khối vẫn chạy trên máy khách như mọi khối; nó gọi `services.packRequest(pack, op, input, signal)`, ứng dụng chuyển tiếp tới `POST /api/packs/<pack>/<op>`, và route tra handler mà gói đã đăng ký qua `registerPackHandler(pack, op, fn)` trong `core/packs/handlers`. Lõi chỉ giữ registry rỗng và kênh chuyển tiếp chung; không có phương thức riêng cho gói nào trong `NodeServices`. Kiểm thử thay handler bằng hàm giả.
+
+Gói khai báo mình bằng một `PackDefinition` (`core/packs/definition.ts`): định danh, hàm `register()` đẳng hình cho kiểu cảnh, khối và đồ thị mẫu, hàm `registerServer()` tùy chọn cho handler, và từ điển chuỗi riêng. Ứng dụng cài gói qua `installPack()` và đọc **một danh sách duy nhất** trong `packs/installed.ts`; ngoài thư mục `packs/` không có tệp nào gọi tên một gói cụ thể. Renderer theo engine và thân khối cho Studio nằm ở hai danh sách bên cạnh, vì máy chủ không được nhập React và bundle kết xuất là đồ thị mô-đun riêng.
 
 Gói không được: thêm kiểu cổng, sửa lược đồ IR, nhập trực tiếp một engine thay vì đăng ký renderer, hay giữ trạng thái ngoài các khối của nó. Gói đầu tiên là `github-showcase`, đặc tả tại `packs/github-showcase.md`.

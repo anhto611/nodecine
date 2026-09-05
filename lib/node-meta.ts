@@ -12,7 +12,7 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/tts-engine': { icon: 'wave', group: 'process' },
   'core/timeline-assembler': { icon: 'layers', group: 'process' },
   'core/remotion-engine': { icon: 'chip', group: 'engine' },
-  'core/hyperframes-engine': { icon: 'chip', group: 'engine', soon: true },
+  'core/hyperframes-engine': { icon: 'chip', group: 'engine' },
   'core/video-output': { icon: 'screen', group: 'output' },
   'core/mp4-export': { icon: 'down', group: 'output' },
 };

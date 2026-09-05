@@ -1,13 +1,17 @@
 'use client';
 import React from 'react';
+import { listTemplates } from '@/core/templates/registry';
 import { useStudio, type TemplateId } from '@/store/useStudio';
 import { Icon } from '../icons';
 import { Btn, useT } from '../ui';
 
-type Card = { id: string; nameKey: string; descKey: string; nodes: number; category: string; status: 'ready' | 'phaseB' | 'soon' };
-const CARDS: Card[] = [
-  { id: 'static-script', nameKey: 'templates.staticScript', descKey: 'templates.staticScriptDesc', nodes: 7, category: 'core', status: 'ready' },
-  { id: 'github-showcase', nameKey: 'templates.github', descKey: 'templates.githubDesc', nodes: 10, category: 'tech', status: 'ready' },
+type Card = { id: string; nameKey: string; descKey: string; nodes: number; category: string; status: 'ready' | 'soon' };
+
+/**
+ * Ideas with no graph behind them yet. Everything that can actually be opened comes from the
+ * template registry instead, so a pack's templates appear here by being installed.
+ */
+const PLANNED: Card[] = [
   { id: 'mobile-app', nameKey: 'Mobile App Promo', descKey: '', nodes: 0, category: 'tech', status: 'soon' },
   { id: 'changelog', nameKey: 'Product Changelog', descKey: '', nodes: 0, category: 'tech', status: 'soon' },
   { id: 'reddit', nameKey: 'Reddit Storytelling', descKey: '', nodes: 0, category: 'faceless', status: 'soon' },
@@ -27,7 +31,18 @@ export const TemplateBrowser: React.FC = () => {
   const load = useStudio((s) => s.loadTemplate);
   const [cat, setCat] = React.useState('all');
   const [sel, setSel] = React.useState<string>('static-script');
-  const cards = CARDS.filter((c) => cat === 'all' || c.category === cat);
+  const cards = React.useMemo(() => {
+    const ready: Card[] = listTemplates().map((tpl) => ({
+      id: tpl.id,
+      nameKey: tpl.nameKey,
+      descKey: tpl.descriptionKey ?? '',
+      nodes: tpl.nodeCount,
+      category: tpl.category,
+      status: 'ready',
+    }));
+    return [...ready, ...PLANNED].filter((c) => cat === 'all' || c.category === cat);
+  }, [cat]);
+  const CARDS = cards;
   const selected = CARDS.find((c) => c.id === sel);
   const canOpen = selected?.status === 'ready' || sel === 'blank';
   const open = () => { if (sel === 'blank') load('blank'); else if (selected?.status === 'ready') load(selected.id as TemplateId); };
@@ -60,7 +75,7 @@ export const TemplateBrowser: React.FC = () => {
                     </div>
                   </div>
                   <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>{name}{c.status !== 'ready' && <span className="nc-soon" style={{ marginLeft: 'auto' }}>{c.status === 'phaseB' ? t('templates.phaseB') : t('templates.soon')}</span>}</div>
+                    <div style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>{name}{c.status !== 'ready' && <span className="nc-soon" style={{ marginLeft: 'auto' }}>{t('templates.soon')}</span>}</div>
                     {c.descKey && <div style={{ fontSize: 10, color: 'var(--tx-2)', lineHeight: 1.5 }}>{t(c.descKey)}</div>}
                     {c.nodes > 0 && <div style={{ fontSize: 8.5, color: 'var(--tx-3)' }}>{t('templates.meta', { n: c.nodes })}</div>}
                   </div>

@@ -86,11 +86,18 @@ nodecine/
 │  │  ├─ Root.tsx                 Composition generic: tra scene registry cho từng cảnh
 │  │  ├─ scenes/TitleCard.tsx     Renderer Remotion cho core/title-card
 │  │  └─ fonts/                   JetBrains Mono, đóng gói cục bộ (OFL 1.1), dùng chung với giao diện
-│  └─ hyperframes/adapter.ts      Khung xương ở v0.1
+│  └─ hyperframes/                Bộ chạy Canvas 2D: xem trước thật, chưa xuất tệp
+│     ├─ adapter.ts               Adapter đẳng hình, probe khai báo preview sẵn sàng
+│     ├─ player.client.ts         Canvas + thẻ âm thanh + vòng lặp khung hình, có thanh điều khiển riêng
+│     ├─ draw.ts, types.ts        Hợp đồng renderer: một hàm vẽ lên canvas, và các tiện ích chung
+│     └─ scenes/                  Renderer cho kiểu cảnh của lõi
 ├─ providers/                     Cài đặt cụ thể của nhà cung cấp, được phép sinh tiến trình
 │  ├─ claude-code/index.ts        Gọi CLI đã đăng nhập
 │  └─ system-tts/index.ts         macOS say + ffmpeg
-├─ packs/                         Gói bản mẫu, mỗi gói tự đăng ký lúc khởi động (Pha B trở đi)
+├─ packs/                         Gói bản mẫu và toàn bộ dây nối tới chúng
+│  ├─ installed.ts                Danh sách gói duy nhất mà ứng dụng đọc
+│  ├─ installed.client.ts         Thân khối và renderer cho Studio
+│  ├─ installed.remotion.ts       Renderer mà bundle kết xuất cần nạp lại
 │  └─ github-showcase/
 │     ├─ index.ts                 Đăng ký khối (đẳng hình, chạy cả hai phía)
 │     ├─ constants.ts             PACK_ID, phiên bản; không nhập gì

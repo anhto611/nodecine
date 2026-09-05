@@ -14,10 +14,6 @@ Docs chia hai tầng, đúng như mã nguồn: **lõi** (khung chạy được v
 
 6. [`packs/github-showcase.md`](packs/github-showcase.md) — Gói GitHub Repo Showcase (Pha B). Đồ thị mười khối, Truy Xuất Repo và dữ kiện, AI Đạo Diễn và ba kiểu cảnh, Kịch bản 1 đến 3b, lỗi và tiêu chí nghiệm thu riêng.
 
-## Biên bản
-
-7. [`REVIEW_NOTES.md`](REVIEW_NOTES.md) — Mọi mâu thuẫn và lỗ hổng đã phát hiện qua các vòng rà soát, cách xử lý, và lý do của việc tách lõi khỏi gói.
-
 ## Bất biến cốt lõi
 
 Ba điều dưới đây xuyên suốt mọi tài liệu. Nếu một thay đổi làm vỡ một trong ba, đó là thay đổi mức kiến trúc chứ không phải sửa lặt vặt:

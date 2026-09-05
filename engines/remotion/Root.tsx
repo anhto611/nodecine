@@ -2,8 +2,11 @@ import React from 'react';
 import { Composition } from 'remotion';
 import { COMPOSITION_ID, NodeCineVideo, type VideoProps } from './Video';
 import { registerRemotionRenderers } from './renderers';
+import { installRemotionBundlePacks } from '@/packs/installed.remotion';
 
+// The bundle is a separate module graph: it has to repeat both registrations for itself.
 registerRemotionRenderers();
+installRemotionBundlePacks();
 
 const placeholder: VideoProps = {
   ir: {

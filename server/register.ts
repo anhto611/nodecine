@@ -7,9 +7,9 @@ import { registerCoreNodes } from '@/core/nodes';
 import { registerSystemTts } from '@/providers/system-tts';
 import { registerClaudeCode } from '@/providers/claude-code';
 import { registerRemotionServer } from '@/engines/remotion/register.server';
-import { registerHyperframes } from '@/engines/hyperframes/adapter';
-import { registerGithubShowcase } from '@/packs/github-showcase';
-import { registerGithubShowcaseServer } from '@/packs/github-showcase/server';
+import { registerHyperframesServer } from '@/engines/hyperframes/register.server';
+import { installPack } from '@/core/packs/definition';
+import { INSTALLED_PACKS } from '@/packs/installed';
 
 let done = false;
 export function ensureServerRegistrations(): void {
@@ -20,7 +20,9 @@ export function ensureServerRegistrations(): void {
   registerSystemTts();
   registerClaudeCode();
   registerRemotionServer();
-  registerHyperframes();
-  registerGithubShowcase();
-  registerGithubShowcaseServer();
+  registerHyperframesServer();
+  for (const pack of INSTALLED_PACKS) {
+    installPack(pack);
+    pack.registerServer?.();
+  }
 }

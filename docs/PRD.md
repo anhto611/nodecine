@@ -79,7 +79,7 @@ Nguyên tắc phân chia khối, theo mô hình ComfyUI: mỗi khối một trá
 4. Nhà Cung Cấp Giọng Đọc (ở v0.1 là System TTS Provider): Khối tài nguyên phát `TTSRef`. Dùng bộ tổng hợp của hệ điều hành, trên macOS là `say`, không khóa, không mạng. ElevenLabs Provider có mặt trong Thư viện với huy hiệu "v0.2".
 5. Giọng Đọc (TTS Engine): Nhận Lời thoại kèm ngôn ngữ và `TTSRef`, tự chọn giọng khớp ngôn ngữ, tạo MP3, đo thời lượng từ tệp.
 6. Đóng Gói Timeline (Timeline Assembler): Hàm thuần. Nhận Kịch bản Phân cảnh, Âm thanh, và tùy chọn Dữ kiện. Phân bổ khung hình theo trọng số, đè dữ kiện lên props theo `factBindings`, kiểm định bất biến IR, phát Bản Đặc Tả Video Trung Gian.
-7. Động Cơ (ở v0.1 là Remotion Engine; Hyperframes Engine có mặt với huy hiệu "v0.2"): Khối tài nguyên phát `EngineRef`, tương đương Load Checkpoint của ComfyUI. Đổi engine là thay khối.
+7. Động Cơ (Remotion Engine kết xuất đầy đủ; Hyperframes Engine xem trước bằng Canvas, chưa xuất tệp): Khối tài nguyên phát `EngineRef`, tương đương Load Checkpoint của ComfyUI. Đổi engine là thay khối.
 8. Xuất Bản Video (Video Output): Nhận IR và `EngineRef`, tự thân là trình phát, theo mô hình PreviewImage. Không có khung xem trước nào khác.
 9. Xuất MP4 (MP4 Export): Nhận cùng hai đầu vào, mang tham số codec, chất lượng, tên tệp, theo mô hình SaveImage nhưng bỏ qua mặc định vì kết xuất tốn hàng chục giây; bấm Kết xuất trên khối để chạy riêng.
 
@@ -92,7 +92,7 @@ Ranh giới trách nhiệm:
 
 ### 4.4. Kiến trúc Độc lập Engine và Độc lập Gói
 
-- Giao diện Adapter dùng chung, nhận IR generic; mỗi Khối Động Cơ bọc đúng một Adapter. Remotion đầy đủ ở v0.1; Hyperframes là khung xương tự khai báo chưa sẵn sàng, để lộ ngay từ đầu nhằm buộc kiến trúc thực sự độc lập engine.
+- Giao diện Adapter dùng chung, nhận IR generic; mỗi Khối Động Cơ bọc đúng một Adapter. Remotion đầy đủ; Hyperframes xem trước được bằng Canvas 2D với renderer riêng cho từng kiểu cảnh, còn kết xuất tệp thì khai báo chưa sẵn sàng. Có hai engine cùng vẽ được một IR là cách duy nhất chứng minh kiến trúc thực sự độc lập engine.
 - Bản Đặc Tả Video Trung Gian không biết tên bất kỳ kiểu cảnh nào: `sceneType` là chuỗi tra trong scene registry, cùng pattern với registry engine và nhà cung cấp. Thêm bản mẫu mới không đụng tới IR, Adapter hay khối lõi. Lõi ship sẵn kiểu cảnh `core/title-card` để khung tự chạy được.
 - Dữ kiện kiểm chứng được đi từ khối truy xuất của gói thẳng tới Đóng Gói Timeline qua cổng Dữ kiện và cơ chế `factBindings` của lõi, không qua mô hình ngôn ngữ. Lõi đảm bảo bằng cấu trúc; gói chỉ khai báo ánh xạ.
 - So sánh hai engine: hai Khối Động Cơ và hai Khối Xuất Bản Video trên cùng đồ thị. Bố cục v0.1 cho phép; cả hai cùng phát được là v0.2.
@@ -147,7 +147,7 @@ Toàn bộ mệnh đề sau đúng trên đồ thị Kịch Bản Tĩnh, không 
 8. Chạy hai lần với tham số khác nhau: Lịch sử chạy đủ hai mục, bấm mục cũ nạp lại đúng bản dựng cũ mà không chạy khối nào.
 9. Khi một khối lỗi, Panel Nhật ký chứa dòng lỗi mang đúng mã; Sao chép toàn bộ hoạt động.
 10. Với cấu hình mặc định, Chạy Luồng không kết xuất; Xuất MP4 chỉ chạy khi bấm Kết xuất hoặc khi đã bỏ đánh dấu bỏ qua.
-11. Thay Remotion Engine bằng Hyperframes Engine: Xuất Bản Video chuyển viền vàng kèm lớp phủ, không khối nào phía trước chạy lại.
+11. Thay Remotion Engine bằng Hyperframes Engine: Xuất Bản Video vẽ lại đúng bản đặc tả đó bằng Canvas, không khối nào phía trước chạy lại; Xuất MP4 chuyển vàng vì engine này chưa xuất tệp.
 12. Gỡ ffmpeg rồi chạy: System TTS Provider vàng nêu lệnh cài, Giọng Đọc `blocked` viền vàng cùng lý do, không tiến trình nào được sinh ra.
 13. Đổi ngôn ngữ giao diện trong Cài đặt: mọi chuỗi đổi ngay, lựa chọn giữ sau khi tải lại.
 14. Dán lời thoại tiếng Việt vào Kịch Bản Tĩnh rồi chạy lại: khối tự nhận diện `vi`, Giọng Đọc tự chọn giọng tiếng Việt, hoặc dùng giọng dự phòng kèm huy hiệu vàng nếu máy không có.
@@ -171,7 +171,7 @@ Tiêu chí riêng của gói nằm tại `packs/github-showcase.md` mục 7, ch�
 
 Các hạng mục dưới đây đã được cân nhắc và cố ý loại khỏi v0.1. Chúng được ghi lại ở đây để tránh việc vô tình thiết kế chặn đường chúng:
 
-- Hoàn thiện Hyperframes Adapter tới mức xem trước và kết xuất đầy đủ, kèm renderer Hyperframes cho các kiểu cảnh đã có.
+- Hoàn thiện Hyperframes Adapter tới mức kết xuất ra tệp, để có đường xuất video không phụ thuộc Remotion.
 - Khối đạo diễn generic dùng chung cho mọi gói, nhận "công thức" gồm lời nhắc và lược đồ cảnh từ gói thay vì mỗi gói tự viết khối.
 - Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng gói, mỗi gói tự mang khối, kiểu cảnh và đồ thị mẫu của nó.
 - Họ khối truy xuất dữ liệu mở rộng: Reddit Fetcher, CSV và Google Sheet Loader, Market API Fetcher. Chúng dùng chung vị trí và vai trò với Khối Truy Xuất Repo trong đồ thị.
