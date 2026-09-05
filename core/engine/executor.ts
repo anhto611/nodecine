@@ -33,6 +33,8 @@ export interface RunOptions {
  * Graph executor (EXECUTION_ENGINE §2–§4). Runs on the client; sequential topological order;
  * signature cache with resource nodes always re-probed; bypass; blocked propagation; single-node runs.
  */
+type Gathered = { inputs: Record<string, Packet>; lists: Record<string, Packet[]>; block?: BlockReason; missing?: string };
+
 export class Executor {
   readonly logs: LogBuffer;
   private runtimes = new Map<string, NodeRuntime>();
@@ -197,72 +199,63 @@ export class Executor {
 
   // ---------- core step ----------
 
-  /** In single-node mode only packet presence matters: the user runs one node with whatever is on its wires. */
-  private gatherInputs(nodeId: string, def: AnyNodeDefinition, single: boolean): { inputs: Record<string, Packet>; block?: BlockReason; missing?: string } {
+  /**
+   * In single-node mode only packet presence matters: the user runs one node with whatever is on its
+   * wires. A `multiple` port gathers every wire into `lists[name]` in edge order and is satisfied by
+   * one; every other port takes its single wire into `inputs[name]`.
+   */
+  private gatherInputs(nodeId: string, def: AnyNodeDefinition, single: boolean): Gathered {
     const inputs: Record<string, Packet> = {};
+    const lists: Record<string, Packet[]> = {};
+    const fail = (block: BlockReason): Gathered => ({ inputs, lists, block });
     for (const port of def.inputs) {
-      const edge = incomingEdges(this.graph, nodeId).find((e) => e.targetPort === port.name);
-      if (!edge) {
+      const edges = incomingEdges(this.graph, nodeId).filter((e) => e.targetPort === port.name);
+      if (port.multiple) lists[port.name] = [];
+      if (edges.length === 0) {
         if (port.required === false) continue;
-        return { inputs, missing: port.name };
+        return { inputs, lists, missing: port.name };
       }
-      const upstreamNode = nodeById(this.graph, edge.source)!;
-      const upstream = this.runtime(edge.source);
-      const packet = upstream.outputs[edge.sourcePort];
-      if (single) {
-        if (!packet) return { inputs, missing: port.name };
-        inputs[port.name] = packet;
-        continue;
-      }
-      if (upstreamNode.bypassed) {
-        return { inputs, block: { kind: 'upstream', code: ErrorCode.NODE_BYPASSED_UPSTREAM, message: `upstream node ${edge.source} is bypassed`, nodeId: edge.source } };
-      }
-      if (!packet || upstream.state === 'error' || upstream.state === 'cancelled' || upstream.state === 'blocked') {
-        // Carry the original reason down the chain. A blocked upstream reports it under blockedBy
-        // rather than error, and without that the whole tail claims a port is unwired when the real
-        // cause is one provider several nodes back — the fix travels with it for the same reason.
-        const cause = upstream.error ?? upstream.blockedBy;
-        return {
-          inputs,
-          block: {
-            kind: 'upstream',
-            code: cause?.code ?? ErrorCode.GRAPH_PORT_UNCONNECTED,
-            message: `upstream node ${edge.source} has no result`,
-            ...(upstream.blockedBy?.fix ? { fix: upstream.blockedBy.fix } : {}),
-            nodeId: edge.source,
-          },
-        };
-      }
-      inputs[port.name] = packet;
-      for (const key of port.requires ?? []) {
-        const cap = readCapability(packet.payload, key);
-        if (!cap || cap.status !== 'ready') {
-          return {
-            inputs,
-            block: {
-              kind: 'capability',
-              code: cap?.code ?? ErrorCode.ENGINE_NOT_READY,
-              message: cap?.reason ?? `capability "${key}" of "${port.name}" is unavailable`,
-              fix: cap?.fix,
+      for (const edge of port.multiple ? edges : edges.slice(0, 1)) {
+        const upstreamNode = nodeById(this.graph, edge.source)!;
+        const upstream = this.runtime(edge.source);
+        const packet = upstream.outputs[edge.sourcePort];
+        if (!packet && single) return { inputs, lists, missing: port.name };
+        if (!single) {
+          if (upstreamNode.bypassed) {
+            return fail({ kind: 'upstream', code: ErrorCode.NODE_BYPASSED_UPSTREAM, message: `upstream node ${edge.source} is bypassed`, nodeId: edge.source });
+          }
+          if (!packet || upstream.state === 'error' || upstream.state === 'cancelled' || upstream.state === 'blocked') {
+            // Carry the original reason down the chain. A blocked upstream reports it under blockedBy
+            // rather than error, and without that the whole tail claims a port is unwired when the real
+            // cause is one provider several nodes back — the fix travels with it for the same reason.
+            const cause = upstream.error ?? upstream.blockedBy;
+            return fail({
+              kind: 'upstream',
+              code: cause?.code ?? ErrorCode.GRAPH_PORT_UNCONNECTED,
+              message: `upstream node ${edge.source} has no result`,
+              ...(upstream.blockedBy?.fix ? { fix: upstream.blockedBy.fix } : {}),
               nodeId: edge.source,
-            },
-          };
+            });
+          }
         }
-      }
-    }
-    if (single) {
-      for (const port of def.inputs) {
-        const packet = inputs[port.name];
         if (!packet) continue;
         for (const key of port.requires ?? []) {
           const cap = readCapability(packet.payload, key);
           if (!cap || cap.status !== 'ready') {
-            return { inputs, block: { kind: 'capability', code: cap?.code ?? ErrorCode.ENGINE_NOT_READY, message: cap?.reason ?? `capability "${key}" of "${port.name}" is unavailable`, fix: cap?.fix } };
+            return fail({
+              kind: 'capability',
+              code: cap?.code ?? ErrorCode.ENGINE_NOT_READY,
+              message: cap?.reason ?? `capability "${key}" of "${port.name}" is unavailable`,
+              fix: cap?.fix,
+              ...(single ? {} : { nodeId: edge.source }),
+            });
           }
         }
+        if (port.multiple) (lists[port.name] ??= []).push(packet);
+        else inputs[port.name] = packet;
       }
     }
-    return { inputs };
+    return { inputs, lists };
   }
 
   private async executeNode(nodeId: string, opts: { force: boolean; single?: boolean }): Promise<NodeState> {
@@ -285,7 +278,7 @@ export class Executor {
       this.setState(nodeId, { state: 'blocked', blockedBy: gathered.block });
       return 'blocked';
     }
-    const preflight = def.preflight?.(gathered.inputs, params);
+    const preflight = def.preflight?.(gathered.inputs, params, gathered.lists);
     if (preflight) {
       this.log(nodeId, 'warn', preflight.message, preflight.code);
       this.setState(nodeId, { state: 'blocked', blockedBy: preflight });
@@ -294,6 +287,7 @@ export class Executor {
 
     const inputHashes: Record<string, string> = {};
     for (const [port, packet] of Object.entries(gathered.inputs)) inputHashes[port] = packet.contentHash;
+    for (const [port, packets] of Object.entries(gathered.lists)) inputHashes[port] = packets.map((p) => p.contentHash).join(',');
     const signature = computeSignature({ type: def.type, version: def.version, params, inputHashes });
 
     const prev = this.runtime(nodeId);
@@ -313,6 +307,7 @@ export class Executor {
         nodeId,
         params,
         inputs: gathered.inputs,
+        lists: gathered.lists,
         signal,
         services: this.services,
         log: (level, message, code) => {

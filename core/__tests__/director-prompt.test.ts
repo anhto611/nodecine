@@ -1,26 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { z } from 'zod';
-import { _resetSceneRegistry, registerScene } from '../scenes/registry';
-import { registerCoreScenes, TITLE_CARD } from '../scenes/title-card';
-import { buildDirectorPrompt, describeField, factsForPrompt } from '../director/prompt';
-import { expandSlots } from '../director/slots';
+import { describe, expect, it } from 'vitest';
+import { buildDirectorPrompt, describeBlock, factsForPrompt } from '../director/prompt';
+import { expandBeats } from '../director/beats';
+import { describeBlockField } from '../look/props';
 import type { FactSheet } from '../types/payloads';
-
-const CARD = 'test/card';
-beforeEach(() => {
-  _resetSceneRegistry();
-  registerCoreScenes();
-  registerScene({
-    sceneType: CARD,
-    propsSchema: z.object({
-      headline: z.string().min(1).max(60),
-      features: z.array(z.string().max(40)).length(3),
-      mood: z.enum(['calm', 'bold']),
-      stars: z.number().int().nullable().optional(),
-      accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-    }),
-  });
-});
+import { CARD, HOOK, STAGE, TEXT_CARD } from './look-fixtures';
 
 const sheet: FactSheet = {
   mode: 'fetched',
@@ -29,14 +12,24 @@ const sheet: FactSheet = {
   facts: { name: 'widget', description: 'Tiny widgets for the web.', stars: 4321, topics: ['widgets', 'web'], url: 'github.com/acme/widget', installCommand: 'npm install widget' },
 };
 
-describe('describeField', () => {
-  it('turns a Zod definition into an honest hint', () => {
-    expect(describeField(z.string().max(60))).toBe('text, up to 60 characters');
-    expect(describeField(z.string().min(8).max(220))).toBe('text, 8–220 characters');
-    expect(describeField(z.string().regex(/^#[0-9a-fA-F]{6}$/))).toBe('#rrggbb');
-    expect(describeField(z.array(z.string().max(40)).length(3))).toBe('[exactly 3 × text, up to 40 characters]');
-    expect(describeField(z.enum(['calm', 'bold']))).toBe('one of: calm, bold');
-    expect(describeField(z.number().optional())).toBe('number');
+describe('describeBlockField', () => {
+  it('turns a field into an honest hint: shape from the type and limits, intent from the hint', () => {
+    expect(describeBlockField({ type: 'string', required: true, max: 60 })).toBe('text, up to 60 characters');
+    expect(describeBlockField({ type: 'text', required: false, max: 160, hint: 'one sentence' })).toBe('text, up to 160 characters — one sentence (optional)');
+    expect(describeBlockField({ type: 'color', required: true })).toBe('#rrggbb');
+    expect(describeBlockField({ type: 'string[]', required: true, min: 3, max: 3, hint: 'three short lines' })).toBe('[exactly 3 × text] — three short lines');
+    expect(describeBlockField({ type: 'number', required: false, min: 0 })).toBe('number (optional)');
+    expect(describeBlockField({ type: 'boolean', required: true })).toBe('true or false');
+  });
+});
+
+describe('describeBlock', () => {
+  it('says when to use the block, what to write, and leaves bound props out', () => {
+    const lines = describeBlock(CARD, new Set(['stars'])).join('\n');
+    expect(lines).toContain('- card — A card with three features.');
+    expect(lines).toContain('"features": "[exactly 3 × text] — three short lines"');
+    expect(lines).not.toMatch(/"stars":/);
+    expect(lines).toContain('example: {"headline":"HI"');
   });
 });
 
@@ -58,38 +51,46 @@ describe('factsForPrompt', () => {
 });
 
 describe('buildDirectorPrompt', () => {
-  const scenes = expandSlots([
-    { sceneType: TITLE_CARD, weight: 0.5, count: 1, factBindings: {} },
-    { sceneType: CARD, weight: 1, count: 2, factBindings: { stars: 'stars' } },
-  ]);
+  const catalogue = [TEXT_CARD, HOOK, CARD];
+  const scenes = expandBeats([
+    { role: 'open', brief: 'Name the subject.', weight: 0.5, count: 1, blocks: ['text-card'], factBindings: {} },
+    { role: 'body', brief: '', weight: 1, count: 2, blocks: ['hook', 'card'], factBindings: { stars: 'stars' } },
+  ], catalogue);
 
-  it('carries the brief, the count, the language, and one shape per scene', () => {
-    const p = buildDirectorPrompt({ brief: 'Introduce widget to busy people.', facts: sheet, excludeFacts: new Set(['stars']), scenes, language: 'vi', strict: false });
+  it('carries the brief, the count, the language, the beats and every block they may use', () => {
+    const p = buildDirectorPrompt({ brief: 'Introduce widget to busy people.', facts: sheet, excludeFacts: new Set(['stars']), stage: STAGE, scenes, language: 'vi', strict: false });
     expect(p).toContain('Introduce widget to busy people.');
     expect(p).toContain('video with 3 scenes');
     expect(p).toContain('Vietnamese');
     expect(p).toContain('exactly 3 scenes');
-    expect((p.match(/\/\/ scene \d+:/g) ?? []).length).toBe(3);
-    expect(p).toContain('core/title-card');
-    expect(p).toContain('test/card');
+    expect(p).toContain('1. open — Name the subject. (block: text-card)');
+    expect(p).toContain('2. body (block: one of hook | card)');
+    expect(p).toContain('3. body (block: one of hook | card)');
+    for (const id of ['text-card', 'hook', 'card']) expect(p).toContain(`- ${id} — `);
+    expect(p).toContain('Stage "Dark"');
+    expect(p).toContain('"tone" to one of: cool, warm, green');
+    expect(p).toContain('- kicker: two or three words');
   });
 
-  it('never asks the model for a fact-bound field, and says so', () => {
-    const p = buildDirectorPrompt({ brief: 'x', facts: sheet, excludeFacts: new Set(['stars']), scenes, language: 'en', strict: false });
+  it('never asks the model for a fact-bound prop, and says so', () => {
+    const p = buildDirectorPrompt({ brief: 'x', facts: sheet, excludeFacts: new Set(['stars']), stage: STAGE, scenes, language: 'en', strict: false });
     expect(p).not.toMatch(/"stars":/);
     expect(p).toContain('"stars" are filled in later');
     expect(p).not.toContain('4321');
   });
 
   it('gets stricter only on the language retry', () => {
-    const soft = buildDirectorPrompt({ brief: 'x', excludeFacts: new Set(), scenes, language: 'vi', strict: false });
-    const hard = buildDirectorPrompt({ brief: 'x', excludeFacts: new Set(), scenes, language: 'vi', strict: true });
+    const soft = buildDirectorPrompt({ brief: 'x', excludeFacts: new Set(), stage: STAGE, scenes, language: 'vi', strict: false });
+    const hard = buildDirectorPrompt({ brief: 'x', excludeFacts: new Set(), stage: STAGE, scenes, language: 'vi', strict: true });
     expect(soft).not.toContain('mandatory');
     expect(hard).toContain('mandatory');
   });
 
-  it('works with no facts at all', () => {
-    const p = buildDirectorPrompt({ brief: 'Four quotes about patience.', excludeFacts: new Set(), scenes, language: 'en', strict: false });
+  it('works with no facts, and says nothing about tones or fields when the stage has none', () => {
+    const bare = { ...STAGE, tones: {}, sceneFields: [] };
+    const p = buildDirectorPrompt({ brief: 'Four quotes about patience.', excludeFacts: new Set(), stage: bare, scenes, language: 'en', strict: false });
     expect(p).not.toContain('Facts about the subject');
+    expect(p).not.toContain('"tone"');
+    expect(p).not.toContain('"fields"');
   });
 });

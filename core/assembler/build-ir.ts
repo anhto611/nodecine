@@ -25,8 +25,6 @@ export interface BuildIRInput {
   voiceover: Voiceover;
   facts?: FactSheet;
   params?: Partial<AssemblerParams>;
-  /** Test-only: skip the registry check when no scenes are registered. */
-  checkRegistry?: boolean;
 }
 
 /** Overlay facts onto props via factBindings; facts always win; missing keys leave props untouched. */
@@ -56,11 +54,13 @@ export function buildIR(input: BuildIRInput): VideoIR {
   let cursor = 0;
   const timeline: TimelineEntry[] = plan.scenes.map((scene, i) => {
     const entry: TimelineEntry = {
-      id: `scene-${i + 1}-${scene.sceneType.replace('/', '-')}`,
-      sceneType: scene.sceneType,
+      id: `scene-${i + 1}-${scene.blockId}`,
+      blockId: scene.blockId,
       startFrame: cursor,
       durationInFrames: frames[i] as number,
       props: applyFactBindings(scene.props, scene.factBindings, facts?.facts),
+      ...(scene.tone !== undefined ? { tone: scene.tone } : {}),
+      ...(scene.fields && Object.keys(scene.fields).length ? { fields: scene.fields } : {}),
     };
     cursor += frames[i] as number;
     return entry;
@@ -71,12 +71,13 @@ export function buildIR(input: BuildIRInput): VideoIR {
     meta: {
       title: p.title,
       language: plan.language,
-      theme: plan.theme,
       fps: p.fps,
       width: p.width,
       height: p.height,
       totalDurationInFrames: total,
     },
+    stage: plan.stage,
+    blocks: plan.blocks,
     audioTrack: {
       voiceoverUrl: voiceover.audioUrl,
       durationSeconds: voiceover.durationSeconds,
@@ -85,6 +86,6 @@ export function buildIR(input: BuildIRInput): VideoIR {
     timeline,
   };
 
-  assertValidIR(ir, { checkRegistry: input.checkRegistry });
+  assertValidIR(ir);
   return ir;
 }

@@ -64,14 +64,16 @@ nodecine/
 │     ├─ tts/route.ts             Gọi nhà cung cấp giọng đọc theo TTSRef
 │     ├─ providers/probe/route.ts Kiểm tra sẵn sàng cho các node tài nguyên
 │     ├─ media/[...path]/route.ts Phục vụ tệp trong thư mục tệp tạm, chỉ đọc
+│     ├─ vendor/[name]/route.ts   Hai script vendor trình phát HyperFrames inline: gsap và runtime, đọc từ node_modules
 │     └─ render/route.ts          Kết xuất MP4 và báo tiến độ
 ├─ core/                          Tầng lõi, không phụ thuộc React và engine
 │  ├─ types/                      Kiểu cổng, lược đồ dữ liệu, Bản đặc tả IR
-│  ├─ nodes/                      Mười một node lõi: cổng, tham số, hàm chạy — gồm Đạo Diễn AI
+│  ├─ nodes/                      Mười ba node lõi: cổng, tham số, hàm chạy — gồm Stage, Block, Đạo Diễn AI
 │  ├─ engine/                     Bộ máy thực thi đồ thị, chữ ký node, bộ nhớ đệm
 │  ├─ assembler/                  Phân bổ khung hình theo trọng số, đè dữ kiện, kiểm định IR
-│  ├─ scenes/                     Scene registry rỗng + kiểu cảnh core/title-card (lược đồ props)
-│  ├─ director/                   Ruột của Đạo Diễn AI: slot → lược đồ đầu ra, prompt, vòng gọi mô hình
+│  ├─ look/                       Bảng props của block → lược đồ Zod; registry renderer theo định dạng code
+│  ├─ github/                     Ruột của Truy Xuất Repo: đọc link, dựng dữ kiện, mã lỗi
+│  ├─ director/                   Ruột của Đạo Diễn AI: beat → lược đồ đầu ra, prompt, vòng gọi mô hình
 │  ├─ server-ops.ts               Registry rỗng cho thao tác máy chủ: tên → hàm
 │  ├─ templates/registry.ts       Registry bản mẫu: kiểm định JSON, trả bản sao đồ thị; rỗng ở lõi
 │  ├─ text/                       Nhận diện ngôn ngữ theo hệ chữ; chính sách ngôn ngữ đầu ra
@@ -84,27 +86,25 @@ nodecine/
 ├─ engines/                       Cài đặt cụ thể, được phép phụ thuộc React và engine
 │  ├─ remotion/
 │  │  ├─ adapter.ts               Cài đặt EngineAdapter cho Remotion, đăng ký vào core registry
-│  │  ├─ Root.tsx                 Composition generic: tra scene registry cho từng cảnh
-│  │  ├─ scenes/TitleCard.tsx     Renderer Remotion cho core/title-card
-│  │  └─ fonts/                   JetBrains Mono, đóng gói cục bộ (OFL 1.1), dùng chung với giao diện
-│  └─ hyperframes/                Bộ chạy Canvas 2D thứ hai (khả năng: STATUS.md)
-│     ├─ adapter.ts               Adapter đẳng hình, probe khai báo preview sẵn sàng
-│     ├─ player.client.ts         Canvas + thẻ âm thanh + vòng lặp khung hình, có thanh điều khiển riêng
-│     ├─ draw.ts, types.ts        Hợp đồng renderer: một hàm vẽ lên canvas, và các tiện ích chung
-│     └─ scenes/                  Renderer cho kiểu cảnh của lõi
+│  │  ├─ Root.tsx, Video.tsx      Composition generic; chưa có renderer cho html-gsap nên vẽ ô báo thiếu
+│  │  └─ fonts.ts                 Nạp JetBrains Mono từ public/fonts (OFL 1.1)
+│  └─ hyperframes/                Engine của định dạng html-gsap, dựng trên thư viện HyperFrames (khả năng: STATUS.md)
+│     ├─ document.ts              IR → một trang HTML tự chứa: clip theo cảnh, style @scope, bootstrap gắn props và gom timeline
+│     ├─ adapter.ts               Adapter đẳng hình; hai nửa môi trường được tiêm vào
+│     ├─ player.client.ts         <hyperframes-player srcdoc sandbox-origin="opaque">, tải hai script vendor rồi inline
+│     ├─ register.server.ts       Kết xuất qua @hyperframes/producer: thư mục dự án tạm → MP4 tên băm
+│     └─ vendor.server.ts         Đường dẫn gsap và runtime trong node_modules, chỉ hai tệp
 ├─ providers/                     Cài đặt cụ thể của nhà cung cấp, được phép sinh tiến trình
 │  ├─ installed.ts                Mô tả nhà cung cấp cho cả hai phía: tên, các trường tham số, mặc định
 │  ├─ installed.server.ts         Đăng ký factory, chỉ chạy trên máy chủ
 │  ├─ claude-code/index.ts        Gọi CLI đã đăng nhập
 │  ├─ piper/index.ts             Giọng máy học chạy cục bộ, chung một đường trên mọi hệ điều hành
 │  └─ system-tts/index.ts         macOS say + ffmpeg
-├─ extras/                        Node và kiểu cảnh app kèm theo, ngoài khung; luôn được cài lúc khởi động
-│  ├─ installed.ts                Danh sách đẳng hình duy nhất: đăng ký node, kiểu cảnh, chuỗi
-│  ├─ installed.client.ts         Thân node và renderer cho Studio
-│  ├─ installed.remotion.ts       Renderer mà bundle kết xuất cần nạp lại
-│  ├─ installed.server.ts         Thao tác máy chủ, đăng ký vào core/server-ops
-│  ├─ github/                     Truy Xuất Repo + ba kiểu cảnh hook/mockup/cta (Remotion và Hyperframes)
-│  └─ quotes/                     Một kiểu cảnh quote (Remotion và Hyperframes); không có node
+├─ server/                        Phần chỉ chạy trên máy chủ, không React
+│  ├─ register.ts                 Đăng ký node, nhà cung cấp, engine, thao tác máy chủ một lần cho mọi route
+│  ├─ services.server.ts          NodeServices không cần trình duyệt: cùng việc với các API route, cho CLI, job và test đầu-cuối
+│  ├─ paths.ts                    Thư mục tệp tạm và tên tệp media băm
+│  └─ github/fetch-repo.ts        Thao tác máy chủ github-fetch-repo: gọi GitHub API, dựng URL từ owner/name đã kiểm định
 ├─ templates/                     Bản mẫu = đồ thị JSON, cùng hình dạng tệp dự án; index.ts đăng ký cả ba
 ├─ components/                    Thành phần giao diện Studio
 ├─ locales/                       Từ điển chuỗi hiển thị
@@ -115,8 +115,8 @@ Quy ước ngôn ngữ trong kho mã: mã nguồn, chú thích, tên kiểm th�
 
 Quy tắc phụ thuộc bắt buộc, kiểm tra được bằng công cụ phân tích tĩnh:
 
-- `core/` không được phép nhập bất cứ thứ gì từ `engines/`, `providers/`, `extras/`, `templates/`, `app/` hay `components/`. Nó chỉ chứa giao diện Adapter, Provider, kiểu cảnh cùng ba registry rỗng; các lớp cài đặt cụ thể nằm ngoài lõi và tự đăng ký vào registry ở thời điểm khởi động ứng dụng. Nếu quy tắc này bị vi phạm, tuyên bố độc lập engine trở thành lời nói suông và Hyperframes Adapter sẽ không bao giờ cài đặt được.
-- `engines/*`, `providers/*` và `extras/*` được nhập giao diện và kiểu từ `core/`, và được nhập thư viện của riêng chúng như Remotion hay React; `core/` không bao giờ nhập ngược lại. Một kiểu cảnh đăng ký renderer cho một engine qua scene registry, không nhập Adapter của engine đó. `templates/` chỉ chứa JSON và một tệp đăng ký; nó không import node nào.
+- `core/` không được phép nhập bất cứ thứ gì từ `engines/`, `providers/`, `server/`, `templates/`, `app/` hay `components/`. Nó chỉ chứa giao diện Adapter, Provider cùng các registry rỗng (engine, nhà cung cấp, renderer theo định dạng, thao tác máy chủ, bản mẫu); các lớp cài đặt cụ thể nằm ngoài lõi và tự đăng ký vào registry ở thời điểm khởi động ứng dụng. Nếu quy tắc này bị vi phạm, tuyên bố độc lập engine trở thành lời nói suông và Hyperframes Adapter sẽ không bao giờ cài đặt được.
+- `engines/*`, `providers/*` và `server/*` được nhập giao diện và kiểu từ `core/`, và được nhập thư viện của riêng chúng như Remotion hay React; `core/` không bao giờ nhập ngược lại. Một engine đăng ký renderer cho định dạng code nó chạy được; không gì nhập Adapter của engine khác. `templates/` chỉ chứa JSON và một tệp đăng ký; nó không import node nào.
 - `components/` được nhập từ `core/`, nhưng `core/` không bao giờ nhập ngược lại. Trình phát Remotion là một component do `engines/remotion/` cung cấp qua `mountPlayer()`, tầng giao diện chỉ gọi hàm đó chứ không nhập Remotion trực tiếp.
 - Chỉ `app/api/` được phép thực hiện lệnh gọi mạng ra ngoài. Các hàm chạy node trong `core/nodes/` gọi tới điểm cuối cục bộ của chính ứng dụng, không gọi thẳng nhà cung cấp.
 
@@ -195,6 +195,6 @@ Những điểm dưới đây không đổi thiết kế nhưng sẽ chặn ti�
 5. **React Flow chỉ chạy phía máy khách.** Trang Studio và mọi thành phần chứa canvas phải là client component; tầng `core/` không được nhập từ chúng, đúng quy tắc mục 2.
 6. **Bộ đóng gói Remotion không biết bí danh `@/` của Next.js.** `@remotion/bundler` dùng webpack riêng, không đọc `tsconfig.paths`, nên mọi `import '@/core/...'` bên trong entry của video sẽ lỗi "module not found" lúc kết xuất dù `next dev` chạy bình thường. Adapter phía máy chủ phải truyền `webpackOverride` thêm `resolve.alias['@'] = process.cwd()` khi gọi `bundle()`; kiểm thử kết xuất thật (không chỉ typecheck) là cách duy nhất bắt được lỗi này.
 7. **Mã máy chủ của Remotion không được kéo React vào route handler.** `@remotion/renderer` chạy trong Node và không cần React, nhưng nếu route handler nhập gián tiếp một tệp có `import { ... } from 'remotion'` (ví dụ để lấy hằng số `COMPOSITION_ID`), Next.js sẽ báo "Remotion requires React.createContext". Hằng số dùng chung phải nằm trong một mô-đun không nhập `remotion`/`react`; phần đăng ký trình kết xuất cảnh chỉ chạy ở máy khách và bên trong bundle.
-8. **Phông chữ của video phải đóng gói cục bộ.** Ba kiểu cảnh và cảnh lõi đều khai JetBrains Mono. Nếu chỉ khai tên phông, máy nào không cài sẽ kết xuất bằng phông monospace mặc định và ra khung hình khác, tức là kết quả không tái lập được. Tệp `woff2` nằm trong `public/fonts` kèm giấy phép OFL 1.1, được phục vụ như tệp âm thanh: trình phát nạp theo đường dẫn tương đối, bản kết xuất không đầu nạp theo `mediaBaseUrl` tuyệt đối. Thành phần video giữ khung đầu bằng `delayRender` cho tới khi phông sẵn sàng, nếu không chữ sẽ nhảy vài khung đầu.
-9. **Bản đóng gói Remotion bị nhớ suốt đời tiến trình.** Kết quả `bundle()` được giữ trong một biến cấp mô-đun để không phải dựng lại mỗi lần kết xuất. Ở chế độ phát triển, tiến trình sống lâu hơn nhiều lần sửa mã, nên bản đóng gói cũ vẫn được dùng và video ra đúng như mã lúc khởi động máy chủ, không có dấu hiệu nào báo. Vì thế ở chế độ phát triển bộ nhớ đệm được đánh khóa theo dấu vân tay thời gian sửa và kích thước của mọi tệp trong `engines/remotion`, `extras` và `core/scenes`; ở bản production mã nguồn không đổi nên vẫn dựng một lần.
+8. **Phông chữ của video phải đóng gói cục bộ.** Stage mặc định khai JetBrains Mono. Nếu chỉ khai tên phông, máy nào không cài sẽ kết xuất bằng phông monospace mặc định và ra khung hình khác, tức là kết quả không tái lập được. Tệp `woff2` nằm trong `public/fonts` kèm giấy phép OFL 1.1, được phục vụ như tệp âm thanh: trình phát nạp theo đường dẫn tương đối, bản kết xuất không đầu nạp theo `mediaBaseUrl` tuyệt đối. Thành phần video giữ khung đầu bằng `delayRender` cho tới khi phông sẵn sàng, nếu không chữ sẽ nhảy vài khung đầu.
+9. **Bản đóng gói Remotion bị nhớ suốt đời tiến trình.** Kết quả `bundle()` được giữ trong một biến cấp mô-đun để không phải dựng lại mỗi lần kết xuất. Ở chế độ phát triển, tiến trình sống lâu hơn nhiều lần sửa mã, nên bản đóng gói cũ vẫn được dùng và video ra đúng như mã lúc khởi động máy chủ, không có dấu hiệu nào báo. Vì thế ở chế độ phát triển bộ nhớ đệm được đánh khóa theo dấu vân tay thời gian sửa và kích thước của mọi tệp trong `engines/remotion`; ở bản production mã nguồn không đổi nên vẫn dựng một lần.
 10. **Trình phát Remotion và cảnh mờ dần từ đen.** Khung 0 của một cảnh mở đầu bằng fade-in là màn đen, nên ảnh đại diện của trình phát sẽ trống. Node Xuất Bản Video mount trình phát với `initialFrame` lùi vài khung (giới hạn dưới tổng số khung) để khung đầu hiển thị nội dung.

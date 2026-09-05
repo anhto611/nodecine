@@ -136,7 +136,7 @@ export function validateGraph(graph: Graph): GraphIssue[] {
           message: `Input "${port.name}" is not connected`,
         });
       }
-      if (edges.length > 1) {
+      if (edges.length > 1 && !port.multiple) {
         issues.push({ severity: 'error', nodeId: n.id, port: port.name, code: ErrorCode.GRAPH_PORT_UNCONNECTED, message: `Input "${port.name}" has more than one edge`, edgeIds: edges.map((e) => e.id) });
       }
       for (const e of edges) {

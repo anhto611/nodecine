@@ -1,9 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, Audio, Sequence, continueRender, delayRender } from 'remotion';
 import type { VideoIR } from '@/core/types/ir';
-import { getScene } from '@/core/scenes/registry';
 
-import { REMOTION_ENGINE_ID } from './constants';
 import { loadVideoFonts } from './fonts';
 export { REMOTION_ENGINE_ID, COMPOSITION_ID } from './constants';
 
@@ -13,7 +11,10 @@ export type VideoProps = {
   mediaBaseUrl: string;
 };
 
-/** Generic composition: every scene is looked up in the scene registry — this file knows no scene by name. */
+/**
+ * Generic composition. Remotion has no renderer for the `html-gsap` block format yet, so every scene
+ * draws the honest placeholder; the output nodes block before this is ever shown (CORE_CONTRACTS §4).
+ */
 export const NodeCineVideo: React.FC<VideoProps> = ({ ir, mediaBaseUrl }) => {
   // Hold the first frame until the web fonts are in place, otherwise the render captures
   // fallback metrics and the text reflows a few frames in.
@@ -27,20 +28,17 @@ export const NodeCineVideo: React.FC<VideoProps> = ({ ir, mediaBaseUrl }) => {
   return (
     <AbsoluteFill style={{ background: '#000' }}>
       <Audio src={`${mediaBaseUrl}${ir.audioTrack.voiceoverUrl}`} />
-      {ir.timeline.map((scene) => {
-        const Renderer = getScene(scene.sceneType)?.renderers[REMOTION_ENGINE_ID] as React.ComponentType<Record<string, unknown>> | undefined;
-        return (
-          <Sequence key={scene.id} from={scene.startFrame} durationInFrames={scene.durationInFrames} name={scene.sceneType}>
-            {Renderer ? <Renderer {...scene.props} /> : <MissingScene sceneType={scene.sceneType} />}
-          </Sequence>
-        );
-      })}
+      {ir.timeline.map((scene) => (
+        <Sequence key={scene.id} from={scene.startFrame} durationInFrames={scene.durationInFrames} name={scene.blockId}>
+          <MissingScene blockId={scene.blockId} />
+        </Sequence>
+      ))}
     </AbsoluteFill>
   );
 };
 
-const MissingScene: React.FC<{ sceneType: string }> = ({ sceneType }) => (
+const MissingScene: React.FC<{ blockId: string }> = ({ blockId }) => (
   <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', color: '#f85149', fontFamily: 'monospace', fontSize: 40 }}>
-    no renderer: {sceneType}
+    no renderer: {blockId}
   </AbsoluteFill>
 );

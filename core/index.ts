@@ -2,8 +2,6 @@ export * from './types';
 export * from './hash';
 export * from './errors';
 export * from './assembler';
-export * from './scenes/registry';
-export * from './scenes/title-card';
 export * from './adapters/types';
 export * from './adapters/registry';
 export * from './providers/types';

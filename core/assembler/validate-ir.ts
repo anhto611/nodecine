@@ -1,5 +1,5 @@
 import { VideoIRSchema, type VideoIR } from '../types/ir';
-import { hasScene } from '../scenes/registry';
+import { propsSchemaFor } from '../look/props';
 
 /**
  * The five IR invariants (CORE_CONTRACTS §3.1). Runs before an IR leaves the assembler
@@ -8,7 +8,7 @@ import { hasScene } from '../scenes/registry';
 
 export type IRValidation = { ok: true } | { ok: false; violations: string[] };
 
-export function validateIR(ir: unknown, opts: { checkRegistry?: boolean } = {}): IRValidation {
+export function validateIR(ir: unknown): IRValidation {
   const parsed = VideoIRSchema.safeParse(ir);
   if (!parsed.success) {
     return {
@@ -40,11 +40,19 @@ export function validateIR(ir: unknown, opts: { checkRegistry?: boolean } = {}):
     if (s.durationInFrames <= 0) violations.push(`4: scene ${i} has 0 frames`);
   });
 
-  if (opts.checkRegistry !== false) {
-    for (const s of v.timeline) {
-      if (!hasScene(s.sceneType)) violations.push(`5: scene type "${s.sceneType}" is not in the scene registry`);
+  // 5: an IR is self-contained — every scene names a block it carries, fits that block's props, and
+  // wears a tone the stage has.
+  const blocks = new Map(v.blocks.map((b) => [b.id, b]));
+  v.timeline.forEach((s, i) => {
+    const block = blocks.get(s.blockId);
+    if (!block) {
+      violations.push(`5: scene ${i} uses block "${s.blockId}", which the IR does not carry`);
+      return;
     }
-  }
+    const parsed = propsSchemaFor(block).safeParse(s.props);
+    if (!parsed.success) violations.push(`5: scene ${i} (${s.blockId}) props: ${parsed.error.issues.map((x) => `${x.path.join('.')} ${x.message}`).join(', ')}`);
+    if (s.tone !== undefined && !(s.tone in v.stage.tones)) violations.push(`5: scene ${i} asks for tone "${s.tone}", which the stage does not have`);
+  });
 
   const ids = new Set<string>();
   for (const s of v.timeline) {
@@ -55,8 +63,8 @@ export function validateIR(ir: unknown, opts: { checkRegistry?: boolean } = {}):
   return violations.length ? { ok: false, violations } : { ok: true };
 }
 
-export function assertValidIR(ir: unknown, opts?: { checkRegistry?: boolean }): asserts ir is VideoIR {
-  const r = validateIR(ir, opts);
+export function assertValidIR(ir: unknown): asserts ir is VideoIR {
+  const r = validateIR(ir);
   if (!r.ok) throw new IRInvalidError(r.violations);
 }
 

@@ -1,5 +1,6 @@
 'use client';
 import type { Graph } from '@/core/engine/graph';
+import { migrateLookV4 } from './storage.v4';
 import githubShowcaseJson from '@/templates/github-showcase.json';
 import quoteCardsJson from '@/templates/quote-cards.json';
 import type { Locale } from './i18n';
@@ -10,7 +11,7 @@ const PROJECT_KEY = 'nodecine.project';
 const UI_KEY = 'nodecine.ui';
 /** Templates the user saved from the canvas or pasted in. Data only, same shape as a shipped one. */
 const TEMPLATES_KEY = 'nodecine.templates';
-export const PROJECT_SCHEMA_VERSION = 3;
+export const PROJECT_SCHEMA_VERSION = 5;
 
 export interface ProjectDoc {
   schemaVersion: number;
@@ -73,9 +74,9 @@ const DIRECTOR_V3: Record<string, (old: Record<string, unknown>) => Record<strin
   }),
   'quote-cards/quote-director': (old) => {
     const base = directorParamsFrom(quoteCardsJson);
-    const scenes = (base.scenes as { sceneType: string; count: number }[]).map((s) =>
-      s.sceneType === 'quote-cards/quote' && typeof old.count === 'number' ? { ...s, count: old.count } : { ...s });
-    return { ...base, scenes, outputLanguage: (old.outputLanguage as string | undefined) ?? 'auto' };
+    const beats = (base.beats as { blocks: string[]; count: number }[]).map((b) =>
+      b.blocks.includes('quote') && typeof old.count === 'number' ? { ...b, count: old.count } : { ...b });
+    return { ...base, beats, outputLanguage: (old.outputLanguage as string | undefined) ?? 'auto' };
   },
 };
 
@@ -105,6 +106,9 @@ export function migrateProject(doc: ProjectDoc): ProjectDoc {
       edges: graph.edges.map((e) => (quoteDirectors.has(e.target) && e.targetPort === 'topic' ? { ...e, targetPort: 'source' } : e)),
     };
   }
+  if (doc.schemaVersion < 4) graph = migrateLookV4(graph);
+  // Version 5: the GitHub fetcher moved from `extras/` into the core; the `extras/` layer is gone.
+  if (doc.schemaVersion < 5) graph = { ...graph, nodes: graph.nodes.map((n) => (n.type === 'github-showcase/github-fetcher' ? { ...n, type: 'core/github-fetcher' } : n)) };
   return { ...doc, graph, schemaVersion: PROJECT_SCHEMA_VERSION };
 }
 

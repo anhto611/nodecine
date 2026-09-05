@@ -1,12 +1,12 @@
 'use client';
 import { registerEngine } from '@/core/adapters/registry';
+import { registerCodeRenderer } from '@/core/look/renderers';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { createHyperframesAdapter } from './adapter';
 import { mountHyperframesPlayer } from './player.client';
-import { registerHyperframesRenderers } from './renderers';
 
-/** Browser registration: the canvas preview plus every scene renderer this engine can draw. */
+/** Browser registration: the HyperFrames player for `html-gsap`; render is reported by the server. */
 export function registerHyperframesClient(): void {
-  registerHyperframesRenderers();
+  registerCodeRenderer('html-gsap', HYPERFRAMES_ENGINE_ID, 'hyperframes-player');
   registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ mountPlayer: mountHyperframesPlayer }));
 }

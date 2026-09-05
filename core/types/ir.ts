@@ -1,16 +1,22 @@
 import { z } from 'zod';
-import { MediaUrlSchema } from './payloads';
+import { BlockDefSchema, MediaUrlSchema, StageDefSchema } from './payloads';
 
-/** Universal Video IR — generic; knows no scene type by name (CORE_CONTRACTS §3). */
+/**
+ * Universal Video IR — generic and self-contained (CORE_CONTRACTS §3). It carries the stage and the
+ * blocks its scenes use, so an engine needs nothing registered to draw it and a saved IR replays
+ * anywhere. It knows no scene by name: a scene is a block id into its own catalogue.
+ */
 
 export const IR_VERSION = 1 as const;
 
 export const TimelineEntrySchema = z.object({
   id: z.string().min(1),
-  sceneType: z.string().min(1),
+  blockId: z.string().min(1),
   startFrame: z.number().int().nonnegative(),
   durationInFrames: z.number().int().positive(),
   props: z.record(z.string(), z.unknown()),
+  tone: z.string().optional(),
+  fields: z.record(z.string(), z.string()).optional(),
 });
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
 
@@ -19,12 +25,13 @@ export const VideoIRSchema = z.object({
   meta: z.object({
     title: z.string(),
     language: z.string().min(2),
-    theme: z.string().min(1),
     fps: z.number().int().positive(),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     totalDurationInFrames: z.number().int().positive(),
   }),
+  stage: StageDefSchema,
+  blocks: z.array(BlockDefSchema).min(1),
   audioTrack: z.object({
     voiceoverUrl: MediaUrlSchema,
     durationSeconds: z.number().positive(),

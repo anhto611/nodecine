@@ -4,7 +4,7 @@ import type { Packet } from '../types/packet';
 import type { NodeServices } from '../engine/services';
 
 /**
- * Node type definition (CORE_CONTRACTS §5, §10). Core nodes and the extras use the same shape.
+ * Node type definition (CORE_CONTRACTS §5).
  * `run` returns outputs keyed by output port name; the executor wraps them into packets.
  */
 
@@ -25,6 +25,12 @@ export interface PortDef {
   type: PortType;
   /** Defaults to true for inputs. */
   required?: boolean;
+  /**
+   * Accepts any number of wires. The packets arrive in `RunContext.lists[name]`, in edge order,
+   * instead of `inputs[name]`. `required` then means at least one. The AI Director's `blocks` port
+   * is the reason this exists: its catalogue is whatever is wired in.
+   */
+  multiple?: boolean;
   /**
    * For reference inputs: capability keys (under payload.capabilities) that must be `ready`
    * for this node to run; otherwise the node is blocked by capability (EXECUTION_ENGINE §1.1 rule 3).
@@ -53,6 +59,8 @@ export interface RunContext<P = Record<string, unknown>> {
   nodeId: string;
   params: P;
   inputs: Record<string, Packet>;
+  /** Packets on `multiple` ports, keyed by port name. */
+  lists: Record<string, Packet[]>;
   signal: AbortSignal;
   services: NodeServices;
   log: (level: LogLevel, message: string, code?: string) => void;
@@ -75,7 +83,7 @@ export interface NodeDefinition<S extends ZodTypeAny = ZodTypeAny> {
   /** Continuous validation of params (EXECUTION_ENGINE §2 item 2). */
   validate?: (params: z.infer<S>) => NodeIssue[];
   /** Checked before run with the resolved inputs; a returned reason blocks the node by capability. */
-  preflight?: (inputs: Record<string, Packet>, params: z.infer<S>) => BlockReason | null;
+  preflight?: (inputs: Record<string, Packet>, params: z.infer<S>, lists: Record<string, Packet[]>) => BlockReason | null;
   run: (ctx: RunContext<z.infer<S>>) => Promise<Record<string, unknown>>;
 }
 

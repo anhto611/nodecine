@@ -64,10 +64,9 @@ NodeCine phục vụ 4 nhóm người dùng trọng tâm tương ứng với cá
 
 ### 4.2. Khung Lõi, Nội Dung Kèm App và Bản Mẫu
 
-NodeCine v0.1 gồm hai tầng code, theo mô hình core nodes và comfy_extras của ComfyUI, cộng một tầng dữ liệu. **Cả ba đều ship cùng app và có sẵn ngay sau khi cài** — người dùng mới phải dựng được mọi bản mẫu từ canvas trống mà không cài thêm gì:
+NodeCine v0.1 gồm một tầng code và một tầng dữ liệu. **Cả ba đều ship cùng app và có sẵn ngay sau khi cài** — người dùng mới phải dựng được mọi bản mẫu từ canvas trống mà không cài thêm gì:
 
-- **Khung lõi** (Hợp đồng Lõi): hệ thống kiểu cổng, bộ máy thực thi, Bản Đặc Tả Video Trung Gian generic, ba registry (engine, nhà cung cấp, kiểu cảnh), giao diện Studio, và bộ node lõi đủ để dựng video từ kịch bản gõ tay mà không cần mạng hay mô hình ngôn ngữ.
-- **Nội dung kèm app** (`extras/`): node và kiểu cảnh mà chỉ code mới cung cấp được — một node gọi API bên ngoài, một renderer cho kiểu cảnh. Luôn được cài. Không sửa gì ở lõi, không mang theo đồ thị, không mang node đạo diễn riêng.
+- **Khung lõi** (Hợp đồng Lõi): hệ thống kiểu cổng, bộ máy thực thi, Bản Đặc Tả Video Trung Gian generic tự chứa, registry engine và nhà cung cấp, renderer theo định dạng code, giao diện Studio, và toàn bộ node — kể cả node lấy dữ liệu như Truy Xuất Repo, vì mỗi nguồn dữ liệu là một node riêng của lõi.
 - **Bản mẫu** (`templates/`): đồ thị JSON, cùng hình dạng tệp dự án, gọi tên node bằng chuỗi. Người dùng dựng được từ canvas trống, lưu lại thành bản mẫu, tải xuống để chia sẻ. Ba bản mẫu ship kèm là Kịch Bản Tĩnh, GitHub Repo Showcase và Thẻ Trích Dẫn.
 
 Nguyên tắc phân chia node, theo mô hình ComfyUI: mỗi node một trách nhiệm; mọi node gọi ra ngoài tiến trình đứng riêng để thử lại độc lập; mọi tài nguyên hay hành động có tham số riêng là một node chứ không phải cài đặt toàn cục.
@@ -75,13 +74,14 @@ Nguyên tắc phân chia node, theo mô hình ComfyUI: mỗi node một trách n
 ### 4.3. Bộ Node Lõi
 
 1. Nhập Liệu (Input Trigger): Ô văn bản, phát Dữ liệu Nguồn, không diễn giải, không gọi mạng.
-2. Kịch Bản Tĩnh (Static Script): Người dùng gõ tay lời thoại và danh sách cảnh (kiểu cảnh, trọng số, nội dung). Phát Kịch bản Phân cảnh và Lời thoại. Là cách dựng video không cần mô hình ngôn ngữ, và là node dùng để nghiệm thu khung.
-2b. Đạo Diễn AI (AI Director): Node đạo diễn duy nhất. Nhận `LLMRef`, và tùy chọn `FactSheet` hoặc `SourceRef`; người dùng viết đề bài và chọn các slot cảnh từ registry kèm số lượng, trọng số và ràng buộc dữ kiện. Lược đồ đầu ra sinh từ lược đồ của cảnh; dữ kiện đã ràng buộc không đi qua mô hình. Một video GitHub hay một video trích dẫn khác nhau chỉ ở tham số của node này.
+2. Kịch Bản Tĩnh (Static Script): Người dùng gõ tay lời thoại và danh sách cảnh (block đã nối, trọng số, tone, nội dung). Phát Kịch bản Phân cảnh và Lời thoại. Là cách dựng video không cần mô hình ngôn ngữ, và là node dùng để nghiệm thu khung.
+2b. Đạo Diễn AI (AI Director): Node đạo diễn duy nhất. Nhận `LLMRef`, một Stage, nhiều Block, và tùy chọn `FactSheet` hoặc `SourceRef`; người dùng viết đề bài và các beat (vai trò, mô tả, số cảnh, block được phép, ràng buộc dữ kiện). Mô hình chọn block cho từng cảnh; lược đồ đầu ra sinh từ bảng props của block; dữ kiện đã ràng buộc không đi qua mô hình. Một video GitHub hay một video trích dẫn khác nhau chỉ ở tham số của node này và các node Stage/Block nối vào.
+2c. Stage và Block: hai node nguồn mang giao diện dưới dạng dữ liệu — sân khấu chung (token, tone, trường theo cảnh, markup) và từng kiểu cảnh (props, tài liệu cho mô hình, code HTML/GSAP). Một workflow mang theo giao diện của chính nó, nên bản mẫu chia sẻ là đủ.
 3. Nhà Cung Cấp Mô Hình Ngôn Ngữ: **một** node tài nguyên phát `LLMRef`, chọn nhà cung cấp ngay trong node theo mẫu Load Checkpoint của ComfyUI — thêm nhà cung cấp không thêm node. Thân node hiện `capabilities` từ `probe()` và các tham số riêng của nhà cung cấp đang chọn; đường dẫn tệp thực thi và địa chỉ máy chủ chỉ đến từ biến môi trường, không bao giờ từ đồ thị. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
 4. Nhà Cung Cấp Giọng Đọc: **một** node tài nguyên phát `TTSRef`, cùng cơ chế chọn nhà cung cấp như trên. Thân node liệt kê giọng mà `probe()` tìm được. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
 5. Giọng Đọc (TTS Engine): Nhận Lời thoại kèm ngôn ngữ và `TTSRef`, tự chọn giọng khớp ngôn ngữ, tạo MP3, đo thời lượng từ tệp.
 6. Đóng Gói Timeline (Timeline Assembler): Hàm thuần. Nhận Kịch bản Phân cảnh, Âm thanh, và tùy chọn Dữ kiện. Phân bổ khung hình theo trọng số, đè dữ kiện lên props theo `factBindings`, kiểm định bất biến IR, phát Bản Đặc Tả Video Trung Gian.
-7. Động Cơ (Remotion Engine kết xuất đầy đủ; Hyperframes Engine xem trước bằng Canvas, chưa xuất tệp): Node tài nguyên phát `EngineRef`, tương đương Load Checkpoint của ComfyUI. Đổi engine là thay node.
+7. Động Cơ (Hyperframes Engine xem trước và kết xuất block `html-gsap` bằng thư viện HyperFrames; Remotion Engine chờ định dạng block `react`): Node tài nguyên phát `EngineRef`, tương đương Load Checkpoint của ComfyUI. Đổi engine là thay node; engine không vẽ được định dạng của block thì node xuất tự chặn.
 8. Xuất Bản Video (Video Output): Nhận IR và `EngineRef`, tự thân là trình phát, theo mô hình PreviewImage. Không có khung xem trước nào khác.
 9. Xuất MP4 (MP4 Export): Nhận cùng hai đầu vào, mang tham số codec, chất lượng, tên tệp, theo mô hình SaveImage nhưng bỏ qua mặc định vì kết xuất tốn hàng chục giây; bấm Kết xuất trên node để chạy riêng.
 
@@ -94,8 +94,8 @@ Ranh giới trách nhiệm:
 
 ### 4.4. Kiến trúc Độc lập Engine và Độc lập Gói
 
-- Giao diện Adapter dùng chung, nhận IR generic; mỗi Node Động Cơ bọc đúng một Adapter. Remotion đầy đủ; Hyperframes xem trước được bằng Canvas 2D với renderer riêng cho từng kiểu cảnh, còn kết xuất tệp thì khai báo chưa sẵn sàng. Có hai engine cùng vẽ được một IR là cách duy nhất chứng minh kiến trúc thực sự độc lập engine.
-- Bản Đặc Tả Video Trung Gian không biết tên bất kỳ kiểu cảnh nào: `sceneType` là chuỗi tra trong scene registry, cùng pattern với registry engine và nhà cung cấp. Thêm bản mẫu mới không đụng tới IR, Adapter hay node lõi. Lõi ship sẵn kiểu cảnh `core/title-card` để khung tự chạy được.
+- Giao diện Adapter dùng chung, nhận IR generic tự chứa; mỗi Node Động Cơ bọc đúng một Adapter và đăng ký renderer theo định dạng code của block. Hyperframes chạy `html-gsap` đầy đủ (xem trước và MP4). Remotion chưa có định dạng nào; định dạng `react` là việc của bản sau.
+- Bản Đặc Tả Video Trung Gian không biết tên bất kỳ kiểu cảnh nào: nó mang theo stage và các block của chính nó, mỗi cảnh chỉ vào một block bằng `blockId`. Engine chỉ đăng ký một renderer cho định dạng code (`html-gsap`), cùng pattern với registry engine và nhà cung cấp. Thêm bản mẫu mới không đụng tới IR, Adapter hay node lõi.
 - Dữ kiện kiểm chứng được đi từ node truy xuất của gói thẳng tới Đóng Gói Timeline qua cổng Dữ kiện và cơ chế `factBindings` của lõi, không qua mô hình ngôn ngữ. Lõi đảm bảo bằng cấu trúc; gói chỉ khai báo ánh xạ.
 - So sánh hai engine: hai Node Động Cơ và hai Node Xuất Bản Video trên cùng đồ thị. Bố cục cho phép; việc cả hai cùng phát một lúc xem `STATUS.md`.
 
@@ -121,7 +121,7 @@ Ranh giới trách nhiệm:
 Khung phải chạy được và qua nghiệm thu trước khi bất kỳ gói nào bắt đầu. Lý do: mọi quyết định của gói đều xây trên hợp đồng lõi, và lỗi ở lõi phát hiện sau khi có gói sẽ tốn gấp nhiều lần.
 
 - **Pha A — khung lõi.** Tầng lõi, ba registry, bộ node lõi, giao diện Studio, đa ngôn ngữ, Remotion Adapter. Đồ thị nghiệm thu là **đồ thị Kịch Bản Tĩnh** bảy node: Kịch Bản Tĩnh, Giọng Đọc Nguồn, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Xuất Bản Video, Xuất MP4. Không mạng, không mô hình ngôn ngữ, không khóa.
-- **Pha B — bản mẫu đầu tiên có mô hình ngôn ngữ.** GitHub Repo Showcase: node Truy Xuất Repo, ba kiểu cảnh, và một đồ thị mười node dùng Đạo Diễn AI của lõi, theo `extras/github-showcase.md`. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
+- **Pha B — bản mẫu đầu tiên có mô hình ngôn ngữ.** GitHub Repo Showcase: node Truy Xuất Repo, stage `developer-dark`, ba block và một đồ thị mười bốn node dùng Đạo Diễn AI, theo `templates/github-showcase.md`. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
 
 Pha nào đã qua nghiệm thu, xem `STATUS.md`.
 
@@ -140,7 +140,7 @@ Làm rõ một hiểu lầm thường gặp: nguyên tắc Zero-Auth và không 
 Toàn bộ mệnh đề sau đúng trên đồ thị Kịch Bản Tĩnh, không có kết nối mạng:
 
 1. Mở ứng dụng lần đầu, đồ thị Kịch Bản Tĩnh bảy node hiện ra đã nối dây; ba node tài nguyên có mặt tự probe và báo sẵn sàng (System TTS Provider và Remotion Engine); Xuất MP4 ở trạng thái bỏ qua.
-2. Gõ lời thoại và ba cảnh `core/title-card` rồi bấm Chạy Luồng: luồng chạy hết sáu node, Xuất Bản Video phát được video có tiếng.
+2. Gõ lời thoại và ba cảnh `text-card` rồi bấm Chạy Luồng: luồng chạy hết tám node, Xuất Bản Video phát được video có tiếng.
 3. Tổng số khung hình của các cảnh bằng đúng tổng khai báo, không lệch một khung; hàm kiểm định IR từ chối mọi bản đặc tả vi phạm.
 4. Bấm Kết xuất trên Xuất MP4 tạo tệp phát được, 1080x1920, 30 fps, có tiếng khớp hình.
 5. Đổi tốc độ đọc rồi chạy lại: Kịch Bản Tĩnh dùng lại, chỉ Giọng Đọc và phía sau chạy lại.
@@ -149,15 +149,15 @@ Toàn bộ mệnh đề sau đúng trên đồ thị Kịch Bản Tĩnh, không 
 8. Chạy hai lần với tham số khác nhau: Lịch sử chạy đủ hai mục, bấm mục cũ nạp lại đúng bản dựng cũ mà không chạy node nào.
 9. Khi một node lỗi, Panel Nhật ký chứa dòng lỗi mang đúng mã; Sao chép toàn bộ hoạt động.
 10. Với cấu hình mặc định, Chạy Luồng không kết xuất; Xuất MP4 chỉ chạy khi bấm Kết xuất hoặc khi đã bỏ đánh dấu bỏ qua.
-11. Thay Remotion Engine bằng Hyperframes Engine: Xuất Bản Video vẽ lại đúng bản đặc tả đó bằng Canvas, không node nào phía trước chạy lại; Xuất MP4 chuyển vàng vì engine này chưa xuất tệp.
+11. Thay Hyperframes Engine bằng Remotion Engine: không node nào phía trước chạy lại; Xuất Bản Video và Xuất MP4 chuyển vàng với `ENGINE_SCENE_UNSUPPORTED: html-gsap`, nêu đúng định dạng thiếu.
 12. Gỡ ffmpeg rồi chạy: System TTS Provider vàng nêu lệnh cài, Giọng Đọc `blocked` viền vàng cùng lý do, không tiến trình nào được sinh ra.
 13. Đổi ngôn ngữ giao diện trong Cài đặt: mọi chuỗi đổi ngay, lựa chọn giữ sau khi tải lại.
 14. Dán lời thoại tiếng Việt vào Kịch Bản Tĩnh rồi chạy lại: node tự nhận diện `vi`, Giọng Đọc tự chọn giọng tiếng Việt, hoặc dùng giọng dự phòng kèm huy hiệu vàng nếu máy không có.
-15. Một kiểu cảnh không có renderer cho engine đang nối làm Xuất Bản Video `blocked` viền vàng nêu tên kiểu cảnh, không vỡ.
+15. Một định dạng code mà engine đang nối không vẽ được làm Xuất Bản Video `blocked` viền vàng nêu tên định dạng, không vỡ.
 
 ### 6.2. Pha B — gói GitHub Repo Showcase
 
-Tiêu chí riêng của bản mẫu nằm tại `extras/github-showcase.md` mục 7, chỉ được đánh giá sau khi 6.1 đạt trọn vẹn.
+Tiêu chí riêng của bản mẫu nằm tại `templates/github-showcase.md` mục 7, chỉ được đánh giá sau khi 6.1 đạt trọn vẹn.
 
 ## 7. Chỉ tiêu Phi chức năng (Non-Functional Requirements)
 
@@ -173,9 +173,9 @@ Tiêu chí riêng của bản mẫu nằm tại `extras/github-showcase.md` mụ
 
 Các hạng mục dưới đây đã được cân nhắc và cố ý loại khỏi v0.1. Chúng được ghi lại ở đây để tránh việc vô tình thiết kế chặn đường chúng:
 
-- Hoàn thiện Hyperframes Adapter tới mức kết xuất ra tệp, để có đường xuất video không phụ thuộc Remotion.
+- Định dạng block `react` cho Remotion Engine: code block là mã một component React dạng chuỗi, dịch lúc chạy trong trình duyệt và trong bundle kết xuất; node Stage/Block có ô chọn định dạng.
 - Node đạo diễn generic dùng chung cho mọi gói, nhận "công thức" gồm lời nhắc và lược đồ cảnh từ gói thay vì mỗi gói tự viết node.
-- Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng gói, mỗi gói tự mang node, kiểu cảnh và đồ thị mẫu của nó.
+- Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng JSON, mỗi bản mang stage và block của nó; node lấy dữ liệu mới (RSS, YouTube) là node lõi riêng.
 - Họ node truy xuất dữ liệu mở rộng: Reddit Fetcher, CSV và Google Sheet Loader, Market API Fetcher. Chúng dùng chung vị trí và vai trò với Node Truy Xuất Repo trong đồ thị.
 - Nhà cung cấp cần khóa API: Anthropic, ElevenLabs và các dịch vụ đám mây khác. Tất cả cắm vào cùng cổng `LLMRef` hoặc `TTSRef` đã có, và vào cùng hai node nhà cung cấp — cái phải làm thêm là két giữ khóa, không phải node mới.
 - Chạy hàng loạt (batch) nhiều biến thể video từ một nguồn dữ liệu bảng tính.

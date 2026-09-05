@@ -88,7 +88,7 @@ Ghi chú về node truy xuất dữ kiện của gói: dữ kiện lấy từ ng
 | Node tài nguyên (ba loại) | 5 giây cho `probe()` | Không | Không sẵn sàng là trạng thái đã biết, không phải lỗi |
 | Xuất Bản Video | Không áp dụng | Không | Chỉ nạp trình phát |
 | Xuất MP4 | Không đặt thời gian chờ cứng | Không | Có tiến độ và nút Hủy riêng |
-| Node kèm app | Do node khai báo | Do node khai báo | Ví dụ tại `extras/github-showcase.md` mục 2.4 |
+| Node lấy dữ liệu (Truy Xuất Repo) | Do node khai báo | Do node khai báo | Ví dụ tại `templates/github-showcase.md` mục 2.4 |
 
 Nguyên tắc chung: chỉ tự thử lại với lỗi tạm thời. Lỗi do cấu hình sai, do thiếu khóa API hoặc do dữ liệu đầu vào không hợp lệ phải hiện ra ngay để người dùng sửa, vì thử lại tự động chỉ làm chậm việc phát hiện vấn đề.
 

@@ -3,8 +3,7 @@ import { Executor } from '../engine/executor';
 import { validateGraph, GraphInvalidError, type Graph } from '../engine/graph';
 import { _resetNodeRegistry } from '../nodes/definition';
 import { registerCoreNodes } from '../nodes';
-import { _resetSceneRegistry, registerSceneRenderer } from '../scenes/registry';
-import { registerCoreScenes, TITLE_CARD } from '../scenes/title-card';
+import { _resetCodeRenderers, registerCodeRenderer } from '../look/renderers';
 import staticScriptJson from '@/templates/static-script.json';
 const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
 import { validateIR } from '../assembler/validate-ir';
@@ -13,10 +12,9 @@ import { makeFakeServices } from './fakes';
 
 function setup(opts: Parameters<typeof makeFakeServices>[0] = {}, withRenderer = true) {
   _resetNodeRegistry();
-  _resetSceneRegistry();
+  _resetCodeRenderers();
   registerCoreNodes();
-  registerCoreScenes();
-  if (withRenderer) registerSceneRenderer(TITLE_CARD, 'remotion', () => null);
+  if (withRenderer) registerCodeRenderer('html-gsap', 'hyperframes', () => null);
   const services = makeFakeServices(opts);
   const graph = staticScriptTemplate();
   const states: string[] = [];
@@ -64,7 +62,7 @@ describe('Phase A run', () => {
     const { executor, services } = setup();
     const { ok } = await executor.run();
     expect(ok).toBe(true);
-    for (const id of ['script', 'tts-provider', 'tts', 'assembler', 'remotion', 'output']) expect(executor.runtime(id).state).toBe('success');
+    for (const id of ['script', 'tts-provider', 'tts', 'assembler', 'engine', 'output']) expect(executor.runtime(id).state).toBe('success');
     expect(executor.runtime('export').state).toBe('bypassed');
     const ir = executor.runtime('assembler').outputs.ir!.payload as VideoIR;
     expect(validateIR(ir)).toEqual({ ok: true });
@@ -150,27 +148,27 @@ describe('resource nodes and capability blocking (EXECUTION_ENGINE §1.1)', () =
     expect(executor.runtime('tts').state).toBe('blocked');
   });
 
-  it('swapping to Hyperframes blocks the player by capability and re-runs nothing upstream', async () => {
+  it('swapping to Remotion blocks the player by capability (no html-gsap renderer) and re-runs nothing upstream', async () => {
     const { executor, graph, services } = setup();
     await executor.run();
-    graph.nodes.find((n) => n.id === 'remotion')!.type = 'core/hyperframes-engine';
-    graph.nodes.find((n) => n.id === 'remotion')!.params = {};
-    executor.invalidate('remotion');
+    graph.nodes.find((n) => n.id === 'engine')!.type = 'core/remotion-engine';
+    graph.nodes.find((n) => n.id === 'engine')!.params = { glBackend: 'angle' };
+    executor.invalidate('engine');
     const synthsBefore = services.calls.filter((c) => c.name === 'synthesize').length;
     await executor.run();
     expect(executor.runtime('output').state).toBe('blocked');
-    expect(executor.runtime('output').blockedBy?.code).toBe('ENGINE_NOT_READY');
+    expect(executor.runtime('output').blockedBy?.code).toBe('ENGINE_SCENE_UNSUPPORTED');
     expect(services.calls.filter((c) => c.name === 'synthesize').length).toBe(synthsBefore);
     expect(executor.runtime('assembler').reused).toBe(true);
   });
 
-  it('a scene type without a renderer for the engine blocks the player with ENGINE_SCENE_UNSUPPORTED', async () => {
+  it('a scene-code format the engine cannot draw blocks the player with ENGINE_SCENE_UNSUPPORTED', async () => {
     const { executor } = setup({}, false);
     await executor.run();
     const out = executor.runtime('output');
     expect(out.state).toBe('blocked');
     expect(out.blockedBy?.code).toBe('ENGINE_SCENE_UNSUPPORTED');
-    expect(out.blockedBy?.message).toContain(TITLE_CARD);
+    expect(out.blockedBy?.message).toContain('html-gsap');
   });
 });
 
@@ -197,7 +195,7 @@ describe('on-demand export and single-node runs (EXECUTION_ENGINE §3)', () => {
     expect(services.calls.some((c) => c.name === 'render')).toBe(true);
   });
   it('a render with the engine lacking render capability is blocked, not errored', async () => {
-    const { executor } = setup({ remotionRender: false });
+    const { executor } = setup({ renderReady: false });
     await executor.run();
     await expect(executor.runNode('export')).resolves.toBe('blocked');
     expect(executor.runtime('export').blockedBy?.code).toBe('ENGINE_NOT_READY');

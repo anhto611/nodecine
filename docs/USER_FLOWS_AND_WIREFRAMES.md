@@ -1,6 +1,6 @@
 # Đặc tả Luồng Trải nghiệm Người dùng & Giao diện NodeCine (UI/UX Specification)
 
-Tài liệu này mô tả giao diện của **khung lõi**: bố cục, dải trái, giải phẫu node, và các kịch bản chỉ dùng node lõi. Kịch bản riêng của từng bản mẫu nằm trong tài liệu của nó (`extras/github-showcase.md` mục 5). Tài liệu liên quan: Hợp đồng Lõi định nghĩa kiểu cổng và dữ liệu chảy qua dây nối; Đặc tả Bộ Máy Thực Thi định nghĩa thứ tự chạy, cơ chế chạy lại từng phần và bảng mã lỗi.
+Tài liệu này mô tả giao diện của **khung lõi**: bố cục, dải trái, giải phẫu node, và các kịch bản chỉ dùng node lõi. Kịch bản riêng của từng bản mẫu nằm trong tài liệu của nó (`templates/github-showcase.md` mục 5). Tài liệu liên quan: Hợp đồng Lõi định nghĩa kiểu cổng và dữ liệu chảy qua dây nối; Đặc tả Bộ Máy Thực Thi định nghĩa thứ tự chạy, cơ chế chạy lại từng phần và bảng mã lỗi.
 
 ## 1. Cấu trúc Bố cục Màn hình (Studio Layout)
 
@@ -125,7 +125,7 @@ Node Động Cơ (ví dụ Remotion Engine):
 
 - Không có cổng nhận. Một cổng phát duy nhất "Động cơ".
 - Thân node: tên và phiên bản Adapter; dòng trạng thái lấy từ `probe()` với chấm xanh "sẵn sàng" hoặc chấm vàng kèm lý do; các tham số riêng của engine. Với Remotion là mức song song và backend đồ họa.
-- Node Hyperframes Engine hiện `preview` sẵn sàng và `render` chưa sẵn sàng ngay trên thân. Node Xuất Bản Video nối vào nó vẫn chạy và vẽ bằng Canvas; chỉ Node Xuất MP4 tự khóa vàng kèm câu gợi ý dùng Remotion Engine.
+- Node Hyperframes Engine hiện `preview` và `render` sẵn sàng ngay trên thân; Remotion Engine hiện sẵn sàng nhưng Xuất Bản Video nối vào nó chặn vì chưa có renderer `html-gsap`. Node Xuất Bản Video nối vào nó vẫn chạy và vẽ bằng Canvas; chỉ Node Xuất MP4 tự khóa vàng kèm câu gợi ý dùng Remotion Engine.
 - Đổi engine: kéo Node Động Cơ khác từ Thư viện node, nối dây "Động cơ" vào Node Xuất Bản Video. Không có hộp chọn nào khác.
 
 Node Xuất MP4 (MP4 Export):
@@ -134,7 +134,7 @@ Node Xuất MP4 (MP4 Export):
 - Thân node ở trạng thái bỏ qua mặc định: ba dòng tham số gồm codec, chất lượng ba mức, tên tệp; nút "Kết xuất" chiếm hết bề ngang. Viền node đứt nét và huy hiệu ghi "bỏ qua".
 - Bấm Kết xuất: node chuyển sang đang chạy, thân node hiện thanh tiến độ theo phần trăm khung hình cùng nút Hủy, tab Nhật ký ở dải trái nhận dòng nhật ký kết xuất theo thời gian thực.
 - Khi xong: thân node hiện tên tệp, dung lượng và nút "Tải xuống". Trình duyệt tự tải tệp về, và mục kết xuất được gắn vào lần chạy tương ứng trong Lịch sử chạy.
-- Nút Kết xuất bị vô hiệu hóa kèm chú giải khi một trong hai dây vào chưa có dữ liệu, khi engine nối vào khai báo chưa hỗ trợ kết xuất, hoặc khi một kiểu cảnh trong bản đặc tả không có renderer cho engine đó.
+- Nút Kết xuất bị vô hiệu hóa kèm chú giải khi một trong hai dây vào chưa có dữ liệu, khi engine nối vào khai báo chưa hỗ trợ kết xuất, hoặc khi engine đó không vẽ được định dạng code của stage/block trong bản đặc tả.
 - Phím tắt `Ctrl` kèm `B` bật tắt trạng thái bỏ qua của node đang chọn, áp dụng cho mọi node, giống ComfyUI.
 
 ### 1.9. Node Kịch Bản Tĩnh (Static Script)
@@ -142,8 +142,8 @@ Node Xuất MP4 (MP4 Export):
 Node duy nhất của lõi cho phép dựng video hoàn toàn bằng tay, và là đồ thị nghiệm thu của Pha A.
 
 - Hai cổng phát: "Kịch bản Phân cảnh" và "Lời thoại". Không cổng nhận.
-- Thân node: ô văn bản nhiều dòng cho lời thoại (ngôn ngữ tự nhận diện từ văn bản, không có hộp chọn), và danh sách cảnh. Mỗi cảnh là một hàng gồm hộp chọn kiểu cảnh (lấy từ scene registry, mặc định `core/title-card`), ô trọng số, và các ô nội dung sinh ra từ lược đồ của kiểu cảnh đã chọn. Node thêm và xóa cảnh; kéo để đổi thứ tự.
-- Mặc định ba cảnh `core/title-card` trọng số 1, 2, 1 với nội dung mẫu, để người dùng bấm Chạy Luồng là có video ngay.
+- Thân node: ô văn bản nhiều dòng cho lời thoại (ngôn ngữ tự nhận diện từ văn bản, không có hộp chọn), và danh sách cảnh. Mỗi cảnh là một hàng gồm hộp chọn block (lấy từ các node Block đã nối vào cổng `blocks`), ô trọng số, hộp chọn tone và các trường của stage đã nối, và các ô nội dung sinh ra từ bảng props của block đã chọn. Chưa nối Stage/Block thì thân node báo vàng. Node thêm và xóa cảnh; kéo để đổi thứ tự.
+- Mặc định ba cảnh `text-card` trọng số 1, 2, 1 với nội dung mẫu, để người dùng bấm Chạy Luồng là có video ngay.
 
 ## 2. Quy chuẩn Cấu trúc Node Chức Năng (Node Anatomy)
 
@@ -183,7 +183,7 @@ Chứa các trường nhập liệu trực tiếp hoặc khu vực tóm tắt k�
 - Node Đóng Gói Timeline: Tóm tắt tổng số khung hình, tốc độ khung hình, bảng phân bổ theo trọng số của từng cảnh, cảnh báo khi ngưỡng tối thiểu được kích hoạt, và dòng "đã đè N dữ kiện" khi có cổng Dữ kiện nối vào.
 - Node Xuất Bản Video: Chính là trình phát, mô tả đầy đủ ở mục 1.4. Không có cổng phát.
 
-Thân các node kèm app được mô tả trong tài liệu của bản mẫu dùng chúng; ví dụ tại `extras/github-showcase.md` mục 2.
+Thân node Truy Xuất Repo được mô tả trong tài liệu của bản mẫu dùng nó, tại `templates/github-showcase.md` mục 2.
 
 ### 2.3. Cổng Kết Nối (Connection Ports)
 
@@ -196,14 +196,14 @@ Thân các node kèm app được mô tả trong tài liệu của bản mẫu d
 ### Kịch bản A: Dựng Video Bằng Kịch Bản Tĩnh (Pha A, không mạng)
 
 1. Người dùng mở studio lần đầu; đồ thị "Kịch Bản Tĩnh" bảy node hiện ra đã nối dây: Kịch Bản Tĩnh, System TTS Provider, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Xuất Bản Video, Xuất MP4. Hai node tài nguyên tự probe và báo sẵn sàng. Không cần mạng, không cần khóa.
-2. Người dùng sửa lời thoại và ba cảnh `core/title-card` mẫu ngay trên Node Kịch Bản Tĩnh, hoặc giữ nguyên nội dung mẫu.
+2. Người dùng sửa lời thoại và ba cảnh `text-card` mẫu ngay trên Node Kịch Bản Tĩnh, hoặc giữ nguyên nội dung mẫu.
 3. Bấm Chạy Luồng. Kịch Bản Tĩnh phát Kịch bản Phân cảnh và Lời thoại; Giọng Đọc tạo MP3 qua `say` và đo thời lượng; Đóng Gói Timeline chia khung hình theo trọng số 1, 2, 1, kiểm định IR; Xuất Bản Video phát ngay trong node. Xuất MP4 không chạy.
 4. Người dùng bấm Phát, tua bằng thanh trượt, nhảy cảnh bằng Thanh tra Phân cảnh.
 5. Bấm Kết xuất trên Xuất MP4 để lấy tệp.
 
 Kịch bản này là toàn bộ phạm vi nghiệm thu của Pha A. Đổi engine (thay node), tinh chỉnh tham số cục bộ (đổi tốc độ đọc, chỉ Giọng Đọc và phía sau chạy lại) và đổi ngôn ngữ (đổi `language` trên Kịch Bản Tĩnh, giọng tự khớp) đều thực hiện được trên đồ thị này với cùng cơ chế mô tả tại Đặc tả Bộ Máy Thực Thi.
 
-Các kịch bản có dữ liệu thật (dán link repo, gọi mô hình ngôn ngữ, đổi ngôn ngữ kịch bản do AI viết) thuộc bản mẫu GitHub Repo Showcase, tại `extras/github-showcase.md` mục 5.
+Các kịch bản có dữ liệu thật (dán link repo, gọi mô hình ngôn ngữ, đổi ngôn ngữ kịch bản do AI viết) thuộc bản mẫu GitHub Repo Showcase, tại `templates/github-showcase.md` mục 5.
 
 ### Kịch bản 4: Xây Dựng Luồng Mới từ Bản Vẽ Trống (Custom Pipeline Flow)
 
@@ -218,7 +218,7 @@ Các kịch bản có dữ liệu thật (dán link repo, gọi mô hình ngôn 
 Nguyên tắc chung: lỗi luôn được gắn vào đúng node gây ra nó, không bao giờ hiển thị dưới dạng thông báo toàn cục trôi nổi. Mọi node nằm sau node lỗi dừng ở trạng thái chờ lượt và giữ nguyên kết quả cũ nếu có.
 
 1. Thiếu thông tin đầu vào: ô văn bản ở Node Nhập Liệu trống thuộc kiểm tra liên tục như 4b. Node Nhập Liệu viền vàng với "Vui lòng nhập nội dung trước khi chạy" và nút Chạy Luồng bị vô hiệu hóa ngay khi ô trống, không có bước bấm rồi mới báo.
-2. Node gọi nguồn ngoài gặp lỗi (repo không tồn tại, vượt hạn mức): node đó viền đỏ với thông báo cụ thể và nút "Thử lại riêng node này"; phía sau chờ. Chi tiết từng lỗi tại tài liệu của bản mẫu, ví dụ `extras/github-showcase.md` mục 6.
+2. Node gọi nguồn ngoài gặp lỗi (repo không tồn tại, vượt hạn mức): node đó viền đỏ với thông báo cụ thể và nút "Thử lại riêng node này"; phía sau chờ. Chi tiết từng lỗi tại tài liệu của bản mẫu, ví dụ `templates/github-showcase.md` mục 6.
 4. Nhà cung cấp chưa sẵn sàng: Node System TTS Provider chuyển vàng với thông báo "Thiếu ffmpeg" kèm nguyên văn lệnh cài và nút Kiểm tra lại; Node Giọng Đọc nối vào bị chặn với viền vàng nêu cùng lý do và cách khắc phục, không tiến trình nào được sinh ra. Tương tự với Node Claude Code Provider khi chưa đăng nhập, thông báo nêu lệnh đăng nhập.
 4b. Chưa nối nhà cung cấp: kiểm tra đồ thị chạy liên tục mỗi khi đồ thị thay đổi, không đợi tới lúc bấm. Ngay khi dây bị tháo, Node Giọng Đọc viền vàng với "Chưa nối node Nhà Cung Cấp vào cổng Giọng đọc" và nút Chạy Luồng bị vô hiệu hóa kèm chú giải nêu tên node và cổng còn thiếu. Không tồn tại thời điểm "bấm rồi mới biết".
 5. Bản đặc tả không qua kiểm định (`IR_INVALID`): Node Đóng Gói Timeline viền đỏ nêu đúng bất biến bị vi phạm; đây là lỗi lập trình, thông báo mời người dùng sao chép nhật ký để báo lỗi.

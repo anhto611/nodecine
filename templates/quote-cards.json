@@ -1,36 +1,342 @@
 {
   "id": "quote-cards",
-  "name": { "en": "Motivational Quotes", "vi": "Thẻ Trích Dẫn Truyền Cảm Hứng" },
-  "description": { "en": "Turn a theme into a 9:16 run of quote cards. No network.", "vi": "Biến một chủ đề thành loạt thẻ trích dẫn dọc 9:16. Không cần mạng." },
+  "name": {
+    "en": "Motivational Quotes",
+    "vi": "Thẻ Trích Dẫn Truyền Cảm Hứng"
+  },
+  "description": {
+    "en": "Turn a theme into a 9:16 run of quote cards. No network.",
+    "vi": "Biến một chủ đề thành loạt thẻ trích dẫn dọc 9:16. Không cần mạng."
+  },
   "category": "faceless",
   "graph": {
     "nodes": [
-      { "id": "input", "type": "core/input-trigger", "params": { "value": "staying focused when progress feels slow" }, "bypassed": false, "position": { "x": 40, "y": 40 } },
-      { "id": "llm-provider", "type": "core/llm-provider", "params": { "providerId": "claude-code", "settings": {} }, "bypassed": false, "position": { "x": 40, "y": 300 } },
-      { "id": "director", "type": "core/ai-director", "params": {
-        "prompt": "A short vertical video of motivational quote cards on the subject. Open with a title card, then one quote per card: one or two sentences each, under 200 characters, with who said it — or a source such as \"an old proverb\" when unsure. Never attribute a quote to a famous person who did not say it. Use one accent colour across every card. The narration introduces and connects the quotes rather than reading them aloud; warm and unhurried.",
-        "outputLanguage": "auto",
-        "theme": "quote-cards/ink",
-        "scenes": [
-          { "sceneType": "core/title-card", "weight": 0.5, "count": 1, "factBindings": {} },
-          { "sceneType": "quote-cards/quote", "weight": 1, "count": 4, "factBindings": {} }
-        ]
-      }, "bypassed": false, "position": { "x": 340, "y": 40 } },
-      { "id": "tts-provider", "type": "core/tts-provider", "params": { "providerId": "system-tts", "settings": { "rate": 1 } }, "bypassed": false, "position": { "x": 340, "y": 620 } },
-      { "id": "tts", "type": "core/tts-engine", "params": { "speed": 1 }, "bypassed": false, "position": { "x": 640, "y": 300 } },
-      { "id": "assembler", "type": "core/timeline-assembler", "params": { "fps": 30, "width": 1080, "height": 1920, "minTotalFrames": 300, "title": "Quote cards" }, "bypassed": false, "position": { "x": 920, "y": 40 } },
-      { "id": "remotion", "type": "core/remotion-engine", "params": { "glBackend": "angle" }, "bypassed": false, "position": { "x": 920, "y": 420 } },
-      { "id": "output", "type": "core/video-output", "params": {}, "bypassed": false, "position": { "x": 1200, "y": 40 } }
+      {
+        "id": "stage",
+        "type": "core/stage",
+        "params": {
+          "id": "ink",
+          "name": "Ink",
+          "tokens": {
+            "palette": {
+              "bg": "#f4f1ea",
+              "bg2": "#ece7dc",
+              "panel": "#ffffff",
+              "line": "#d6cfc0",
+              "fg": "#1c1a17",
+              "muted": "#5b554b",
+              "muted2": "#8a8378",
+              "accent": "#b5451b"
+            },
+            "fonts": {
+              "display": "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
+              "body": "'JetBrains Mono', ui-monospace, Menlo, monospace"
+            }
+          },
+          "tones": {
+            "rust": {
+              "accent": "#b5451b"
+            },
+            "moss": {
+              "accent": "#4f6d3a"
+            },
+            "indigo": {
+              "accent": "#2f4b7c"
+            },
+            "plum": {
+              "accent": "#6b2d5c"
+            }
+          },
+          "sceneFields": [
+            {
+              "name": "kicker",
+              "rule": "two or three words for the mood of this card, uppercase"
+            }
+          ],
+          "code": {
+            "format": "html-gsap",
+            "source": "<style>\n  .stage { position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 65%); color: var(--fg); font-family: var(--font-body); }\n  .stage .kicker { position: absolute; left: 72px; top: 200px; font: 600 28px/1 var(--font-body); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }\n  .stage .content { position: absolute; left: 72px; right: 168px; top: 260px; bottom: 680px; display: flex; flex-direction: column; justify-content: center; }\n  .stage .rule { position: absolute; left: 72px; right: 168px; bottom: 640px; height: 2px; background: var(--line); }\n</style>\n<div class=\"stage\">\n  <div class=\"kicker\" data-field=\"kicker\"></div>\n  <div class=\"content\" data-slot=\"content\"></div>\n  <div class=\"rule\"></div>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".kicker\", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.4, ease: \"power2.out\" }, 0)\n    .fromTo(\".rule\", { scaleX: 0, transformOrigin: \"left center\" }, { scaleX: 1, duration: 0.6, ease: \"power2.out\" }, 0.1));\n</script>"
+          }
+        },
+        "bypassed": false,
+        "position": {
+          "x": 40,
+          "y": 560
+        }
+      },
+      {
+        "id": "block-text-card",
+        "type": "core/block",
+        "params": {
+          "id": "text-card",
+          "name": "Text card",
+          "doc": {
+            "example": "{\"headline\":\"Ship video from a graph\",\"body\":\"Wire a source to a script, a voice and an engine.\"}",
+            "when": "One idea on screen: a headline and at most one supporting line. Use it for openings, transitions and closings; not for lists or numbers."
+          },
+          "props": {
+            "headline": {
+              "type": "string",
+              "hint": "up to six words, title case",
+              "required": true,
+              "max": 60
+            },
+            "body": {
+              "type": "text",
+              "hint": "one sentence, or leave it out",
+              "required": false,
+              "max": 160
+            }
+          },
+          "code": {
+            "format": "html-gsap",
+            "source": "<style>\n  .card { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 32px; }\n  .card h1 { font: 800 88px/1.05 var(--font-display); color: var(--fg); margin: 0; letter-spacing: -0.01em; }\n  .card p  { font: 400 38px/1.4 var(--font-body); color: var(--muted); margin: 0; max-width: 760px; }\n  .card .bar { width: 120px; height: 10px; border-radius: 5px; background: var(--accent); transform-origin: left center; }\n</style>\n<div class=\"card\">\n  <div class=\"bar\"></div>\n  <h1 data-prop=\"headline\"></h1>\n  <p data-prop=\"body\" data-if=\"body\"></p>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".card .bar\", { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: \"power2.out\" }, 0)\n    .fromTo(\".card h1\", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: \"power3.out\" }, 0.2)\n    .fromTo(\".card p\", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: \"power3.out\" }, 0.5));\n</script>"
+          }
+        },
+        "bypassed": false,
+        "position": {
+          "x": 40,
+          "y": 820
+        }
+      },
+      {
+        "id": "block-quote",
+        "type": "core/block",
+        "params": {
+          "id": "quote",
+          "name": "Quote card",
+          "doc": {
+            "example": "{\"text\":\"Slow is smooth, and smooth is fast.\",\"attribution\":\"a saying among instructors\"}",
+            "when": "One quotation filling the frame with who said it underneath. One quote per scene; never two."
+          },
+          "props": {
+            "text": {
+              "type": "text",
+              "hint": "one or two sentences, quoted exactly if it is a real quote",
+              "required": true,
+              "min": 8,
+              "max": 220
+            },
+            "attribution": {
+              "type": "string",
+              "hint": "who said it, or a source such as \"an old proverb\" when unsure",
+              "required": true,
+              "max": 60
+            }
+          },
+          "code": {
+            "format": "html-gsap",
+            "source": "<style>\n  .quote { padding: 0 8px; }\n  .quote .mark { font: 400 170px/0.6 var(--font-display); color: color-mix(in srgb, var(--accent) 35%, transparent); margin-bottom: 20px; }\n  .quote .q { font: 500 78px/1.32 var(--font-display); color: var(--fg); margin: 0; }\n  .quote .line { width: 160px; height: 4px; background: var(--accent); margin-top: 52px; transform-origin: left center; }\n  .quote .who { font: 400 30px/1.2 var(--font-body); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-top: 30px; }\n</style>\n<div class=\"quote\">\n  <div class=\"mark\">“</div>\n  <p class=\"q\" data-prop=\"text\"></p>\n  <div class=\"line\"></div>\n  <div class=\"who\" data-prop=\"attribution\"></div>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".quote .q\", { y: 36, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: \"power3.out\" }, 0)\n    .fromTo(\".quote .line\", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: \"power2.out\" }, 0.4)\n    .fromTo(\".quote .who\", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.7));\n</script>"
+          }
+        },
+        "bypassed": false,
+        "position": {
+          "x": 40,
+          "y": 1080
+        }
+      },
+      {
+        "id": "input",
+        "type": "core/input-trigger",
+        "params": {
+          "value": "staying focused when progress feels slow"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 340,
+          "y": 40
+        }
+      },
+      {
+        "id": "llm-provider",
+        "type": "core/llm-provider",
+        "params": {
+          "providerId": "claude-code",
+          "settings": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 340,
+          "y": 300
+        }
+      },
+      {
+        "id": "director",
+        "type": "core/ai-director",
+        "params": {
+          "prompt": "A short vertical video of motivational quote cards on the subject. Quotes are one or two sentences each, under 200 characters, with who said them — or a source such as \"an old proverb\" when unsure. Never attribute a quote to a famous person who did not say it. Keep one tone across every card. The narration introduces and connects the quotes rather than reading them aloud; warm and unhurried.",
+          "outputLanguage": "auto",
+          "beats": [
+            {
+              "role": "title",
+              "brief": "Name the theme in a few words.",
+              "weight": 0.5,
+              "count": 1,
+              "blocks": [
+                "text-card"
+              ],
+              "factBindings": {}
+            },
+            {
+              "role": "quote",
+              "brief": "One quote per card, with who said it.",
+              "weight": 1,
+              "count": 4,
+              "blocks": [
+                "quote"
+              ],
+              "factBindings": {}
+            }
+          ]
+        },
+        "bypassed": false,
+        "position": {
+          "x": 640,
+          "y": 40
+        }
+      },
+      {
+        "id": "tts-provider",
+        "type": "core/tts-provider",
+        "params": {
+          "providerId": "system-tts",
+          "settings": {
+            "rate": 1
+          }
+        },
+        "bypassed": false,
+        "position": {
+          "x": 640,
+          "y": 620
+        }
+      },
+      {
+        "id": "tts",
+        "type": "core/tts-engine",
+        "params": {
+          "speed": 1
+        },
+        "bypassed": false,
+        "position": {
+          "x": 940,
+          "y": 300
+        }
+      },
+      {
+        "id": "assembler",
+        "type": "core/timeline-assembler",
+        "params": {
+          "fps": 30,
+          "width": 1080,
+          "height": 1920,
+          "minTotalFrames": 300,
+          "title": "Quote cards"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1220,
+          "y": 40
+        }
+      },
+      {
+        "id": "engine",
+        "type": "core/hyperframes-engine",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 1220,
+          "y": 420
+        }
+      },
+      {
+        "id": "output",
+        "type": "core/video-output",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 1500,
+          "y": 40
+        }
+      }
     ],
     "edges": [
-      { "id": "e1", "source": "input", "sourcePort": "source", "target": "director", "targetPort": "source" },
-      { "id": "e2", "source": "llm-provider", "sourcePort": "llm", "target": "director", "targetPort": "llm" },
-      { "id": "e3", "source": "director", "sourcePort": "script", "target": "tts", "targetPort": "script" },
-      { "id": "e4", "source": "tts-provider", "sourcePort": "tts", "target": "tts", "targetPort": "tts" },
-      { "id": "e5", "source": "director", "sourcePort": "plan", "target": "assembler", "targetPort": "plan" },
-      { "id": "e6", "source": "tts", "sourcePort": "voiceover", "target": "assembler", "targetPort": "voiceover" },
-      { "id": "e7", "source": "assembler", "sourcePort": "ir", "target": "output", "targetPort": "ir" },
-      { "id": "e8", "source": "remotion", "sourcePort": "engine", "target": "output", "targetPort": "engine" }
+      {
+        "id": "look-stage",
+        "source": "stage",
+        "sourcePort": "stage",
+        "target": "director",
+        "targetPort": "stage"
+      },
+      {
+        "id": "look-text-card",
+        "source": "block-text-card",
+        "sourcePort": "block",
+        "target": "director",
+        "targetPort": "blocks"
+      },
+      {
+        "id": "look-quote",
+        "source": "block-quote",
+        "sourcePort": "block",
+        "target": "director",
+        "targetPort": "blocks"
+      },
+      {
+        "id": "e1",
+        "source": "input",
+        "sourcePort": "source",
+        "target": "director",
+        "targetPort": "source"
+      },
+      {
+        "id": "e2",
+        "source": "llm-provider",
+        "sourcePort": "llm",
+        "target": "director",
+        "targetPort": "llm"
+      },
+      {
+        "id": "e3",
+        "source": "director",
+        "sourcePort": "script",
+        "target": "tts",
+        "targetPort": "script"
+      },
+      {
+        "id": "e4",
+        "source": "tts-provider",
+        "sourcePort": "tts",
+        "target": "tts",
+        "targetPort": "tts"
+      },
+      {
+        "id": "e5",
+        "source": "director",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
+      },
+      {
+        "id": "e6",
+        "source": "tts",
+        "sourcePort": "voiceover",
+        "target": "assembler",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e7",
+        "source": "assembler",
+        "sourcePort": "ir",
+        "target": "output",
+        "targetPort": "ir"
+      },
+      {
+        "id": "e8",
+        "source": "engine",
+        "sourcePort": "engine",
+        "target": "output",
+        "targetPort": "engine"
+      }
     ]
   }
 }

@@ -1,17 +1,17 @@
 import { z } from 'zod';
 import { ErrorCode } from '../errors';
-import { missingRenderers } from '../scenes/registry';
+import { missingCodeRenderers } from '../look/renderers';
 import type { EngineRef } from '../types/payloads';
 import type { VideoIR } from '../types/ir';
 import type { Packet } from '../types/packet';
 import type { BlockReason, NodeDefinition } from './definition';
 
-/** Both output nodes block by capability when the engine lacks a renderer for a scene (CORE_CONTRACTS §4). */
+/** Both output nodes block by capability when the engine cannot draw the IR's scene-code format (CORE_CONTRACTS §2.8). */
 function sceneSupportPreflight(inputs: Record<string, Packet>): BlockReason | null {
   const ir = inputs.ir?.payload as VideoIR | undefined;
   const engine = inputs.engine?.payload as EngineRef | undefined;
   if (!ir || !engine) return null;
-  const missing = missingRenderers(ir.timeline.map((s) => s.sceneType), engine.engineId);
+  const missing = missingCodeRenderers([ir.stage.code.format, ...ir.blocks.map((b) => b.code.format)], engine.engineId);
   if (missing.length === 0) return null;
   return {
     kind: 'capability',

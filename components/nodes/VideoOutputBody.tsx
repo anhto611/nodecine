@@ -99,7 +99,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
                   style={{ flex: s.durationInFrames, textAlign: 'left', padding: '4px 6px', lineHeight: 1.4 }}
                   // Land a few frames in: scenes fade in from black, so the exact first frame previews as empty.
                   onClick={() => handle.current?.seekTo(s.startFrame + Math.min(12, Math.max(0, s.durationInFrames - 1)))}
-                  title={s.sceneType}
+                  title={s.blockId}
                 >
                   <div style={{ color: active ? 'var(--accent-2)' : 'var(--tx)', textTransform: 'uppercase', letterSpacing: '.05em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('node.scene')} {i + 1}</div>
                   <div style={{ color: 'var(--tx-3)', fontSize: 8 }}>{s.startFrame}–{s.startFrame + s.durationInFrames}</div>

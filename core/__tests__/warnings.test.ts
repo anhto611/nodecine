@@ -4,9 +4,8 @@ import { Executor } from '../engine/executor';
 import type { Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
 import { registerCoreNodes } from '../nodes';
-import { _resetSceneRegistry } from '../scenes/registry';
-import { registerCoreScenes, TITLE_CARD } from '../scenes/title-card';
 import { makeFakeServices } from './fakes';
+import { STAGE, TEXT_CARD } from './look-fixtures';
 
 /**
  * A stand-in director: emits a plan that binds facts, which the core's own
@@ -28,8 +27,9 @@ const fakeDirector: NodeDefinition<typeof Params> = {
   run: async ({ params }) => ({
     plan: {
       language: 'en',
-      theme: 'core/dark',
-      scenes: [{ sceneType: TITLE_CARD, weight: 1, props: { headline: 'ONE' }, ...(params.bindFacts ? { factBindings: { headline: 'name' } } : {}) }],
+      stage: STAGE,
+      blocks: [TEXT_CARD],
+      scenes: [{ blockId: TEXT_CARD.id, weight: 1, props: { headline: 'ONE' }, ...(params.bindFacts ? { factBindings: { headline: 'name' } } : {}) }],
     },
     script: { text: 'A short script for the test, long enough to synthesize.', language: 'en' },
   }),
@@ -55,8 +55,6 @@ function graph(): Graph {
 describe('run warnings surface on the node', () => {
   beforeEach(() => {
     _resetNodeRegistry();
-    _resetSceneRegistry();
-    registerCoreScenes();
     registerCoreNodes();
     registerNodeType(fakeDirector as unknown as AnyNodeDefinition);
   });

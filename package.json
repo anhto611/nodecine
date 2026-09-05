@@ -12,10 +12,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@hyperframes/core": "^0.8.29",
+    "@hyperframes/player": "^0.8.29",
+    "@hyperframes/producer": "^0.8.29",
     "@remotion/bundler": "^4.0.0",
     "@remotion/player": "^4.0.0",
     "@remotion/renderer": "^4.0.0",
     "@xyflow/react": "^12.3.0",
+    "gsap": "^3.15.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

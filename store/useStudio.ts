@@ -206,8 +206,11 @@ export const useStudio = create<StudioState>((set, get) => {
       const sp = src?.outputs.find((p) => p.name === sourcePort);
       const tp = dst?.inputs.find((p) => p.name === targetPort);
       if (!sp || !tp || sp.type !== tp.type || source === target) return false;
-      // One edge per input: a new connection replaces the old one (USER_FLOWS Scenario 2).
-      const edges = g.edges.filter((e) => !(e.target === target && e.targetPort === targetPort));
+      // One edge per input: a new connection replaces the old one (USER_FLOWS Scenario 2) — except on a
+      // `multiple` port, which keeps every wire and only refuses the very same wire twice.
+      const edges = tp.multiple
+        ? g.edges.filter((e) => !(e.target === target && e.targetPort === targetPort && e.source === source && e.sourcePort === sourcePort))
+        : g.edges.filter((e) => !(e.target === target && e.targetPort === targetPort));
       edges.push({ id: `e-${newId('edge')}`, source, sourcePort, target, targetPort });
       refresh({ ...g, edges });
       get().executor?.invalidate(target);

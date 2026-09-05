@@ -1,10 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { z } from 'zod';
+import { describe, it, expect } from 'vitest';
 import { buildIR, applyFactBindings } from '../assembler/build-ir';
 import { validateIR, IRInvalidError } from '../assembler/validate-ir';
-import { _resetSceneRegistry, registerScene } from '../scenes/registry';
-import { registerCoreScenes, TITLE_CARD } from '../scenes/title-card';
 import type { DirectorPlan, FactSheet, Voiceover } from '../types/payloads';
+import { HOOK, STAGE, TEXT_CARD } from './look-fixtures';
 
 const voiceover: Voiceover = {
   audioUrl: '/api/media/0123456789abcdef.mp3',
@@ -16,21 +14,17 @@ const voiceover: Voiceover = {
 
 const plan: DirectorPlan = {
   language: 'en',
-  theme: 'core/dark',
+  stage: STAGE,
+  blocks: [TEXT_CARD, HOOK],
   scenes: [
-    { sceneType: TITLE_CARD, weight: 1, props: { headline: 'A' } },
-    { sceneType: TITLE_CARD, weight: 2, props: { headline: 'B' } },
-    { sceneType: TITLE_CARD, weight: 1, props: { headline: 'C' } },
+    { blockId: 'text-card', weight: 1, props: { headline: 'A' }, fields: { kicker: 'ONE' } },
+    { blockId: 'text-card', weight: 2, props: { headline: 'B' }, tone: 'cool' },
+    { blockId: 'text-card', weight: 1, props: { headline: 'C' } },
   ],
 };
 
-beforeEach(() => {
-  _resetSceneRegistry();
-  registerCoreScenes();
-});
-
 describe('buildIR', () => {
-  it('builds a valid IR matching the docs example', () => {
+  it('builds a valid, self-contained IR matching the docs example', () => {
     const ir = buildIR({ plan, voiceover, params: { title: 't' } });
     expect(ir.meta.totalDurationInFrames).toBe(336);
     expect(ir.timeline.map((s) => [s.startFrame, s.durationInFrames])).toEqual([
@@ -40,6 +34,11 @@ describe('buildIR', () => {
     ]);
     expect(ir.audioTrack.padTailFrames).toBe(0);
     expect(ir.meta.language).toBe('en');
+    expect(ir.stage.id).toBe('dark');
+    expect(ir.blocks.map((b) => b.id)).toEqual(['text-card', 'hook']);
+    expect(ir.timeline[0]!.fields).toEqual({ kicker: 'ONE' });
+    expect(ir.timeline[1]!.tone).toBe('cool');
+    expect(ir.timeline[2]!.tone).toBeUndefined();
     expect(validateIR(ir)).toEqual({ ok: true });
   });
 
@@ -50,10 +49,6 @@ describe('buildIR', () => {
   });
 
   it('invariant 2: facts always win over model-written props', () => {
-    registerScene({
-      sceneType: 'demo/hook',
-      propsSchema: z.object({ headline: z.string(), stars: z.number().nullable().optional() }),
-    });
     const facts: FactSheet = {
       facts: { stars: 1284, url: 'github.com/a/b' },
       sourceLabel: 'github.com/a/b',
@@ -62,18 +57,10 @@ describe('buildIR', () => {
     };
     const p: DirectorPlan = {
       ...plan,
-      scenes: [
-        {
-          sceneType: 'demo/hook',
-          weight: 1,
-          props: { headline: 'H', stars: 999999 },
-          factBindings: { stars: 'stars', brandName: 'url' },
-        },
-      ],
+      scenes: [{ blockId: 'hook', weight: 1, props: { headline: 'H', stars: 999999 }, factBindings: { stars: 'stars' } }],
     };
     const ir = buildIR({ plan: p, voiceover, facts });
     expect(ir.timeline[0]!.props.stars).toBe(1284);
-    expect(ir.timeline[0]!.props.brandName).toBe('github.com/a/b');
   });
 
   it('without factBindings props are untouched; missing fact keys are ignored', () => {
@@ -81,9 +68,19 @@ describe('buildIR', () => {
     expect(applyFactBindings({ a: 1 }, { a: 'missing' }, { b: 2 })).toEqual({ a: 1 });
   });
 
-  it('invariant 5: an unregistered scene type is rejected', () => {
-    const p: DirectorPlan = { ...plan, scenes: [{ sceneType: 'nope/x', weight: 1, props: {} }] };
+  it('invariant 5: a scene naming a block the plan does not carry is rejected', () => {
+    const p: DirectorPlan = { ...plan, scenes: [{ blockId: 'nope', weight: 1, props: {} }] };
     expect(() => buildIR({ plan: p, voiceover })).toThrow(IRInvalidError);
+  });
+
+  it('invariant 5: props that do not fit the block are rejected', () => {
+    const p: DirectorPlan = { ...plan, scenes: [{ blockId: 'text-card', weight: 1, props: { headline: '' } }] };
+    expect(() => buildIR({ plan: p, voiceover })).toThrow(/headline/);
+  });
+
+  it('invariant 5: a tone the stage lacks is rejected', () => {
+    const p: DirectorPlan = { ...plan, scenes: [{ blockId: 'text-card', weight: 1, props: { headline: 'A' }, tone: 'neon' }] };
+    expect(() => buildIR({ plan: p, voiceover })).toThrow(/neon/);
   });
 });
 

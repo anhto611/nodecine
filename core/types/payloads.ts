@@ -18,19 +18,80 @@ export const FactSheetSchema = z.object({
 });
 export type FactSheet = z.infer<typeof FactSheetSchema>;
 
+/** One thing the model may write into a block (CORE_CONTRACTS §2.7). The hint is quoted to the model verbatim. */
+export const BlockFieldSchema = z.object({
+  type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]']),
+  hint: z.string().max(200).optional(),
+  required: z.boolean().default(true),
+  max: z.number().int().positive().optional(),
+  min: z.number().optional(),
+});
+export type BlockField = z.infer<typeof BlockFieldSchema>;
+
+/** Scene code shared by stage and block: an HTML fragment with inline style and an optional GSAP timeline. */
+export const SceneCodeSchema = z.object({
+  format: z.literal('html-gsap'),
+  source: z.string().max(200_000),
+});
+export type SceneCode = z.infer<typeof SceneCodeSchema>;
+
+const SLUG = /^[a-z0-9][a-z0-9-]*$/;
+
+/** A scene archetype the director may pick: what to write, when to use it, how it draws. */
+export const BlockDefSchema = z.object({
+  id: z.string().regex(SLUG).max(60),
+  name: z.string().min(1).max(80),
+  doc: z.object({ example: z.string().max(2000), when: z.string().max(1000) }),
+  props: z.record(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), BlockFieldSchema),
+  code: SceneCodeSchema,
+});
+export type BlockDef = z.infer<typeof BlockDefSchema>;
+
+/** The persistent shell every scene plays on; one per workflow (CORE_CONTRACTS §2.6). */
+export const StageDefSchema = z.object({
+  id: z.string().regex(SLUG).max(60),
+  name: z.string().min(1).max(80),
+  tokens: z.object({ palette: z.record(z.string()), fonts: z.record(z.string()) }),
+  /** Named palette overrides a scene may switch to; keys are what the model writes into `tone`. */
+  tones: z.record(z.record(z.string())).default({}),
+  /** Extra per-scene fields the stage draws itself; the rule teaches the model how to write each. */
+  sceneFields: z.array(z.object({ name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), rule: z.string().max(300), options: z.array(z.string()).optional() })).default([]),
+  code: SceneCodeSchema,
+});
+export type StageDef = z.infer<typeof StageDefSchema>;
+
+/** One scene of a plan: a block from the plan's catalogue, what goes into it, and how the stage dresses it. */
 export const SceneSpecSchema = z.object({
-  sceneType: z.string().regex(/^[a-z0-9-]+\/[a-z0-9-]+$/, 'sceneType must look like <namespace>/<name>'),
+  blockId: z.string().regex(SLUG),
   weight: z.number().positive(),
   props: z.record(z.string(), z.unknown()),
+  /** One of the stage's tones; absent means the stage's base palette. */
+  tone: z.string().optional(),
+  /** Values for the stage's `sceneFields`, by name. */
+  fields: z.record(z.string(), z.string()).optional(),
   factBindings: z.record(z.string(), z.string()).optional(),
 });
 export type SceneSpec = z.infer<typeof SceneSpecSchema>;
 
-export const DirectorPlanSchema = z.object({
-  language: bcp47,
-  theme: z.string().min(1),
-  scenes: z.array(SceneSpecSchema).min(1),
-});
+/**
+ * A plan is self-contained (CORE_CONTRACTS §2.3): it carries the stage and every block its scenes
+ * may use, so the assembler, the engines and a saved project need nothing registered anywhere.
+ */
+export const DirectorPlanSchema = z
+  .object({
+    language: bcp47,
+    stage: StageDefSchema,
+    blocks: z.array(BlockDefSchema).min(1),
+    scenes: z.array(SceneSpecSchema).min(1),
+  })
+  .superRefine((plan, ctx) => {
+    const ids = new Set(plan.blocks.map((b) => b.id));
+    if (ids.size !== plan.blocks.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['blocks'], message: 'block ids must be unique' });
+    plan.scenes.forEach((s, i) => {
+      if (!ids.has(s.blockId)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scenes', i, 'blockId'], message: `the plan carries no block "${s.blockId}"` });
+      if (s.tone !== undefined && !(s.tone in plan.stage.tones)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scenes', i, 'tone'], message: `the stage has no tone "${s.tone}"` });
+    });
+  });
 export type DirectorPlan = z.infer<typeof DirectorPlanSchema>;
 
 export const AudioScriptSchema = z.object({
@@ -108,4 +169,6 @@ export const PAYLOAD_SCHEMAS = {
   EngineRef: EngineRefSchema,
   LLMRef: LLMRefSchema,
   TTSRef: TTSRefSchema,
+  StageDef: StageDefSchema,
+  BlockDef: BlockDefSchema,
 } as const;

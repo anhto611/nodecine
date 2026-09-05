@@ -1,4 +1,4 @@
-/** The nine core port types (CORE_CONTRACTS §1.1). Nothing outside the core may add a port type. */
+/** The eleven core port types (CORE_CONTRACTS §1.1). Nothing outside the core may add a port type. */
 export const PORT_TYPES = [
   'SourceRef',
   'FactSheet',
@@ -9,6 +9,8 @@ export const PORT_TYPES = [
   'EngineRef',
   'LLMRef',
   'TTSRef',
+  'StageDef',
+  'BlockDef',
 ] as const;
 
 export type PortType = (typeof PORT_TYPES)[number];
@@ -24,6 +26,8 @@ export const PORT_LABEL_KEYS: Record<PortType, string> = {
   EngineRef: 'port.engineRef',
   LLMRef: 'port.llmRef',
   TTSRef: 'port.ttsRef',
+  StageDef: 'port.stageDef',
+  BlockDef: 'port.blockDef',
 };
 
 export function isPortType(value: string): value is PortType {

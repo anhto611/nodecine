@@ -7,7 +7,7 @@ export function makeFakeServices(overrides: Partial<{
   ttsInstalled: boolean;
   encoder: boolean;
   voices: Voice[];
-  remotionRender: boolean;
+  renderReady: boolean;
   claudeAuthenticated: boolean;
   secondsPerChar: number;
   serverOps: Record<string, (input: unknown) => Promise<unknown>>;
@@ -20,7 +20,7 @@ export function makeFakeServices(overrides: Partial<{
       { id: 'samantha', displayName: 'Samantha', language: 'en-US' },
       { id: 'linh', displayName: 'Linh', language: 'vi-VN' },
     ],
-    remotionRender: true,
+    renderReady: true,
     claudeAuthenticated: true,
     secondsPerChar: 0.07,
     serverOps: {} as Record<string, (input: unknown) => Promise<unknown>>,
@@ -73,12 +73,12 @@ export function makeFakeServices(overrides: Partial<{
     },
     async probeEngine(engineId, settings): Promise<EngineRef> {
       calls.push({ name: 'probeEngine', args: [engineId, settings] });
-      const notReady = unavailable('coming in v0.2', 'ENGINE_NOT_READY');
+      const notReady = unavailable('render is only available on the server', 'ENGINE_NOT_READY');
       return {
         engineId,
         displayName: engineId === 'remotion' ? 'Remotion' : 'Hyperframes',
-        adapterVersion: '0.1.0',
-        capabilities: engineId === 'remotion' ? { preview: ready, render: o.remotionRender ? ready : notReady } : { preview: notReady, render: notReady },
+        adapterVersion: '1.0.0',
+        capabilities: { preview: ready, render: o.renderReady ? ready : notReady },
         settings,
       };
     },

@@ -1,44 +1,42 @@
-import type { EngineAdapter, PlayerHandle } from '@/core/adapters/types';
+import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult } from '@/core/adapters/types';
 import type { VideoIR } from '@/core/types/ir';
 import type { Capability } from '@/core/types/payloads';
+import { assertValidIR } from '@/core/assembler/validate-ir';
 import { HYPERFRAMES_ADAPTER_VERSION, HYPERFRAMES_ENGINE_ID } from './constants';
 
-/**
- * Hyperframes: a canvas runtime, the second engine (CORE_CONTRACTS §6.3). It exists to keep the
- * engine-independence claim honest — the same Video IR previews here with no React and no Remotion.
- * Rendering to a file is not implemented, and the capability says so rather than the adapter throwing
- * at an awkward moment.
- */
-
 export type MountPlayer = (element: HTMLElement, ir: VideoIR) => PlayerHandle;
+export type ServerRender = (ir: VideoIR, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal) => Promise<RenderResult>;
 
-const ready: Capability = { status: 'ready' };
-const noRender: Capability = {
-  status: 'unavailable',
-  code: 'ENGINE_NOT_READY',
-  reason: 'Hyperframes previews only; file export arrives in a later version',
-  fix: 'Use the Remotion Engine node for MP4 export',
-};
-
-/** Isomorphic: the browser passes a real `mountPlayer`, the server leaves it out. */
-export function createHyperframesAdapter(impl: { mountPlayer?: MountPlayer } = {}): EngineAdapter {
+/**
+ * HyperFrames: the engine for `html-gsap` (CORE_CONTRACTS §6.3). Every scene is a block's HTML and
+ * GSAP timeline on a stage; this engine builds one composition page per IR and hands it to the
+ * HyperFrames player in the browser and to the HyperFrames producer on the server. Isomorphic like
+ * the Remotion adapter: the two environment-specific halves are injected by the registrations.
+ */
+export function createHyperframesAdapter(impl: { mountPlayer?: MountPlayer; render?: ServerRender } = {}): EngineAdapter {
+  const ready: Capability = { status: 'ready' };
   return {
     engineId: HYPERFRAMES_ENGINE_ID,
     displayName: 'Hyperframes',
     adapterVersion: HYPERFRAMES_ADAPTER_VERSION,
 
     async probe() {
-      // Preview needs nothing but a canvas, which every browser this app runs in has.
-      return { preview: ready, render: noRender };
+      return {
+        preview: ready,
+        render: impl.render ? ready : { status: 'unavailable', code: 'ENGINE_NOT_READY', reason: 'render is only available on the server' },
+      };
     },
 
     mountPlayer(element, ir) {
-      if (!impl.mountPlayer) throw Object.assign(new Error('Hyperframes preview is browser-only'), { code: 'ENGINE_NOT_READY' });
+      if (!impl.mountPlayer) throw Object.assign(new Error('the player is only available in the browser'), { code: 'ENGINE_NOT_READY' });
+      assertValidIR(ir);
       return impl.mountPlayer(element, ir);
     },
 
-    async render() {
-      throw Object.assign(new Error(noRender.status === 'unavailable' ? noRender.reason : 'not available'), { code: 'ENGINE_NOT_READY' });
+    async render(ir, settings, onProgress, signal) {
+      if (!impl.render) throw Object.assign(new Error('render is only available on the server'), { code: 'ENGINE_NOT_READY' });
+      assertValidIR(ir);
+      return impl.render(ir, settings, onProgress, signal);
     },
   };
 }

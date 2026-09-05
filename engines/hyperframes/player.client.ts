@@ -1,138 +1,104 @@
 'use client';
 import type { VideoIR } from '@/core/types/ir';
 import type { PlayerHandle } from '@/core/adapters/types';
-import { getScene } from '@/core/scenes/registry';
-import { HYPERFRAMES_ENGINE_ID } from './constants';
-import { MONO } from './draw';
-import type { SceneDraw } from './types';
+import { buildHyperframesDocument } from './document';
+import type { MountPlayer } from './adapter';
 
 /**
- * Browser-only preview for Hyperframes: one canvas, one audio element, one animation frame loop.
- * The audio track is the clock while playing, so sound and picture cannot drift apart; when paused
- * the frame is whatever was last seeked to.
+ * Browser preview: the HyperFrames web component with the composition passed inline as `srcdoc`
+ * and run in an opaque-origin sandbox — the block code cannot reach the Studio, and the page's own
+ * CSP keeps it off the network. The two vendored scripts are fetched from the app once and inlined.
  */
-export function mountHyperframesPlayer(element: HTMLElement, ir: VideoIR): PlayerHandle {
-  const { width, height, fps, totalDurationInFrames } = ir.meta;
 
-  const root = document.createElement('div');
-  root.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;background:#000';
+type HyperframesPlayerElement = HTMLElement & {
+  play(): void;
+  pause(): void;
+  seek(seconds: number): void;
+  readonly currentTime: number;
+  readonly duration: number;
+  readonly paused: boolean;
+  readonly ready: boolean;
+};
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  canvas.style.cssText = 'flex:1;min-height:0;width:100%;object-fit:contain;display:block';
-  const ctx = canvas.getContext('2d');
+let vendor: Promise<{ gsapSource: string; runtimeSource: string }> | null = null;
+function vendorSources() {
+  if (!vendor) {
+    vendor = Promise.all(['gsap.js', 'hyperframes-runtime.js'].map((n) => fetch(`/api/vendor/${n}`).then((r) => { if (!r.ok) throw new Error(`vendor ${n}: ${r.status}`); return r.text(); })))
+      .then(([gsapSource, runtimeSource]) => ({ gsapSource: gsapSource!, runtimeSource: runtimeSource! }))
+      .catch((e) => { vendor = null; throw e; });
+  }
+  return vendor;
+}
 
-  const audio = document.createElement('audio');
-  audio.src = ir.audioTrack.voiceoverUrl;
-  audio.preload = 'auto';
+let elementDefined: Promise<void> | null = null;
+const defineElement = () => (elementDefined ??= import('@hyperframes/player').then(() => undefined));
 
-  const bar = document.createElement('div');
-  bar.style.cssText = 'height:26px;display:flex;align-items:center;gap:8px;padding:0 8px;background:#0b0c10;border-top:1px solid #23262c;font:9px ' + MONO + ';color:#8b909b';
-  const playBtn = document.createElement('button');
-  playBtn.type = 'button';
-  playBtn.style.cssText = 'width:18px;height:18px;border:0;border-radius:3px;background:#22252b;color:#e4e6ea;cursor:pointer;font:10px ' + MONO;
-  playBtn.textContent = '▶';
-  const scrub = document.createElement('input');
-  scrub.type = 'range';
-  scrub.min = '0';
-  scrub.max = String(Math.max(0, totalDurationInFrames - 1));
-  scrub.value = '0';
-  scrub.style.cssText = 'flex:1;accent-color:#7c5cff';
-  const time = document.createElement('span');
-  time.style.cssText = 'min-width:52px;text-align:right';
+export const mountHyperframesPlayer: MountPlayer = (element: HTMLElement, ir: VideoIR): PlayerHandle => {
+  const { fps, totalDurationInFrames } = ir.meta;
+  const host = document.createElement('div');
+  host.style.cssText = 'position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center';
+  element.append(host);
 
-  bar.append(playBtn, scrub, time);
-  root.append(canvas, bar, audio);
-  element.append(root);
-
-  let frame = 0;
-  let raf = 0;
+  let player: HyperframesPlayerElement | null = null;
   let disposed = false;
+  let raf = 0;
+  let lastFrame = -1;
+  let pendingSeek: number | null = Math.min(12, totalDurationInFrames - 1);
   const listeners = new Set<(f: number) => void>();
-
-  const clockFrame = () => Math.min(totalDurationInFrames - 1, Math.max(0, Math.round(audio.currentTime * fps)));
-
-  const paint = () => {
-    if (!ctx) return;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, width, height);
-
-    const scene = ir.timeline.find((s) => frame >= s.startFrame && frame < s.startFrame + s.durationInFrames) ?? ir.timeline[ir.timeline.length - 1];
-    if (!scene) return;
-    const draw = getScene(scene.sceneType)?.renderers[HYPERFRAMES_ENGINE_ID] as SceneDraw | undefined;
-    if (!draw) {
-      ctx.fillStyle = '#f85149';
-      ctx.font = `400 40px ${MONO}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`no renderer: ${scene.sceneType}`, width / 2, height / 2);
-      return;
-    }
-    ctx.save();
-    try {
-      draw(scene.props, { ctx, width, height, frame: frame - scene.startFrame, durationInFrames: scene.durationInFrames, fps });
-    } finally {
-      ctx.restore();
-    }
-  };
-
-  const setFrame = (next: number, fromClock = false) => {
-    const f = Math.min(totalDurationInFrames - 1, Math.max(0, Math.round(next)));
-    if (f === frame && fromClock) return;
-    frame = f;
-    scrub.value = String(f);
-    time.textContent = `${(f / fps).toFixed(1)}s / ${(totalDurationInFrames / fps).toFixed(1)}s`;
-    paint();
-    listeners.forEach((l) => l(f));
-  };
 
   const tick = () => {
     if (disposed) return;
-    if (!audio.paused) setFrame(clockFrame(), true);
+    if (player?.ready) {
+      const f = Math.min(totalDurationInFrames - 1, Math.max(0, Math.round(player.currentTime * fps)));
+      if (f !== lastFrame) {
+        lastFrame = f;
+        listeners.forEach((l) => l(f));
+      }
+    }
     raf = requestAnimationFrame(tick);
   };
 
-  playBtn.onclick = () => {
-    if (audio.paused) void audio.play().catch(() => undefined);
-    else audio.pause();
-  };
-  audio.onplay = () => { playBtn.textContent = '❚❚'; };
-  audio.onpause = () => { playBtn.textContent = '▶'; };
-  audio.onended = () => { playBtn.textContent = '▶'; };
-  scrub.oninput = () => {
-    audio.currentTime = Number(scrub.value) / fps;
-    setFrame(Number(scrub.value));
-  };
-
-  // Text metrics depend on the web font, so repaint once it is in place.
-  void (document.fonts?.ready ?? Promise.resolve()).then(() => { if (!disposed) paint(); });
-  setFrame(Math.min(12, totalDurationInFrames - 1));
-  raf = requestAnimationFrame(tick);
+  void Promise.all([vendorSources(), defineElement()])
+    .then(([sources]) => {
+      if (disposed) return;
+      const html = buildHyperframesDocument(ir, { ...sources, voiceoverSrc: ir.audioTrack.voiceoverUrl, fontBase: '/fonts' });
+      const el = document.createElement('hyperframes-player') as HyperframesPlayerElement;
+      el.setAttribute('width', String(ir.meta.width));
+      el.setAttribute('height', String(ir.meta.height));
+      el.setAttribute('controls', '');
+      el.setAttribute('sandbox-origin', 'opaque');
+      el.setAttribute('srcdoc', html);
+      el.style.cssText = 'width:100%;height:100%;display:block';
+      el.addEventListener('ready', () => {
+        if (pendingSeek !== null) { el.seek(pendingSeek / fps); pendingSeek = null; }
+      }, { once: true });
+      host.append(el);
+      player = el;
+      raf = requestAnimationFrame(tick);
+    })
+    .catch((e: unknown) => {
+      if (disposed) return;
+      host.textContent = `Hyperframes preview failed: ${e instanceof Error ? e.message : String(e)}`;
+      host.style.cssText += ';color:#f85149;font:12px ui-monospace,monospace;padding:12px';
+    });
 
   return {
     unmount() {
       disposed = true;
       cancelAnimationFrame(raf);
-      audio.pause();
       listeners.clear();
-      root.remove();
+      player?.pause();
+      host.remove();
     },
-    seekTo(f) {
-      audio.currentTime = f / fps;
-      setFrame(f);
+    seekTo(frame) {
+      if (player?.ready) player.seek(frame / fps);
+      else pendingSeek = frame;
     },
-    play() {
-      void audio.play().catch(() => undefined);
-    },
-    pause() {
-      audio.pause();
-    },
+    play() { player?.play(); },
+    pause() { player?.pause(); },
     onFrame(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
   };
-}
+};
