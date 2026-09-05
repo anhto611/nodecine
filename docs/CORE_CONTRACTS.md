@@ -26,9 +26,9 @@ Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ đư�
 | `LLMRef` | Mô hình ngôn ngữ | Tham chiếu tới nhà cung cấp mô hình | Nhà Cung Cấp Mô Hình Ngôn Ngữ | Đạo Diễn AI |
 | `TTSRef` | Giọng đọc | Tham chiếu tới nhà cung cấp giọng | Nhà Cung Cấp Giọng Đọc | Giọng Đọc |
 | `StageDef` | Stage | Sân khấu: token thiết kế, tone, trường theo cảnh, markup bao quanh block | Stage | Đạo Diễn AI, Kịch Bản Tĩnh |
-| `BlockDef` | Block | Một kiểu cảnh: props mô hình được viết, tài liệu, code vẽ | Block | Đạo Diễn AI, Kịch Bản Tĩnh — cổng `blocks` **nhiều dây** |
+| `BlockSet` | Blocks | Danh mục block của một node Blocks: mỗi block là một kiểu cảnh (props mô hình được viết, tài liệu, code vẽ), `id` không trùng trong node | Blocks | Đạo Diễn AI, Kịch Bản Tĩnh — cổng `blocks` **nhiều dây**, danh mục là hợp của mọi dây |
 
-Một cổng xuất được phép nối ra nhiều cổng nhận. Một cổng nhận mặc định chỉ được phép có đúng một dây nối tới; cổng khai báo `multiple: true` nhận **bao nhiêu dây cũng được**, bắt buộc nghĩa là ít nhất một. Gói của cổng nhiều dây tới node dưới dạng danh sách `lists[tên cổng]` theo thứ tự dây, không phải `inputs[tên cổng]`; chữ ký chạy lại băm cả danh sách nên thêm hoặc bớt dây là node chạy lại. Cổng nhiều dây hiện có là cổng `blocks` của Đạo Diễn AI và Kịch Bản Tĩnh. Đồ thị bắt buộc không có chu trình. Node tài nguyên (ba loại phát `EngineRef`, `LLMRef`, `TTSRef`) không có cổng nhận nào.
+Một cổng xuất được phép nối ra nhiều cổng nhận. Một cổng nhận mặc định chỉ được phép có đúng một dây nối tới; cổng khai báo `multiple: true` nhận **bao nhiêu dây cũng được**, bắt buộc nghĩa là ít nhất một. Gói của cổng nhiều dây tới node dưới dạng danh sách `lists[tên cổng]` theo thứ tự dây, không phải `inputs[tên cổng]`; chữ ký chạy lại băm cả danh sách nên thêm hoặc bớt dây là node chạy lại. Cổng nhiều dây hiện có là cổng `blocks` (kiểu `BlockSet`) của Đạo Diễn AI và Kịch Bản Tĩnh. Đồ thị bắt buộc không có chu trình. Node tài nguyên (ba loại phát `EngineRef`, `LLMRef`, `TTSRef`) không có cổng nhận nào.
 
 ### 1.2. Gói dữ liệu qua dây nối
 
@@ -64,7 +64,7 @@ Tự chứa: mang theo sân khấu và mọi block mà các cảnh dùng, nên �
 
 - `language` (Chuỗi, mã BCP 47): Ngôn ngữ của toàn bộ chữ trên màn hình và lời thoại.
 - `stage` (`StageDef`, mục 2.6): Sân khấu của cả video, chép từ dây `stage` của node phát.
-- `blocks` (Danh sách `BlockDef`, mục 2.7, ít nhất một, `id` không trùng): Danh mục block đã nối vào node phát — toàn bộ, không chỉ những block được dùng.
+- `blocks` (Danh sách `BlockDef`, mục 2.7, ít nhất một, `id` không trùng): Danh mục block đã nối vào node phát — hợp của mọi node Blocks trên cổng `blocks`, toàn bộ chứ không chỉ những block được dùng.
 - `scenes` (Danh sách, ít nhất một phần tử):
   - `blockId` (Chuỗi): `id` của một block trong `blocks`. Lược đồ từ chối plan có `blockId` không nằm trong danh mục.
   - `weight` (Số dương): Trọng số thời lượng tương đối. Đóng Gói Timeline chia tổng số khung hình theo tỷ lệ các trọng số.
@@ -94,9 +94,9 @@ Sân khấu — cái vỏ hiển thị bền qua mọi cảnh của một workfl
 - `sceneFields[]`: `{ name, rule, options? }` — trường theo cảnh mà stage tự vẽ (ví dụ `kicker`), kèm quy tắc dạy mô hình cách viết; `options` giới hạn giá trị.
 - `code`: xem 2.8.
 
-### 2.7. `BlockDef`
+### 2.7. `BlockDef` và `BlockSet`
 
-Một kiểu cảnh, mang theo dưới dạng dữ liệu; đây là thứ Đạo Diễn AI chọn cho từng cảnh.
+`BlockDef` là một kiểu cảnh, mang theo dưới dạng dữ liệu; đây là thứ Đạo Diễn AI chọn cho từng cảnh. `BlockSet` là thứ đi trên dây: `{ blocks: BlockDef[] }` của một node Blocks, ít nhất một, `id` không trùng trong node.
 
 - `id` (slug), `name`.
 - `doc.example`: một ví dụ props hợp lệ dạng JSON. `doc.when`: dùng khi nào, không dùng khi nào — nguồn duy nhất cho cả mô hình và người.
@@ -217,7 +217,7 @@ Mô tả ở mục 6, 7 và 8. Cả ba dùng chung khuôn: không cổng nhận,
 
 ### 5.8. Đạo Diễn AI (AI Director)
 
-Có **một node đạo diễn**, trong lõi. Cổng nhận: `LLMRef` bắt buộc, `stage` bắt buộc (một dây), `blocks` bắt buộc (nhiều dây — mỗi dây một node Block, gộp lại là **danh mục** mô hình được chọn), `FactSheet` tùy chọn và `SourceRef` tùy chọn; phát `DirectorPlan` và `AudioScript`. Mọi thứ từng khiến mỗi loại video cần một node đạo diễn riêng đều là **tham số** hoặc **dữ liệu trên dây**:
+Có **một node đạo diễn**, trong lõi. Cổng nhận: `LLMRef` bắt buộc, `stage` bắt buộc (một dây), `blocks` bắt buộc (nhiều dây — mỗi dây một node Blocks, hợp của chúng là **danh mục** mô hình được chọn), `FactSheet` tùy chọn và `SourceRef` tùy chọn; phát `DirectorPlan` và `AudioScript`. Mọi thứ từng khiến mỗi loại video cần một node đạo diễn riêng đều là **tham số** hoặc **dữ liệu trên dây**:
 
 - `prompt` — đề bài người dùng viết. Thứ duy nhất chỉ người dùng nói được.
 - `beats` — danh sách **beat**: `{ role, brief, weight, count, blocks, factBindings }`. `role` là tên ngắn của một đoạn (hook, quote, cta); `brief` nói đoạn đó làm gì; `count` là số cảnh liên tiếp; `blocks` là các `id` block mô hình được chọn cho đoạn đó (rỗng = mọi block đã nối); `factBindings` là `propKey → factKey`.
@@ -229,7 +229,7 @@ Ba bất biến do node này giữ:
 
 1. **Prop đã ràng buộc không bao giờ được hỏi mô hình**, và **dữ kiện đã ràng buộc không bao giờ vào prompt**. Số sao, lệnh cài, đường dẫn đi thẳng từ `FactSheet` tới Đóng Gói Timeline; mô hình không có gì để chép sai.
 2. Prompt được dựng từ các nguồn tách bạch: đề bài mang ý đồ, beat mang cấu trúc, block tự nói khi nào dùng nó và viết gì (`doc.when`, `doc.example`, `hint` của từng prop), stage nói tone và trường nó vẽ được, dữ kiện mang sự thật. Không có gì trong prompt nói về một loại video cụ thể.
-3. Danh mục phải dùng được trước khi tốn một lần gọi mô hình: preflight chặn `NODE_PARAMS_INVALID` khi hai Block nối vào trùng `id` hoặc một beat nêu `id` không nối.
+3. Danh mục phải dùng được trước khi tốn một lần gọi mô hình: preflight chặn `NODE_PARAMS_INVALID` khi hai block nối vào trùng `id` (kể cả từ hai node Blocks khác nhau) hoặc một beat nêu `id` không nối.
 
 Vòng gọi mô hình (`core/director/loop.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `core/director/beats.ts`, prompt ở `core/director/prompt.ts`.
 
@@ -239,9 +239,11 @@ Hệ quả: một video GitHub showcase là *node này* + stage `developer-dark`
 
 Node nguồn, không cổng nhận, phát `StageDef`. Tham số của node **là** định nghĩa (2.6): đổi tham số là đổi sân khấu, lưu workflow là lưu luôn giao diện. Mặc định là stage `dark` với ba tone `cool/warm/green` và trường `kicker`. Người dùng sửa id, tên, token, tone, trường theo cảnh và code ngay trong node.
 
-### 5.10. Block
+### 5.10. Blocks
 
-Node nguồn, không cổng nhận, phát `BlockDef`. Tham số của node là định nghĩa (2.7). Mặc định là block `text-card` với `headline` bắt buộc và `body` tùy chọn. Một workflow có bao nhiêu block cũng được — mỗi block một node — và tất cả nối vào cùng cổng `blocks` của đạo diễn; đó là **danh mục** mô hình được chọn. Một bản mẫu chia sẻ mang theo đủ giao diện vì nó mang theo các node này.
+Node nguồn, không cổng nhận, phát `BlockSet`: **một node mang cả danh mục** block của workflow, tham số là mảng `BlockDef` (2.7) với `id` không trùng. Thân node là một danh sách — mỗi dòng một block, bấm để mở sửa đúng block đó, có thêm, nhân bản, bỏ. Mặc định là một block `text-card` với `headline` bắt buộc và `body` tùy chọn. Một workflow thường có một node Blocks; nối thêm node Blocks thứ hai vào cùng cổng `blocks` thì danh mục là hợp của cả hai, cách để dùng chung một bộ block giữa các workflow. Một bản mẫu chia sẻ mang theo đủ giao diện vì nó mang theo node này.
+
+Vì sao một node chứ không mỗi block một node: thử với sáu block trên canvas thì sáu node và sáu dây che mất đồ thị, trong khi block không có cổng vào, không có tham số nào ngoài chính nó, và luôn đi cùng nhau tới một cổng. Cái cần nhìn trên canvas là luồng dữ liệu, không phải từng mục của một danh mục.
 
 ### 5.11. Truy Xuất Repo (GitHub Fetcher)
 
@@ -337,13 +339,15 @@ Node chạy trên máy khách. Khi một node cần mạng hay hệ tệp, nó g
 
 ## 10. Bản Mẫu
 
-Không có tầng "nội dung kèm app" nữa. Mọi node là node lõi (mục 5), giao diện là dữ liệu trong node Stage và Block, và bản mẫu là đồ thị. Ba nguồn của bản mẫu đổ vào cùng một registry.
+Không có tầng "nội dung kèm app" nữa. Mọi node là node lõi (mục 5), giao diện là dữ liệu trong node Stage và Blocks. Hai thứ cùng hình dạng nhưng khác vai, như trong ComfyUI: **bản mẫu** là đồ thị dựng sẵn ship kèm app, mở ra là một bản nháp mới; **workflow** là tệp của người dùng, lưu, đổi tên, nhập, xóa ở thanh tab và panel Workflow. Cùng lược đồ `TemplateDefinition`, nên một workflow tải xuống và một bản mẫu chia sẻ là cùng một loại tệp.
 
 ### 10.1. Bản mẫu (template) là dữ liệu
 
 Một bản mẫu là **một đồ thị đã lưu**: `{ id, name, description?, category, graph }`, trong đó `graph` có đúng hình dạng `lib/storage.ts` ghi khi người dùng lưu dự án. Nó gọi tên node bằng chuỗi và không import gì; giao diện của nó nằm trong tham số của các node Stage và Block bên trong đồ thị. Registry ở `core/templates/registry.ts` kiểm định hình dạng lúc đăng ký và trả ra bản sao khi mở.
 
-Ba nguồn đổ vào cùng registry, và registry không phân biệt: tệp JSON dưới `templates/` (ship kèm), bản người dùng lưu từ canvas (*Lưu đồ thị hiện tại*), bản người dùng nhập từ tệp (*Nhập JSON*). Hai nguồn sau lưu ở `localStorage`, tải xuống được thành tệp để chia sẻ.
+Registry chỉ chứa **bản mẫu ship kèm** (tệp JSON dưới `templates/`). Workflow của người dùng là một thứ khác và không vào registry: chúng là **tệp trên máy chủ** trong `.nodecine/workflows/<id>.json` (đổi bằng `NODECINE_WORKFLOWS_DIR`), theo mô hình `userdata/workflows` của ComfyUI: một tệp một workflow, cùng hình dạng bản mẫu cộng `schemaVersion` và `updatedAt`, ghi nguyên tử, đọc lại thì tự nâng phiên bản. API: `GET/POST /api/workflows`, `GET/PUT/DELETE /api/workflows/<id>`, `POST /api/workflows/from-video`. `id` là tên tệp và bị lược đồ kiểm định; đường dẫn chỉ được dựng ở `server/workflows.ts`. Id `current` được giữ riêng và không liệt kê.
+
+Một MP4 do NodeCine kết xuất **mang theo workflow** đã tạo ra nó (thẻ `nodecine_workflow` trong metadata định dạng, ghi bằng ffmpeg stream copy, gồm tên, đồ thị và IR), như PNG của ComfyUI mang theo workflow: kéo video vào canvas là dựng lại đồ thị. Thiếu ffmpeg thì video vẫn ra, chỉ không có thẻ.
 
 ### 10.2. Bài kiểm tra duy nhất
 

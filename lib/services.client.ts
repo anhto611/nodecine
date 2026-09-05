@@ -6,6 +6,12 @@ import type { RenderResult } from '@/core/adapters/types';
 
 /** Browser implementation of NodeServices: every call goes to a local API route (ARCHITECTURE §1.2). */
 
+/** What a render should stamp into the MP4; the store provides it, so this module never imports the store. */
+let workflowProvider: () => { name: string; graph: unknown } | null = () => null;
+export function provideWorkflowForRenders(fn: typeof workflowProvider): void {
+  workflowProvider = fn;
+}
+
 async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal });
   const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -39,7 +45,7 @@ export const clientServices: NodeServices = {
     const res = await fetch('/api/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ engineId: ref.engineId, settings: ref.settings, ir, exportSettings: settings }),
+      body: JSON.stringify({ engineId: ref.engineId, settings: ref.settings, ir, exportSettings: settings, workflow: workflowProvider() ?? undefined }),
       signal,
     });
     if (!res.ok || !res.body) {

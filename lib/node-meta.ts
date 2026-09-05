@@ -9,7 +9,7 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/github-fetcher': { icon: 'branch', group: 'source' },
   'core/static-script': { icon: 'doc', group: 'source' },
   'core/stage': { icon: 'screen', group: 'look' },
-  'core/block': { icon: 'layers', group: 'look' },
+  'core/blocks': { icon: 'layers', group: 'look' },
   'core/ai-director': { icon: 'bot', group: 'process' },
   'core/llm-provider': { icon: 'term', group: 'provider' },
   'core/tts-provider': { icon: 'mic', group: 'provider' },

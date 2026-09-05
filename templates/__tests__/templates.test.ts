@@ -22,11 +22,11 @@ beforeEach(() => {
   registerTemplates();
 });
 
-/** The Block nodes wired into a node's `blocks` port, as definitions. */
+/** Every block of every Blocks node wired into a node's `blocks` port. */
 function wiredBlocks(t: ReturnType<typeof listTemplates>[number], nodeId: string): BlockDef[] {
   return t.graph.edges
     .filter((e) => e.target === nodeId && e.targetPort === 'blocks')
-    .map((e) => t.graph.nodes.find((n) => n.id === e.source)!.params as unknown as BlockDef);
+    .flatMap((e) => (t.graph.nodes.find((n) => n.id === e.source)!.params as unknown as { blocks: BlockDef[] }).blocks);
 }
 
 describe('shipped templates', () => {

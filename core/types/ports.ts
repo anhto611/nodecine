@@ -10,7 +10,7 @@ export const PORT_TYPES = [
   'LLMRef',
   'TTSRef',
   'StageDef',
-  'BlockDef',
+  'BlockSet',
 ] as const;
 
 export type PortType = (typeof PORT_TYPES)[number];
@@ -27,7 +27,7 @@ export const PORT_LABEL_KEYS: Record<PortType, string> = {
   LLMRef: 'port.llmRef',
   TTSRef: 'port.ttsRef',
   StageDef: 'port.stageDef',
-  BlockDef: 'port.blockDef',
+  BlockSet: 'port.blockSet',
 };
 
 export function isPortType(value: string): value is PortType {

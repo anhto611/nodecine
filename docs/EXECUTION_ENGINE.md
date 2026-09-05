@@ -131,6 +131,8 @@ Mã lỗi riêng của từng gói (ví dụ `REPO_*`, `LLM_SCHEMA_INVALID`) n�
 
 ### 7.1. Những gì được lưu
 
+*Cập nhật:* các workflow người dùng lưu không còn ở `localStorage` mà là tệp trên máy chủ (`CORE_CONTRACTS.md` §10.1); các workflow **đang mở** trên thanh tab (kể cả bản nháp chưa lưu) tự lưu vào `localStorage` dưới khóa `nodecine.tabs`, như ComfyUI giữ các workflow đang mở; tải lại trang là các tab trở lại nguyên trạng.
+
 Toàn bộ trạng thái bền vững nằm trong bộ nhớ cục bộ của trình duyệt, chia thành ba khóa tách biệt:
 
 1. Tài liệu dự án: tên dự án, danh sách node kèm vị trí, tham số và cờ bỏ qua, danh sách dây nối.

@@ -143,11 +143,11 @@ describe('core/ai-director', () => {
     expect(services.calls.some((c) => c.name === 'complete')).toBe(false);
   });
 
-  it('blocks when two wired blocks share an id', async () => {
+  it('blocks when two wired Blocks nodes carry the same id', async () => {
     const services = makeFakeServices({ complete: async () => goodAnswer });
     const g = graph(showcaseParams, false);
-    g.nodes.push({ id: 'block-dupe', type: 'core/block', params: { ...HOOK }, bypassed: false, position: { x: 0, y: 0 } });
-    g.edges.push({ id: 'look-dupe', source: 'block-dupe', sourcePort: 'block', target: 'dir', targetPort: 'blocks' });
+    g.nodes.push({ id: 'blocks-dupe', type: 'core/blocks', params: { blocks: [{ ...HOOK }] }, bypassed: false, position: { x: 0, y: 0 } });
+    g.edges.push({ id: 'look-dupe', source: 'blocks-dupe', sourcePort: 'blocks', target: 'dir', targetPort: 'blocks' });
     const ex = new Executor(g, services);
     await ex.run();
     const rt = ex.runtimes_().get('dir')!;

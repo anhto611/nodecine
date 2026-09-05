@@ -16,6 +16,7 @@ import {
   applyNodeChanges,
 } from '@xyflow/react';
 import { getNodeType } from '@/core/nodes/definition';
+import { layoutGraph } from '@/lib/layout';
 import { useStudio } from '@/store/useStudio';
 import { NodeCard, type NcNode } from './nodes/NodeCard';
 import { Icon } from './icons';
@@ -42,10 +43,13 @@ function CanvasInner() {
   const graph = useStudio((s) => s.graph);
   const runtimes = useStudio((s) => s.runtimes);
   const setNodePosition = useStudio((s) => s.setNodePosition);
+  const setNodePositions = useStudio((s) => s.setNodePositions);
   const removeNodes = useStudio((s) => s.removeNodes);
   const removeEdges = useStudio((s) => s.removeEdges);
   const connect = useStudio((s) => s.connect);
   const addNode = useStudio((s) => s.addNode);
+  const importWorkflow = useStudio((s) => s.importWorkflow);
+  const importVideo = useStudio((s) => s.importWorkflowVideo);
   const select = useStudio((s) => s.select);
   const setPanel = useStudio((s) => s.setPanel);
   const rf = useReactFlow();
@@ -101,8 +105,18 @@ function CanvasInner() {
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const type = e.dataTransfer.getData('application/nodecine-node');
-    if (!type) return;
-    addNode(type, rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }));
+    if (type) {
+      addNode(type, rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }));
+      return;
+    }
+    // A workflow file, or a video that carries one: import it, open it in a tab, show the Workflows panel.
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    void (async () => {
+      const why = /\.mp4$/i.test(file.name) || file.type === 'video/mp4' ? await importVideo(file) : await importWorkflow(await file.text());
+      if (why) console.warn(`[nodecine] import failed: ${why}`);
+      else if (useStudio.getState().panel !== 'workflows') setPanel('workflows');
+    })();
   };
 
   return (
@@ -151,6 +165,12 @@ function CanvasInner() {
           <button className="nc-tbtn" title={t('canvas.zoomIn')} onClick={() => rf.zoomIn()}><Icon.plus /></button>
           <button className="nc-tbtn" title={t('canvas.zoomOut')} onClick={() => rf.zoomOut()}><Icon.minus /></button>
           <button className="nc-tbtn" title={t('canvas.fit')} onClick={() => rf.fitView({ padding: 0.08 })}><Icon.fit /></button>
+          <button className="nc-tbtn" title={t('canvas.layout')} onClick={() => {
+            // Measured sizes come from React Flow; a node not yet measured gets the default.
+            const sizes = Object.fromEntries(rf.getNodes().map((n) => [n.id, { width: n.measured?.width ?? 196, height: n.measured?.height ?? 160 }]));
+            setNodePositions(layoutGraph(graph, sizes));
+            requestAnimationFrame(() => void rf.fitView({ padding: 0.08, duration: 300 }));
+          }}><Icon.branch /></button>
           <button className="nc-tbtn" title={t('canvas.add')} onClick={() => setPanel('library')}><Icon.plus /></button>
         </div>
       </div>

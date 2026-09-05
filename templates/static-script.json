@@ -65,33 +65,37 @@
         }
       },
       {
-        "id": "block-text-card",
-        "type": "core/block",
+        "id": "blocks",
+        "type": "core/blocks",
         "params": {
-          "id": "text-card",
-          "name": "Text card",
-          "doc": {
-            "example": "{\"headline\":\"Ship video from a graph\",\"body\":\"Wire a source to a script, a voice and an engine.\"}",
-            "when": "One idea on screen: a headline and at most one supporting line. Use it for openings, transitions and closings; not for lists or numbers."
-          },
-          "props": {
-            "headline": {
-              "type": "string",
-              "hint": "up to six words, title case",
-              "required": true,
-              "max": 60
-            },
-            "body": {
-              "type": "text",
-              "hint": "one sentence, or leave it out",
-              "required": false,
-              "max": 160
+          "blocks": [
+            {
+              "id": "text-card",
+              "name": "Text card",
+              "doc": {
+                "example": "{\"headline\":\"Ship video from a graph\",\"body\":\"Wire a source to a script, a voice and an engine.\"}",
+                "when": "One idea on screen: a headline and at most one supporting line. Use it for openings, transitions and closings; not for lists or numbers."
+              },
+              "props": {
+                "headline": {
+                  "type": "string",
+                  "hint": "up to six words, title case",
+                  "required": true,
+                  "max": 60
+                },
+                "body": {
+                  "type": "text",
+                  "hint": "one sentence, or leave it out",
+                  "required": false,
+                  "max": 160
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<style>\n  .card { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 32px; }\n  .card h1 { font: 800 88px/1.05 var(--font-display); color: var(--fg); margin: 0; letter-spacing: -0.01em; }\n  .card p  { font: 400 38px/1.4 var(--font-body); color: var(--muted); margin: 0; max-width: 760px; }\n  .card .bar { width: 120px; height: 10px; border-radius: 5px; background: var(--accent); transform-origin: left center; }\n</style>\n<div class=\"card\">\n  <div class=\"bar\"></div>\n  <h1 data-prop=\"headline\"></h1>\n  <p data-prop=\"body\" data-if=\"body\"></p>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".card .bar\", { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: \"power2.out\" }, 0)\n    .fromTo(\".card h1\", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: \"power3.out\" }, 0.2)\n    .fromTo(\".card p\", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: \"power3.out\" }, 0.5));\n</script>"
+              }
             }
-          },
-          "code": {
-            "format": "html-gsap",
-            "source": "<style>\n  .card { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 32px; }\n  .card h1 { font: 800 88px/1.05 var(--font-display); color: var(--fg); margin: 0; letter-spacing: -0.01em; }\n  .card p  { font: 400 38px/1.4 var(--font-body); color: var(--muted); margin: 0; max-width: 760px; }\n  .card .bar { width: 120px; height: 10px; border-radius: 5px; background: var(--accent); transform-origin: left center; }\n</style>\n<div class=\"card\">\n  <div class=\"bar\"></div>\n  <h1 data-prop=\"headline\"></h1>\n  <p data-prop=\"body\" data-if=\"body\"></p>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".card .bar\", { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: \"power2.out\" }, 0)\n    .fromTo(\".card h1\", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: \"power3.out\" }, 0.2)\n    .fromTo(\".card p\", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: \"power3.out\" }, 0.5));\n</script>"
-          }
+          ]
         },
         "bypassed": false,
         "position": {
@@ -233,9 +237,9 @@
         "targetPort": "stage"
       },
       {
-        "id": "look-text-card",
-        "source": "block-text-card",
-        "sourcePort": "block",
+        "id": "look-blocks",
+        "source": "blocks",
+        "sourcePort": "blocks",
         "target": "script",
         "targetPort": "blocks"
       },

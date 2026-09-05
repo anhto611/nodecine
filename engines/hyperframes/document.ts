@@ -1,5 +1,8 @@
 import type { VideoIR } from '@/core/types/ir';
-import type { BlockDef, StageDef } from '@/core/types/payloads';
+import type { BlockDef } from '@/core/types/payloads';
+import { BIND_SCRIPT, baseStyles, esc, sceneMarkup, scopedCss, splitCode, tokenVars } from '@/core/look/markup';
+
+export { splitCode, fillSlot, tokenVars } from '@/core/look/markup';
 
 /**
  * One self-contained HyperFrames composition per IR (CORE_CONTRACTS §2.8, §6.3).
@@ -29,49 +32,6 @@ export interface DocumentOptions {
 export const RUNTIME_MARKER = '<!-- hyperframe.runtime.iife.js (inlined) -->';
 export const COMPOSITION_ID = 'nodecine';
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const attr = (s: string) => esc(s);
-
-/** Split a stage/block code fragment into markup, style text and script text. */
-export function splitCode(source: string): { markup: string; styles: string[]; scripts: string[] } {
-  const styles: string[] = [];
-  const scripts: string[] = [];
-  const markup = source
-    .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, (_, css: string) => { styles.push(css.trim()); return ''; })
-    .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, (_, js: string) => { scripts.push(js.trim()); return ''; })
-    .trim();
-  return { markup, styles, scripts };
-}
-
-/** Put the block's markup inside the stage's `data-slot="content"` element. */
-export function fillSlot(stageMarkup: string, inner: string): string {
-  const m = /<([a-zA-Z][\w-]*)\b[^>]*\bdata-slot=["']content["'][^>]*>/.exec(stageMarkup);
-  if (!m) return `${stageMarkup}${inner}`;
-  const at = m.index + m[0].length;
-  return `${stageMarkup.slice(0, at)}${inner}${stageMarkup.slice(at)}`;
-}
-
-/** Stage tokens as CSS custom properties: `palette.bg` → `--bg`, `fonts.display` → `--font-display`. */
-export function tokenVars(stage: StageDef, tone?: string): string {
-  const palette = { ...stage.tokens.palette, ...(tone && stage.tones[tone] ? stage.tones[tone] : {}) };
-  const vars = [
-    ...Object.entries(palette).map(([k, v]) => `--${k}: ${v}`),
-    ...Object.entries(stage.tokens.fonts).map(([k, v]) => `--font-${k}: ${v}`),
-  ];
-  return vars.join('; ');
-}
-
-const scoped = (selector: string, css: string) => (css ? `@scope (${selector}) {\n${css}\n}` : '');
-
-const fontFaces = (base: string) =>
-  [
-    ['400', 'JetBrainsMono-Regular.woff2'],
-    ['700', 'JetBrainsMono-Bold.woff2'],
-    ['800', 'JetBrainsMono-ExtraBold.woff2'],
-  ]
-    .map(([w, f]) => `@font-face { font-family: 'JetBrains Mono'; font-weight: ${w}; font-style: normal; font-display: block; src: url('${base}/${f}') format('woff2'); }`)
-    .join('\n');
-
 /**
  * Runs inside the composition before the runtime initialises. Binds props and fields into the
  * markup, runs the stage and block scripts of every scene with a gsap whose string targets are
@@ -82,36 +42,8 @@ export const BOOTSTRAP = String.raw`
   var data = JSON.parse(document.getElementById('nodecine-data').textContent);
   var timelines = [];
   var unwrap = new WeakMap();
-
-  function bindProps(root, props) {
-    root.querySelectorAll('[data-if]').forEach(function (el) {
-      var v = props[el.getAttribute('data-if')];
-      var empty = v === undefined || v === null || v === false || v === '' || (Array.isArray(v) && v.length === 0);
-      if (empty) el.remove();
-    });
-    root.querySelectorAll('[data-prop]').forEach(function (el) {
-      var v = props[el.getAttribute('data-prop')];
-      if (v === undefined || v === null) { el.textContent = ''; return; }
-      if (Array.isArray(v)) {
-        var template = el.firstElementChild;
-        el.textContent = '';
-        v.forEach(function (item) {
-          if (template) { var c = template.cloneNode(true); c.textContent = String(item); el.appendChild(c); }
-          else el.appendChild(document.createTextNode(String(item)));
-        });
-        return;
-      }
-      el.textContent = typeof v === 'number' ? v.toLocaleString('en-US') : String(v);
-    });
-  }
-
-  function bindFields(root, fields) {
-    root.querySelectorAll('[data-field]').forEach(function (el) {
-      var v = fields[el.getAttribute('data-field')];
-      if (v === undefined || v === null || v === '') el.remove();
-      else el.textContent = String(v);
-    });
-  }
+  var bindProps = window.__nodecineBind.props;
+  var bindFields = window.__nodecineBind.fields;
 
   function scopedGsap(root) {
     var q = gsap.utils.selector(root);
@@ -175,26 +107,21 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
   const duration = totalDurationInFrames / fps;
   const scenes = ir.timeline.map((s) => {
     const bc = blockCode.get(s.blockId)!;
-    const inner = `<div class="nc-block" data-block="${attr(s.blockId)}">${bc.markup}</div>`;
-    const markup = fillSlot(stageCode.markup, inner);
+    const markup = sceneMarkup(stageCode.markup, bc.markup, s.blockId);
     return {
       id: s.id,
       start: s.startFrame / fps,
       duration: s.durationInFrames / fps,
-      html: `<div id="${attr(s.id)}" class="clip nc-scene" data-start="${s.startFrame / fps}" data-duration="${s.durationInFrames / fps}" data-track-index="0" data-stage${s.tone ? ` data-tone="${attr(s.tone)}"` : ''} style="${attr(tokenVars(stage, s.tone))}">${markup}</div>`,
+      html: `<div id="${esc(s.id)}" class="clip nc-scene" data-start="${s.startFrame / fps}" data-duration="${s.durationInFrames / fps}" data-track-index="0" data-stage${s.tone ? ` data-tone="${esc(s.tone)}"` : ''} style="${esc(tokenVars(stage, s.tone))}">${markup}</div>`,
       data: { id: s.id, start: s.startFrame / fps, props: s.props, fields: s.fields ?? {}, scripts: [...stageCode.scripts, ...bc.scripts] },
     };
   });
 
   const styles = [
-    fontFaces(o.fontBase),
-    `* { margin: 0; padding: 0; box-sizing: border-box; }`,
-    `html, body { width: ${width}px; height: ${height}px; overflow: hidden; background: #000; }`,
-    `[data-composition-id] { position: relative; width: ${width}px; height: ${height}px; overflow: hidden; background: var(--bg, #000); ${tokenVars(stage)}; }`,
+    baseStyles(stage, width, height, o.fontBase),
     `.clip { position: absolute; inset: 0; visibility: hidden; overflow: hidden; }`,
-    `.nc-block { display: contents; }`,
-    scoped('[data-stage]', stageCode.styles.join('\n')),
-    ...[...blockCode].map(([id, bc]) => scoped(`[data-block="${id}"]`, bc.styles.join('\n'))),
+    scopedCss('[data-stage]', stageCode.styles.join('\n')),
+    ...[...blockCode].map(([id, bc]) => scopedCss(`[data-block="${id}"]`, bc.styles.join('\n'))),
   ].filter(Boolean);
 
   const data = { compositionId: COMPOSITION_ID, duration, scenes: scenes.map((s) => s.data) };
@@ -208,7 +135,7 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
   // is lost, the producer waits its full readiness timeout, and nothing animates.
   return [
     `<!doctype html>`,
-    `<html lang="${attr(ir.meta.language)}" data-resolution="${height > width ? 'portrait' : 'landscape'}">`,
+    `<html lang="${esc(ir.meta.language)}" data-resolution="${height > width ? 'portrait' : 'landscape'}">`,
     `<head>`,
     `<meta charset="utf-8">`,
     `<meta http-equiv="Content-Security-Policy" content="${csp}">`,
@@ -222,9 +149,10 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     `<body>`,
     `<div id="${COMPOSITION_ID}" data-composition-id="${COMPOSITION_ID}" data-start="0" data-duration="${duration}" data-width="${width}" data-height="${height}" data-fps="${fps}">`,
     ...scenes.map((s) => s.html),
-    `<audio id="voiceover" data-start="0" data-duration="${ir.audioTrack.durationSeconds}" data-track-index="1" src="${attr(o.voiceoverSrc)}"></audio>`,
+    `<audio id="voiceover" data-start="0" data-duration="${ir.audioTrack.durationSeconds}" data-track-index="1" src="${esc(o.voiceoverSrc)}"></audio>`,
     `</div>`,
     `<script type="application/json" id="nodecine-data">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`,
+    `<script>${BIND_SCRIPT}</script>`,
     `<script>${BOOTSTRAP}</script>`,
     `</body>`,
     `</html>`,

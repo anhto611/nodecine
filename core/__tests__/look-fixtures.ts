@@ -1,5 +1,5 @@
 import type { BlockDef, StageDef } from '../types/payloads';
-import { DEFAULT_BLOCK } from '../nodes/block';
+import { DEFAULT_BLOCK } from '../nodes/blocks';
 import { DEFAULT_STAGE } from '../nodes/stage';
 
 /** The shipped dark stage and text card, plus a hook block with a fact-bound number, for tests. */
@@ -32,10 +32,10 @@ export const CARD: BlockDef = {
 export const lookNodes = (consumer: string, blocks: BlockDef[] = [TEXT_CARD], stage: StageDef = STAGE) => ({
   nodes: [
     { id: 'stage', type: 'core/stage', params: stage, bypassed: false, position: { x: 0, y: 0 } },
-    ...blocks.map((b) => ({ id: `block-${b.id}`, type: 'core/block', params: b, bypassed: false, position: { x: 0, y: 0 } })),
+    { id: 'blocks', type: 'core/blocks', params: { blocks }, bypassed: false, position: { x: 0, y: 0 } },
   ],
   edges: [
     { id: 'look-stage', source: 'stage', sourcePort: 'stage', target: consumer, targetPort: 'stage' },
-    ...blocks.map((b) => ({ id: `look-${b.id}`, source: `block-${b.id}`, sourcePort: 'block', target: consumer, targetPort: 'blocks' })),
+    { id: 'look-blocks', source: 'blocks', sourcePort: 'blocks', target: consumer, targetPort: 'blocks' },
   ],
 });

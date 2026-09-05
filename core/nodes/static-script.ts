@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ErrorCode } from '../errors';
 import { blockById, duplicateBlockIds, propsSchemaFor } from '../look/props';
 import { detectLanguage } from '../text/detect-language';
-import type { BlockDef, StageDef } from '../types/payloads';
+import type { BlockDef, BlockSet, StageDef } from '../types/payloads';
 import type { Packet } from '../types/packet';
 import type { BlockReason, NodeDefinition } from './definition';
 
@@ -36,7 +36,7 @@ export const DEFAULT_STATIC_SCRIPT: z.infer<typeof Params> = {
 function scenesProblem(params: z.infer<typeof Params>, stage: StageDef | undefined, catalogue: BlockDef[]): BlockReason | null {
   const problems: string[] = [];
   const dupes = duplicateBlockIds(catalogue);
-  if (dupes.length) problems.push(`two Block nodes share the id: ${dupes.join(', ')}`);
+  if (dupes.length) problems.push(`two wired blocks share the id: ${dupes.join(', ')}`);
   params.scenes.forEach((s, i) => {
     const block = blockById(catalogue, s.blockId);
     if (!block) {
@@ -59,7 +59,7 @@ export const staticScript: NodeDefinition<typeof Params> = {
   kind: 'source',
   inputs: [
     { name: 'stage', type: 'StageDef' },
-    { name: 'blocks', type: 'BlockDef', multiple: true },
+    { name: 'blocks', type: 'BlockSet', multiple: true },
   ],
   outputs: [
     { name: 'plan', type: 'DirectorPlan' },
@@ -69,7 +69,7 @@ export const staticScript: NodeDefinition<typeof Params> = {
   defaultParams: DEFAULT_STATIC_SCRIPT,
   validate: (p) => (p.script.trim() ? [] : [{ code: 'INPUT_EMPTY', message: 'Script is empty' }]),
   preflight: (inputs, params, lists) =>
-    scenesProblem(params, inputs.stage?.payload as StageDef | undefined, (lists.blocks ?? []).map((p: Packet) => p.payload as BlockDef)),
+    scenesProblem(params, inputs.stage?.payload as StageDef | undefined, (lists.blocks ?? []).flatMap((p: Packet) => (p.payload as BlockSet).blocks)),
   run: async ({ params, inputs, lists, log }) => {
     // The user pastes the final narration, so its language *is* the video's language: detect it
     // from the text instead of asking. Voice choice can still be overridden on the TTS Engine.
@@ -77,7 +77,7 @@ export const staticScript: NodeDefinition<typeof Params> = {
     const language = detectLanguage(text);
     log('info', `language detected: ${language}`);
     const stage = inputs.stage!.payload as StageDef;
-    const blocks = (lists.blocks ?? []).map((p) => p.payload as BlockDef);
+    const blocks = (lists.blocks ?? []).flatMap((p) => (p.payload as BlockSet).blocks);
     return {
       plan: { language, stage, blocks, scenes: params.scenes.map((s) => propsParsed(s, blocks)) },
       script: { text, language },

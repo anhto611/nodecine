@@ -29,7 +29,7 @@ Thuật ngữ chuyên ngành giữ nguyên tiếng Anh trong cả code lẫn tà
 |---|---|---|
 | node của đồ thị | `node` | node — không dịch |
 | vỏ giao diện cố định mà mọi cảnh của một workflow diễn ra trên đó: nền, vùng an toàn, chỗ phụ đề, bộ xương cảnh, bảng màu, font, hệ tone | node `core/stage`, cổng `StageDef`, `plan.stage` | stage *(sân khấu)* |
-| archetype cảnh cắm vào stage: lược đồ props, `doc`, code HTML/GSAP | node `core/block`, cổng `BlockDef` | block *(khối)* |
+| archetype cảnh cắm vào stage: lược đồ props, `doc`, code HTML/GSAP; một node Blocks mang cả danh mục | node `core/blocks`, cổng `BlockSet`, kiểu `BlockDef` | block *(khối)* |
 | một mục trong danh sách của Đạo Diễn AI: vai trò, brief, số cảnh, các block được phép | `beat` | beat *(nhịp)* |
 | một ô thời gian trong timeline = một block + props + tone | `scene` | cảnh |
 | biến thể màu theo cảnh, đổi nền lẫn màu nhấn cùng lúc | `tone` | tone |

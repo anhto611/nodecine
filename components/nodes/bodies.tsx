@@ -9,7 +9,7 @@ import { Icon } from '@/components/icons';
 import { useInputPayload, useNode, useRuntime, useStudio } from '@/store/useStudio';
 import { findProvider, providersOfKind } from '@/providers/installed';
 import { AiDirectorBody } from './AiDirectorBody';
-import { BlockBody, StageBody, useWiredLook } from './LookBody';
+import { BlocksBody, StageBody, useWiredLook } from './LookBody';
 import { GithubFetcherBody } from './GithubFetcherBody';
 
 export type BodyProps = { nodeId: string };
@@ -349,7 +349,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/github-fetcher': GithubFetcherBody,
   'core/static-script': StaticScriptBody,
   'core/stage': StageBody,
-  'core/block': BlockBody,
+  'core/blocks': BlocksBody,
   'core/ai-director': AiDirectorBody,
   'core/llm-provider': LlmProviderBody,
   'core/tts-provider': TtsProviderBody,

@@ -1,11 +1,11 @@
-import { BlockDefSchema, type BlockDef } from '../types/payloads';
+import { BlockSetSchema, type BlockDef, type BlockSet } from '../types/payloads';
 import type { NodeDefinition } from './definition';
 
 /**
- * A block (CORE_CONTRACTS §5.10, payload §2.7): one scene archetype, carried as data. The node's parameters *are*
- * the definition — id, what the model may write, how to explain it, how to draw it — so a workflow
- * that contains this node contains the look of its scenes, and a template file is complete on its
- * own. Wire several into the AI Director's `blocks` port and that is the catalogue it may pick from.
+ * The Blocks node (CORE_CONTRACTS §5.10): one node carries a whole catalogue of blocks, each a scene
+ * archetype (payload §2.7) — id, what the model may write, how to explain it, how to draw it. A
+ * workflow usually has one; wire several into the AI Director's `blocks` port and the catalogue is
+ * their union. The node's parameters *are* the definitions, so a template file is complete on its own.
  *
  * Code convention (shared with the stage, honoured by each engine's one generic renderer):
  * an HTML fragment with an inline `<style>`; text props bind to elements by `data-prop="name"`;
@@ -13,7 +13,7 @@ import type { NodeDefinition } from './definition';
  * scene's start. No network, no `repeat: -1` — the renderer seeks the timeline by absolute time.
  */
 
-export const BLOCK = 'core/block';
+export const BLOCKS = 'core/blocks';
 
 export const DEFAULT_BLOCK: BlockDef = {
   id: 'text-card',
@@ -60,14 +60,16 @@ export const DEFAULT_BLOCK: BlockDef = {
   },
 };
 
-export const block: NodeDefinition<typeof BlockDefSchema> = {
-  type: BLOCK,
+export const DEFAULT_BLOCKS: BlockSet = { blocks: [DEFAULT_BLOCK] };
+
+export const blocks: NodeDefinition<typeof BlockSetSchema> = {
+  type: BLOCKS,
   version: 1,
   namespace: 'core',
   kind: 'source',
   inputs: [],
-  outputs: [{ name: 'block', type: 'BlockDef' }],
-  paramsSchema: BlockDefSchema,
-  defaultParams: DEFAULT_BLOCK,
-  run: async ({ params }) => ({ block: params }),
+  outputs: [{ name: 'blocks', type: 'BlockSet' }],
+  paramsSchema: BlockSetSchema,
+  defaultParams: DEFAULT_BLOCKS,
+  run: async ({ params }) => ({ blocks: params }),
 };

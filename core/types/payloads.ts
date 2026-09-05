@@ -47,6 +47,16 @@ export const BlockDefSchema = z.object({
 });
 export type BlockDef = z.infer<typeof BlockDefSchema>;
 
+/** What travels on a `BlockSet` port: the blocks of one Blocks node, ids unique within the node. */
+export const BlockSetSchema = z.object({ blocks: z.array(BlockDefSchema).min(1) }).superRefine((v, ctx) => {
+  const seen = new Set<string>();
+  v.blocks.forEach((b, i) => {
+    if (seen.has(b.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['blocks', i, 'id'], message: `block id "${b.id}" is used twice` });
+    seen.add(b.id);
+  });
+});
+export type BlockSet = z.infer<typeof BlockSetSchema>;
+
 /** The persistent shell every scene plays on; one per workflow (CORE_CONTRACTS §2.6). */
 export const StageDefSchema = z.object({
   id: z.string().regex(SLUG).max(60),
@@ -170,5 +180,5 @@ export const PAYLOAD_SCHEMAS = {
   LLMRef: LLMRefSchema,
   TTSRef: TTSRefSchema,
   StageDef: StageDefSchema,
-  BlockDef: BlockDefSchema,
+  BlockSet: BlockSetSchema,
 } as const;

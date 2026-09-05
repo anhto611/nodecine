@@ -1,6 +1,6 @@
 # GitHub Repo Showcase
 
-Bản mẫu đầu tiên có mô hình ngôn ngữ, và là bằng chứng rằng khung lõi chạy được với dữ liệu thật. Mọi thứ của nó là node lõi: Truy Xuất Repo lấy dữ kiện, Đạo Diễn AI viết, một node Stage và sáu node Block mang giao diện; tham số ghi trong `templates/github-showcase.json`. Đồ thị 17 node cho ra video khoảng một phút, mười cảnh: hook, tổng quan, ba tính năng, cài đặt, con số, hai cảnh đối tượng, kêu gọi.
+Bản mẫu đầu tiên có mô hình ngôn ngữ, và là bằng chứng rằng khung lõi chạy được với dữ liệu thật. Mọi thứ của nó là node lõi: Truy Xuất Repo lấy dữ kiện, Đạo Diễn AI viết, một node Stage và một node Blocks với sáu block mang giao diện; tham số ghi trong `templates/github-showcase.json`. Đồ thị 12 node cho ra video khoảng một phút, mười cảnh: hook, tổng quan, ba tính năng, cài đặt, con số, hai cảnh đối tượng, kêu gọi.
 
 Thứ tự triển khai: gói này thuộc **Pha B**, chỉ bắt đầu sau khi Pha A (khung lõi với Kịch Bản Tĩnh) đã qua nghiệm thu. Xem Tài liệu Yêu cầu Sản phẩm mục 4.8.
 
@@ -74,7 +74,7 @@ Gọi GitHub REST API ẩn danh, hạn mức theo địa chỉ IP; đặt `GITHU
 
 ## 3. Đạo Diễn — là node lõi, cấu hình bằng dữ liệu
 
-Không có node đạo diễn riêng cho GitHub. Bản mẫu dùng `core/ai-director` (Hợp đồng Lõi §5.8) với stage `developer-dark`, ba node Block `hook/mockup/cta` nối vào cổng `blocks`, và ba beat với ba ràng buộc dữ kiện:
+Không có node đạo diễn riêng cho GitHub. Bản mẫu dùng `core/ai-director` (Hợp đồng Lõi §5.8) với stage `developer-dark`, một node Blocks nối vào cổng `blocks`, và ba beat với ba ràng buộc dữ kiện:
 
 | Slot | Kiểu cảnh | Trọng số | Ràng buộc |
 |---|---|---|---|
@@ -86,7 +86,7 @@ Không có node đạo diễn riêng cho GitHub. Bản mẫu dùng `core/ai-dire
 
 ## 4. Stage và Block
 
-Giao diện là sáu node Block và một node Stage trong JSON của bản mẫu, không có code nào ngoài đồ thị. Stage `developer-dark`: nền tối, JetBrains Mono, bốn tone `violet/green/amber/pink` đổi màu nhấn theo cảnh, trường `kicker`. Mỗi block có bảng `props` (mô hình viết những prop không ràng buộc), `doc.when` để mô hình biết khi nào dùng, và code HTML/GSAP; props ràng buộc từ dữ kiện khai `required: false` để bản kế hoạch hợp lệ trước khi Đóng Gói Timeline đè vào.
+Giao diện là một node Blocks (sáu block) và một node Stage trong JSON của bản mẫu, không có code nào ngoài đồ thị. Stage `developer-dark`: nền tối, JetBrains Mono, bốn tone `violet/green/amber/pink` đổi màu nhấn theo cảnh, trường `kicker`. Mỗi block có bảng `props` (mô hình viết những prop không ràng buộc), `doc.when` để mô hình biết khi nào dùng, và code HTML/GSAP; props ràng buộc từ dữ kiện khai `required: false` để bản kế hoạch hợp lệ trước khi Đóng Gói Timeline đè vào.
 
 - `hook`: `headline`, `subline`, `badgeText`, và `stars` (đè từ dữ kiện). Tiêu đề in hoa, nhãn xu hướng, huy hiệu sao; không có `stars` thì huy hiệu biến mất nhờ `data-if`.
 - `mockup`: `headline`, `featureHighlights` (đúng ba dòng), `installCommand` và `repoName` (đè từ dữ kiện). Cửa sổ terminal với lệnh cài và ba dòng tính năng.

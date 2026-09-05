@@ -65,6 +65,7 @@ nodecine/
 │     ├─ providers/probe/route.ts Kiểm tra sẵn sàng cho các node tài nguyên
 │     ├─ media/[...path]/route.ts Phục vụ tệp trong thư mục tệp tạm, chỉ đọc
 │     ├─ vendor/[name]/route.ts   Hai script vendor trình phát HyperFrames inline: gsap và runtime, đọc từ node_modules
+│     ├─ workflows/               Tệp workflow của người dùng: danh sách, lưu, đọc, đổi tên, xóa, và đọc workflow từ MP4
 │     └─ render/route.ts          Kết xuất MP4 và báo tiến độ
 ├─ core/                          Tầng lõi, không phụ thuộc React và engine
 │  ├─ types/                      Kiểu cổng, lược đồ dữ liệu, Bản đặc tả IR
@@ -103,6 +104,8 @@ nodecine/
 ├─ server/                        Phần chỉ chạy trên máy chủ, không React
 │  ├─ register.ts                 Đăng ký node, nhà cung cấp, engine, thao tác máy chủ một lần cho mọi route
 │  ├─ services.server.ts          NodeServices không cần trình duyệt: cùng việc với các API route, cho CLI, job và test đầu-cuối
+│  ├─ workflows.ts                Kho tệp workflow .nodecine/workflows, ghi nguyên tử, tự nâng phiên bản khi đọc
+│  ├─ video-meta.ts               Thẻ nodecine_workflow trong MP4: ghi bằng ffmpeg stream copy, đọc bằng ffprobe
 │  ├─ paths.ts                    Thư mục tệp tạm và tên tệp media băm
 │  └─ github/fetch-repo.ts        Thao tác máy chủ github-fetch-repo: gọi GitHub API, dựng URL từ owner/name đã kiểm định
 ├─ templates/                     Bản mẫu = đồ thị JSON, cùng hình dạng tệp dự án; index.ts đăng ký cả ba

@@ -6,16 +6,28 @@ import type { NodeRuntime } from '@/core/engine/state';
 import { RunHistory, type RunRecord } from '@/core/engine/history';
 import { getNodeType } from '@/core/nodes/definition';
 import staticScriptJson from '@/templates/static-script.json';
-import { _resetTemplates, getTemplate, listTemplates, registerTemplate, templateGraph, type TemplateDefinition } from '@/core/templates/registry';
+import { getTemplate, templateGraph, type TemplateDefinition, localized } from '@/core/templates/registry';
 import type { VideoIR } from '@/core/types/ir';
 import type { EngineRef } from '@/core/types/payloads';
 import { clientServices } from '@/lib/services.client';
 import { bootstrapClient } from '@/lib/bootstrap.client';
-import { loadUserTemplates, saveUserTemplates, loadProject, loadUiPrefs, saveProject, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
+import { loadUserTemplates, saveUserTemplates, loadProject, loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
+import { workflowsApi } from '@/lib/workflows.client';
+import { provideWorkflowForRenders } from '@/lib/services.client';
 import type { Locale } from '@/lib/i18n';
 
-export type Panel = 'library' | 'history' | null;
-/** A registered template id (core/templates/registry) or 'blank'. */
+export type Panel = 'workflows' | 'library' | 'history' | null;
+
+/** One open workflow: a saved file, a template just opened, or a draft that has never been saved. */
+export interface WorkflowTab {
+  key: string;
+  /** The file on the server this tab is, or null for a draft. */
+  fileId: string | null;
+  name: string;
+  graph: Graph;
+  dirty: boolean;
+}
+/** A registered template id (core/templates/registry). */
 export type TemplateId = string;
 
 export interface StudioState {
@@ -30,19 +42,26 @@ export interface StudioState {
   logTick: number;
   unreadErrors: number;
   projectName: string;
+  tabs: WorkflowTab[];
+  activeTab: string;
   locale: Locale;
   panel: Panel;
   logsOpen: boolean;
   templatesOpen: boolean;
   /** Bumped whenever the template list changes, so the browser re-reads the registry. */
-  templatesTick: number;
+  /** Bumps whenever a workflow file changes, so lists re-read the directory. */
+  workflowsTick: number;
   settingsOpen: boolean;
+  /** The stage node, or one block of a Blocks node, open in the code editor. */
+  codeEditor: { nodeId: string; blockIndex?: number } | null;
   selectedNodeId: string | null;
   executor: Executor | null;
 
   init(): void;
   setParams(nodeId: string, patch: Record<string, unknown>): void;
   setNodePosition(nodeId: string, position: { x: number; y: number }): void;
+  /** Many at once, for auto-layout; one persist, one dirty mark. */
+  setNodePositions(positions: Record<string, { x: number; y: number }>): void;
   addNode(type: string, position: { x: number; y: number }): string;
   removeNodes(ids: string[]): void;
   removeEdges(ids: string[]): void;
@@ -53,10 +72,20 @@ export interface StudioState {
   runNode(nodeId: string): Promise<void>;
   loadTemplate(id: TemplateId): void;
   /** Package the current graph as a template the browser lists and a file that can be shared. */
-  saveAsTemplate(meta: { name: string; description?: string }): TemplateDefinition;
+  /** Tab bar, ComfyUI-style. */
+  newWorkflow(): void;
+  openWorkflow(fileId: string): Promise<void>;
+  activateTab(key: string): void;
+  closeTab(key: string): void;
+  /** Saves the active tab to its file; a draft has no file and reports `needs-name`. */
+  saveWorkflow(): Promise<'saved' | 'needs-name'>;
+  saveWorkflowAs(name: string): Promise<void>;
+  renameWorkflow(id: string, name: string): Promise<void>;
+  deleteWorkflow(id: string): Promise<void>;
   /** Add a template from JSON text; returns a message when it is not one, else null. */
-  importTemplate(json: string): string | null;
-  removeUserTemplate(id: string): void;
+  /** Imports a workflow file, or the workflow a NodeCine MP4 carries; returns why it failed, or null. */
+  importWorkflow(json: string): Promise<string | null>;
+  importWorkflowVideo(file: File): Promise<string | null>;
   viewRun(seq: number | null): void;
   setLocale(locale: Locale): void;
   setProjectName(name: string): void;
@@ -64,13 +93,9 @@ export interface StudioState {
   toggleLogs(): void;
   setTemplatesOpen(open: boolean): void;
   setSettingsOpen(open: boolean): void;
+  setCodeEditor(target: { nodeId: string; blockIndex?: number } | null): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
-}
-
-function _rebuildTemplates(keep: TemplateDefinition[]): void {
-  _resetTemplates();
-  for (const t of keep) registerTemplate(t);
 }
 
 let uid = 0;
@@ -79,9 +104,27 @@ const newId = (type: string) => `${type.split('/')[1] ?? 'node'}-${Date.now().to
 export const useStudio = create<StudioState>((set, get) => {
   const history = new RunHistory(20);
 
+  let tabSeq = 0;
+  const tabKey = () => `tab-${Date.now().toString(36)}-${(tabSeq++).toString(36)}`;
   const persist = () => {
-    const { graph, projectName } = get();
-    saveProject({ schemaVersion: PROJECT_SCHEMA_VERSION, name: projectName, graph });
+    const { tabs, activeTab } = get();
+    saveTabs({ schemaVersion: PROJECT_SCHEMA_VERSION, active: activeTab, tabs });
+  };
+  /** Swap the canvas to a tab's graph: executor, validation, runtimes, name. */
+  const showTab = (tab: WorkflowTab) => {
+    const ex = get().executor;
+    ex?.setGraph(tab.graph);
+    const runtimes: Record<string, NodeRuntime> = {};
+    if (ex) for (const [id, rt] of ex.runtimes_()) runtimes[id] = rt;
+    set({ activeTab: tab.key, graph: tab.graph, projectName: tab.name, issues: validateGraph(tab.graph), runtimes, viewingRun: null, selectedNodeId: null });
+    persist();
+    void ex?.probeResources();
+  };
+  const addTab = (tab: Omit<WorkflowTab, 'key'>) => {
+    const full: WorkflowTab = { key: tabKey(), ...tab };
+    set({ tabs: [...get().tabs, full] });
+    showTab(full);
+    return full;
   };
   const persistUi = () => {
     const { locale, panel, logsOpen } = get();
@@ -92,7 +135,8 @@ export const useStudio = create<StudioState>((set, get) => {
     ex?.setGraph(graph);
     const runtimes: Record<string, NodeRuntime> = {};
     if (ex) for (const [id, rt] of ex.runtimes_()) runtimes[id] = rt;
-    set({ graph, issues: validateGraph(graph), runtimes });
+    const { tabs, activeTab } = get();
+    set({ graph, issues: validateGraph(graph), runtimes, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, graph, dirty: true } : t)) });
     persist();
   };
 
@@ -108,22 +152,34 @@ export const useStudio = create<StudioState>((set, get) => {
     logTick: 0,
     unreadErrors: 0,
     projectName: 'nodecine-project',
+    tabs: [],
+    activeTab: '',
     locale: 'en',
     panel: null,
     logsOpen: false,
     templatesOpen: false,
-    templatesTick: 0,
+    workflowsTick: 0,
     settingsOpen: false,
+    codeEditor: null,
     selectedNodeId: null,
     executor: null,
 
     init() {
       if (get().ready) return;
       bootstrapClient();
-      const saved = loadProject();
       const prefs = loadUiPrefs();
-      // First open with nothing saved: the core template, as data, so no registry has to be ready yet.
-      const graph = saved?.graph ?? (structuredClone(staticScriptJson.graph) as Graph);
+      // The tabs that were open, or the single project an older build saved, or a first open: the
+      // core template as data, so no registry has to be ready yet.
+      const stored = loadTabs();
+      const saved = stored ? null : loadProject();
+      const tabs: WorkflowTab[] = stored?.tabs.length
+        ? stored.tabs
+        : saved
+          ? [{ key: tabKey(), fileId: null, name: saved.name, graph: saved.graph, dirty: true }]
+          : [{ key: tabKey(), fileId: null, name: 'Static Script', graph: structuredClone(staticScriptJson.graph) as Graph, dirty: false }];
+      const active = tabs.find((t) => t.key === stored?.active) ?? tabs[0]!;
+      const graph = active.graph;
+      provideWorkflowForRenders(() => ({ name: get().projectName, graph: get().graph }));
       const executor = new Executor(graph, clientServices, {
         onStateChange: (nodeId, runtime) => set((s) => ({ runtimes: { ...s.runtimes, [nodeId]: runtime } })),
         onRunStart: ({ stepTotal }) => set({ running: true, step: { nodeId: '', step: 0, total: stepTotal }, viewingRun: null }),
@@ -147,7 +203,9 @@ export const useStudio = create<StudioState>((set, get) => {
         ready: true,
         executor,
         graph,
-        projectName: saved?.name ?? 'nodecine-project',
+        projectName: active.name,
+        tabs,
+        activeTab: active.key,
         locale: prefs.locale ?? 'en',
         panel: prefs.panel ?? null,
         logsOpen: prefs.logsOpen ?? false,
@@ -157,6 +215,65 @@ export const useStudio = create<StudioState>((set, get) => {
       for (const [id, rt] of executor.runtimes_()) runtimes[id] = rt;
       set({ runtimes });
       void executor.probeResources();
+      persist();
+      // Whatever an older build left in localStorage moves to the server once, then the key is cleared.
+      void (async () => {
+        const leftovers = loadUserTemplates();
+        if (!leftovers.length) return;
+        for (const t of leftovers) await workflowsApi.save(t as TemplateDefinition).catch(() => undefined);
+        saveUserTemplates([]);
+        set({ workflowsTick: get().workflowsTick + 1 });
+      })();
+    },
+
+    newWorkflow() {
+      const n = get().tabs.filter((t) => t.fileId === null).length + 1;
+      addTab({ fileId: null, name: `Untitled ${n}`, graph: { nodes: [], edges: [] }, dirty: false });
+    },
+
+    async openWorkflow(fileId) {
+      const open = get().tabs.find((t) => t.fileId === fileId);
+      if (open) { showTab(open); return; }
+      const def = await workflowsApi.read(fileId).catch(() => null);
+      if (!def) return;
+      addTab({ fileId, name: localized(def.name, get().locale, fileId), graph: structuredClone(def.graph), dirty: false });
+    },
+
+    activateTab(key) {
+      const tab = get().tabs.find((t) => t.key === key);
+      if (tab && tab.key !== get().activeTab) showTab(tab);
+    },
+
+    closeTab(key) {
+      const { tabs, activeTab } = get();
+      const i = tabs.findIndex((t) => t.key === key);
+      if (i < 0) return;
+      const rest = tabs.filter((t) => t.key !== key);
+      set({ tabs: rest });
+      if (rest.length === 0) { get().newWorkflow(); return; }
+      if (activeTab === key) showTab(rest[Math.min(i, rest.length - 1)]!);
+      else persist();
+    },
+
+    async saveWorkflow() {
+      const tab = get().tabs.find((t) => t.key === get().activeTab);
+      if (!tab) return 'saved';
+      if (!tab.fileId) return 'needs-name';
+      const existing = await workflowsApi.read(tab.fileId).catch(() => null);
+      await workflowsApi.replace(tab.fileId, { name: tab.name, ...(existing?.description ? { description: existing.description } : {}), graph: tab.graph });
+      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, dirty: false } : t)), workflowsTick: get().workflowsTick + 1 });
+      persist();
+      return 'saved';
+    },
+
+    async saveWorkflowAs(name) {
+      const tab = get().tabs.find((t) => t.key === get().activeTab);
+      if (!tab || !name.trim()) return;
+      const base = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workflow';
+      const id = `${base}-${Date.now().toString(36)}`;
+      await workflowsApi.save({ id, name: name.trim(), graph: structuredClone(tab.graph) });
+      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, fileId: id, name: name.trim(), dirty: false } : t)), projectName: name.trim(), workflowsTick: get().workflowsTick + 1 });
+      persist();
     },
 
     setParams(nodeId, patch) {
@@ -168,12 +285,17 @@ export const useStudio = create<StudioState>((set, get) => {
       refresh(next);
     },
 
-    setNodePosition(nodeId, position) {
+    setNodePositions(positions) {
       const graph = get().graph;
-      const next: Graph = { ...graph, nodes: graph.nodes.map((n) => (n.id === nodeId ? { ...n, position } : n)) };
-      set({ graph: next });
+      const next: Graph = { ...graph, nodes: graph.nodes.map((n) => (positions[n.id] ? { ...n, position: positions[n.id]! } : n)) };
+      const { tabs, activeTab } = get();
+      set({ graph: next, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, graph: next, dirty: true } : t)) });
       get().executor?.setGraph(next);
       persist();
+    },
+
+    setNodePosition(nodeId, position) {
+      get().setNodePositions({ [nodeId]: position });
     },
 
     addNode(type, position) {
@@ -260,22 +382,25 @@ export const useStudio = create<StudioState>((set, get) => {
       }
     },
 
-    saveAsTemplate(meta) {
-      const base = meta.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'template';
-      const id = `${base}-${Date.now().toString(36)}`;
-      const def = registerTemplate({
-        id,
-        name: meta.name.trim(),
-        ...(meta.description?.trim() ? { description: meta.description.trim() } : {}),
-        category: 'mine',
-        graph: structuredClone(get().graph),
-      });
-      saveUserTemplates([...loadUserTemplates(), def]);
-      set({ templatesTick: get().templatesTick + 1 });
-      return def;
+    async renameWorkflow(id, name) {
+      if (!name.trim()) return;
+      const def = await workflowsApi.read(id).catch(() => null);
+      if (!def) return;
+      await workflowsApi.replace(id, { name: name.trim(), ...(def.description ? { description: def.description } : {}), graph: def.graph });
+      const { tabs, activeTab } = get();
+      const next = tabs.map((t) => (t.fileId === id ? { ...t, name: name.trim() } : t));
+      set({ tabs: next, workflowsTick: get().workflowsTick + 1, projectName: next.find((t) => t.key === activeTab)?.name ?? get().projectName });
+      persist();
     },
 
-    importTemplate(json) {
+    async deleteWorkflow(id) {
+      await workflowsApi.remove(id).catch(() => undefined);
+      // A tab that was this file goes on as a draft; nothing on the canvas is lost.
+      set({ tabs: get().tabs.map((t) => (t.fileId === id ? { ...t, fileId: null, dirty: true } : t)), workflowsTick: get().workflowsTick + 1 });
+      persist();
+    },
+
+    async importWorkflow(json) {
       let parsed: unknown;
       try {
         parsed = JSON.parse(json);
@@ -283,31 +408,34 @@ export const useStudio = create<StudioState>((set, get) => {
         return 'not JSON';
       }
       try {
-        const def = registerTemplate({ ...(parsed as object), category: 'mine' });
-        saveUserTemplates([...loadUserTemplates().filter((t) => (t as { id?: string }).id !== def.id), def]);
-        set({ templatesTick: get().templatesTick + 1 });
+        const def = parsed as TemplateDefinition;
+        const saved = await workflowsApi.save({ ...def, id: `${def.id ?? 'workflow'}-${Date.now().toString(36)}`.slice(0, 64), category: 'mine' });
+        set({ workflowsTick: get().workflowsTick + 1 });
+        await get().openWorkflow(saved.id);
         return null;
       } catch (e) {
         return e instanceof Error ? e.message : String(e);
       }
     },
 
-    removeUserTemplate(id) {
-      saveUserTemplates(loadUserTemplates().filter((t) => (t as { id?: string }).id !== id));
-      // The registry has no remove: rebuild it from what is left, keeping the shipped ones.
-      const keep = listTemplates().filter((t) => t.id !== id);
-      _rebuildTemplates(keep);
-      set({ templatesTick: get().templatesTick + 1 });
+    async importWorkflowVideo(file) {
+      try {
+        const fromVideo = await workflowsApi.fromVideo(file);
+        const saved = await workflowsApi.save({ ...fromVideo, id: `${fromVideo.id}-${Date.now().toString(36)}`.slice(0, 64), category: 'mine' });
+        set({ workflowsTick: get().workflowsTick + 1 });
+        await get().openWorkflow(saved.id);
+        return null;
+      } catch (e) {
+        return e instanceof Error ? e.message : String(e);
+      }
     },
 
     loadTemplate(id) {
-      const def = id === 'blank' ? undefined : getTemplate(id);
-      const graph = def ? templateGraph(def) : { nodes: [], edges: [] };
-      const executor = get().executor;
-      executor?.setGraph(graph);
-      refresh(graph);
-      set({ templatesOpen: false, viewingRun: null });
-      void executor?.probeResources();
+      set({ templatesOpen: false });
+      const def = getTemplate(id);
+      if (!def) return;
+      // A shipped template opens as a fresh draft named after it; saving makes it the user's own file.
+      addTab({ fileId: null, name: localized(def.name, get().locale, id), graph: templateGraph(def), dirty: true });
     },
 
     viewRun(seq) {
@@ -319,7 +447,8 @@ export const useStudio = create<StudioState>((set, get) => {
       persistUi();
     },
     setProjectName(name) {
-      set({ projectName: name });
+      const { tabs, activeTab } = get();
+      set({ projectName: name, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, name, dirty: true } : t)) });
       persist();
     },
     setPanel(panel) {
@@ -333,6 +462,10 @@ export const useStudio = create<StudioState>((set, get) => {
     setTemplatesOpen(open) {
       set({ templatesOpen: open });
     },
+    setCodeEditor(target) {
+      set({ codeEditor: target });
+    },
+
     setSettingsOpen(open) {
       set({ settingsOpen: open });
     },

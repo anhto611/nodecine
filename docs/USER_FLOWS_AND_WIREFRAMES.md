@@ -29,8 +29,9 @@ Thanh điều hướng chỉ giữ những gì phải luôn nhìn thấy. Mọi 
 
 Cửa sổ dạng modal theo mô hình trình duyệt workflow của ComfyUI, mở từ tab "Bản mẫu" ở đầu dải trái.
 
-- Đầu cửa sổ: tiêu đề, một dòng phụ, ô tìm kiếm theo tên, nút đóng.
-- Cột bên trái: danh sách danh mục kèm số lượng bản mẫu trong mỗi danh mục. Gồm "Tất cả" và bốn nhóm: Tech & Product, Faceless Content, Commerce & Ads, Dữ liệu & Tài chính. Cuối cột là mục "Canvas trống".
+- Dưới header là **thanh tab workflow** theo ComfyUI: mỗi workflow đang mở một tab (dấu • khi chưa lưu, nút đóng hỏi một lần nếu chưa lưu), nút + mở bản nháp mới, bên phải là *Workflow*, *Lưu* (Ctrl+S) và *Lưu thành…* (Ctrl+Shift+S, hỏi tên ngay trên thanh). Mở một bản mẫu ship kèm là mở một bản nháp mang tên nó.
+- Trình duyệt bản mẫu chỉ liệt kê bản mẫu kèm app; không có nút lưu hay nhập ở đây. Workflow của người dùng nằm ở **panel Workflow** (dải trái, phím W): phần *Đang mở* và phần *Đã lưu* là tệp trong `.nodecine/workflows`, mỗi tệp có Mở, Đổi tên, Tải JSON, Xóa; nút *Nhập JSON / MP4* ở đầu panel. Kéo một tệp JSON hoặc một MP4 do NodeCine kết xuất vào canvas cũng là nhập, và mở luôn thành tab.
+- Cột bên trái: danh sách danh mục kèm số lượng bản mẫu trong mỗi danh mục. Gồm "Tất cả" và bốn nhóm: Tech & Product, Faceless Content, Commerce & Ads, Dữ liệu & Tài chính. Không có mục "Canvas trống": nút + trên thanh tab workflow mở bản nháp trống.
 - Vùng chính: lưới thẻ ba cột. Mỗi thẻ gồm ảnh xem trước dạng khung dọc 9:16 thu nhỏ, tên bản mẫu, một câu mô tả, và dòng thông số gồm số node cùng tỷ lệ khung hình và tốc độ khung hình.
 - Danh sách bản mẫu theo danh mục:
   - Lõi: Kịch Bản Tĩnh.
@@ -73,10 +74,10 @@ Khung phát trong node có bốn trạng thái loại trừ lẫn nhau, và giao
 
 Theo mô hình dải icon dọc của ComfyUI, nằm ở mép trái ngay dưới thanh điều hướng.
 
-- Dải icon rộng 44 pixel. Từ trên xuống: Bản mẫu, Thư viện node, Lịch sử chạy, Nhật ký; một khoảng trống co giãn; rồi Cài đặt ghim ở đáy dải, đúng vị trí bánh răng của ComfyUI. Tab đang mở có vạch màu thương hiệu ở mép trái và biểu tượng sáng lên. Tab Nhật ký hiện thêm một chấm đỏ khi có lỗi mới chưa xem; tab Cài đặt hiện chấm vàng khi một node tài nguyên báo chưa sẵn sàng vì thiếu đường dẫn tệp thực thi.
+- Dải rộng 64 pixel, mỗi nút là biểu tượng với chữ ngắn bên dưới. Từ trên xuống: Bản mẫu, Workflow, Node, Lịch sử; một khoảng trống co giãn; rồi Cài đặt ghim ở đáy dải, đúng vị trí bánh răng của ComfyUI. Nút đang mở có vạch màu thương hiệu ở mép trái và biểu tượng sáng lên. Nhật ký không nằm ở dải này: nút bật tắt của nó ở dải trạng thái dưới canvas (mục 1.7), đúng chỗ panel mở ra.
 - Tab Bản mẫu và tab Cài đặt không mở panel bên trái mà mở cửa sổ modal tương ứng, vì nội dung của chúng cần bề ngang.
 - Bấm tab Thư viện node hoặc Lịch sử chạy mở một panel rộng 280 pixel trượt ra bên phải dải; bấm lại tab đó, bấm nút đóng ở đầu panel, hoặc nhấn `Esc` để đóng. Chỉ một panel mở tại một thời điểm. Canvas co lại tương ứng và không tự căn giữa lại đồ thị, để người dùng không mất vị trí đang xem.
-- Tab Nhật ký không mở panel bên trái mà bật tắt Panel Nhật ký ở đáy màn hình, mô tả ở mục 1.7.
+- Dải trạng thái dưới canvas (24 pixel): bên trái nút Nhật ký với số lỗi chưa xem và mũi tên chỉ trạng thái mở/đóng; bên phải số node, số dây và số lỗi của đồ thị.
 
 Thư viện node (Node Library):
 
@@ -104,7 +105,7 @@ Cài đặt (mở từ tab ở đáy dải):
 - Đầu panel: tiêu đề, bộ lọc theo node dạng chip, ô tìm trong nhật ký, nút "Sao chép toàn bộ", nút "Xóa", nút đóng.
 - Thân panel: các dòng nhật ký theo thứ tự thời gian, font đơn cách. Mỗi dòng gồm mốc thời gian chính xác tới mili giây, tên node phát sinh với màu theo trạng thái của node, và thông điệp. Dòng lỗi mang mã lỗi ổn định từ bảng mã lỗi tại Đặc tả Bộ Máy Thực Thi mục 6, để người dùng sao chép nguyên văn khi báo lỗi.
 - Trong lúc kết xuất MP4, nhật ký kết xuất Remotion được đưa thẳng vào đây theo thời gian thực, song song với thanh tiến độ trên thân Node Xuất MP4.
-- Panel không tự bật khi có lỗi, để không cướp không gian làm việc. Lỗi mới chỉ báo bằng chấm đỏ trên tab Nhật ký ở dải trái.
+- Panel không tự bật khi có lỗi, để không cướp không gian làm việc. Lỗi mới chỉ báo bằng số đỏ trên nút Nhật ký ở dải trạng thái.
 - Nhật ký chỉ tồn tại trong phiên, tối đa 2.000 dòng, dòng cũ nhất bị đẩy ra.
 
 ### 1.8. Node Tài Nguyên và Node Xuất MP4 (Resource Nodes & Export Node)

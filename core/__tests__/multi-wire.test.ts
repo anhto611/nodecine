@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import { validateGraph, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { block, stage } from '../nodes';
+import { blocks, stage } from '../nodes';
 import { makeFakeServices } from './fakes';
 
 /**
  * A `multiple` port takes any number of wires and hands the packets to run() as a list, in edge
- * order. This is how the AI Director receives its block catalogue: one Block node per wire.
+ * order. This is how the AI Director receives its block catalogue: one Blocks node per wire.
  */
 const Params = z.object({});
 const collector: NodeDefinition<typeof Params> = {
@@ -18,20 +18,20 @@ const collector: NodeDefinition<typeof Params> = {
   kind: 'process',
   inputs: [
     { name: 'stage', type: 'StageDef' },
-    { name: 'blocks', type: 'BlockDef', multiple: true },
+    { name: 'blocks', type: 'BlockSet', multiple: true },
   ],
   outputs: [{ name: 'stage', type: 'StageDef' }],
   paramsSchema: Params,
   defaultParams: {},
   run: async ({ inputs, lists }) => {
-    const ids = (lists.blocks ?? []).map((p) => (p.payload as { id: string }).id);
+    const ids = (lists.blocks ?? []).flatMap((p) => (p.payload as { blocks: { id: string }[] }).blocks.map((b) => b.id));
     const st = inputs.stage!.payload as { name: string };
     return { stage: { ...(inputs.stage!.payload as object), name: `${st.name}:${ids.join('+')}` } };
   },
 };
 
 function blockNode(id: string, x: number) {
-  return { id, type: 'core/block', params: { ...block.defaultParams, id }, bypassed: false, position: { x, y: 0 } };
+  return { id, type: 'core/blocks', params: { blocks: [{ ...blocks.defaultParams.blocks[0]!, id }] }, bypassed: false, position: { x, y: 0 } };
 }
 
 function graph(): Graph {
@@ -45,9 +45,9 @@ function graph(): Graph {
     ],
     edges: [
       { id: 'e0', source: 'st', sourcePort: 'stage', target: 'col', targetPort: 'stage' },
-      { id: 'e1', source: 'b1', sourcePort: 'block', target: 'col', targetPort: 'blocks' },
-      { id: 'e2', source: 'b2', sourcePort: 'block', target: 'col', targetPort: 'blocks' },
-      { id: 'e3', source: 'b3', sourcePort: 'block', target: 'col', targetPort: 'blocks' },
+      { id: 'e1', source: 'b1', sourcePort: 'blocks', target: 'col', targetPort: 'blocks' },
+      { id: 'e2', source: 'b2', sourcePort: 'blocks', target: 'col', targetPort: 'blocks' },
+      { id: 'e3', source: 'b3', sourcePort: 'blocks', target: 'col', targetPort: 'blocks' },
     ],
   };
 }
@@ -56,7 +56,7 @@ describe('multiple-wire ports', () => {
   beforeEach(() => {
     _resetNodeRegistry();
     registerNodeType(stage as unknown as AnyNodeDefinition);
-    registerNodeType(block as unknown as AnyNodeDefinition);
+    registerNodeType(blocks as unknown as AnyNodeDefinition);
     registerNodeType(collector as unknown as AnyNodeDefinition);
   });
 
@@ -64,7 +64,7 @@ describe('multiple-wire ports', () => {
     const errors = (g: Graph) => validateGraph(g).filter((i) => i.severity === 'error');
     expect(errors(graph())).toEqual([]);
     const g = graph();
-    g.edges.push({ id: 'e4', source: 'b1', sourcePort: 'block', target: 'col', targetPort: 'stage' });
+    g.edges.push({ id: 'e4', source: 'b1', sourcePort: 'blocks', target: 'col', targetPort: 'stage' });
     expect(errors(g).some((i) => i.port === 'stage' && /more than one/.test(i.message))).toBe(true);
   });
 
@@ -97,7 +97,7 @@ describe('multiple-wire ports', () => {
     await ex.run();
     expect(ex.runtime('col').reused).toBe(true);
 
-    g.edges.push({ id: 'e3', source: 'b3', sourcePort: 'block', target: 'col', targetPort: 'blocks' });
+    g.edges.push({ id: 'e3', source: 'b3', sourcePort: 'blocks', target: 'col', targetPort: 'blocks' });
     ex.setGraph(g);
     await ex.run();
     expect(ex.runtime('col').reused).toBe(false);

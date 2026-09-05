@@ -11,6 +11,7 @@ import staticScriptJson from '@/templates/static-script.json';
  */
 
 type Node = Graph['nodes'][number];
+type BlockLike = { id: string } & Record<string, unknown>;
 type Edge = Graph['edges'][number];
 type OldSlot = { sceneType: string; weight?: number; count?: number; factBindings?: Record<string, string> };
 type OldScene = { sceneType: string; weight?: number; props?: Record<string, unknown> };
@@ -31,11 +32,12 @@ const STAGE_OF_THEME: Record<string, string> = {
 const shipped = [staticScriptJson, githubShowcaseJson, quoteCardsJson] as { graph: Graph }[];
 const lookNodes = (type: string) => shipped.flatMap((t) => t.graph.nodes.filter((n) => n.type === type));
 const shippedStage = (id: string) => lookNodes('core/stage').find((n) => (n.params as { id: string }).id === id) ?? lookNodes('core/stage')[0]!;
-const shippedBlock = (id: string) => lookNodes('core/block').find((n) => (n.params as { id: string }).id === id);
+const shippedBlocks = (): BlockLike[] => lookNodes('core/blocks').flatMap((n) => (n.params as { blocks: BlockLike[] }).blocks);
+const shippedBlock = (id: string) => shippedBlocks().find((b) => b.id === id);
 /** The stage the shipped templates pair with a block, for graphs that never had a theme. */
 const stageForBlocks = (ids: string[]): string => {
   const stageOf = (t: { graph: Graph }) => (t.graph.nodes.find((n) => n.type === 'core/stage')!.params as { id: string }).id;
-  const blocksOf = (t: { graph: Graph }) => t.graph.nodes.filter((n) => n.type === 'core/block').map((n) => (n.params as { id: string }).id);
+  const blocksOf = (t: { graph: Graph }) => t.graph.nodes.filter((n) => n.type === 'core/blocks').flatMap((n) => (n.params as { blocks: BlockLike[] }).blocks.map((b) => b.id));
   // The template that carries every block wins; otherwise the first that carries any of them.
   const all = shipped.find((t) => ids.every((id) => blocksOf(t).includes(id)));
   const any = shipped.find((t) => ids.some((id) => blocksOf(t).includes(id)));
@@ -108,12 +110,45 @@ export function migrateLookV4(graph: Graph): Graph {
     const stageNode: Node = { ...structuredClone(shippedStage(stageId)), id: `${n.id}-stage`, position: { x, y: n.position.y } };
     added.push(stageNode);
     edges.push({ id: `${n.id}-stage-e`, source: stageNode.id, sourcePort: 'stage', target: n.id, targetPort: 'stage' });
-    blockIds.forEach((id, i) => {
-      const src = shippedBlock(id) ?? { ...shippedBlock('text-card')!, params: { ...(shippedBlock('text-card')!.params as object), id } };
-      const blockNode: Node = { ...structuredClone(src), id: `${n.id}-block-${id}`, position: { x, y: n.position.y + 260 * (i + 1) } };
-      added.push(blockNode);
-      edges.push({ id: `${n.id}-block-${id}-e`, source: blockNode.id, sourcePort: 'block', target: n.id, targetPort: 'blocks' });
-    });
+    const defs = blockIds.map((id) => structuredClone(shippedBlock(id) ?? { ...shippedBlock('text-card')!, id }));
+    const blocksNode: Node = { id: `${n.id}-blocks`, type: 'core/blocks', params: { blocks: defs }, bypassed: false, position: { x, y: n.position.y + 260 } };
+    added.push(blocksNode);
+    edges.push({ id: `${n.id}-blocks-e`, source: blocksNode.id, sourcePort: 'blocks', target: n.id, targetPort: 'blocks' });
   }
   return { nodes: [...added, ...nodes], edges };
+}
+
+/**
+ * Version 6: one Block node per block became one Blocks node per catalogue. Block nodes that fed the
+ * same port of the same node merge into one Blocks node there; a Block node wired nowhere becomes a
+ * Blocks node of its own.
+ */
+export function migrateBlocksV6(graph: Graph): Graph {
+  const oldBlocks = graph.nodes.filter((n) => n.type === 'core/block');
+  if (!oldBlocks.length) return graph;
+  const groups = new Map<string, Node[]>();
+  for (const b of oldBlocks) {
+    const edge = graph.edges.find((e) => e.source === b.id);
+    const key = edge ? `${edge.target}:${edge.targetPort}` : `lone:${b.id}`;
+    groups.set(key, [...(groups.get(key) ?? []), b]);
+  }
+  const replaced = new Map<string, string>();
+  const nodes: Node[] = graph.nodes.filter((n) => n.type !== 'core/block');
+  for (const [key, members] of groups) {
+    const first = members[0]!;
+    const id = key.startsWith('lone:') ? first.id : `${key.split(':')[0]}-blocks`;
+    nodes.push({ id, type: 'core/blocks', params: { blocks: members.map((m) => m.params) }, bypassed: members.every((m) => m.bypassed), position: first.position });
+    for (const m of members) replaced.set(m.id, id);
+  }
+  const seen = new Set<string>();
+  const edges: Edge[] = [];
+  for (const e of graph.edges) {
+    const source = replaced.get(e.source);
+    if (!source) { edges.push(e); continue; }
+    const key = `${source}->${e.target}:${e.targetPort}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    edges.push({ ...e, id: `${source}-e-${e.target}`, source, sourcePort: 'blocks' });
+  }
+  return { nodes, edges };
 }

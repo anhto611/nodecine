@@ -4,11 +4,15 @@ import { useStudio } from '@/store/useStudio';
 import { Header } from './Header';
 import { Rail } from './Rail';
 import { Canvas } from './Canvas';
+import { WorkflowTabs } from './WorkflowTabs';
+import { StatusBar } from './StatusBar';
+import { WorkflowsPanel } from './panels/WorkflowsPanel';
 import { LibraryPanel } from './panels/LibraryPanel';
 import { HistoryPanel } from './panels/HistoryPanel';
 import { LogsPanel } from './panels/LogsPanel';
 import { TemplateBrowser } from './panels/TemplateBrowser';
 import { SettingsDialog } from './panels/SettingsDialog';
+import { CodeEditorDialog } from './panels/CodeEditorDialog';
 
 /** Studio shell: header, rail, optional left panel, canvas, optional bottom logs, modals. */
 export const Studio: React.FC = () => {
@@ -18,6 +22,7 @@ export const Studio: React.FC = () => {
   const logsOpen = useStudio((s) => s.logsOpen);
   const templatesOpen = useStudio((s) => s.templatesOpen);
   const settingsOpen = useStudio((s) => s.settingsOpen);
+  const codeEditor = useStudio((s) => s.codeEditor);
 
   React.useEffect(() => {
     init();
@@ -39,8 +44,9 @@ export const Studio: React.FC = () => {
       if (mod && e.key.toLowerCase() === 'j') { e.preventDefault(); s.toggleLogs(); return; }
       if (mod && e.key === ',') { e.preventDefault(); s.setSettingsOpen(true); return; }
       if (mod && e.key.toLowerCase() === 'b' && s.selectedNodeId) { e.preventDefault(); s.toggleBypass(s.selectedNodeId); return; }
-      if (e.key === 'Escape') { s.setTemplatesOpen(false); s.setSettingsOpen(false); if (s.panel) s.setPanel(s.panel); return; }
+      if (e.key === 'Escape') { s.setTemplatesOpen(false); s.setSettingsOpen(false); s.setCodeEditor(null); if (s.panel) s.setPanel(s.panel); return; }
       if (inField || mod) return;
+      if (e.key.toLowerCase() === 'w') s.setPanel('workflows');
       if (e.key.toLowerCase() === 'n') s.setPanel('library');
       if (e.key.toLowerCase() === 'h') s.setPanel('history');
       if (e.key.toLowerCase() === 't') s.setTemplatesOpen(true);
@@ -53,17 +59,21 @@ export const Studio: React.FC = () => {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Header />
+      <WorkflowTabs />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <Rail />
+        {panel === 'workflows' && <WorkflowsPanel />}
         {panel === 'library' && <LibraryPanel />}
         {panel === 'history' && <HistoryPanel />}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
           <Canvas />
+          <StatusBar />
           {logsOpen && <LogsPanel />}
         </div>
       </div>
       {templatesOpen && <TemplateBrowser />}
       {settingsOpen && <SettingsDialog />}
+      {codeEditor && <CodeEditorDialog />}
     </div>
   );
 };

@@ -39,7 +39,7 @@ describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
     const id = (process.env.NODECINE_MANUAL_TEMPLATE ?? 'static-script') as keyof typeof TEMPLATES;
     const nodes = TEMPLATES[id].graph.nodes;
     const stage = nodes.find((n) => n.type === 'core/stage')!.params as unknown as StageDef;
-    const blocks = nodes.filter((n) => n.type === 'core/block').map((n) => n.params as unknown as BlockDef);
+    const blocks = nodes.filter((n) => n.type === 'core/blocks').flatMap((n) => (n.params as unknown as { blocks: BlockDef[] }).blocks);
     const duration = Number(process.env.NODECINE_MANUAL_DURATION ?? '9');
     const fps = 30;
     const total = Math.ceil(duration * fps);

@@ -5,7 +5,7 @@ import { buildDirectorPrompt } from '../director/prompt';
 import { BeatSchema, boundFactKeys, expandBeats, outputSchemaFor, toPackets, unknownBlocks } from '../director/beats';
 import { duplicateBlockIds } from '../look/props';
 import { resolveOutputLanguage } from '../text/languages';
-import type { BlockDef, FactSheet, LLMRef, SourceRef, StageDef } from '../types/payloads';
+import type { BlockDef, BlockSet, FactSheet, LLMRef, SourceRef, StageDef } from '../types/payloads';
 import type { Packet } from '../types/packet';
 import type { BlockReason, NodeDefinition } from './definition';
 
@@ -29,17 +29,18 @@ export const DEFAULT_AI_DIRECTOR: z.infer<typeof Params> = {
   ],
 };
 
-const catalogueOf = (packets: Packet[] | undefined): BlockDef[] => (packets ?? []).map((p) => p.payload as BlockDef);
+/** The union of every Blocks node on the wire, in wire order. */
+const catalogueOf = (packets: Packet[] | undefined): BlockDef[] => (packets ?? []).flatMap((p) => (p.payload as BlockSet).blocks);
 
 /** The wired catalogue must be usable before a model call is spent: unique ids, and every id a beat names. */
 function catalogueProblem(beats: z.infer<typeof Params>['beats'], catalogue: BlockDef[]): BlockReason | null {
   const dupes = duplicateBlockIds(catalogue);
   if (dupes.length) {
-    return { kind: 'capability', code: ErrorCode.NODE_PARAMS_INVALID, message: `two Block nodes share the id: ${dupes.join(', ')}`, fix: 'give each wired Block a different id' };
+    return { kind: 'capability', code: ErrorCode.NODE_PARAMS_INVALID, message: `two wired blocks share the id: ${dupes.join(', ')}`, fix: 'give each block a different id' };
   }
   const missing = unknownBlocks(beats, catalogue);
   if (missing.length) {
-    return { kind: 'capability', code: ErrorCode.NODE_PARAMS_INVALID, message: `no wired block named: ${missing.join(', ')}`, fix: 'wire a Block node with that id, or clear the beat\'s block list' };
+    return { kind: 'capability', code: ErrorCode.NODE_PARAMS_INVALID, message: `no wired block named: ${missing.join(', ')}`, fix: 'add a block with that id to a wired Blocks node, or clear the beat\'s block list' };
   }
   return null;
 }
@@ -65,7 +66,7 @@ export const aiDirector: NodeDefinition<typeof Params> = {
     { name: 'source', type: 'SourceRef', required: false },
     { name: 'facts', type: 'FactSheet', required: false },
     { name: 'stage', type: 'StageDef' },
-    { name: 'blocks', type: 'BlockDef', multiple: true },
+    { name: 'blocks', type: 'BlockSet', multiple: true },
     { name: 'llm', type: 'LLMRef', requires: ['installed', 'authenticated'] },
   ],
   outputs: [

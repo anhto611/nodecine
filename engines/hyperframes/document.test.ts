@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildHyperframesDocument, fillSlot, splitCode, tokenVars, COMPOSITION_ID } from './document';
 import type { VideoIR } from '@/core/types/ir';
 import { DEFAULT_STAGE } from '@/core/nodes/stage';
-import { DEFAULT_BLOCK } from '@/core/nodes/block';
+import { DEFAULT_BLOCK } from '@/core/nodes/blocks';
 
 const ir: VideoIR = {
   irVersion: 1,

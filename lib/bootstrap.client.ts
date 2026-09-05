@@ -3,11 +3,9 @@ import { registerCoreNodes } from '@/core/nodes';
 import { registerRemotionClient } from '@/engines/remotion/register.client';
 import { registerHyperframesClient } from '@/engines/hyperframes/register.client';
 import { registerTemplates } from '@/templates';
-import { registerTemplate } from '@/core/templates/registry';
-import { loadUserTemplates } from '@/lib/storage';
 
 let done = false;
-/** Browser-side registrations: core nodes, the two engines, the templates. */
+/** Browser-side registrations: core nodes, the two engines, the shipped templates. The user's own workflows are files on the server and arrive through the store. */
 export function bootstrapClient(): void {
   if (done) return;
   done = true;
@@ -15,7 +13,4 @@ export function bootstrapClient(): void {
   registerRemotionClient();
   registerHyperframesClient();
   registerTemplates();
-  for (const t of loadUserTemplates()) {
-    try { registerTemplate(t); } catch { /* a template someone hand-edited badly should not stop the app */ }
-  }
 }

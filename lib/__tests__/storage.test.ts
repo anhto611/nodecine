@@ -9,7 +9,7 @@ const stageOf = (d: ProjectDoc, id: string) => {
   return (d.graph.nodes.find((n) => n.id === e.source)!.params as { id: string }).id;
 };
 const blocksOf = (d: ProjectDoc, id: string) =>
-  d.graph.edges.filter((e) => e.target === id && e.targetPort === 'blocks').map((e) => (d.graph.nodes.find((n) => n.id === e.source)!.params as { id: string }).id);
+  d.graph.edges.filter((e) => e.target === id && e.targetPort === 'blocks').flatMap((e) => (d.graph.nodes.find((n) => n.id === e.source)!.params as { blocks: { id: string }[] }).blocks.map((b) => b.id));
 
 describe('project migration', () => {
   it('v1 → provider nodes fold into one node per port type', () => {
@@ -81,6 +81,24 @@ describe('project migration', () => {
   it('v4 → the GitHub fetcher becomes a core node', () => {
     const out = migrateProject(doc(4, [{ id: 'f', type: 'github-showcase/github-fetcher', params: {}, bypassed: false, position: at }]));
     expect(out.graph.nodes[0]!.type).toBe('core/github-fetcher');
+  });
+
+  it('v5 → Block nodes on the same port merge into one Blocks node; a lone one becomes its own', () => {
+    const block = (id: string) => ({ id: `b-${id}`, type: 'core/block', params: { id, name: id, doc: { example: '', when: '' }, props: {}, code: { format: 'html-gsap', source: '' } }, bypassed: false, position: at });
+    const out = migrateProject({
+      schemaVersion: 5, name: 'p',
+      graph: {
+        nodes: [block('hook'), block('cta'), block('spare'), { id: 'd', type: 'core/ai-director', params: { prompt: 'p', beats: [] }, bypassed: false, position: at }],
+        edges: [
+          { id: 'e1', source: 'b-hook', sourcePort: 'block', target: 'd', targetPort: 'blocks' },
+          { id: 'e2', source: 'b-cta', sourcePort: 'block', target: 'd', targetPort: 'blocks' },
+        ],
+      },
+    } as ProjectDoc);
+    expect(out.graph.nodes.filter((n) => n.type === 'core/block')).toEqual([]);
+    expect(blocksOf(out, 'd')).toEqual(['hook', 'cta']);
+    expect(out.graph.edges.filter((e) => e.target === 'd')).toHaveLength(1);
+    expect(out.graph.nodes.filter((n) => n.type === 'core/blocks')).toHaveLength(2);
   });
 
   it('leaves a current document alone', () => {
