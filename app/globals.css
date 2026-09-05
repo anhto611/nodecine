@@ -79,7 +79,13 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .react-flow__edge.active .react-flow__edge-path { stroke: var(--accent); stroke-width: 1.7; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--accent-2); }
 .react-flow__attribution { display: none; }
-.react-flow__minimap { background: rgba(10,10,11,.86) !important; border: 1px solid var(--line-2); border-radius: 4px; }
+/* React Flow sizes the inner <svg> to the minimap's full outer box, so a real border would be
+   painted over on the right and bottom edges. Draw the ring outside the box instead, and clip
+   the svg to the rounded corners. */
+/* Our own minimap (components/Minimap.tsx): fixed frame, so panning never rescales it. */
+.nc-mini { position: absolute; right: 12px; bottom: 12px; z-index: 5; line-height: 0; border-radius: 4px; box-shadow: 0 0 0 1px var(--line-2); overflow: hidden; background: rgba(10,10,11,.86); }
+.nc-minimap { display: block; cursor: grab; }
+.nc-minimap:active { cursor: grabbing; }
 .nc-bar { height: 6px; background: var(--bg-sunk); border-radius: 3px; overflow: hidden; border: 1px solid var(--line); }
 .nc-bar > div { height: 100%; background: var(--run); }
 .nc-alloc { display: flex; gap: 2px; height: 8px; margin-top: 4px; }
