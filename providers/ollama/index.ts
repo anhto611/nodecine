@@ -139,11 +139,11 @@ export function createOllamaProvider(settings: Record<string, unknown>, deps: Ol
       try {
         json = JSON.parse(text);
       } catch {
-        throw Object.assign(new Error('ollama did not return JSON'), { code: 'LLM_SCHEMA_INVALID', raw: envelope.response });
+        throw Object.assign(new Error('ollama did not return JSON'), { code: ErrorCode.LLM_SCHEMA_INVALID, raw: envelope.response });
       }
       const parsed = outputSchema.safeParse(json);
       if (!parsed.success) {
-        throw Object.assign(new Error(parsed.error.issues.map((i) => i.message).join('; ')), { code: 'LLM_SCHEMA_INVALID', raw: envelope.response });
+        throw Object.assign(new Error(parsed.error.issues.map((i) => i.message).join('; ')), { code: ErrorCode.LLM_SCHEMA_INVALID, raw: envelope.response });
       }
       return parsed.data as z.infer<S>;
     },

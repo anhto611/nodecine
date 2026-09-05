@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ensureServerRegistrations } from '@/server/register';
 import { getLLMProviderFactory } from '@/core/providers/registry';
+import { ErrorCode } from '@/core/errors';
 
 const Body = z.object({
   providerId: z.string(),
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   } catch (e) {
     const err = e as { code?: string; message?: string; raw?: string };
     const isJsonError = e instanceof SyntaxError;
-    const code = isJsonError ? 'LLM_SCHEMA_INVALID' : (err.code ?? 'LLM_UPSTREAM');
+    const code = isJsonError ? ErrorCode.LLM_SCHEMA_INVALID : (err.code ?? ErrorCode.LLM_UPSTREAM);
     const status = code === 'PROVIDER_NOT_INSTALLED' || code === 'PROVIDER_NOT_AUTHENTICATED' ? 409 : 502;
     return NextResponse.json({ error: code, message: err.message ?? String(e), details: err.raw ? { raw: err.raw.slice(0, 4000) } : null }, { status });
   }

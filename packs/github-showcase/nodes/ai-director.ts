@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import type { FactSheet, LLMRef } from '@/core/types/payloads';
-import { NodeError, toNodeError } from '@/core/errors';
+import { ErrorCode, NodeError, toNodeError } from '@/core/errors';
 import { PACK_ID } from '../constants';
 import { PackErrorCode } from '../errors';
 import { DirectorOutputSchema, buildDirectorPrompt, resolveOutputLanguage, sameLanguage, toPackets, type DirectorOutput } from '../director';
@@ -52,7 +52,7 @@ export const aiDirector: NodeDefinition<typeof Params> = {
         raw = await services.complete(ref, buildDirectorPrompt(sheet, language, strict), Raw, signal);
       } catch (e) {
         const err = toNodeError(e, 'LLM_UPSTREAM');
-        if (err.code === PackErrorCode.LLM_SCHEMA_INVALID && schemaRetries < 1) {
+        if (err.code === ErrorCode.LLM_SCHEMA_INVALID && schemaRetries < 1) {
           schemaRetries++;
           log('warn', `model did not return JSON; retrying once`, err.code);
           continue;
@@ -65,10 +65,10 @@ export const aiDirector: NodeDefinition<typeof Params> = {
         const why = parsed.error.issues.slice(0, 3).map((i) => `${i.path.join('.') || '$'}: ${i.message}`).join('; ');
         if (schemaRetries < 1) {
           schemaRetries++;
-          log('warn', `plan has the wrong structure (${why}); retrying once`, PackErrorCode.LLM_SCHEMA_INVALID);
+          log('warn', `plan has the wrong structure (${why}); retrying once`, ErrorCode.LLM_SCHEMA_INVALID);
           continue;
         }
-        throw new NodeError(PackErrorCode.LLM_SCHEMA_INVALID, why, true, { raw: lastRaw });
+        throw new NodeError(ErrorCode.LLM_SCHEMA_INVALID, why, true, { raw: lastRaw });
       }
       const out: DirectorOutput = parsed.data;
       if (!sameLanguage(out.language, language)) {

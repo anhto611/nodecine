@@ -3,6 +3,7 @@ import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { z, type ZodTypeAny } from 'zod';
 import { registerLLMProvider } from '@/core/providers/registry';
+import { ErrorCode } from '@/core/errors';
 import type { LLMProvider } from '@/core/providers/types';
 import type { Capability, LLMRef } from '@/core/types/payloads';
 import { exec, findBinary } from '@/server/exec';
@@ -75,7 +76,7 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
         if (envelope.is_error || typeof envelope.result !== 'string') throw Object.assign(new Error('claude returned an error envelope'), { code: 'LLM_UPSTREAM' });
         const text = extractJson(envelope.result);
         const parsed = outputSchema.safeParse(JSON.parse(text));
-        if (!parsed.success) throw Object.assign(new Error(parsed.error.issues.map((i) => i.message).join('; ')), { code: 'LLM_SCHEMA_INVALID', raw: envelope.result });
+        if (!parsed.success) throw Object.assign(new Error(parsed.error.issues.map((i) => i.message).join('; ')), { code: ErrorCode.LLM_SCHEMA_INVALID, raw: envelope.result });
         return parsed.data as z.infer<S>;
       } finally {
         await rm(cwd, { recursive: true, force: true });

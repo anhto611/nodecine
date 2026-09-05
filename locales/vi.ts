@@ -190,6 +190,7 @@ export const vi: Record<DictKey, string> = {
   'error.KEY_MISSING': 'Chưa có khóa API cho nhà cung cấp này',
   'error.KEY_INVALID': 'Khóa API bị từ chối',
   'error.LLM_UPSTREAM': 'Mô hình ngôn ngữ gặp lỗi',
+  'error.LLM_SCHEMA_INVALID': 'Mô hình trả về không đúng cấu trúc yêu cầu',
   'error.IR_VERSION_UNSUPPORTED': 'Bản đặc tả IR thuộc phiên bản mới hơn',
   'error.GRAPH_CYCLE': 'Các dây nối tạo thành vòng lặp',
   'error.GRAPH_PORT_UNCONNECTED': 'Một cổng bắt buộc chưa được nối dây',

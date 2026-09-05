@@ -188,6 +188,7 @@ export const en = {
   'error.KEY_MISSING': 'No API key for this provider',
   'error.KEY_INVALID': 'The API key was rejected',
   'error.LLM_UPSTREAM': 'The language model failed',
+  'error.LLM_SCHEMA_INVALID': 'The model did not return the requested structure',
   'error.IR_VERSION_UNSUPPORTED': 'This video spec is from a newer version',
   'error.GRAPH_CYCLE': 'The wires form a loop',
   'error.GRAPH_PORT_UNCONNECTED': 'A required input has nothing wired into it',

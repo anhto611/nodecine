@@ -3,7 +3,6 @@ export const PackErrorCode = {
   REPO_NOT_FOUND: 'REPO_NOT_FOUND',
   REPO_RATE_LIMITED: 'REPO_RATE_LIMITED',
   REPO_NETWORK: 'REPO_NETWORK',
-  LLM_SCHEMA_INVALID: 'LLM_SCHEMA_INVALID',
   LLM_LANGUAGE_MISMATCH: 'LLM_LANGUAGE_MISMATCH',
 } as const;
 export type PackErrorCode = (typeof PackErrorCode)[keyof typeof PackErrorCode];
@@ -13,6 +12,5 @@ export const RETRYABLE: Record<string, boolean> = {
   REPO_NOT_FOUND: false,
   REPO_RATE_LIMITED: true,
   REPO_NETWORK: true,
-  LLM_SCHEMA_INVALID: true,
   LLM_LANGUAGE_MISMATCH: true,
 };
