@@ -68,10 +68,10 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
           <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 3, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div className="nc-scene-row">
               <span className="nc-k" style={{ color: 'var(--accent-2)' }}>{i + 1}</span>
-              <input className={`nc-input ${stopFlow}`} value={b.role} title={t('director.role')} onChange={(e) => updateBeat(i, { role: e.target.value })} />
-              <input className={`nc-input ${stopFlow}`} style={{ width: 38 }} type="number" min={0.1} step={0.5} value={b.weight} title={t('node.weight')} onChange={(e) => updateBeat(i, { weight: Number(e.target.value) || 1 })} />
+              <input className={`nc-input ${stopFlow}`} style={{ flex: 1, minWidth: 0 }} value={b.role} title={t('director.role')} onChange={(e) => updateBeat(i, { role: e.target.value })} />
+              <input className={`nc-input ${stopFlow}`} style={{ width: 30 }} type="number" min={0.1} step={0.5} value={b.weight} title={t('node.weight')} onChange={(e) => updateBeat(i, { weight: Number(e.target.value) || 1 })} />
               <span className="nc-k">{t('director.count')}</span>
-              <input className={`nc-input ${stopFlow}`} style={{ width: 34 }} type="number" min={1} max={12} step={1} value={b.count} onChange={(e) => updateBeat(i, { count: Math.max(1, Math.min(12, Math.round(Number(e.target.value) || 1))) })} />
+              <input className={`nc-input ${stopFlow}`} style={{ width: 30 }} type="number" min={1} max={12} step={1} value={b.count} onChange={(e) => updateBeat(i, { count: Math.max(1, Math.min(12, Math.round(Number(e.target.value) || 1))) })} />
               <button className={`nc-chip ${stopFlow}`} onClick={() => removeBeat(i)} disabled={beats.length <= 1} title="remove"><Icon.x size={9} /></button>
             </div>
             <textarea className={`nc-textarea ${stopFlow}`} rows={2} placeholder={t('director.beatBrief')} value={b.brief} onChange={(e) => updateBeat(i, { brief: e.target.value })} />
@@ -100,7 +100,7 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
       {script && plan && (
         <>
           <div className="nc-k" style={{ marginTop: 4 }}>{t('director.narration', { n: script.text.split(/\s+/).length })}</div>
-          <div style={{ fontSize: 9, color: 'var(--tx-2)', lineHeight: 1.5, maxHeight: 54, overflow: 'hidden' }}>{script.text}</div>
+          <div style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)', lineHeight: 1.5, maxHeight: 54, overflow: 'hidden' }}>{script.text}</div>
           <div className="nc-k" style={{ marginTop: 4 }}>{t('director.written')}</div>
           {plan.scenes.map((s, i) => (
             <div key={i} className="nc-kv"><span className="nc-k">{i + 1} · {s.blockId}{s.tone ? ` · ${s.tone}` : ''}</span><span className="nc-v">{String(s.props.headline ?? s.props.text ?? '')}</span></div>
@@ -110,7 +110,7 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
       {raw != null && (
         <>
           <div className="nc-k" style={{ marginTop: 4, color: 'var(--err)' }}>{t('director.rawOutput')}</div>
-          <pre className={`nc-textarea ${stopFlow}`} style={{ margin: 0, maxHeight: 70, overflow: 'auto', fontSize: 8.5, whiteSpace: 'pre-wrap' }}>{typeof raw === 'string' ? raw : JSON.stringify(raw, null, 1)}</pre>
+          <pre className={`nc-textarea ${stopFlow}`} style={{ margin: 0, maxHeight: 70, overflow: 'auto', fontSize: 'var(--fs-hint)', whiteSpace: 'pre-wrap' }}>{typeof raw === 'string' ? raw : JSON.stringify(raw, null, 1)}</pre>
         </>
       )}
     </>

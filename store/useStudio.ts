@@ -275,6 +275,10 @@ export const useStudio = create<StudioState>((set, get) => {
 
     setNodePositions(positions) {
       const graph = get().graph;
+      // React Flow reports a position change on mount and on select even when nothing moved; a
+      // no-op must not mark the tab unsaved.
+      const moved = Object.entries(positions).filter(([id, pos]) => { const n = graph.nodes.find((x) => x.id === id); return n && (n.position.x !== pos.x || n.position.y !== pos.y); });
+      if (!moved.length) return;
       const next: Graph = { ...graph, nodes: graph.nodes.map((n) => (positions[n.id] ? { ...n, position: positions[n.id]! } : n)) };
       const { tabs, activeTab } = get();
       set({ graph: next, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, graph: next, dirty: true } : t)) });

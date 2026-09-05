@@ -49,7 +49,7 @@ export const WorkflowsPanel: React.FC = () => {
   return (
     <aside className="nc-panel">
       <div className="nc-pn-h">{t('workflows.title')}<button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => setPanel('workflows')}><Icon.x size={12} /></button></div>
-      <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 6 }}>
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--line)', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         <Btn small onClick={create}><Icon.plus size={10} /> {t('tabs.new')}</Btn>
         <Btn small onClick={() => fileRef.current?.click()}><Icon.down size={10} /> {t('workflows.import')}</Btn>
         <input ref={fileRef} type="file" accept="application/json,.json,video/mp4,.mp4" hidden onChange={async (e) => {
@@ -59,8 +59,8 @@ export const WorkflowsPanel: React.FC = () => {
           setImportError(/\.mp4$/i.test(f.name) || f.type === 'video/mp4' ? await importVideo(f) : await importWorkflow(await f.text()));
         }} />
       </div>
-      {importError && <div style={{ padding: '6px 12px', fontSize: 9.5, color: 'var(--err)', borderBottom: '1px solid var(--line)' }}>{t('workflows.importBad', { why: importError })}</div>}
-      <div style={{ padding: '6px 12px', fontSize: 8.5, color: 'var(--tx-3)', borderBottom: '1px solid var(--line)' }}>{t('workflows.where')}</div>
+      {importError && <div style={{ padding: '6px 12px', fontSize: 'var(--fs-body)', color: 'var(--err)', borderBottom: '1px solid var(--line)' }}>{t('workflows.importBad', { why: importError })}</div>}
+      <div style={{ padding: '6px 12px', fontSize: 'var(--fs-hint)', color: 'var(--tx-3)', borderBottom: '1px solid var(--line)' }}>{t('workflows.where')}</div>
       <div style={{ overflowY: 'auto', flex: 1 }}>
         <div className="nc-pn-sub">{t('workflows.open')}</div>
         {tabs.map((tab) => (
@@ -71,8 +71,8 @@ export const WorkflowsPanel: React.FC = () => {
           </div>
         ))}
         <div className="nc-pn-sub">{t('workflows.saved')}</div>
-        {files === null && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 9.5 }}>…</div>}
-        {files?.length === 0 && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 9.5 }}>{t('workflows.empty')}</div>}
+        {files === null && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>…</div>}
+        {files?.length === 0 && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>{t('workflows.empty')}</div>}
         {files?.map((f) => {
           const isOpen = tabs.some((x) => x.fileId === f.id);
           return (

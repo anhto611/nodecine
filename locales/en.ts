@@ -77,7 +77,7 @@ export const en = {
   'settings.ffmpegBin': 'ffmpeg binary',
   'settings.tmpDir': 'Temp directory',
   'settings.envHint': 'Override with environment variables (see .env.example). Login status shows on the provider node.',
-  'settings.footer': 'Everything is stored in this browser. No account, no central server.',
+  'settings.footer': 'Workflows and run history live in .nodecine on this machine. No account, no cloud.',
   'settings.close': 'Close',
   'node.core/input-trigger': 'Input Trigger',
   'node.core/static-script': 'Static Script',

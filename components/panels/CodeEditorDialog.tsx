@@ -54,8 +54,8 @@ export const CodeEditorDialog: React.FC = () => {
       <div className="nc-modal" style={{ width: 'min(1400px, 94vw)', height: 'min(860px, 92vh)' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', borderBottom: '1px solid var(--line)' }}>
           <span style={{ color: 'var(--accent-2)' }}><Icon.layers size={14} /></span>
-          <span style={{ fontWeight: 700, fontSize: 13 }}>{title}</span>
-          <span style={{ fontSize: 9, color: 'var(--tx-3)' }}>{t('code.hint')}</span>
+          <span style={{ fontWeight: 700, fontSize: 'var(--fs-title)' }}>{title}</span>
+          <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('code.hint')}</span>
           <div style={{ flex: 1 }} />
           <Btn small onClick={() => close(null)}>{t('code.cancel')}</Btn>
           <Btn small primary disabled={!dirty} onClick={save} title="Ctrl+Enter">{t('code.save')}</Btn>
@@ -71,7 +71,7 @@ export const CodeEditorDialog: React.FC = () => {
               if (e.key === 'Tab') { e.preventDefault(); const el = e.currentTarget; const a = el.selectionStart; const b = el.selectionEnd; setSource(`${source.slice(0, a)}  ${source.slice(b)}`); requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = a + 2; }); }
               if (e.key === 'Escape') close(null);
             }}
-            style={{ flex: 1, minWidth: 0, height: '100%', resize: 'none', borderRadius: 0, border: 0, borderRight: '1px solid var(--line)', fontSize: 12, lineHeight: 1.5, padding: 14 }}
+            style={{ flex: 1, minWidth: 0, height: '100%', resize: 'none', borderRadius: 0, border: 0, borderRight: '1px solid var(--line)', fontSize: 'var(--fs-title)', lineHeight: 1.5, padding: 14 }}
           />
           <div style={{ width: 'min(420px, 36%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'var(--bg-sunk)' }}>
             {previewStage ? <LookPreview options={{ stage: previewStage, block: previewBlock }} delayMs={300} style={{ width: '100%', maxHeight: '100%' }} /> : null}

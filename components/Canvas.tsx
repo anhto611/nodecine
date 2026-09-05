@@ -167,7 +167,7 @@ function CanvasInner() {
           <button className="nc-tbtn" title={t('canvas.fit')} onClick={() => rf.fitView({ padding: 0.08 })}><Icon.fit /></button>
           <button className="nc-tbtn" title={t('canvas.layout')} onClick={() => {
             // Measured sizes come from React Flow; a node not yet measured gets the default.
-            const sizes = Object.fromEntries(rf.getNodes().map((n) => [n.id, { width: n.measured?.width ?? 196, height: n.measured?.height ?? 160 }]));
+            const sizes = Object.fromEntries(rf.getNodes().map((n) => [n.id, { width: n.measured?.width ?? 220, height: n.measured?.height ?? 180 }]));
             setNodePositions(layoutGraph(graph, sizes));
             requestAnimationFrame(() => void rf.fitView({ padding: 0.08, duration: 300 }));
           }}><Icon.branch /></button>

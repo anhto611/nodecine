@@ -79,7 +79,7 @@ export const vi: Record<DictKey, string> = {
   'settings.ffmpegBin': 'Tệp thực thi ffmpeg',
   'settings.tmpDir': 'Thư mục tệp tạm',
   'settings.envHint': 'Ghi đè bằng biến môi trường (xem .env.example). Trạng thái đăng nhập xem trên node nhà cung cấp.',
-  'settings.footer': 'Mọi thứ lưu trong trình duyệt này. Không tài khoản, không máy chủ tập trung.',
+  'settings.footer': 'Workflow và lịch sử chạy nằm trong .nodecine trên máy này. Không tài khoản, không đám mây.',
   'settings.close': 'Đóng',
   'node.core/input-trigger': 'Nhập Liệu',
   'node.core/static-script': 'Kịch Bản Tĩnh',

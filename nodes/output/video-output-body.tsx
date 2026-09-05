@@ -66,7 +66,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
           // and must not share an element with the next createRoot().
           <div key={irKey} ref={ref} style={{ position: 'absolute', inset: 0 }} />
         ) : (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 22px', textAlign: 'center', color: 'var(--tx-3)', fontSize: 9.5, lineHeight: 1.7 }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 22px', textAlign: 'center', color: 'var(--tx-3)', fontSize: 'var(--fs-body)', lineHeight: 1.7 }}>
             {running && step ? (
               <>
                 <span style={{ color: 'var(--run)' }}><Icon.spin size={22} /></span>
@@ -90,7 +90,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
       {ir && (
         <>
           {/* One chip per scene; ten of them do not fit one row, so they wrap instead of spilling past the card. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(66px, 1fr))', gap: 3 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 3 }}>
             {ir.timeline.map((s, i) => {
               const active = frame >= s.startFrame && frame < s.startFrame + s.durationInFrames;
               return (
@@ -103,7 +103,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
                   title={s.blockId}
                 >
                   <div style={{ color: active ? 'var(--accent-2)' : 'var(--tx)', textTransform: 'uppercase', letterSpacing: '.05em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('node.scene')} {i + 1}</div>
-                  <div style={{ color: 'var(--tx-3)', fontSize: 8 }}>{s.startFrame}–{s.startFrame + s.durationInFrames}</div>
+                  <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>{s.startFrame}–{s.startFrame + s.durationInFrames}</div>
                 </button>
               );
             })}

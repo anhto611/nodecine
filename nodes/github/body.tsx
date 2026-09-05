@@ -31,7 +31,7 @@ export const GithubFetcherBody: React.FC<{ nodeId: string }> = ({ nodeId }) => {
               <Kv k={t('fetcher.stars')} v={num(facts?.stars)} />
               <Kv k={t('fetcher.language')} v={str(facts?.primaryLanguage)} />
               <Kv k={t('fetcher.topics')} v={topics.length ? topics.slice(0, 3).join(', ') + (topics.length > 3 ? ` +${topics.length - 3}` : '') : '—'} />
-              <Kv k={t('fetcher.install')} v={<code style={{ fontSize: 8.5 }}>{str(facts?.installCommand)}</code>} />
+              <Kv k={t('fetcher.install')} v={<code style={{ fontSize: 'var(--fs-hint)' }}>{str(facts?.installCommand)}</code>} />
             </>
           )}
           <div className="nc-hint">{t('fetcher.readme', { n: String(facts?.readmeExcerpt ?? '').length })}</div>

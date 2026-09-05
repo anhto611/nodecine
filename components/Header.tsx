@@ -23,12 +23,12 @@ export const Header: React.FC = () => {
         <span style={{ width: 22, height: 22, borderRadius: 4, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="2.4" /><circle cx="18" cy="12" r="2.4" /><circle cx="6" cy="18" r="2.4" /><line x1="8.2" y1="7.2" x2="15.8" y2="10.8" /><line x1="8.2" y1="16.8" x2="15.8" y2="13.2" /></svg>
         </span>
-        <span style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.02em' }}>{t('app.name')}</span>
+        <span style={{ fontWeight: 700, fontSize: 'var(--fs-title)', letterSpacing: '.02em' }}>{t('app.name')}</span>
       </div>
       {editing ? (
-        <input className="nc-input" style={{ width: 220, height: 26, fontSize: 12 }} autoFocus value={projectName} onChange={(e) => setProjectName(e.target.value)} onBlur={() => setEditing(false)} onKeyDown={(e) => e.key === 'Enter' && setEditing(false)} />
+        <input className="nc-input" style={{ width: 220, height: 26, fontSize: 'var(--fs-title)' }} autoFocus value={projectName} onChange={(e) => setProjectName(e.target.value)} onBlur={() => setEditing(false)} onKeyDown={(e) => e.key === 'Enter' && setEditing(false)} />
       ) : (
-        <span onDoubleClick={() => setEditing(true)} title={t('header.projectName')} style={{ fontSize: 12, color: 'var(--tx-2)', padding: '4px 8px', border: '1px solid transparent', borderRadius: 4, cursor: 'text' }}>{projectName}</span>
+        <span onDoubleClick={() => setEditing(true)} title={t('header.projectName')} style={{ fontSize: 'var(--fs-title)', color: 'var(--tx-2)', padding: '4px 8px', border: '1px solid transparent', borderRadius: 4, cursor: 'text' }}>{projectName}</span>
       )}
       <div style={{ flex: 1 }} />
       {running ? (

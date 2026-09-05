@@ -61,15 +61,15 @@ export const TemplateBrowser: React.FC = () => {
         <div style={{ height: 52, display: 'flex', alignItems: 'center', gap: 12, padding: '0 18px', borderBottom: '1px solid var(--line)' }}>
           <button className="nc-chip nc-tpl-sidebtn" style={{ border: 0, padding: '5px 7px' }} onClick={() => setSideOpen((v) => !v)} title={t('templates.categories')}><Icon.layers size={13} /></button>
           <span style={{ color: 'var(--accent-2)' }}><Icon.tpl size={15} /></span>
-          <span style={{ fontWeight: 700, fontSize: 13 }}>{t('templates.title')}</span>
-          <span style={{ fontSize: 9, color: 'var(--tx-3)' }}>{t('templates.subtitle')}</span>
+          <span style={{ fontWeight: 700, fontSize: 'var(--fs-title)' }}>{t('templates.title')}</span>
+          <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('templates.subtitle')}</span>
           <div style={{ marginLeft: 'auto' }} />
           <button className="nc-chip" style={{ border: 0 }} onClick={() => close(false)}><Icon.x /></button>
         </div>
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           <div className={`nc-tpl-side ${sideOpen ? 'open' : ''}`}>
             {[['all', 'templates.all'] as const, ...cats].map(([id, key]) => (
-              <button key={id} className={`nc-chip ${cat === id ? 'on' : ''}`} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 11, border: 0 }} onClick={() => pick(id)}>{key.startsWith('templates.') ? t(key) : key}</button>
+              <button key={id} className={`nc-chip ${cat === id ? 'on' : ''}`} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 'var(--fs-label)', border: 0 }} onClick={() => pick(id)}>{key.startsWith('templates.') ? t(key) : key}</button>
             ))}
           </div>
           {/* Columns follow the width instead of always being three: cards keep a readable floor
@@ -90,13 +90,13 @@ export const TemplateBrowser: React.FC = () => {
                         column width becomes. */}
                     <div style={{ height: '100%', aspectRatio: '9 / 16', overflow: 'hidden', background: '#0b0c10', borderLeft: '1px solid #23262c', borderRight: '1px solid #23262c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 8px' }}>
                       <div style={{ width: 24, height: 2, background: '#a78bfa' }} />
-                      <div style={{ fontSize: 10, color: '#fff', fontWeight: 700, textAlign: 'center', lineHeight: 1.35 }}>{name.split(' ').slice(0, 3).join('\n')}</div>
+                      <div style={{ fontSize: 'var(--fs-body)', color: '#fff', fontWeight: 700, textAlign: 'center', lineHeight: 1.35 }}>{name.split(' ').slice(0, 3).join('\n')}</div>
                     </div>
                   </div>
                   <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 11 }}>{name}</div>
-                    {c.description && <div style={{ fontSize: 10, color: 'var(--tx-2)', lineHeight: 1.5 }}>{c.description}</div>}
-                    {c.nodes > 0 && <div style={{ fontSize: 8.5, color: 'var(--tx-3)' }}>{t('templates.meta', { n: c.nodes })}</div>}
+                    <div style={{ fontSize: 'var(--fs-label)' }}>{name}</div>
+                    {c.description && <div style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)', lineHeight: 1.5 }}>{c.description}</div>}
+                    {c.nodes > 0 && <div style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('templates.meta', { n: c.nodes })}</div>}
                   </div>
                 </div>
               );
@@ -107,7 +107,7 @@ export const TemplateBrowser: React.FC = () => {
           </div>
         </div>
         <div style={{ borderTop: '1px solid var(--line)', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 9, color: 'var(--tx-3)' }}>{t('templates.warning')}</span>
+          <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('templates.warning')}</span>
           <div style={{ flex: 1 }} />
           <Btn onClick={() => close(false)}>{t('templates.cancel')}</Btn>
           <Btn primary disabled={!canOpen} onClick={open}>{t('templates.open', { name: selected?.name ?? '' })}</Btn>
