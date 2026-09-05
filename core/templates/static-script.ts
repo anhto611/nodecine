@@ -6,7 +6,7 @@ export function staticScriptTemplate(): Graph {
   return {
     nodes: [
       { id: 'script', type: 'core/static-script', params: { ...DEFAULT_STATIC_SCRIPT }, bypassed: false, position: { x: 60, y: 200 } },
-      { id: 'tts-provider', type: 'core/system-tts-provider', params: { rate: 1 }, bypassed: false, position: { x: 330, y: 520 } },
+      { id: 'tts-provider', type: 'core/tts-provider', params: { providerId: 'system-tts', settings: { rate: 1 } }, bypassed: false, position: { x: 330, y: 520 } },
       { id: 'tts', type: 'core/tts-engine', params: { speed: 1 }, bypassed: false, position: { x: 550, y: 380 } },
       { id: 'assembler', type: 'core/timeline-assembler', params: { fps: 30, width: 1080, height: 1920, minTotalFrames: 270, title: 'Static script' }, bypassed: false, position: { x: 770, y: 200 } },
       { id: 'remotion', type: 'core/remotion-engine', params: { glBackend: 'angle' }, bypassed: false, position: { x: 550, y: 600 } },

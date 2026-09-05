@@ -175,7 +175,9 @@ Nhận `VideoIR` và `EngineRef`, bỏ qua mặc định. Tham số `ExportSetti
 
 Hành vi: khi đang bỏ qua, Chạy Luồng không chạm tới; bấm Kết xuất là chạy riêng khối theo Đặc tả Bộ Máy Thực Thi mục 3; nút bị vô hiệu hóa khi thiếu dây, khi `EngineRef.capabilities.render` không phải `ready`, hoặc khi thiếu renderer cho một `sceneType`. Trong lúc chạy hiện tiến độ và nút Hủy; xong hiện tên tệp, dung lượng, nút Tải xuống; kết quả gắn vào lịch sử chạy. Nhiều khối xuất trên cùng đồ thị là hợp lệ.
 
-### 5.7. Khối tài nguyên: Động Cơ, Nhà Cung Cấp Mô Hình Ngôn Ngữ, Nhà Cung Cấp Giọng Đọc
+### 5.7. Khối tài nguyên: Động Cơ, Mô Hình Ngôn Ngữ, Giọng Đọc
+
+Có **một khối cho mỗi kiểu cổng**, không phải một khối cho mỗi nhà cung cấp. Khối Mô Hình Ngôn Ngữ phát `LLMRef`, khối Giọng Đọc phát `TTSRef`, và nhà cung cấp là tham số chọn trong hộp thả, giống cách Load Checkpoint của ComfyUI chứa mọi checkpoint. Tham số của khối là `{providerId, settings}`; lõi không kiểm tra `settings` vì lõi không được biết danh sách nhà cung cấp, việc kiểm định thuộc về chính nhà cung cấp lúc dựng. Thêm một nhà cung cấp là thêm một dòng vào `providers/installed.ts`, không thêm khối, không sửa giao diện.
 
 Mô tả ở mục 6, 7 và 8. Cả ba dùng chung khuôn: không cổng nhận, một cổng phát, `run() = probe()`, tham chiếu là dữ liệu tuần tự hóa được.
 
@@ -214,7 +216,7 @@ Tham chiếu là dữ liệu, không phải đối tượng: không bao giờ ch
 
 ### 7.1. Cấu trúc `LLMRef`
 
-- `providerId`: `claude-code` ở v0.1.
+- `providerId`: định danh nhà cung cấp đang chọn trên khối.
 - `displayName`, `transport` (`cli` ở v0.1; `api` dành cho v0.2).
 - `capabilities`: `installed`, `authenticated`, `structuredOutput`; mỗi trường `ready` hoặc `unavailable` kèm `reason` và, nếu có, `fix` là lệnh người dùng cần chạy. Phiên bản công cụ tìm thấy được ghi ở đây để hiển thị.
 - `settings`: `model` (để trống là mặc định của công cụ), `maxTurns` cố định 1.
@@ -234,9 +236,9 @@ Khối gọi `complete()` là khối đạo diễn của gói; lõi không có k
 
 ### 8.1. Cấu trúc `TTSRef`
 
-- `providerId`: `system-tts` ở v0.1.
+- `providerId`: định danh nhà cung cấp đang chọn trên khối. Hiện có `system-tts` (chỉ macOS) và `piper` (chạy cục bộ trên mọi hệ điều hành).
 - `displayName`, `transport` (`local`).
-- `capabilities`: `installed` (bộ tổng hợp của hệ điều hành), `encoder` (ffmpeg).
+- `capabilities`: `installed` (bộ tổng hợp sẵn sàng, gồm cả việc có mô hình giọng hay chưa với Piper), `encoder` (ffmpeg).
 - `voices`: Danh sách `{id, displayName, language}` lấy từ hệ điều hành lúc `probe()`.
 - `settings`: `defaultVoice`, `rate`.
 

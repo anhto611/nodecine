@@ -7,8 +7,8 @@ export type NodeMeta = { icon: IconKey; group: LibraryGroup | string; soon?: boo
 export const NODE_META: Record<string, NodeMeta> = {
   'core/input-trigger': { icon: 'bolt', group: 'source' },
   'core/static-script': { icon: 'doc', group: 'source' },
-  'core/claude-code-provider': { icon: 'term', group: 'provider' },
-  'core/system-tts-provider': { icon: 'mic', group: 'provider' },
+  'core/llm-provider': { icon: 'term', group: 'provider' },
+  'core/tts-provider': { icon: 'mic', group: 'provider' },
   'core/tts-engine': { icon: 'wave', group: 'process' },
   'core/timeline-assembler': { icon: 'layers', group: 'process' },
   'core/remotion-engine': { icon: 'chip', group: 'engine' },

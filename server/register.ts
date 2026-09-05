@@ -4,8 +4,7 @@
  */
 import { registerCoreScenes } from '@/core/scenes/title-card';
 import { registerCoreNodes } from '@/core/nodes';
-import { registerSystemTts } from '@/providers/system-tts';
-import { registerClaudeCode } from '@/providers/claude-code';
+import { installProviders } from '@/providers/installed.server';
 import { registerRemotionServer } from '@/engines/remotion/register.server';
 import { registerHyperframesServer } from '@/engines/hyperframes/register.server';
 import { installPack } from '@/core/packs/definition';
@@ -17,8 +16,7 @@ export function ensureServerRegistrations(): void {
   done = true;
   registerCoreScenes();
   registerCoreNodes();
-  registerSystemTts();
-  registerClaudeCode();
+  installProviders();
   registerRemotionServer();
   registerHyperframesServer();
   for (const pack of INSTALLED_PACKS) {

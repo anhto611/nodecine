@@ -36,9 +36,9 @@ function graph(outputLanguage = 'auto'): Graph {
     nodes: [
       { id: 'in', type: 'core/input-trigger', params: { value: 'acme/widget' }, bypassed: false, position: { x: 0, y: 0 } },
       { id: 'fetch', type: GITHUB_FETCHER, params: {}, bypassed: false, position: { x: 0, y: 0 } },
-      { id: 'llm', type: 'core/claude-code-provider', params: {}, bypassed: false, position: { x: 0, y: 0 } },
+      { id: 'llm', type: 'core/llm-provider', params: { providerId: 'claude-code', settings: {} }, bypassed: false, position: { x: 0, y: 0 } },
       { id: 'dir', type: AI_DIRECTOR, params: { outputLanguage }, bypassed: false, position: { x: 0, y: 0 } },
-      { id: 'tts-provider', type: 'core/system-tts-provider', params: { rate: 1 }, bypassed: false, position: { x: 0, y: 0 } },
+      { id: 'tts-provider', type: 'core/tts-provider', params: { providerId: 'system-tts', settings: { rate: 1 } }, bypassed: false, position: { x: 0, y: 0 } },
       { id: 'tts', type: 'core/tts-engine', params: { speed: 1 }, bypassed: false, position: { x: 0, y: 0 } },
       { id: 'asm', type: 'core/timeline-assembler', params: { fps: 30, width: 1080, height: 1920, minTotalFrames: 270, title: 'Widget' }, bypassed: false, position: { x: 0, y: 0 } },
     ],

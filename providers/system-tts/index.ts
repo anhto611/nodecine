@@ -8,6 +8,7 @@ import { exec, ExecError, findBinary } from '@/server/exec';
 import { convertToMp3, ffmpegBin, measureDurationSeconds } from '@/server/audio';
 import { ensureTmpDir } from '@/server/paths';
 import { contentHash } from '@/core/hash';
+import { z } from 'zod';
 
 /**
  * System TTS provider (CORE_CONTRACTS §8): the OS speech synthesizer plus ffmpeg.
@@ -106,7 +107,13 @@ export function createSystemTtsProvider(settings: Record<string, unknown>): TTSP
 }
 
 export function registerSystemTts(): void {
-  registerTTSProvider(SYSTEM_TTS_ID, createSystemTtsProvider);
+  registerTTSProvider({
+    id: SYSTEM_TTS_ID,
+    displayName: 'System voice',
+    factory: createSystemTtsProvider,
+    settingsSchema: z.object({ rate: z.number().positive().default(1) }),
+    defaultSettings: { rate: 1 },
+  });
 }
 
 export function buildTTSRef(provider: TTSProvider, probe: Awaited<ReturnType<TTSProvider['probe']>>, settings: Record<string, unknown>): TTSRef {

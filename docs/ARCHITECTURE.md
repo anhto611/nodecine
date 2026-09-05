@@ -92,7 +92,10 @@ nodecine/
 │     ├─ draw.ts, types.ts        Hợp đồng renderer: một hàm vẽ lên canvas, và các tiện ích chung
 │     └─ scenes/                  Renderer cho kiểu cảnh của lõi
 ├─ providers/                     Cài đặt cụ thể của nhà cung cấp, được phép sinh tiến trình
+│  ├─ installed.ts                Mô tả nhà cung cấp cho cả hai phía: tên, các trường tham số, mặc định
+│  ├─ installed.server.ts         Đăng ký factory, chỉ chạy trên máy chủ
 │  ├─ claude-code/index.ts        Gọi CLI đã đăng nhập
+│  ├─ piper/index.ts             Giọng máy học chạy cục bộ, chung một đường trên mọi hệ điều hành
 │  └─ system-tts/index.ts         macOS say + ffmpeg
 ├─ packs/                         Gói bản mẫu và toàn bộ dây nối tới chúng
 │  ├─ installed.ts                Danh sách gói duy nhất mà ứng dụng đọc

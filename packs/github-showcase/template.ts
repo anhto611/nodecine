@@ -15,9 +15,9 @@ export function githubShowcaseTemplate(): Graph {
     nodes: [
       { id: 'input', type: 'core/input-trigger', params: { value: '' }, bypassed: false, position: { x: 40, y: 40 } },
       { id: 'fetcher', type: GITHUB_FETCHER, params: {}, bypassed: false, position: { x: 40, y: 300 } },
-      { id: 'llm-provider', type: 'core/claude-code-provider', params: {}, bypassed: false, position: { x: 320, y: 40 } },
-      { id: 'director', type: AI_DIRECTOR, params: { outputLanguage: 'auto' }, bypassed: false, position: { x: 320, y: 300 } },
-      { id: 'tts-provider', type: 'core/system-tts-provider', params: { rate: 1 }, bypassed: false, position: { x: 320, y: 720 } },
+      { id: 'llm-provider', type: 'core/llm-provider', params: { providerId: 'claude-code', settings: {} }, bypassed: false, position: { x: 320, y: 40 } },
+      { id: 'director', type: AI_DIRECTOR, params: { outputLanguage: 'auto' }, bypassed: false, position: { x: 320, y: 360 } },
+      { id: 'tts-provider', type: 'core/tts-provider', params: { providerId: 'system-tts', settings: { rate: 1 } }, bypassed: false, position: { x: 320, y: 720 } },
       { id: 'tts', type: 'core/tts-engine', params: { speed: 1 }, bypassed: false, position: { x: 600, y: 540 } },
       { id: 'assembler', type: 'core/timeline-assembler', params: { fps: 30, width: 1080, height: 1920, minTotalFrames: 270, title: 'GitHub showcase' }, bypassed: false, position: { x: 880, y: 300 } },
       { id: 'remotion', type: 'core/remotion-engine', params: { glBackend: 'angle' }, bypassed: false, position: { x: 880, y: 660 } },

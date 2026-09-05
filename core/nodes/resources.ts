@@ -1,35 +1,49 @@
 import { z } from 'zod';
 import type { NodeDefinition } from './definition';
+import { ErrorCode } from '../errors';
 
 /**
  * Resource nodes (CORE_CONTRACTS §5.7, EXECUTION_ENGINE §1.1): no inputs, run() = probe(),
  * always re-run, never `error` merely for being unavailable.
  */
 
-const LLMParams = z.object({ model: z.string().optional() });
-export const claudeCodeProvider: NodeDefinition<typeof LLMParams> = {
-  type: 'core/claude-code-provider',
+/**
+ * One node per port type, not per provider: the provider is a parameter, the way ComfyUI's Load
+ * Checkpoint holds every checkpoint. Adding a provider is a line in `providers/installed.ts`.
+ * `settings` is free-form here because the core must not import the provider list; the provider
+ * validates its own settings when it is built.
+ */
+const ProviderParams = z.object({
+  providerId: z.string(),
+  settings: z.record(z.string(), z.unknown()).default({}),
+});
+
+const missingProvider = (kind: string) => [{ code: ErrorCode.INPUT_EMPTY, message: `Choose a ${kind} provider` }];
+
+export const llmProvider: NodeDefinition<typeof ProviderParams> = {
+  type: 'core/llm-provider',
   version: 1,
   pack: 'core',
   kind: 'resource',
   inputs: [],
   outputs: [{ name: 'llm', type: 'LLMRef' }],
-  paramsSchema: LLMParams,
-  defaultParams: {},
-  run: async ({ params, services }) => ({ llm: await services.probeLLM('claude-code', params) }),
+  paramsSchema: ProviderParams,
+  defaultParams: { providerId: '', settings: {} },
+  validate: (p) => (p.providerId ? [] : missingProvider('language model')),
+  run: async ({ params, services }) => ({ llm: await services.probeLLM(params.providerId, params.settings) }),
 };
 
-const TTSParams = z.object({ defaultVoice: z.string().optional(), rate: z.number().positive().default(1) });
-export const systemTtsProvider: NodeDefinition<typeof TTSParams> = {
-  type: 'core/system-tts-provider',
+export const ttsProvider: NodeDefinition<typeof ProviderParams> = {
+  type: 'core/tts-provider',
   version: 1,
   pack: 'core',
   kind: 'resource',
   inputs: [],
   outputs: [{ name: 'tts', type: 'TTSRef' }],
-  paramsSchema: TTSParams,
-  defaultParams: { rate: 1 },
-  run: async ({ params, services }) => ({ tts: await services.probeTTS('system-tts', params) }),
+  paramsSchema: ProviderParams,
+  defaultParams: { providerId: '', settings: {} },
+  validate: (p) => (p.providerId ? [] : missingProvider('voice')),
+  run: async ({ params, services }) => ({ tts: await services.probeTTS(params.providerId, params.settings) }),
 };
 
 const RemotionParams = z.object({

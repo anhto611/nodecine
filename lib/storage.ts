@@ -5,7 +5,7 @@ import type { Locale } from './i18n';
 /** Three separate localStorage keys (EXECUTION_ENGINE §7.1). API keys slot exists but is unused in v0.1. */
 const PROJECT_KEY = 'nodecine.project';
 const UI_KEY = 'nodecine.ui';
-export const PROJECT_SCHEMA_VERSION = 1;
+export const PROJECT_SCHEMA_VERSION = 2;
 
 export interface ProjectDoc {
   schemaVersion: number;
@@ -47,9 +47,29 @@ export function loadProject(): ProjectDoc | null {
   }
 }
 
+/** One node per provider became one node per port type; a saved graph is rewritten on load. */
+const PROVIDER_NODE_V2: Record<string, { type: string; providerId: string }> = {
+  'core/system-tts-provider': { type: 'core/tts-provider', providerId: 'system-tts' },
+  'core/piper-provider': { type: 'core/tts-provider', providerId: 'piper' },
+  'core/claude-code-provider': { type: 'core/llm-provider', providerId: 'claude-code' },
+};
+
 function migrateProject(doc: ProjectDoc): ProjectDoc {
-  // Version 1 is the first; future migrations chain here.
-  return { ...doc, schemaVersion: PROJECT_SCHEMA_VERSION };
+  let graph = doc.graph;
+  if (doc.schemaVersion < 2) {
+    graph = {
+      ...graph,
+      nodes: graph.nodes.map((n) => {
+        const moved = PROVIDER_NODE_V2[n.type];
+        if (!moved) return n;
+        const { defaultVoice, rate, model, ...rest } = n.params as Record<string, unknown>;
+        void rest;
+        const settings = moved.providerId === 'claude-code' ? { ...(model !== undefined ? { model } : {}) } : { rate: (rate as number) ?? 1 };
+        return { ...n, type: moved.type, params: { providerId: moved.providerId, settings, ...(defaultVoice !== undefined ? { defaultVoice } : {}) } };
+      }),
+    };
+  }
+  return { ...doc, graph, schemaVersion: PROJECT_SCHEMA_VERSION };
 }
 
 export function saveProject(doc: ProjectDoc): void {

@@ -22,14 +22,11 @@ export const DirectorBody: React.FC<{ nodeId: string }> = ({ nodeId }) => {
 
   return (
     <>
-      <Kv
-        k={t('director.outputLanguage')}
-        v={
-          <select className={`nc-select ${stopFlow}`} style={{ width: 120 }} value={param} onChange={(e) => setParams(nodeId, { outputLanguage: e.target.value })}>
-            {LANGS.map((l) => <option key={l} value={l}>{l === 'auto' ? `${t('node.auto')}${resolved && param === 'auto' ? ` · ${resolved}` : ''}` : `${l} · ${languageName(l)}`}</option>)}
-          </select>
-        }
-      />
+      <Kv k={t('director.outputLanguage')} v={
+        <select className={`nc-select ${stopFlow}`} value={param} onChange={(e) => setParams(nodeId, { outputLanguage: e.target.value })}>
+          {LANGS.map((l) => <option key={l} value={l}>{l === 'auto' ? `${t('node.auto')}${resolved && param === 'auto' ? ` · ${resolved}` : ''}` : `${l} · ${languageName(l)}`}</option>)}
+        </select>
+      } />
       <div className="nc-hint">{t('director.theme')}</div>
       {script && plan && (
         <>

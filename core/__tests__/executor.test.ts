@@ -130,6 +130,17 @@ describe('resource nodes and capability blocking (EXECUTION_ENGINE §1.1)', () =
     expect(executor.runtime('assembler').blockedBy?.kind).toBe('upstream');
   });
 
+  it('a node blocked behind another reports the original cause, not an unwired port', async () => {
+    const { executor } = setup({ encoder: false });
+    await executor.run();
+    // The assembler is three steps from the missing encoder, and still names it.
+    expect(executor.runtime('assembler').blockedBy).toMatchObject({
+      code: 'PROVIDER_NOT_INSTALLED',
+      fix: 'brew install ffmpeg',
+      nodeId: 'tts',
+    });
+  });
+
   it('the world changing between runs is detected because probe() always re-runs', async () => {
     const { executor, services } = setup();
     await executor.run();

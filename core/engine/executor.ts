@@ -218,7 +218,20 @@ export class Executor {
         return { inputs, block: { kind: 'upstream', code: ErrorCode.NODE_BYPASSED_UPSTREAM, message: `upstream node ${edge.source} is bypassed`, nodeId: edge.source } };
       }
       if (!packet || upstream.state === 'error' || upstream.state === 'cancelled' || upstream.state === 'blocked') {
-        return { inputs, block: { kind: 'upstream', code: upstream.error?.code ?? ErrorCode.GRAPH_PORT_UNCONNECTED, message: `upstream node ${edge.source} has no result`, nodeId: edge.source } };
+        // Carry the original reason down the chain. A blocked upstream reports it under blockedBy
+        // rather than error, and without that the whole tail claims a port is unwired when the real
+        // cause is one provider several nodes back — the fix travels with it for the same reason.
+        const cause = upstream.error ?? upstream.blockedBy;
+        return {
+          inputs,
+          block: {
+            kind: 'upstream',
+            code: cause?.code ?? ErrorCode.GRAPH_PORT_UNCONNECTED,
+            message: `upstream node ${edge.source} has no result`,
+            ...(upstream.blockedBy?.fix ? { fix: upstream.blockedBy.fix } : {}),
+            nodeId: edge.source,
+          },
+        };
       }
       inputs[port.name] = packet;
       for (const key of port.requires ?? []) {

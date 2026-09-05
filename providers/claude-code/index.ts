@@ -1,7 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import type { ZodTypeAny, z } from 'zod';
+import { z, type ZodTypeAny } from 'zod';
 import { registerLLMProvider } from '@/core/providers/registry';
 import type { LLMProvider } from '@/core/providers/types';
 import type { Capability, LLMRef } from '@/core/types/payloads';
@@ -94,5 +94,11 @@ export function extractJson(text: string): string {
 }
 
 export function registerClaudeCode(): void {
-  registerLLMProvider(CLAUDE_CODE_ID, createClaudeCodeProvider);
+  registerLLMProvider({
+    id: CLAUDE_CODE_ID,
+    displayName: 'Claude Code',
+    factory: createClaudeCodeProvider,
+    settingsSchema: z.object({ model: z.string().optional() }),
+    defaultSettings: {},
+  });
 }

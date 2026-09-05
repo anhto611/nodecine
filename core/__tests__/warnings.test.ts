@@ -39,7 +39,7 @@ function graph(): Graph {
   return {
     nodes: [
       { id: 'dir', type: 'test/director', params: { bindFacts: true }, bypassed: false, position: { x: 0, y: 0 } },
-      { id: 'tts-provider', type: 'core/system-tts-provider', params: { rate: 1 }, bypassed: false, position: { x: 0, y: 0 } },
+      { id: 'tts-provider', type: 'core/tts-provider', params: { providerId: 'system-tts', settings: { rate: 1 } }, bypassed: false, position: { x: 0, y: 0 } },
       { id: 'tts', type: 'core/tts-engine', params: { speed: 1 }, bypassed: false, position: { x: 0, y: 0 } },
       { id: 'asm', type: 'core/timeline-assembler', params: { fps: 30, width: 1080, height: 1920, minTotalFrames: 270, title: 'T' }, bypassed: false, position: { x: 0, y: 0 } },
     ],

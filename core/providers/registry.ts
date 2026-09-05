@@ -1,26 +1,59 @@
+import type { ZodTypeAny } from 'zod';
 import type { LLMProviderFactory, TTSProviderFactory } from './types';
 
-/** Empty registries; providers/* self-register at startup (ARCHITECTURE §2). */
-const llm = new Map<string, LLMProviderFactory>();
-const tts = new Map<string, TTSProviderFactory>();
+/**
+ * Provider registries (ARCHITECTURE §2). Empty in the core; `providers/*` self-register at startup.
+ *
+ * A registration carries more than a factory, because there is one node per port type rather than
+ * one node per provider: the node renders the provider list and the fields of whichever provider is
+ * selected, so the registry has to describe the settings as well as build the provider.
+ */
 
-export function registerLLMProvider(id: string, factory: LLMProviderFactory): void {
-  llm.set(id, factory);
+export interface ProviderRegistration<F> {
+  id: string;
+  displayName: string;
+  factory: F;
+  /** Shape of `settings` for this provider; the node validates and renders from it. */
+  settingsSchema: ZodTypeAny;
+  defaultSettings: Record<string, unknown>;
+  /**
+   * Setting names that hold a credential. Nothing reads this yet — v0.1 ships no API keys — but a
+   * provider that needs one declares it here so the key handling has a single place to look.
+   */
+  secretSettings?: string[];
 }
-export function registerTTSProvider(id: string, factory: TTSProviderFactory): void {
-  tts.set(id, factory);
+
+export type LLMProviderRegistration = ProviderRegistration<LLMProviderFactory>;
+export type TTSProviderRegistration = ProviderRegistration<TTSProviderFactory>;
+
+const llm = new Map<string, LLMProviderRegistration>();
+const tts = new Map<string, TTSProviderRegistration>();
+
+export function registerLLMProvider(reg: LLMProviderRegistration): void {
+  llm.set(reg.id, reg);
 }
-export function getLLMProviderFactory(id: string): LLMProviderFactory | undefined {
+export function registerTTSProvider(reg: TTSProviderRegistration): void {
+  tts.set(reg.id, reg);
+}
+
+export function getLLMProvider(id: string): LLMProviderRegistration | undefined {
   return llm.get(id);
 }
-export function getTTSProviderFactory(id: string): TTSProviderFactory | undefined {
+export function getTTSProvider(id: string): TTSProviderRegistration | undefined {
   return tts.get(id);
 }
-export function listLLMProviderIds(): string[] {
-  return [...llm.keys()];
+export function getLLMProviderFactory(id: string): LLMProviderFactory | undefined {
+  return llm.get(id)?.factory;
 }
-export function listTTSProviderIds(): string[] {
-  return [...tts.keys()];
+export function getTTSProviderFactory(id: string): TTSProviderFactory | undefined {
+  return tts.get(id)?.factory;
+}
+
+export function listLLMProviders(): LLMProviderRegistration[] {
+  return [...llm.values()];
+}
+export function listTTSProviders(): TTSProviderRegistration[] {
+  return [...tts.values()];
 }
 
 /** Test-only. */

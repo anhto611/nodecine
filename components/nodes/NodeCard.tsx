@@ -48,7 +48,10 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
 
   const stateClass = `s-${rt.state}${rt.blockedBy?.kind === 'capability' ? ' by-capability' : ''}${issues.length || rt.warnings?.length ? ' has-issue' : ''}${notReady && rt.state === 'success' ? ' not-ready' : ''}`;
   const badge = renderBadge(rt, notReady, t);
-  const hasRetry = rt.state === 'error' || (def.kind === 'resource' && rt.state === 'success');
+  // A resource node offers its re-check whenever it is not busy. Tying it to `success` took the
+  // button away exactly when a setting had just changed and the node had gone stale — the one
+  // moment the user has a reason to press it.
+  const hasRetry = rt.state === 'error' || (def.kind === 'resource' && rt.state !== 'running' && rt.state !== 'queued');
 
   return (
     <div className={`nc-node ${node.type === 'core/video-output' ? 'wide' : ''} ${stateClass} ${selected ? 'selected' : ''}`}>
