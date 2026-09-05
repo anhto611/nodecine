@@ -2,6 +2,7 @@
 import React from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
 import type { NodeRuntime } from '@/core/engine/state';
+import { clampCentre, frameFor, viewRect as visibleRect, type Extent } from './minimap-geometry';
 
 /**
  * Minimap with a FIXED frame (USER_FLOWS §1.1).
@@ -13,7 +14,7 @@ import type { NodeRuntime } from '@/core/engine/state';
  * to have.
  */
 
-export type Extent = [[number, number], [number, number]];
+export type { Extent };
 
 type Tone = 'idle' | 'run' | 'ok' | 'warn' | 'err';
 
@@ -65,9 +66,10 @@ export const Minimap: React.FC<{
   // its own aspect ratio, so the frame ends up a scaled copy of the real viewport and the rectangle
   // inside it a scaled copy of the screen. The container adds a hairline of padding so the outline
   // of a rectangle sitting on the very edge is not sliced in half.
-  const scale = Math.max(ew / MAX_WIDTH, eh / MAX_HEIGHT);
-  const WIDTH = ew / scale;
-  const HEIGHT = eh / scale;
+  const frame = frameFor(extent, { w: MAX_WIDTH, h: MAX_HEIGHT });
+  const scale = frame.scale;
+  const WIDTH = frame.w;
+  const HEIGHT = frame.h;
   const originX = ex;
   const originY = ey;
 
@@ -80,8 +82,8 @@ export const Minimap: React.FC<{
     rf.setViewport(v);
   };
 
-  const [tx, ty, zoom] = transform;
-  const view = { x: -tx / zoom, y: -ty / zoom, w: paneWidth / zoom, h: paneHeight / zoom };
+  const zoom = transform[2];
+  const view = visibleRect(transform, { w: paneWidth, h: paneHeight });
 
   const toPx = (fx: number, fy: number) => ({ x: (fx - originX) / scale, y: (fy - originY) / scale });
   /**
@@ -92,21 +94,22 @@ export const Minimap: React.FC<{
   const viewRect = { x: p0.x, y: p0.y, w: Math.max(2, view.w / scale), h: Math.max(2, view.h / scale) };
 
   /**
-   * Move the canvas so the given minimap point becomes the centre of the viewport, clamped to the
-   * same extent the canvas itself pans within — setViewport writes the transform directly and does
-   * not go through React Flow's translateExtent.
+   * Centre the canvas on a point in flow coordinates, keeping the visible rect inside the extent.
+   * Every write goes through here: setViewport sets the transform directly and does not pass through
+   * React Flow's own translateExtent, so this is the only thing stopping the rectangle from sliding
+   * out of its frame. A rect larger than the extent on an axis is centred on that axis.
    */
+  const centreAt = (fx: number, fy: number, nextZoom: number) => {
+    const c = clampCentre(fx, fy, { w: paneWidth / nextZoom, h: paneHeight / nextZoom }, extent);
+    write({ x: -c.x * nextZoom + paneWidth / 2, y: -c.y * nextZoom + paneHeight / 2, zoom: nextZoom });
+  };
+
+  /** Move the canvas so the given point on the map becomes the centre of the viewport. */
   const centreOn = (clientX: number, clientY: number) => {
     const r = svgRef.current?.getBoundingClientRect();
     if (!r) return;
     const cur = live();
-    const vw = paneWidth / cur.zoom;
-    const vh = paneHeight / cur.zoom;
-    const clamp = (c: number, half: number, lo: number, hi: number) =>
-      hi - lo < half * 2 ? (lo + hi) / 2 : Math.min(Math.max(c, lo + half), hi - half);
-    const fx = clamp(originX + ((clientX - r.left) / r.width) * WIDTH * scale, vw / 2, ex, ex2);
-    const fy = clamp(originY + ((clientY - r.top) / r.height) * HEIGHT * scale, vh / 2, ey, ey2);
-    write({ x: -fx * cur.zoom + paneWidth / 2, y: -fy * cur.zoom + paneHeight / 2, zoom: cur.zoom });
+    centreAt(originX + ((clientX - r.left) / r.width) * WIDTH * scale, originY + ((clientY - r.top) / r.height) * HEIGHT * scale, cur.zoom);
   };
 
   /**
@@ -119,9 +122,7 @@ export const Minimap: React.FC<{
     const cur = live();
     const next = Math.min(maxZoom, Math.max(minZoom, cur.zoom * Math.pow(2, -e.deltaY / 400)));
     if (next === cur.zoom) return;
-    const cx = -cur.x / cur.zoom + paneWidth / cur.zoom / 2;
-    const cy = -cur.y / cur.zoom + paneHeight / cur.zoom / 2;
-    write({ x: -cx * next + paneWidth / 2, y: -cy * next + paneHeight / 2, zoom: next });
+    centreAt(-cur.x / cur.zoom + paneWidth / cur.zoom / 2, -cur.y / cur.zoom + paneHeight / cur.zoom / 2, next);
   };
 
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
