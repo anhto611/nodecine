@@ -16,9 +16,9 @@ export const AssemblerBody: React.FC<BodyProps> = ({ nodeId }) => {
   return (
     <>
       <Kv k={t('node.total')} v={ir ? `${ir.meta.totalDurationInFrames} ${t('node.frames')}` : '—'} dim={!ir} />
-      <Kv k={t('node.fps')} v={<input className={`nc-input ${stopFlow}`} style={{ width: 44 }} type="number" value={p.fps} onChange={(e) => set({ fps: Number(e.target.value) || 30 })} />} />
-      <Kv k={t('node.minFrames')} v={<input className={`nc-input ${stopFlow}`} style={{ width: 54 }} type="number" value={p.minTotalFrames} onChange={(e) => set({ minTotalFrames: Number(e.target.value) || 0 })} />} />
-      <Kv k={t('node.title')} v={<input className={`nc-input ${stopFlow}`} style={{ width: 100 }} value={p.title} onChange={(e) => set({ title: e.target.value })} />} />
+      <Kv k={t('node.fps')} v={<input className={`nc-input ${stopFlow}`} type="number" value={p.fps} onChange={(e) => set({ fps: Number(e.target.value) || 30 })} />} />
+      <Kv k={t('node.minFrames')} v={<input className={`nc-input ${stopFlow}`} type="number" value={p.minTotalFrames} onChange={(e) => set({ minTotalFrames: Number(e.target.value) || 0 })} />} />
+      <Kv k={t('node.title')} v={<input className={`nc-input ${stopFlow}`} value={p.title} onChange={(e) => set({ title: e.target.value })} />} />
       <div className="nc-alloc">
         {(ir?.timeline ?? plan?.scenes ?? []).map((s, i, arr) => {
           const w = 'durationInFrames' in s ? s.durationInFrames : (s as { weight: number }).weight;
@@ -26,7 +26,11 @@ export const AssemblerBody: React.FC<BodyProps> = ({ nodeId }) => {
           return <div key={i} style={{ width: `${(100 * w) / sum}%`, background: ir ? colors[i % colors.length] : 'var(--tx-3)', opacity: ir ? 1 : 0.25 }} />;
         })}
       </div>
-      {ir && <div className="nc-hint">{ir.timeline.map((s) => s.durationInFrames).join(' / ')} · {t('node.padTail')} {ir.audioTrack.padTailFrames}f</div>}
+      {ir && (() => {
+        const durations = ir.timeline.map((s) => s.durationInFrames).join(' / ');
+        // Ten durations do not fit one row; keep the line to one and hand the full list to the tooltip.
+        return <div className="nc-hint one-line" title={durations}>{ir.timeline.length} {t('node.scenes')} · {durations} · {t('node.padTail')} {ir.audioTrack.padTailFrames}f</div>;
+      })()}
     </>
   );
 };

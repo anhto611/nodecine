@@ -1,6 +1,7 @@
 'use client';
 import { GraphInvalidError, type Graph, type GraphIssue } from '@/core/engine/graph';
 import type { ExecutorHooks } from '@/core/engine/executor';
+import type { RunRecord } from '@/core/engine/history';
 import { LogBuffer, type LogEntry } from '@/core/engine/log';
 import { initialRuntime, type NodeRuntime } from '@/core/engine/state';
 import type { Job } from '@/server/jobs';
@@ -12,7 +13,8 @@ import type { Job } from '@/server/jobs';
  * back. One instance follows the active tab: switching tabs switches the key it speaks for.
  */
 
-type Snapshot = { runtimes: Record<string, NodeRuntime>; logs: LogEntry[]; running: boolean; pending: Job[] };
+type Snapshot = { runtimes: Record<string, NodeRuntime>; logs: LogEntry[]; running: boolean; pending: Job[]; history?: RunRecord[] };
+export type RemoteHooks = ExecutorHooks & { onHistory?: (history: RunRecord[]) => void };
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -35,7 +37,7 @@ export class RemoteExecutor {
   private pushGraph: ReturnType<typeof setTimeout> | null = null;
   private runningJob: string | null = null;
 
-  constructor(key: string, graph: Graph, name: string, private readonly hooks: ExecutorHooks = {}) {
+  constructor(key: string, graph: Graph, name: string, private readonly hooks: RemoteHooks = {}) {
     this.key = key;
     this.graph = graph;
     this.name = name;
@@ -152,6 +154,7 @@ export class RemoteExecutor {
       for (const [id, rt] of Object.entries(snap.runtimes)) this.setRuntime(id, rt);
       for (const entry of snap.logs.slice(-500)) this.logs.push(entry);
       this.runningJob = snap.running ? 'unknown' : null;
+      this.hooks.onHistory?.(snap.history ?? []);
     }
     const es = new EventSource(`/api/jobs/events?key=${encodeURIComponent(key)}`);
     this.source = es;
@@ -159,6 +162,7 @@ export class RemoteExecutor {
     es.addEventListener('run:start', (m) => { const e = JSON.parse((m as MessageEvent).data) as { runId: number; stepTotal: number }; this.hooks.onRunStart?.(e); });
     es.addEventListener('run:step', (m) => { const e = JSON.parse((m as MessageEvent).data) as { nodeId: string; step: number; stepTotal: number }; this.hooks.onStep?.(e); });
     es.addEventListener('run:end', (m) => { const e = JSON.parse((m as MessageEvent).data) as { runId: number; ok: boolean; durationMs: number }; this.hooks.onRunEnd?.(e); });
+    es.addEventListener('history', (m) => { const e = JSON.parse((m as MessageEvent).data) as { history: RunRecord[] }; this.hooks.onHistory?.(e.history); });
     es.addEventListener('log', (m) => { const e = JSON.parse((m as MessageEvent).data) as { entry: LogEntry }; this.logs.push(e.entry); });
     es.addEventListener('job', (m) => {
       const { job } = JSON.parse((m as MessageEvent).data) as { job: Job };

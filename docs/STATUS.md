@@ -29,7 +29,7 @@ Cả ba là **tệp JSON** dưới `templates/`, cùng hình dạng tệp dự �
 
 Hai node nhà cung cấp theo mẫu Load Checkpoint của ComfyUI: **một node cho mỗi loại cổng**, chọn nhà cung cấp trong node, không phải một node cho mỗi hãng.
 
-**Bộ máy chạy ở máy chủ** (`server/jobs.ts`, `lib/remote-executor.ts`, `ARCHITECTURE.md` §1.2): bấm Chạy là nộp việc vào hàng đợi, executor theo từng tab giữ kết quả và bộ đệm, trạng thái về qua SSE, tải lại trang hay đóng tab không mất việc, nhiều video xếp hàng chạy lần lượt. Các route theo từng dịch vụ cũ đã gỡ.
+**Bộ máy chạy ở máy chủ** (`server/jobs.ts`, `lib/remote-executor.ts`, `ARCHITECTURE.md` §1.2): bấm Chạy là nộp việc vào hàng đợi, executor theo từng tab giữ kết quả và bộ đệm, trạng thái về qua SSE, tải lại trang hay đóng tab không mất việc, nhiều video xếp hàng chạy lần lượt. Các route theo từng dịch vụ cũ đã gỡ. Việc và lịch sử chạy ghi xuống đĩa (`.nodecine/jobs/<id>.json`, `EXECUTION_ENGINE.md` §7.2): khởi động lại máy chủ vẫn còn lịch sử kèm bản đặc tả và các MP4 đã xuất; việc dở dang lúc tiến trình cũ chết được đánh dấu hủy.
 
 **Mọi node ở `nodes/<họ>/`** (định nghĩa, ruột, thân node, test cạnh nhau; `nodes/index.ts` là danh sách duy nhất), `core/` chỉ còn khung. **Không còn `extras/`.** Truy Xuất Repo là node `core/github-fetcher`, cả họ ở `nodes/github/`, gọi GitHub thẳng như node API của ComfyUI; project cũ tự đổi tên node (schema v5). Người dùng mới cài thấy đủ 14 loại node lõi trong Thư viện; `templates/__tests__/fresh-install.test.ts` ghim đúng tập này.
 

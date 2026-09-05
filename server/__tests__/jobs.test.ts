@@ -1,5 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { JobHub, type HubEvent } from '../jobs';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { JobHub, type HubEvent, type Job } from '../jobs';
 import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
 import { _resetCodeRenderers, registerCodeRenderer } from '@/core/look/renderers';
@@ -17,11 +20,18 @@ async function until(pred: () => boolean, ms = 5000): Promise<void> {
 }
 
 describe('JobHub', () => {
-  beforeEach(() => {
+  let dir: string;
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'nodecine-jobs-'));
+    process.env.NODECINE_JOBS_DIR = dir;
     _resetNodeRegistry();
     _resetCodeRenderers();
     registerNodes();
     registerCodeRenderer('html-gsap', 'hyperframes', () => null);
+  });
+  afterEach(async () => {
+    delete process.env.NODECINE_JOBS_DIR;
+    await rm(dir, { recursive: true, force: true });
   });
 
   it('runs a submitted graph, streams node states and job status, and keeps the executor for the key', async () => {
@@ -77,5 +87,47 @@ describe('JobHub', () => {
     await until(() => hub.get(exp.id)?.status === 'done');
     expect(hub.get(exp.id)?.ok).toBe(true);
     expect(hub.snapshot('tab-6')!.runtimes.export!.state).toBe('success');
+  });
+
+  it('writes every job to disk, keeps the run in the history, and reads it all back after a restart', async () => {
+    const hub = new JobHub(() => makeFakeServices());
+    const events: HubEvent[] = [];
+    hub.subscribe((e) => events.push(e));
+    const job = hub.submit({ key: 'tab-1', kind: 'run', graph: graph(), name: 'Static' });
+    await until(() => hub.get(job.id)?.status === 'done');
+    const onDisk = JSON.parse(await readFile(path.join(dir, `${job.id}.json`), 'utf8')) as Job;
+    expect(onDisk.status).toBe('done');
+    expect(onDisk.result?.ir.timeline.length).toBeGreaterThan(0);
+    expect(onDisk.result?.engineId).toBe('hyperframes');
+    expect(events.some((e) => e.type === 'history' && e.history.length === 1)).toBe(true);
+    expect(hub.snapshot('tab-1')!.history[0]!.seq).toBe(1);
+
+    // An export that follows is filed under that run.
+    const exp = hub.submit({ key: 'tab-1', kind: 'node', graph: graph(), name: 'Static', nodeId: 'export' });
+    await until(() => hub.get(exp.id)?.status === 'done');
+    expect(hub.get(exp.id)?.ok).toBe(true);
+    expect(hub.history('tab-1')[0]!.exports).toEqual([expect.objectContaining({ fileName: expect.any(String), outputUrl: expect.stringMatching(/^\/api\/media\//) })]);
+
+    // A new process reads the same directory: the history is still there, no executor needed.
+    const again = new JobHub(() => makeFakeServices());
+    expect(again.list().map((j) => j.id).sort()).toEqual([exp.id, job.id].sort());
+    expect(again.history('tab-1')).toHaveLength(1);
+    expect(again.history('tab-1')[0]!.exports).toHaveLength(1);
+    expect(again.history('tab-1')[0]!.ir).toEqual(onDisk.result!.ir);
+  });
+
+  it('marks a job the previous process died on as cancelled, and ignores files that are not jobs', async () => {
+    const stale: Job = { id: 'job-stale', key: 'tab-9', kind: 'run', name: 'Old', status: 'running', createdAt: 1, startedAt: 2 } as Job;
+    await writeFile(path.join(dir, 'job-stale.json'), JSON.stringify(stale));
+    await writeFile(path.join(dir, 'half-written.json'), '{"id": "job-x", ');
+    await writeFile(path.join(dir, 'notes.txt'), 'not a job');
+    const hub = new JobHub(() => makeFakeServices());
+    const job = hub.get('job-stale')!;
+    expect(job.status).toBe('cancelled');
+    expect(job.error?.code).toBe('RUN_CANCELLED');
+    expect(hub.list()).toHaveLength(1);
+    const files = (await readdir(dir)).sort();
+    expect(files).toEqual(['half-written.json', 'job-stale.json', 'notes.txt']);
+    expect(JSON.parse(await readFile(path.join(dir, 'job-stale.json'), 'utf8')).status).toBe('cancelled');
   });
 });

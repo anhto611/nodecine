@@ -34,7 +34,7 @@ export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
     <>
       <Kv k={t('node.codec')} v={<select className={`nc-select ${stopFlow}`} value={p.codec} onChange={(e) => set({ codec: e.target.value })}><option value="h264">H.264</option><option value="h265">H.265</option></select>} />
       <Kv k={t('node.quality')} v={<select className={`nc-select ${stopFlow}`} value={p.quality} onChange={(e) => set({ quality: e.target.value })}>{['high', 'medium', 'low'].map((q) => <option key={q} value={q}>{t(`node.quality.${q}`)}</option>)}</select>} />
-      <Kv k={t('node.fileName')} v={<input className={`nc-input ${stopFlow}`} style={{ width: 120 }} value={p.fileName} onChange={(e) => set({ fileName: e.target.value })} />} />
+      <Kv k={t('node.fileName')} v={<input className={`nc-input ${stopFlow}`} value={p.fileName} onChange={(e) => set({ fileName: e.target.value })} />} />
       {result?.outputUrl && rt?.state === 'success' && (
         <a className={`nc-btn nc-btn-sm ${stopFlow}`} href={result.outputUrl} download={result.fileName} style={{ justifyContent: 'center', marginTop: 4 }}>
           <Icon.down size={10} /> {t('node.download')} · {((result.bytes ?? 0) / 1024 / 1024).toFixed(1)} MB

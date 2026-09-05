@@ -64,9 +64,14 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 /* A dropdown is the exception: it must fit its longest option, not just the selected one, so it
    asks for a floor instead of measuring the text that happens to be showing. */
 .nc-kv > .nc-v:has(.nc-select) { flex: 1 1 0; min-width: 120px; }
+/* A text field fills the rest of its row the way a select does; numbers keep one shared width so a column of them lines up. */
+.nc-kv > .nc-v:has(.nc-input:not([type=number])) { flex: 1 1 0; min-width: 120px; }
+.nc-kv > .nc-v:has(.nc-input:not([type=number])) .nc-input { width: 100%; }
+.nc-kv .nc-input[type=number] { width: 64px; }
 .nc-v { color: var(--tx-2); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .nc-dim { color: var(--tx-3); }
 .nc-code { font-family: ui-monospace, Menlo, monospace; font-size: 9px; line-height: 1.4; white-space: pre; overflow: auto; resize: vertical; }
-.nc-hint { font-size: 8.5px; color: var(--tx-3); margin-top: 4px; }
+.nc-hint { font-size: 8.5px; color: var(--tx-3); margin-top: 4px; min-width: 0; }
+.nc-hint.one-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nc-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
 .nc-spin { animation: nc-spin 1s linear infinite; }
 @keyframes nc-spin { to { transform: rotate(360deg); } }

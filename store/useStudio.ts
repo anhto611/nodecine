@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { RemoteExecutor } from '@/lib/remote-executor';
 import { validateGraph, type Graph, type GraphIssue, type NodeInstance, GraphInvalidError } from '@/core/engine/graph';
 import type { NodeRuntime } from '@/core/engine/state';
-import { RunHistory, type RunRecord } from '@/core/engine/history';
+import type { RunRecord } from '@/core/engine/history';
 import { getNodeType } from '@/core/nodes/definition';
 import staticScriptJson from '@/templates/static-script.json';
 import { getTemplate, templateGraph, type TemplateDefinition, localized } from '@/core/templates/registry';
@@ -101,8 +101,6 @@ let uid = 0;
 const newId = (type: string) => `${type.split('/')[1] ?? 'node'}-${Date.now().toString(36)}-${(uid++).toString(36)}`;
 
 export const useStudio = create<StudioState>((set, get) => {
-  const history = new RunHistory(20);
-
   let tabSeq = 0;
   const tabKey = () => `tab-${Date.now().toString(36)}-${(tabSeq++).toString(36)}`;
   const persist = () => {
@@ -112,7 +110,7 @@ export const useStudio = create<StudioState>((set, get) => {
   /** Swap the canvas to a tab's graph: executor, validation, runtimes, name. */
   const showTab = (tab: WorkflowTab) => {
     const ex = get().executor;
-    set({ activeTab: tab.key, graph: tab.graph, projectName: tab.name, issues: validateGraph(tab.graph), runtimes: {}, running: false, step: null, viewingRun: null, selectedNodeId: null });
+    set({ activeTab: tab.key, graph: tab.graph, projectName: tab.name, issues: validateGraph(tab.graph), runtimes: {}, running: false, step: null, viewingRun: null, selectedNodeId: null, history: [] });
     persist();
     void ex?.switchTo(tab.key, tab.graph, tab.name).then(() => {
       if (get().activeTab !== tab.key) return;
@@ -185,19 +183,8 @@ export const useStudio = create<StudioState>((set, get) => {
         onStateChange: (nodeId, runtime) => set((s) => ({ runtimes: { ...s.runtimes, [nodeId]: runtime } })),
         onRunStart: ({ stepTotal }) => set({ running: true, step: { nodeId: '', step: 0, total: stepTotal }, viewingRun: null }),
         onStep: ({ nodeId, step, stepTotal }) => set({ step: { nodeId, step, total: stepTotal } }),
-        onRunEnd: ({ ok, durationMs }) => {
-          const s = get();
-          const asm = s.graph.nodes.find((n) => getNodeType(n.type)?.type === 'core/timeline-assembler');
-          const irPacket = asm ? s.executor?.runtime(asm.id).outputs.ir : undefined;
-          if (irPacket) {
-            const out = s.graph.nodes.find((n) => n.type === 'core/video-output' && s.executor?.runtime(n.id).state === 'success');
-            const engineEdge = out ? s.graph.edges.find((e) => e.target === out.id && e.targetPort === 'engine') : undefined;
-            const engineRef = engineEdge ? (s.executor?.runtime(engineEdge.source).outputs[engineEdge.sourcePort]?.payload as EngineRef | undefined) : undefined;
-            history.add({ startedAt: Date.now() - durationMs, durationMs, ir: irPacket.payload as VideoIR, engineId: engineRef?.engineId });
-          }
-          set({ running: false, step: null, history: [...history.all()] });
-          void ok;
-        },
+        onRunEnd: () => set({ running: false, step: null }),
+        onHistory: (history) => set({ history }),
       });
       executor.logs.subscribe((e) => set((s) => ({ logTick: s.logTick + 1, unreadErrors: e.level === 'error' && !s.logsOpen ? s.unreadErrors + 1 : s.unreadErrors })));
       set({

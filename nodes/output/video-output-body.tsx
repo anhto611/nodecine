@@ -89,14 +89,15 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
       </div>
       {ir && (
         <>
-          <div style={{ display: 'flex', gap: 3 }}>
+          {/* One chip per scene; ten of them do not fit one row, so they wrap instead of spilling past the card. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(66px, 1fr))', gap: 3 }}>
             {ir.timeline.map((s, i) => {
               const active = frame >= s.startFrame && frame < s.startFrame + s.durationInFrames;
               return (
                 <button
                   key={s.id}
                   className={`nc-chip ${active ? 'on' : ''}`}
-                  style={{ flex: s.durationInFrames, textAlign: 'left', padding: '4px 6px', lineHeight: 1.4 }}
+                  style={{ minWidth: 0, textAlign: 'left', padding: '4px 6px', lineHeight: 1.4 }}
                   // Land a few frames in: scenes fade in from black, so the exact first frame previews as empty.
                   onClick={() => handle.current?.seekTo(s.startFrame + Math.min(12, Math.max(0, s.durationInFrames - 1)))}
                   title={s.blockId}

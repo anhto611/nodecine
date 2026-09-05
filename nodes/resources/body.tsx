@@ -96,7 +96,7 @@ const ProviderBody: React.FC<BodyProps & { kind: 'tts' | 'llm' }> = ({ nodeId, k
               {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           ) : (
-            <input className={`nc-input ${stopFlow}`} style={{ width: 100 }} placeholder={f.placeholder}
+            <input className={`nc-input ${stopFlow}`} placeholder={f.placeholder}
               value={String(settings[f.name] ?? '')} onChange={(e) => setSetting(f.name, e.target.value || undefined)} />
           )
         } />

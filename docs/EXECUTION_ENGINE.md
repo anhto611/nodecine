@@ -139,11 +139,11 @@ Trạng thái bền vững phía trình duyệt nằm trong bộ nhớ cục b�
 2. Khóa API: tách riêng để có thể xóa độc lập mà không mất đồ thị, và để không bao giờ bị vô tình đưa vào nội dung xuất hay chia sẻ. Khóa này chỉ được tạo khi có nhà cung cấp cần khóa (xem `STATUS.md`).
 3. Tùy chọn giao diện: ngôn ngữ giao diện (mặc định `en`), vị trí và mức thu phóng của canvas, danh mục đang chọn trong Trình duyệt Bản mẫu.
 
-### 7.2. Những gì cố ý không được lưu
+### 7.2. Việc và lịch sử chạy nằm trên đĩa của máy chủ
 
-Kết quả chạy của các node, gồm dữ kiện, kịch bản, tệp âm thanh và Bản Đặc Tả Video Trung Gian, chỉ tồn tại trong bộ nhớ của phiên làm việc. Lịch sử chạy trong phiên và nhật ký cũng vậy: chúng là hai vùng đệm trong bộ nhớ, giới hạn lần lượt 20 mục và 2.000 dòng, mất khi tải lại trang. Tải lại trang sẽ khôi phục đồ thị và mọi tham số; mọi node xử lý trở về trạng thái `idle` và người dùng cần chạy lại, riêng ba node tài nguyên được tự chạy `probe()` ngay sau khi nạp theo mục 1.1 nên hiện trạng thái sẵn sàng mà không cần bấm gì.
+Bộ máy chạy ở máy chủ (mục 8 và `ARCHITECTURE.md` §1.2), nên kết quả chạy không còn phụ thuộc vào trình duyệt. Mỗi việc trong hàng đợi (`run`, `node`, `probe`) là một tệp `.nodecine/jobs/<id>.json` (đổi thư mục bằng biến môi trường `NODECINE_JOBS_DIR`), ghi lại theo kiểu ghi tạm rồi đổi tên ở mỗi lần đổi trạng thái, giống `job.json` của cutdown. Một việc `run` đi tới được Bản Đặc Tả Video Trung Gian thì giữ luôn bản đặc tả đó, định danh engine và tổng thời gian chạy; việc Xuất MP4 hoàn tất sau đó được gắn vào lần chạy gần nhất của cùng khóa. Khi tiến trình khởi động, thư mục được đọc lại: việc đang `pending` hay `running` lúc tiến trình cũ chết được đánh dấu `cancelled` với mã `RUN_CANCELLED`, tệp không đọc được bị bỏ qua, và chỉ giữ 200 tệp mới nhất.
 
-Lý do của quyết định này: bộ nhớ cục bộ của trình duyệt có hạn mức khoảng vài megabyte, trong khi tệp âm thanh và Bản đặc tả dễ vượt ngưỡng đó. Quan trọng hơn, đường dẫn tệp tạm có thể đã bị dọn ở phía máy chủ, nên một kết quả khôi phục lại có nguy cơ trỏ vào tệp không còn tồn tại. Thà chạy lại còn hơn hiển thị một trạng thái hỏng. Việc lưu bền kết quả chạy được ghi nhận là hạng mục cho phiên bản sau, khi đó nơi lưu phù hợp là cơ sở dữ liệu phía trình duyệt chứ không phải bộ nhớ cục bộ.
+Trạng thái node trong bộ nhớ (kết quả từng node, chữ ký bộ nhớ đệm) và nhật ký (2.000 dòng) vẫn là của executor theo từng khóa trong tiến trình máy chủ: tải lại trang là thấy lại qua `GET /api/executors/<khóa>`, nhưng khởi động lại máy chủ thì mọi node xử lý về `idle` và cần chạy lại; ba node tài nguyên tự `probe()` sau khi nạp theo mục 1.1. Tệp âm thanh và MP4 vẫn nằm trong thư mục tạm theo vòng đời riêng, nên một mục lịch sử cũ có thể trỏ tới tệp đã bị dọn (mục 8.1).
 
 ### 7.3. Đánh phiên bản và nâng cấp
 
@@ -154,11 +154,12 @@ Lý do của quyết định này: bộ nhớ cục bộ của trình duyệt c�
 
 ---
 
-## 8. Lịch sử Chạy và Nhật ký trong Phiên
+## 8. Lịch sử Chạy và Nhật ký
 
 ### 8.1. Lịch sử chạy
 
-- Mỗi lần luồng chạy tới khi Node Đóng Gói Timeline phát ra Bản Đặc Tả Video Trung Gian, bộ máy đẩy một mục vào lịch sử gồm: số thứ tự, mốc thời gian, bản đặc tả đó, tổng thời gian chạy. Ảnh khung hình đầu tiên và định danh engine được bổ sung từ Node Xuất Bản Video đầu tiên thành công trong lần chạy; nếu không có node nào, mục dùng ảnh giữ chỗ và ghi "chưa có trình phát". Nhiều Node Xuất Bản Video vẫn là một mục; bấm mục đó nạp bản đặc tả vào mọi Node Xuất Bản Video đang có. Mỗi lần Node Xuất MP4 hoàn tất, mục kết xuất gồm tên tệp và dung lượng được gắn vào lần chạy đã sinh ra Bản Đặc Tả Video Trung Gian tương ứng.
+- Lịch sử là của máy chủ, theo từng khóa workflow, suy ra từ các việc `run` đã lưu trên đĩa (mục 7.2): 20 lần chạy gần nhất, mới nhất trước. Trình duyệt nhận nó trong ảnh chụp `GET /api/executors/<khóa>` khi mở tab và qua sự kiện SSE `history` mỗi khi có lần chạy hay lần xuất mới; trình duyệt không tự ghép lịch sử.
+- Mỗi lần luồng chạy tới khi Node Đóng Gói Timeline phát ra Bản Đặc Tả Video Trung Gian, bộ máy ghi vào việc đó một mục gồm: số thứ tự, mốc thời gian, bản đặc tả đó, tổng thời gian chạy. Ảnh khung hình đầu tiên và định danh engine được bổ sung từ Node Xuất Bản Video đầu tiên thành công trong lần chạy; nếu không có node nào, mục dùng ảnh giữ chỗ và ghi "chưa có trình phát". Nhiều Node Xuất Bản Video vẫn là một mục; bấm mục đó nạp bản đặc tả vào mọi Node Xuất Bản Video đang có. Mỗi lần Node Xuất MP4 hoàn tất, mục kết xuất gồm tên tệp và dung lượng được gắn vào lần chạy đã sinh ra Bản Đặc Tả Video Trung Gian tương ứng.
 - Chọn một mục trong lịch sử chỉ đổi Bản Đặc Tả Video Trung Gian đang nạp vào các Node Xuất Bản Video. Trạng thái và chữ ký của mọi node khác giữ nguyên, nên không có lệnh gọi mạng nào phát sinh và lần Chạy Luồng kế tiếp vẫn tận dụng được bộ nhớ đệm như bình thường.
 - Đường dẫn âm thanh trong một mục cũ có thể đã bị dọn ở phía máy chủ theo vòng đời tệp tạm. Khi nạp lại mục đó mà tệp không còn, Node Video Output hiển thị kết quả không tiếng kèm cảnh báo, không chuyển sang trạng thái lỗi.
 
