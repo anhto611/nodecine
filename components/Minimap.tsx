@@ -34,16 +34,20 @@ const toneOf = (state: string | undefined): Tone =>
 
 export const Minimap: React.FC<{
   extent: Extent;
+  pane: { w: number; h: number };
   nodes: { id: string; position: { x: number; y: number } }[];
   sizes: Record<string, { w: number; h: number }>;
   runtimes: Record<string, NodeRuntime>;
   minZoom: number;
   maxZoom: number;
-}> = ({ extent, nodes, sizes, runtimes, minZoom, maxZoom }) => {
+}> = ({ extent, pane, nodes, sizes, runtimes, minZoom, maxZoom }) => {
   const rf = useReactFlow();
   const transform = useStore((s) => s.transform);
-  const paneWidth = useStore((s) => s.width);
-  const paneHeight = useStore((s) => s.height);
+  // Canvas size comes from the caller, not React Flow's store: the store learns it from a
+  // ResizeObserver, and where those are not delivered it keeps reporting the size the canvas had
+  // when the page loaded, which would draw the viewport with the wrong shape after a panel opens.
+  const paneWidth = pane.w;
+  const paneHeight = pane.h;
   const svgRef = React.useRef<SVGSVGElement>(null);
   const drag = React.useRef<{ x: number; y: number } | null>(null);
   /**

@@ -23,6 +23,9 @@ import { useT } from './ui';
 
 const nodeTypes = { nc: NodeCard };
 
+/** The pannable area always has this shape, whatever the window and the open panels do to the canvas. */
+const WORLD_ASPECT = 16 / 9;
+
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 2;
 
@@ -56,10 +59,15 @@ function CanvasInner() {
    * an internal lookup that an externally controlled node array never receives.
    */
   const [sizes, setSizes] = React.useState<Record<string, { w: number; h: number }>>({});
+  /** Canvas size in CSS pixels, so the pannable area follows panels opening and window resizes. */
+  const [pane, setPane] = React.useState({ w: 0, h: 0 });
   React.useEffect(() => {
     const read = () => {
+      const root = paneRef.current;
+      if (!root) return;
+      setPane((prev) => (prev.w === root.clientWidth && prev.h === root.clientHeight ? prev : { w: root.clientWidth, h: root.clientHeight }));
       const next: Record<string, { w: number; h: number }> = {};
-      paneRef.current?.querySelectorAll<HTMLElement>('.react-flow__node[data-id]').forEach((el) => {
+      root.querySelectorAll<HTMLElement>('.react-flow__node[data-id]').forEach((el) => {
         const id = el.dataset.id;
         if (id && el.offsetWidth) next[id] = { w: el.offsetWidth, h: el.offsetHeight };
       });
@@ -70,6 +78,9 @@ function CanvasInner() {
       });
     };
     read();
+    // A timer rather than a ResizeObserver: observers are not delivered in every embedding of the app
+    // (they are silently dropped when the page is not being painted), and a stale canvas size would
+    // leave the pannable area shaped for a window that no longer exists.
     const t = setInterval(read, 400);
     return () => clearInterval(t);
   }, []);
@@ -108,13 +119,15 @@ function CanvasInner() {
       })),
     [graph.edges, runtimes],
   );
-  // Panning is otherwise unbounded, and dragging inside the minimap makes that obvious: the viewport
-  // walks away from the graph, the minimap's box is the union of the nodes and the viewport, so the
-  // node squares shrink towards nothing and the canvas ends up empty. Keep the viewport near the graph.
+  /**
+   * The area the canvas can be panned around in. Node coordinates themselves are unbounded, but
+   * without a limit the viewport walks off into empty space, which is what made the minimap collapse.
+   * The area grows with the graph and always keeps a 16:9 shape, so the minimap that draws it is a
+   * stable frame rather than something that changes proportions with the window.
+   */
   const translateExtent = React.useMemo((): [[number, number], [number, number]] => {
-    const pane = paneRef.current;
-    const viewW = (pane?.clientWidth ?? 0) / zoom;
-    const viewH = (pane?.clientHeight ?? 0) / zoom;
+    const viewW = pane.w / zoom;
+    const viewH = pane.h / zoom;
     // Room to drop new nodes beside the graph, but never more than half a screen of it: the extent
     // bounds the visible rect, so a margin wider than the screen would let the graph scroll away
     // entirely. Half a screen keeps the nearest half of the graph in view at every zoom level.
@@ -129,18 +142,16 @@ function CanvasInner() {
     // keep containing it, or the minimap would have to draw a viewport bigger than its own frame.
     let [x0, x1] = grow(bounds.x - padX, bounds.x + bounds.width + padX, viewW);
     let [y0, y1] = grow(bounds.y - padY, bounds.y + bounds.height + padY, viewH);
-    // Finally give the pannable area the shape of the canvas itself. The minimap frame is this area,
-    // so this is what anchors the frame to the real viewport: same proportions at every zoom level,
-    // the area fills the frame edge to edge, and the viewport rectangle inside it stays a true
-    // scaled-down copy of the screen.
-    const aspect = viewW > 0 && viewH > 0 ? viewW / viewH : (x1 - x0) / (y1 - y0);
-    if ((x1 - x0) / (y1 - y0) < aspect) [x0, x1] = grow(x0, x1, (y1 - y0) * aspect);
-    else [y0, y1] = grow(y0, y1, (x1 - x0) / aspect);
+    // Finally settle the area on 16:9. Growing an axis only ever makes the area bigger, so it still
+    // contains the visible rect; the rect keeps the real proportions of the canvas and simply has
+    // slack on one axis when a panel makes the canvas wider or shorter than 16:9.
+    if ((x1 - x0) / (y1 - y0) < WORLD_ASPECT) [x0, x1] = grow(x0, x1, (y1 - y0) * WORLD_ASPECT);
+    else [y0, y1] = grow(y0, y1, (x1 - x0) / WORLD_ASPECT);
     return [
       [x0, y0],
       [x1, y1],
     ];
-  }, [bounds, zoom]);
+  }, [bounds, zoom, pane]);
 
   const onNodesChange = (changes: NodeChange<Node>[]) => {
     setNodes((ns) => applyNodeChanges(changes, ns as Node[]) as NcNode[]);
@@ -172,14 +183,13 @@ function CanvasInner() {
    * Measuring the rendered cards is both reliable and the same source the minimap uses.
    */
   const fitGraph = React.useCallback(() => {
-    const pane = paneRef.current;
-    if (!pane || bounds.width === 0) return;
+    if (bounds.width === 0 || pane.w === 0) return;
     const pad = 0.08;
-    const pw = pane.clientWidth;
-    const ph = pane.clientHeight;
+    const pw = pane.w;
+    const ph = pane.h;
     const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min((pw * (1 - pad)) / bounds.width, (ph * (1 - pad)) / bounds.height)));
     rf.setViewport({ x: pw / 2 - (bounds.x + bounds.width / 2) * zoom, y: ph / 2 - (bounds.y + bounds.height / 2) * zoom, zoom });
-  }, [bounds, rf]);
+  }, [bounds, pane, rf]);
 
   // One automatic fit once the cards have been laid out, replacing React Flow's `fitView` prop.
   // The cards are measured from the DOM, so wait until they actually have a layout box.
@@ -225,7 +235,7 @@ function CanvasInner() {
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#23262c" />
       </ReactFlow>
-      <div className="nc-mini"><Minimap extent={translateExtent} nodes={graph.nodes} sizes={sizes} runtimes={runtimes} minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} /></div>
+      <div className="nc-mini"><Minimap extent={translateExtent} pane={pane} nodes={graph.nodes} sizes={sizes} runtimes={runtimes} minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} /></div>
       <div className="nc-tools" style={{ bottom: 12 }}>
         <div className="nc-tbar">
           <span className="nc-zoom">{Math.round(zoom * 100)}%</span>
