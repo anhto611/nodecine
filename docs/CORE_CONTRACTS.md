@@ -1,4 +1,4 @@
-# Hợp đồng Lõi (Core Contracts) - v0.1
+# Hợp đồng Lõi (Core Contracts)
 
 Tài liệu này định nghĩa phần **khung** của NodeCine: những hợp đồng mà mọi khối, mọi gói bản mẫu và mọi engine đều phải tuân theo, và không chứa bất kỳ chi tiết nào của một bản mẫu cụ thể. Chi tiết của bản mẫu đầu tiên nằm ở `packs/github-showcase.md`.
 
@@ -12,7 +12,7 @@ Tài liệu liên quan: Kiến trúc Hệ thống mô tả nơi từng phần th
 
 ### 1.1. Kiểu cổng
 
-Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ được phép tạo khi định danh kiểu ở cổng xuất trùng khớp tuyệt đối với định danh kiểu ở cổng nhận. Không có cơ chế ép kiểu ngầm. Lõi định nghĩa chín kiểu; gói bản mẫu không được thêm kiểu cổng mới ở v0.1, chỉ được định nghĩa hình dạng cụ thể của `payload` bên trong các kiểu có sẵn.
+Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ được phép tạo khi định danh kiểu ở cổng xuất trùng khớp tuyệt đối với định danh kiểu ở cổng nhận. Không có cơ chế ép kiểu ngầm. Lõi định nghĩa chín kiểu; gói bản mẫu không được thêm kiểu cổng mới, chỉ được định nghĩa hình dạng cụ thể của `payload` bên trong các kiểu có sẵn.
 
 | Định danh kiểu | Nhãn hiển thị | Ý nghĩa | Khối lõi phát | Khối lõi nhận |
 | --- | --- | --- | --- | --- |
@@ -204,11 +204,11 @@ Adapter nhận IR generic và tra scene registry để lấy renderer cho từng
 
 Tham chiếu là dữ liệu, không phải đối tượng: không bao giờ chứa instance Adapter. Khối tiêu thụ tra `engineId` trong adapter registry của lõi để lấy instance. Registry khởi đầu rỗng; các gói `engines/*` tự đăng ký lúc khởi động, nhờ vậy lõi không nhập Remotion hay React. Chữ ký của Khối Động Cơ chỉ phụ thuộc `engineId` và `settings`.
 
-### 6.3. Mức hỗ trợ ở v0.1
+### 6.3. Mức hỗ trợ
 
 - Remotion: xem trước và kết xuất đầy đủ. Ánh xạ: `meta` vào Composition, `voiceoverUrl` vào thẻ Audio, mỗi cảnh vào một Sequence gọi renderer tra từ registry.
 - Hyperframes: bộ chạy trên Canvas 2D. `probe()` khai báo `preview` sẵn sàng và `render` không sẵn sàng kèm mã `ENGINE_NOT_READY`, lý do và cách khắc phục. Xem trước dựng một canvas, một thẻ âm thanh và một vòng lặp khung hình; thẻ âm thanh làm đồng hồ khi đang phát nên hình và tiếng không lệch nhau. Không React, không Remotion: đây là bằng chứng cho tuyên bố IR không phụ thuộc engine, chứ không phải lời hứa. Khối Xuất MP4 nối vào nó tự khóa vàng theo khai báo năng lực, không phải bằng cách ném lỗi lúc chạy.
-- Dự phòng hiệu ứng: khi Adapter gặp hiệu ứng không dựng được, tự thay bằng mờ dần hoặc trượt và phát cảnh báo mức thông tin để giao diện hiện huy hiệu vàng. Định nghĩa sẵn, chưa Adapter nào kích hoạt ở v0.1.
+- Dự phòng hiệu ứng: khi Adapter gặp hiệu ứng không dựng được, tự thay bằng mờ dần hoặc trượt và phát cảnh báo mức thông tin để giao diện hiện huy hiệu vàng.
 
 ---
 
@@ -217,7 +217,7 @@ Tham chiếu là dữ liệu, không phải đối tượng: không bao giờ ch
 ### 7.1. Cấu trúc `LLMRef`
 
 - `providerId`: định danh nhà cung cấp đang chọn trên khối.
-- `displayName`, `transport` (`cli` ở v0.1; `api` dành cho v0.2).
+- `displayName`, `transport`: `cli` cho nhà cung cấp chạy bằng tiến trình con, `api` cho nhà cung cấp gọi qua HTTP.
 - `capabilities`: `installed`, `authenticated`, `structuredOutput`; mỗi trường `ready` hoặc `unavailable` kèm `reason` và, nếu có, `fix` là lệnh người dùng cần chạy. Phiên bản công cụ tìm thấy được ghi ở đây để hiển thị.
 - `settings`: `model` (để trống là mặc định của công cụ), `maxTurns` cố định 1.
 
@@ -246,7 +246,7 @@ Khối gọi `complete()` là khối đạo diễn của gói; lõi không có k
 
 Nếu người dùng đã chọn một giọng khớp ngôn ngữ lời thoại, dùng giọng đó; nếu không, dùng giọng đầu tiên khớp ngôn ngữ; nếu không có giọng nào khớp, dùng `defaultVoice` và phát cảnh báo `TTS_VOICE_LANGUAGE_MISMATCH`, không dừng luồng.
 
-Trên macOS: `say` ghi AIFF vào thư mục tệp tạm, ffmpeg chuyển sang MP3, đo thời lượng từ tệp MP3. Hệ điều hành chưa hỗ trợ thì `probe()` báo `installed: unavailable`; ứng dụng không giả vờ có giọng.
+Ví dụ với bộ tổng hợp của hệ điều hành trên macOS: `say` ghi AIFF vào thư mục tệp tạm, ffmpeg chuyển sang MP3, đo thời lượng từ tệp MP3. Hệ điều hành chưa hỗ trợ thì `probe()` báo `installed: unavailable`; ứng dụng không giả vờ có giọng.
 
 ---
 

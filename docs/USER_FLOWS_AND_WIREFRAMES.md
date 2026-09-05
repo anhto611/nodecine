@@ -4,7 +4,7 @@ Tài liệu này mô tả giao diện của **khung lõi**: bố cục, dải tr
 
 ## 1. Cấu trúc Bố cục Màn hình (Studio Layout)
 
-Giao diện vận hành trên chuẩn màn hình Desktop, tối thiểu 1080p. Bố cục theo mô hình của ComfyUI: một thanh điều hướng mỏng phía trên và một canvas đồ thị chiếm trọn phần còn lại. Không có khung xem trước riêng, vì chính Khối Video Output là trình phát. Dưới ngưỡng 1280 pixel chiều rộng, ứng dụng hiển thị thông báo khuyến nghị dùng màn hình lớn hơn thay vì cố co bố cục; giao diện di động không nằm trong phạm vi v0.1.
+Giao diện vận hành trên chuẩn màn hình Desktop, tối thiểu 1080p. Bố cục theo mô hình của ComfyUI: một thanh điều hướng mỏng phía trên và một canvas đồ thị chiếm trọn phần còn lại. Không có khung xem trước riêng, vì chính Khối Video Output là trình phát. Dưới ngưỡng 1280 pixel chiều rộng, ứng dụng hiển thị thông báo khuyến nghị dùng màn hình lớn hơn thay vì cố co bố cục; giao diện di động không nằm trong phạm vi sản phẩm.
 
 ### 1.1. Thanh Điều Hướng Toàn Cục (Header Bar)
 
@@ -30,7 +30,7 @@ Thanh điều hướng chỉ giữ những gì phải luôn nhìn thấy. Mọi 
 Cửa sổ dạng modal theo mô hình trình duyệt workflow của ComfyUI, mở từ tab "Bản mẫu" ở đầu dải trái.
 
 - Đầu cửa sổ: tiêu đề, một dòng phụ, ô tìm kiếm theo tên, nút đóng.
-- Cột bên trái: danh sách danh mục kèm số lượng bản mẫu trong mỗi danh mục. Gồm "Tất cả" và bốn nhóm: Tech & Product, Faceless Content, Commerce & Ads, Dữ liệu & Tài chính. Cuối cột là mục "Canvas trống" và một ghi chú ngắn về phạm vi v0.1.
+- Cột bên trái: danh sách danh mục kèm số lượng bản mẫu trong mỗi danh mục. Gồm "Tất cả" và bốn nhóm: Tech & Product, Faceless Content, Commerce & Ads, Dữ liệu & Tài chính. Cuối cột là mục "Canvas trống" và một ghi chú ngắn về bản mẫu nào đang mở được.
 - Vùng chính: lưới thẻ ba cột. Mỗi thẻ gồm ảnh xem trước dạng khung dọc 9:16 thu nhỏ, tên bản mẫu, một câu mô tả, và dòng thông số gồm số khối cùng tỷ lệ khung hình và tốc độ khung hình.
 - Danh sách bản mẫu theo danh mục:
   - Lõi: Kịch Bản Tĩnh.
@@ -38,7 +38,7 @@ Cửa sổ dạng modal theo mô hình trình duyệt workflow của ComfyUI, m�
   - Faceless Content: Reddit Storytelling, Daily Facts & Trivia, Motivational Quotes.
   - Commerce & Ads: Flash Sale Alert, Product Comparison (A vs B).
   - Dữ liệu & Tài chính: Market Recap & Movers, Crypto Trends.
-- Phạm vi hoạt động ở v0.1: ba mục chọn được là "Kịch Bản Tĩnh" (đồ thị bảy khối của lõi, có ngay từ Pha A), "GitHub Repo Showcase" (từ Pha B) và "Canvas trống". Thẻ GitHub Repo Showcase có viền màu thương hiệu; toàn bộ thẻ còn lại hiển thị mờ, không nhận thao tác, kèm nhãn "Sắp có" ngay cạnh tên. Chúng vẫn được liệt kê nhằm bộc lộ tầm nhìn sản phẩm, không phải do sót việc.
+- Thẻ nào chọn được là do registry bản mẫu quyết định, không mã hóa cứng ở đây (danh sách hiện tại: `STATUS.md`). Thẻ chưa có bản mẫu hiển thị mờ, không nhận thao tác, kèm nhãn "Sắp có" ngay cạnh tên. Chúng vẫn được liệt kê nhằm bộc lộ tầm nhìn sản phẩm, không phải do sót việc.
 - Chân cửa sổ: dòng cảnh báo "Mở bản mẫu sẽ thay toàn bộ đồ thị hiện tại", nút Hủy và nút hành động chính ghi rõ tên bản mẫu sắp mở.
 
 ### 1.4. Khối Video Output là Trình phát (Player Node)
@@ -57,7 +57,7 @@ Khối Xuất Bản Video không chỉ nhận Bản Đặc Tả Video Trung Gian
   - Nhấp vào bất kỳ thẻ phân cảnh nào sẽ đưa con trỏ phát nhảy ngay đến khung hình đầu tiên của phân cảnh đó.
   - Nếu Bản Đặc Tả Video Trung Gian có phần đuôi không tiếng, thanh trượt vẽ thêm một vạch mờ đánh dấu thời điểm âm thanh kết thúc, kèm chú giải khi rê chuột.
 - Dòng tóm tắt cuối khối: tổng số khung hình, tốc độ khung hình, độ dài đuôi lặng và độ phân giải, để đối chiếu nhanh với Khối Đóng Gói Timeline. Không có nút xuất tệp trong khối này.
-- Hệ quả của việc gộp trình phát vào khối: đặt hai Khối Video Output cạnh nhau, cùng nhận một Bản Đặc Tả Video Trung Gian, là cách so sánh trực tiếp hai engine. Đây là hạng mục cho v0.2 nhưng bố cục v0.1 không được chặn đường nó.
+- Hệ quả của việc gộp trình phát vào khối: đặt hai Khối Video Output cạnh nhau, cùng nhận một Bản Đặc Tả Video Trung Gian, là cách so sánh trực tiếp hai engine. Bố cục không được chặn đường cách dùng này.
 
 ### 1.5. Các Trạng thái của Khối Video Output
 
@@ -80,10 +80,10 @@ Theo mô hình dải icon dọc của ComfyUI, nằm ở mép trái ngay dưới
 Thư viện khối (Node Library):
 
 - Ô tìm kiếm theo tên ở đầu panel.
-- Khối xếp theo nhóm vai trò, khối lõi trước rồi tới khối của từng gói đã cài, mỗi gói một nhóm mang tên gói. Lõi: Nguồn (Input Trigger, Static Script), Nhà cung cấp (Claude Code Provider, System TTS Provider, cùng Anthropic API Provider và ElevenLabs Provider với huy hiệu "v0.2"), Xử lý (TTS Engine, Timeline Assembler), Động cơ (Remotion Engine, Hyperframes Engine với huy hiệu "v0.2"), Xuất (Video Output, MP4 Export). Gói GitHub Showcase: GitHub Fetcher, AI Director. Mỗi mục gồm biểu tượng, tên khối, một dòng mô tả và dòng nhãn cổng vào và ra dùng đúng tên trong bảng kiểu cổng.
+- Khối xếp theo nhóm vai trò, khối lõi trước rồi tới khối của từng gói đã cài, mỗi gói một nhóm mang tên gói. Lõi: Nguồn (Nhập Liệu, Kịch Bản Tĩnh), Nhà cung cấp (Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn — mỗi loại cổng một khối, chọn hãng bên trong khối), Xử lý (Giọng Đọc, Đóng Gói Timeline), Động cơ (Remotion Engine, Hyperframes Engine), Xuất (Xuất Bản Video, Xuất MP4). Danh sách khối của gói do gói đã cài quyết định. Mỗi mục gồm biểu tượng, tên khối, một dòng mô tả và dòng nhãn cổng vào và ra dùng đúng tên trong bảng kiểu cổng.
 - Kéo một mục thả lên canvas để tạo khối tại vị trí thả; nhấp đúp để thả vào giữa vùng đang nhìn. Trong lúc kéo, một bản mờ của khối bám theo con trỏ.
 - Nút "Thêm khối" ở thanh công cụ đáy trái không còn tự mở danh mục riêng, mà chỉ mở panel này.
-- Mọi khối đều được phép thêm nhiều lần trên cùng đồ thị. Bộ máy thực thi nạp dữ liệu vào mọi khối có dây nối hợp lệ; việc hai engine cùng phát được là hạng mục v0.2.
+- Mọi khối đều được phép thêm nhiều lần trên cùng đồ thị. Bộ máy thực thi nạp dữ liệu vào mọi khối có dây nối hợp lệ.
 
 Lịch sử chạy (Run History):
 
@@ -95,7 +95,7 @@ Lịch sử chạy (Run History):
 
 Cài đặt (mở từ tab ở đáy dải):
 
-- Cửa sổ modal. Ở v0.1 không có mục khóa API nào, chỉ gồm đường dẫn ghi đè cho Claude Code và ffmpeg, thư mục tệp tạm, và ngôn ngữ giao diện với mặc định English và có sẵn Tiếng Việt. Đổi ngôn ngữ áp dụng tức thì. Toàn bộ bản vẽ trong tài liệu này minh họa ở ngôn ngữ giao diện Tiếng Việt.
+- Cửa sổ modal, gồm các đường dẫn và địa chỉ ghi đè được (đọc từ biến môi trường), thư mục tệp tạm, và ngôn ngữ giao diện với mặc định English và có sẵn Tiếng Việt. Mục nhập khóa API chỉ xuất hiện khi có nhà cung cấp cần khóa. Đổi ngôn ngữ áp dụng tức thì. Toàn bộ bản vẽ trong tài liệu này minh họa ở ngôn ngữ giao diện Tiếng Việt.
 
 ### 1.7. Panel Nhật ký (Logs Panel, đáy màn hình)
 
@@ -229,7 +229,7 @@ Nguyên tắc chung: lỗi luôn được gắn vào đúng khối gây ra nó, 
 
 ## 4. Phím Tắt (Keyboard Shortcuts)
 
-Tập phím tắt tối thiểu của v0.1, chỉ có hiệu lực khi tiêu điểm không nằm trong một ô nhập liệu. `Ctrl` ở đây hiểu là `Cmd` trên macOS; giao diện hiển thị đúng ký hiệu theo hệ điều hành đang chạy:
+Tập phím tắt tối thiểu, chỉ có hiệu lực khi tiêu điểm không nằm trong một ô nhập liệu. `Ctrl` ở đây hiểu là `Cmd` trên macOS; giao diện hiển thị đúng ký hiệu theo hệ điều hành đang chạy:
 
 - Chạy luồng: `Ctrl` kèm `Enter`.
 - Căn giữa đồ thị: phím `F`.

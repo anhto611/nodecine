@@ -1,4 +1,4 @@
-# Kiến trúc Hệ thống NodeCine (System Architecture) - v0.1
+# Kiến trúc Hệ thống NodeCine (System Architecture)
 
 Tài liệu này mô tả phần khung lõi; gói bản mẫu chỉ xuất hiện ở cây thư mục. Nó trả lời câu hỏi mà các tài liệu còn lại không trả lời: mã nguồn chạy ở đâu, ranh giới giữa máy khách và máy chủ nằm chỗ nào, và tại sao một sản phẩm tuyên bố Zero-Auth vẫn cần phần máy chủ.
 
@@ -12,7 +12,7 @@ NodeCine v0.1 là một ứng dụng Next.js duy nhất, người dùng tự t�
 Máy của người dùng
 ├─ Trình duyệt (Chromium)
 │   └─ Studio UI: canvas đồ thị, bộ máy thực thi, trình phát trong khối,
-│                 (v0.2: kho khóa API trong bộ nhớ cục bộ)
+│                 (kho khóa API, khi có nhà cung cấp cần khóa)
 │        │
 │        │  HTTP trên localhost
 │        ▼
@@ -31,8 +31,8 @@ Không có thành phần nào do đội ngũ NodeCine vận hành nằm trên đ
 Có đúng ba việc trình duyệt không làm được, và đó là toàn bộ lý do tồn tại của tầng máy chủ:
 
 1. Kết xuất MP4. Remotion kết xuất bằng cách điều khiển một tiến trình headless Chromium chụp từng khung hình rồi ghép qua FFmpeg. Đây là công việc của hệ điều hành, không thể thực hiện trong một tab trình duyệt.
-2. Sinh tiến trình con. Ở v0.1 mô hình ngôn ngữ đi qua công cụ dòng lệnh Claude Code đã đăng nhập, giọng đọc đi qua bộ tổng hợp của hệ điều hành và ffmpeg. Trình duyệt không thể sinh tiến trình.
-3. Vượt rào chắn nguồn gốc chéo cho GitHub API, và ở v0.2 giữ khóa API của các nhà cung cấp qua mạng không lộ trong mã nguồn trang.
+2. Sinh tiến trình con. Nhà cung cấp có `transport` là `cli` hoặc `local` chạy tệp thực thi trên máy, và trình duyệt không sinh được tiến trình. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
+3. Vượt rào chắn nguồn gốc chéo cho GitHub API, và giữ khóa API của nhà cung cấp qua mạng không lộ trong mã nguồn trang.
 
 ### 1.2. Ranh giới máy khách và máy chủ
 
@@ -86,7 +86,7 @@ nodecine/
 │  │  ├─ Root.tsx                 Composition generic: tra scene registry cho từng cảnh
 │  │  ├─ scenes/TitleCard.tsx     Renderer Remotion cho core/title-card
 │  │  └─ fonts/                   JetBrains Mono, đóng gói cục bộ (OFL 1.1), dùng chung với giao diện
-│  └─ hyperframes/                Bộ chạy Canvas 2D: xem trước thật, chưa xuất tệp
+│  └─ hyperframes/                Bộ chạy Canvas 2D thứ hai (khả năng: STATUS.md)
 │     ├─ adapter.ts               Adapter đẳng hình, probe khai báo preview sẵn sàng
 │     ├─ player.client.ts         Canvas + thẻ âm thanh + vòng lặp khung hình, có thanh điều khiển riêng
 │     ├─ draw.ts, types.ts        Hợp đồng renderer: một hàm vẽ lên canvas, và các tiện ích chung
@@ -140,20 +140,20 @@ Quy tắc phụ thuộc bắt buộc, kiểm tra được bằng công cụ phâ
 
 ## 4. Thông tin Đăng nhập và Khóa API
 
-Ở v0.1 ứng dụng không giữ bất kỳ thông tin đăng nhập nào:
+Ứng dụng không giữ thông tin đăng nhập của nhà cung cấp nào:
 
 - Khối Claude Code Provider gọi tệp thực thi `claude` đang có trên máy. Phiên đăng nhập thuộc về công cụ đó, nằm ở nơi công cụ đó tự lưu; NodeCine không đọc, không sao chép, không chuyển tiếp nó. `probe()` chỉ hỏi công cụ "có đăng nhập chưa" và nhận câu trả lời có hoặc không.
 - Khối System TTS Provider gọi bộ tổng hợp của hệ điều hành, không có khái niệm đăng nhập.
 - GitHub API dùng hạn mức ẩn danh theo địa chỉ IP. Người dùng có thể đặt biến môi trường chứa mã thông báo GitHub để nâng hạn mức; đây là tùy chọn, không bắt buộc.
 
-Khi các khối Nhà Cung Cấp qua API xuất hiện ở v0.2, quy tắc sau áp dụng:
+Khi có nhà cung cấp cần khóa API, quy tắc sau áp dụng:
 
 1. Người dùng nhập khóa trong cửa sổ Cài đặt. Khóa được ghi vào bộ nhớ cục bộ của trình duyệt, tách khỏi tài liệu dự án.
 2. Khối Nhà Cung Cấp chỉ giữ một định danh trỏ tới khóa, không giữ khóa. Tệp dự án chia sẻ ra ngoài vì thế không bao giờ chứa khóa.
 3. Khi một khối cần khóa, bộ máy thực thi đọc khóa ra và gửi kèm trong phần thân yêu cầu tới điểm cuối cục bộ tương ứng. Điểm cuối loại bỏ khóa ngay khi yêu cầu kết thúc, không ghi nhật ký, không ghi ra đĩa.
 4. Khóa lấy từ biến môi trường của tiến trình máy chủ được ưu tiên hơn khóa gửi từ máy khách.
 
-Quy tắc ghi nhật ký, áp dụng ngay từ v0.1: mọi thông báo lỗi chuyển ngược về máy khách phải được lọc bỏ chuỗi giống khóa hoặc mã thông báo trước khi gửi, kể cả khi tiến trình con vô tình in chúng ra.
+Quy tắc ghi nhật ký, áp dụng luôn: mọi thông báo lỗi chuyển ngược về máy khách phải được lọc bỏ chuỗi giống khóa hoặc mã thông báo trước khi gửi, kể cả khi tiến trình con vô tình in chúng ra.
 
 ## 5. Bảo vệ Điểm Cuối Chuyển Tiếp
 
@@ -172,7 +172,7 @@ Tầng máy chủ nhận đường dẫn từ máy khách rồi đi gọi ra ngo
 
 - Tệp âm thanh và tệp video được ghi vào một thư mục tệp tạm nằm trong thư mục làm việc của dự án, đặt tên theo mã băm nội dung để hai lần chạy giống hệt nhau dùng lại đúng một tệp.
 - Thư mục này nằm trong danh sách bỏ qua của hệ thống quản lý phiên bản.
-- Ứng dụng dọn các tệp cũ hơn 24 giờ vào lúc khởi động. Ở v0.1 không có tiến trình dọn dẹp chạy nền.
+- Ứng dụng dọn các tệp cũ hơn 24 giờ vào lúc khởi động.
 
 ---
 

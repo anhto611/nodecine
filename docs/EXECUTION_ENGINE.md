@@ -1,4 +1,4 @@
-# Đặc tả Bộ Máy Thực Thi Đồ Thị (Graph Execution Engine) - v0.1
+# Đặc tả Bộ Máy Thực Thi Đồ Thị (Graph Execution Engine)
 
 Tài liệu này định nghĩa cách một đồ thị được chạy, cách hệ thống quyết định khối nào cần chạy lại, cách lỗi được biểu diễn, và cách toàn bộ trạng thái được lưu giữ giữa các phiên làm việc. Tài liệu này thuộc tầng lõi và không biết tên khối nào của gói; ví dụ dùng khối lõi. Đây là phần nền mà các kịch bản trong Đặc tả Luồng Trải nghiệm và trong từng gói dựa vào.
 
@@ -41,7 +41,7 @@ Khi người dùng sửa một tham số của khối, khối đó và toàn b�
 1. Bộ máy sắp xếp đồ thị theo thứ tự tô-pô. Nếu phát hiện chu trình, luồng dừng ngay trước khi chạy khối nào, và các dây nối tạo thành chu trình được tô đỏ.
 2. Kiểm tra tính đầy đủ: mọi cổng nhận bắt buộc phải có đúng một dây nối tới. Thiếu dây nối là lỗi mức đồ thị, không phải lỗi mức khối. Kiểm tra này chạy liên tục theo mỗi thay đổi của đồ thị, kết quả hiện ngay trên khối liên quan và trên nút Chạy Luồng bị vô hiệu hóa, nên không có bước kiểm tra riêng lúc bấm. Số lượng Khối Xuất Bản Video và Khối Xuất MP4 không bị giới hạn, kể cả bằng không; đồ thị không có khối đích nào chỉ nhận cảnh báo `GRAPH_NO_SINK` chứ không bị chặn, vì người dùng có thể đang dựng dở.
 3. Khối ở trạng thái `bypassed` bị bỏ qua khi duyệt. Nếu một khối phía sau cần đầu ra của khối bị bỏ qua, khối đó chuyển sang `blocked` với thông báo nêu tên khối bị bỏ qua. Trong các đồ thị mẫu, Khối Xuất MP4 bị bỏ qua nhưng không khối nào phụ thuộc vào nó, nên luồng chạy hết các khối còn lại.
-4. Các khối được chạy theo thứ tự tô-pô. Ở v0.1 việc thực thi là tuần tự, kể cả với những khối về lý thuyết có thể chạy song song. Đồ thị mẫu chỉ có khoảng mười khối và nút thắt cổ chai nằm ở lệnh gọi ra ngoài, nên chạy song song không mang lại lợi ích đáng kể mà lại làm phức tạp việc báo tiến độ.
+4. Các khối được chạy theo thứ tự tô-pô, tuần tự, kể cả với những khối về lý thuyết có thể chạy song song. Đồ thị mẫu chỉ có khoảng mười khối và nút thắt cổ chai nằm ở lệnh gọi ra ngoài, nên chạy song song không mang lại lợi ích đáng kể mà lại làm phức tạp việc báo tiến độ.
 5. Trước khi chạy một khối, bộ máy tính chữ ký của khối đó. Nếu chữ ký trùng với chữ ký của kết quả đang lưu, khối được bỏ qua và kết quả cũ được tái sử dụng.
 
 ---
@@ -106,8 +106,8 @@ Mỗi lỗi mang một mã ổn định, một thông báo hiển thị lấy t�
 | `PROVIDER_NOT_AUTHENTICATED` | Mã lý do trong `capabilities` | Công cụ chưa đăng nhập, kèm lệnh cần chạy; như trên | Không |
 | `PROVIDER_PROBE_FAILED` | Nhà Cung Cấp, Động Cơ | `probe()` vỡ hoặc quá thời gian chờ | Có |
 | `PROVIDER_PROCESS_FAILED` | Khối tiêu thụ tham chiếu | Tiến trình nhà cung cấp thoát với lỗi | Có |
-| `KEY_MISSING` | Nhà Cung Cấp qua API (v0.2) | Chưa cấu hình khóa API, mở Cài đặt để bổ sung | Không |
-| `KEY_INVALID` | Nhà Cung Cấp qua API (v0.2) | Khóa API bị từ chối | Không |
+| `KEY_MISSING` | Nhà cung cấp cần khóa | Chưa cấu hình khóa API, mở Cài đặt để bổ sung | Không |
+| `KEY_INVALID` | Nhà cung cấp cần khóa | Khóa API bị từ chối | Không |
 | `LLM_UPSTREAM` | Khối gọi mô hình ngôn ngữ | Nhà cung cấp mô hình đang gặp sự cố | Có |
 | `TTS_UPSTREAM` | Giọng Đọc | Dịch vụ giọng đọc đang gặp sự cố | Có |
 | `TTS_AUDIO_UNREADABLE` | Giọng Đọc | Không đọc được thời lượng tệp âm thanh vừa tạo | Có |
@@ -134,7 +134,7 @@ Mã lỗi riêng của từng gói (ví dụ `REPO_*`, `LLM_SCHEMA_INVALID`) n�
 Toàn bộ trạng thái bền vững nằm trong bộ nhớ cục bộ của trình duyệt, chia thành ba khóa tách biệt:
 
 1. Tài liệu dự án: tên dự án, danh sách khối kèm vị trí, tham số và cờ bỏ qua, danh sách dây nối.
-2. Khóa API (chỗ để sẵn cho v0.2, rỗng ở v0.1): tách riêng để có thể xóa độc lập mà không mất đồ thị, và để không bao giờ bị vô tình đưa vào nội dung xuất hay chia sẻ.
+2. Khóa API: tách riêng để có thể xóa độc lập mà không mất đồ thị, và để không bao giờ bị vô tình đưa vào nội dung xuất hay chia sẻ. Khóa này chỉ được tạo khi có nhà cung cấp cần khóa (xem `STATUS.md`).
 3. Tùy chọn giao diện: ngôn ngữ giao diện (mặc định `en`), vị trí và mức thu phóng của canvas, danh mục đang chọn trong Trình duyệt Bản mẫu.
 
 ### 7.2. Những gì cố ý không được lưu
@@ -169,7 +169,7 @@ Lý do của quyết định này: bộ nhớ cục bộ của trình duyệt c�
 
 ## 9. Ranh giới Kiểm thử
 
-Tài liệu này đặt ra ba nhóm kiểm thử bắt buộc của lõi trước khi Pha A được coi là hoàn thành; gói có bài kiểm thử riêng trong tài liệu của gói.
+Tài liệu này đặt ra ba nhóm kiểm thử bắt buộc của lõi; gói có bài kiểm thử riêng trong tài liệu của gói.
 
 1. Kiểm thử phân bổ khung hình và kiểm định IR. Với một tập thời lượng âm thanh trải từ dưới ngưỡng tối thiểu tới trên ngưỡng, và với các bộ trọng số khác nhau kể cả một cảnh duy nhất, khẳng định tổng các cảnh luôn bằng đúng tổng số khung hình, cảnh liền nhau không khe hở, không cảnh nào có thời lượng bằng 0, cùng đầu vào luôn cho cùng kết quả; và hàm kiểm định IR từ chối mọi bản đặc tả dựng tay vi phạm một trong năm bất biến.
 2. Kiểm thử chữ ký khối. Khẳng định việc đổi tham số của một khối chỉ làm thay đổi chữ ký của chính khối đó và các khối phía sau, không ảnh hưởng khối phía trước; và khối tài nguyên probe lại nhưng mã băm không đổi thì phía sau vẫn dùng lại.

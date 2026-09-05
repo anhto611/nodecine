@@ -75,8 +75,8 @@ Nguyên tắc phân chia khối, theo mô hình ComfyUI: mỗi khối một trá
 
 1. Nhập Liệu (Input Trigger): Ô văn bản, phát Dữ liệu Nguồn, không diễn giải, không gọi mạng.
 2. Kịch Bản Tĩnh (Static Script): Người dùng gõ tay lời thoại và danh sách cảnh (kiểu cảnh, trọng số, nội dung). Phát Kịch bản Phân cảnh và Lời thoại. Là cách dựng video không cần gói nào, và là khối dùng để nghiệm thu khung.
-3. Nhà Cung Cấp Mô Hình Ngôn Ngữ (ở v0.1 là Claude Code Provider): Khối tài nguyên phát `LLMRef`. Gọi công cụ dòng lệnh Claude Code đã đăng nhập trên máy, không dùng khóa API. Thân khối hiện phiên bản và trạng thái đăng nhập từ `probe()`; đường dẫn tệp thực thi chỉ nằm trong Cài đặt. Anthropic API Provider có mặt trong Thư viện với huy hiệu "v0.2".
-4. Nhà Cung Cấp Giọng Đọc (ở v0.1 là System TTS Provider): Khối tài nguyên phát `TTSRef`. Dùng bộ tổng hợp của hệ điều hành, trên macOS là `say`, không khóa, không mạng. ElevenLabs Provider có mặt trong Thư viện với huy hiệu "v0.2".
+3. Nhà Cung Cấp Mô Hình Ngôn Ngữ: **một** khối tài nguyên phát `LLMRef`, chọn nhà cung cấp ngay trong khối theo mẫu Load Checkpoint của ComfyUI — thêm nhà cung cấp không thêm khối. Thân khối hiện `capabilities` từ `probe()` và các tham số riêng của nhà cung cấp đang chọn; đường dẫn tệp thực thi và địa chỉ máy chủ chỉ đến từ biến môi trường, không bao giờ từ đồ thị. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
+4. Nhà Cung Cấp Giọng Đọc: **một** khối tài nguyên phát `TTSRef`, cùng cơ chế chọn nhà cung cấp như trên. Thân khối liệt kê giọng mà `probe()` tìm được. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
 5. Giọng Đọc (TTS Engine): Nhận Lời thoại kèm ngôn ngữ và `TTSRef`, tự chọn giọng khớp ngôn ngữ, tạo MP3, đo thời lượng từ tệp.
 6. Đóng Gói Timeline (Timeline Assembler): Hàm thuần. Nhận Kịch bản Phân cảnh, Âm thanh, và tùy chọn Dữ kiện. Phân bổ khung hình theo trọng số, đè dữ kiện lên props theo `factBindings`, kiểm định bất biến IR, phát Bản Đặc Tả Video Trung Gian.
 7. Động Cơ (Remotion Engine kết xuất đầy đủ; Hyperframes Engine xem trước bằng Canvas, chưa xuất tệp): Khối tài nguyên phát `EngineRef`, tương đương Load Checkpoint của ComfyUI. Đổi engine là thay khối.
@@ -95,13 +95,13 @@ Ranh giới trách nhiệm:
 - Giao diện Adapter dùng chung, nhận IR generic; mỗi Khối Động Cơ bọc đúng một Adapter. Remotion đầy đủ; Hyperframes xem trước được bằng Canvas 2D với renderer riêng cho từng kiểu cảnh, còn kết xuất tệp thì khai báo chưa sẵn sàng. Có hai engine cùng vẽ được một IR là cách duy nhất chứng minh kiến trúc thực sự độc lập engine.
 - Bản Đặc Tả Video Trung Gian không biết tên bất kỳ kiểu cảnh nào: `sceneType` là chuỗi tra trong scene registry, cùng pattern với registry engine và nhà cung cấp. Thêm bản mẫu mới không đụng tới IR, Adapter hay khối lõi. Lõi ship sẵn kiểu cảnh `core/title-card` để khung tự chạy được.
 - Dữ kiện kiểm chứng được đi từ khối truy xuất của gói thẳng tới Đóng Gói Timeline qua cổng Dữ kiện và cơ chế `factBindings` của lõi, không qua mô hình ngôn ngữ. Lõi đảm bảo bằng cấu trúc; gói chỉ khai báo ánh xạ.
-- So sánh hai engine: hai Khối Động Cơ và hai Khối Xuất Bản Video trên cùng đồ thị. Bố cục v0.1 cho phép; cả hai cùng phát được là v0.2.
+- So sánh hai engine: hai Khối Động Cơ và hai Khối Xuất Bản Video trên cùng đồ thị. Bố cục cho phép; việc cả hai cùng phát một lúc xem `STATUS.md`.
 
-### 4.5. Trình duyệt Bản Mẫu (Template Browser) trong phạm vi v0.1
+### 4.5. Trình duyệt Bản Mẫu (Template Browser)
 
 - Bản mẫu được chọn qua một cửa sổ modal mở từ tab đầu tiên trên dải trái, theo mô hình trình duyệt workflow của ComfyUI: cột danh mục bên trái, lưới thẻ có ảnh xem trước bên phải. Cửa sổ hiển thị đầy đủ 4 danh mục và toàn bộ tên bản mẫu dự kiến, nhằm bộc lộ tầm nhìn sản phẩm cho người dùng ngay từ lần đầu mở ứng dụng.
-- Ở v0.1 chỉ có hai mục thực sự hoạt động: "GitHub Repo Showcase" và "Canvas trống".
-- Toàn bộ thẻ còn lại được làm mờ, không bấm được, kèm nhãn "Sắp có". Chúng không nằm trong phạm vi v0.1 và không có lược đồ phân cảnh riêng ở phiên bản này.
+- Bản mẫu nào mở được thì đọc từ registry, không mã hóa cứng trong giao diện; danh sách hiện tại ở `STATUS.md`.
+- Thẻ chưa có bản mẫu tương ứng thì làm mờ, không bấm được, kèm nhãn "Sắp có". Chúng vẫn được liệt kê để bộc lộ tầm nhìn sản phẩm.
 
 ### 4.6. Xem Trước Thời Gian Thực & Xuất Tệp Cục Bộ
 
@@ -110,26 +110,27 @@ Ranh giới trách nhiệm:
 
 ### 4.7. Bảng Cài Đặt
 
-- Ở v0.1 ứng dụng không cần khóa API nào: mô hình ngôn ngữ đi qua Claude Code đã đăng nhập, giọng đọc đi qua bộ tổng hợp của hệ điều hành, kết xuất chạy cục bộ. Cửa sổ Cài đặt vì thế không có mục nhập khóa.
+- Nguyên tắc Zero-Key: phải luôn tồn tại ít nhất một đường đi trọn vẹn từ nguồn tới MP4 mà không cần khóa API nào. Chừng nào chưa nhà cung cấp nào cần khóa, Cài đặt không có mục nhập khóa; xem `STATUS.md`.
 - Cài đặt gồm: đường dẫn ghi đè cho tệp thực thi Claude Code và ffmpeg khi tự phát hiện thất bại, thư mục tệp tạm, và ngôn ngữ giao diện.
-- Khi các khối Nhà Cung Cấp qua API xuất hiện ở v0.2, Cài đặt trở thành két giữ khóa; khối Nhà Cung Cấp chỉ trỏ tới khóa trong két, khóa không bao giờ nằm trên canvas hay trong tệp dự án.
+- Khi có nhà cung cấp cần khóa, Cài đặt trở thành két giữ khóa; khối Nhà Cung Cấp chỉ trỏ tới khóa trong két, khóa không bao giờ nằm trên canvas hay trong tệp dự án. Nhà cung cấp khai báo tham số nào là khóa qua `secretSettings`.
 - Nếu một khối Nhà Cung Cấp báo chưa sẵn sàng, thông báo trên thân khối chỉ thẳng cách khắc phục, ví dụ lệnh đăng nhập cần chạy trong terminal.
 
 ### 4.8. Trình Tự Triển Khai: Pha A rồi Pha B
 
 Khung phải chạy được và qua nghiệm thu trước khi bất kỳ gói nào bắt đầu. Lý do: mọi quyết định của gói đều xây trên hợp đồng lõi, và lỗi ở lõi phát hiện sau khi có gói sẽ tốn gấp nhiều lần.
 
-- **Pha B — gói đầu tiên.** Gói `github-showcase` gồm Truy Xuất Repo, AI Đạo Diễn, ba kiểu cảnh kèm renderer Remotion và đồ thị mẫu mười khối; kênh RPC chung cho gói và registry đồ thị mẫu nằm ở lõi. Hoàn thành 2026-09-05, nghiệm thu bằng một lần chạy thật từ đường dẫn repo tới MP4.
-- **Pha A — khung lõi.** Tầng lõi, ba registry, bộ khối lõi, giao diện Studio, đa ngôn ngữ, Remotion Adapter, Hyperframes khung xương. Đồ thị nghiệm thu là **đồ thị Kịch Bản Tĩnh** bảy khối: Kịch Bản Tĩnh, System TTS Provider, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Xuất Bản Video, Xuất MP4. Không mạng, không mô hình ngôn ngữ, không khóa. Đây là bản mẫu "Canvas trống có sẵn ví dụ" trong Trình duyệt Bản mẫu.
-- **Pha B — gói GitHub Repo Showcase.** Hai khối, ba kiểu cảnh, đồ thị mẫu mười khối, theo `packs/github-showcase.md`. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
+- **Pha A — khung lõi.** Tầng lõi, ba registry, bộ khối lõi, giao diện Studio, đa ngôn ngữ, Remotion Adapter. Đồ thị nghiệm thu là **đồ thị Kịch Bản Tĩnh** bảy khối: Kịch Bản Tĩnh, Giọng Đọc Nguồn, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Xuất Bản Video, Xuất MP4. Không mạng, không mô hình ngôn ngữ, không khóa.
+- **Pha B — gói đầu tiên.** Gói `github-showcase`: hai khối, ba kiểu cảnh, đồ thị mẫu mười khối, theo `packs/github-showcase.md`; kênh RPC chung cho gói và registry đồ thị mẫu nằm ở lõi. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
+
+Pha nào đã qua nghiệm thu, xem `STATUS.md`.
 
 ## 5. Triết lý Kiến trúc & Các Tính năng Không Bao Giờ Làm (Non-Goals)
 
-- Quyền riêng tư & Zero-Auth: NodeCine không bao giờ xây dựng tính năng đăng ký, đăng nhập tài khoản hay cơ sở dữ liệu người dùng trên đám mây. Ở v0.1 đi xa hơn một bước, Zero-Key: không yêu cầu người dùng dán bất kỳ khóa API nào, vì các Khối Nhà Cung Cấp tận dụng công cụ dòng lệnh đã đăng nhập và bộ tổng hợp giọng nói của hệ điều hành. Khi có khóa ở phiên bản sau, chúng được lưu cục bộ trong trình duyệt hoặc tệp môi trường của người dùng.
+- Quyền riêng tư & Zero-Auth: NodeCine không bao giờ xây dựng tính năng đăng ký, đăng nhập tài khoản hay cơ sở dữ liệu người dùng trên đám mây. Thêm một bước nữa là Zero-Key: luôn phải có đường đi không cần khóa API nào, nhờ các nhà cung cấp tận dụng công cụ đã đăng nhập trên máy, máy chủ cục bộ và bộ tổng hợp giọng nói của hệ điều hành. Khóa, khi có, được lưu cục bộ trong trình duyệt hoặc tệp môi trường của người dùng.
 - Không phát triển Timeline đa rãnh: NodeCine không chạy theo mô hình kéo thả thủ công của Premiere hay CapCut. Mọi chuyển động thị giác do mã nguồn của template và engine quy định.
 - Không phụ thuộc hạ tầng đám mây: Ứng dụng hoạt động độc lập theo mô hình self-hosted, không bắt buộc người dùng kết nối tới dịch vụ đám mây tập trung nào để kết xuất.
 
-Làm rõ một hiểu lầm thường gặp: nguyên tắc Zero-Auth và không phụ thuộc đám mây không có nghĩa là ứng dụng không có phần máy chủ. Ứng dụng vẫn có một lớp máy chủ cục bộ chạy trên chính máy người dùng để làm những việc mà trình duyệt không làm được: điều khiển tiến trình kết xuất, sinh tiến trình con cho các nhà cung cấp cục bộ, và ở v0.2 chuyển tiếp yêu cầu tới nhà cung cấp API. Điều bị loại trừ là máy chủ tập trung do đội ngũ NodeCine vận hành.
+Làm rõ một hiểu lầm thường gặp: nguyên tắc Zero-Auth và không phụ thuộc đám mây không có nghĩa là ứng dụng không có phần máy chủ. Ứng dụng vẫn có một lớp máy chủ cục bộ chạy trên chính máy người dùng để làm những việc mà trình duyệt không làm được: điều khiển tiến trình kết xuất, sinh tiến trình con cho các nhà cung cấp cục bộ, và chuyển tiếp yêu cầu tới nhà cung cấp gọi qua HTTP. Điều bị loại trừ là máy chủ tập trung do đội ngũ NodeCine vận hành.
 
 ## 6. Tiêu chí Nghiệm thu Phiên bản v0.1 (Acceptance Criteria)
 
@@ -175,7 +176,7 @@ Các hạng mục dưới đây đã được cân nhắc và cố ý loại kh�
 - Khối đạo diễn generic dùng chung cho mọi gói, nhận "công thức" gồm lời nhắc và lược đồ cảnh từ gói thay vì mỗi gói tự viết khối.
 - Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng gói, mỗi gói tự mang khối, kiểu cảnh và đồ thị mẫu của nó.
 - Họ khối truy xuất dữ liệu mở rộng: Reddit Fetcher, CSV và Google Sheet Loader, Market API Fetcher. Chúng dùng chung vị trí và vai trò với Khối Truy Xuất Repo trong đồ thị.
-- Họ khối Nhà Cung Cấp mở rộng: Anthropic API Provider và các nhà cung cấp mô hình khác qua khóa API; ElevenLabs và các nhà cung cấp giọng đọc đám mây; nhà cung cấp giọng đọc chạy mô hình cục bộ trên GPU. Tất cả cắm vào cùng cổng `LLMRef` hoặc `TTSRef` đã có từ v0.1.
+- Nhà cung cấp cần khóa API: Anthropic, ElevenLabs và các dịch vụ đám mây khác. Tất cả cắm vào cùng cổng `LLMRef` hoặc `TTSRef` đã có, và vào cùng hai khối nhà cung cấp — cái phải làm thêm là két giữ khóa, không phải khối mới.
 - Chạy hàng loạt (batch) nhiều biến thể video từ một nguồn dữ liệu bảng tính.
 - Đặt nhiều Khối Video Output trên cùng một đồ thị để so sánh hai engine, hoặc hai bản dựng, cạnh nhau.
 - Phụ đề chạy từng từ, phục vụ nhóm người dùng sáng tạo nội dung không lộ mặt.

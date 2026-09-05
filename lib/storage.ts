@@ -2,7 +2,8 @@
 import type { Graph } from '@/core/engine/graph';
 import type { Locale } from './i18n';
 
-/** Three separate localStorage keys (EXECUTION_ENGINE §7.1). API keys slot exists but is unused in v0.1. */
+/** Two localStorage keys today. EXECUTION_ENGINE §7.1 specifies a third for API keys; nothing
+ *  needs one yet, so it is not created. See docs/STATUS.md. */
 const PROJECT_KEY = 'nodecine.project';
 const UI_KEY = 'nodecine.ui';
 export const PROJECT_SCHEMA_VERSION = 2;

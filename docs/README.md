@@ -2,6 +2,12 @@
 
 Docs chia hai tầng, đúng như mã nguồn: **lõi** (khung chạy được với zero phụ thuộc ngoài) và **gói bản mẫu** (thêm khối, kiểu cảnh và đồ thị mẫu cho một loại video). Đọc lõi trước; gói chỉ có nghĩa khi đã hiểu lõi.
 
+Một quy ước xuyên suốt: **`STATUS.md` nói cái gì đã dựng xong, mọi tài liệu khác nói luật.** Thêm một provider hay một engine chỉ sửa `STATUS.md`; sửa tài liệu luật nghĩa là hợp đồng đổi.
+
+## Đọc trước
+
+0. [`STATUS.md`](STATUS.md) — **Tình trạng triển khai.** Cái gì đã dựng xong hôm nay: bản mẫu, khối, engine, nhà cung cấp, kiểu cảnh. Đây là tài liệu duy nhất nói về tiến độ; năm tài liệu dưới chỉ nói luật. Mâu thuẫn thì tin tệp này.
+
 ## Tầng lõi
 
 1. [`PRD.md`](PRD.md) — Yêu cầu Sản phẩm. Sản phẩm giải quyết vấn đề gì, cho ai; khung lõi và gói; bộ khối lõi; trình tự Pha A rồi Pha B; tiêu chí nghiệm thu; những gì cố ý không làm.
@@ -12,7 +18,7 @@ Docs chia hai tầng, đúng như mã nguồn: **lõi** (khung chạy được v
 
 ## Gói bản mẫu
 
-6. [`packs/github-showcase.md`](packs/github-showcase.md) — Gói GitHub Repo Showcase (Pha B). Đồ thị mười khối, Truy Xuất Repo và dữ kiện, AI Đạo Diễn và ba kiểu cảnh, Kịch bản 1 đến 3b, lỗi và tiêu chí nghiệm thu riêng.
+6. [`packs/github-showcase.md`](packs/github-showcase.md) — Gói GitHub Repo Showcase. Đồ thị mười khối, Truy Xuất Repo và dữ kiện, AI Đạo Diễn và ba kiểu cảnh, Kịch bản 1 đến 3b, lỗi và tiêu chí nghiệm thu riêng.
 
 ## Bất biến cốt lõi
 

@@ -1,4 +1,4 @@
-# Gói Bản Mẫu: GitHub Repo Showcase - v0.1
+# Gói Bản Mẫu: GitHub Repo Showcase
 
 Gói bản mẫu đầu tiên của NodeCine, và là bằng chứng rằng khung lõi chạy được với dữ liệu thật. Mọi thứ trong tài liệu này xây trên Hợp đồng Lõi và **không sửa gì ở lõi**: gói chỉ thêm hai khối, ba kiểu cảnh, một đồ thị mẫu và bài kiểm thử của riêng nó.
 
@@ -74,7 +74,7 @@ Gọi GitHub REST API ẩn danh, hạn mức theo địa chỉ IP; đặt `GITHU
 
 ## 3. Khối AI Đạo Diễn (AI Director)
 
-Nhận `FactSheet` và `LLMRef`, phát `DirectorPlan` và `AudioScript`. Tham số: `outputLanguage` (mặc định `auto`: bằng ngôn ngữ nguồn do lõi nhận diện từ văn bản của `FactSheet`; chọn `vi` để mô hình viết toàn bộ lời thoại và tiêu đề bằng tiếng Việt dù nguồn là tiếng Anh). Dữ kiện đi qua cổng Dữ kiện không bị dịch. Chủ đề thị giác cố định `github-showcase/developer-dark`, không chọn được ở v0.1.
+Nhận `FactSheet` và `LLMRef`, phát `DirectorPlan` và `AudioScript`. Tham số: `outputLanguage` (mặc định `auto`: bằng ngôn ngữ nguồn do lõi nhận diện từ văn bản của `FactSheet`; chọn `vi` để mô hình viết toàn bộ lời thoại và tiêu đề bằng tiếng Việt dù nguồn là tiếng Anh). Dữ kiện đi qua cổng Dữ kiện không bị dịch. Chủ đề thị giác cố định `github-showcase/developer-dark`, gói quyết định, người dùng không chọn.
 
 ### 3.1. Lược đồ kết quả mô hình phải trả về
 
@@ -112,7 +112,7 @@ Lời nhắc gửi cho mô hình chứa: `readmeExcerpt`, `description`, `topics
 
 ## 4. Kiểu Cảnh của Gói
 
-Ba kiểu cảnh đăng ký vào scene registry, mỗi kiểu có renderer Remotion ở v0.1; renderer Hyperframes để v0.2. Chủ đề `github-showcase/developer-dark`: nền tối, font JetBrains Mono, hiệu ứng cửa sổ Terminal. Lược đồ `props` gồm hai phần: các trường mô hình viết (`HookModelSchema` và hai lược đồ tương ứng, dùng lại làm lược đồ đầu ra của AI Đạo Diễn) và các trường đè từ dữ kiện, khai báo tùy chọn để bản kế hoạch vẫn hợp lệ trước khi Đóng Gói Timeline đè vào.
+Ba kiểu cảnh đăng ký vào scene registry, mỗi kiểu có renderer riêng cho từng engine gói hỗ trợ (xem `../STATUS.md`). Chủ đề `github-showcase/developer-dark`: nền tối, font JetBrains Mono, hiệu ứng cửa sổ Terminal. Lược đồ `props` gồm hai phần: các trường mô hình viết (`HookModelSchema` và hai lược đồ tương ứng, dùng lại làm lược đồ đầu ra của AI Đạo Diễn) và các trường đè từ dữ kiện, khai báo tùy chọn để bản kế hoạch vẫn hợp lệ trước khi Đóng Gói Timeline đè vào.
 
 ### 4.1. `github-showcase/hook`
 
@@ -140,9 +140,9 @@ Ba kiểu cảnh đăng ký vào scene registry, mỗi kiểu có renderer Remot
 
 ### Kịch bản 2: Đổi Engine bằng cách Thay Khối
 
-1. Kéo Khối Hyperframes Engine từ Thư viện; thân khối hiện chấm vàng "chưa sẵn sàng, v0.2".
+1. Kéo một Khối Động Cơ khác từ Thư viện, ví dụ Hyperframes; thân khối hiện `capabilities` mà Adapter của nó khai báo.
 2. Nối dây "Động cơ" của nó vào Xuất Bản Video; dây cũ bị thay vì một cổng nhận chỉ giữ một dây.
-3. Chỉ chữ ký của các khối nhận `EngineRef` đổi; không khối nào khác chạy lại. Xuất Bản Video `blocked` viền vàng với lớp phủ "Hyperframes Engine sẽ có ở v0.2"; kết quả Remotion cũ vẫn nằm dưới lớp phủ. Nếu Xuất MP4 cũng nối sang engine mới, nút Kết xuất bị khóa kèm lý do.
+3. Chỉ chữ ký của các khối nhận `EngineRef` đổi; không khối nào khác chạy lại. Khối nào cần một khả năng mà engine mới khai là `unavailable` thì tự chặn, viền vàng, nêu đúng lý do Adapter đưa ra; kết quả cũ vẫn nằm dưới lớp phủ. Nếu Xuất MP4 nối sang một engine không kết xuất được, nút Kết xuất bị khóa kèm lý do.
 4. Nối lại Remotion Engine, khung phát khôi phục tức thì.
 
 ### Kịch bản 3: Tinh Chỉnh Tham Số Cục Bộ
