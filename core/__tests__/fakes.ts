@@ -10,7 +10,6 @@ export function makeFakeServices(overrides: Partial<{
   renderReady: boolean;
   claudeAuthenticated: boolean;
   secondsPerChar: number;
-  serverOps: Record<string, (input: unknown) => Promise<unknown>>;
   complete: (prompt: string) => Promise<unknown>;
 }> = {}) {
   const o = {
@@ -23,7 +22,6 @@ export function makeFakeServices(overrides: Partial<{
     renderReady: true,
     claudeAuthenticated: true,
     secondsPerChar: 0.07,
-    serverOps: {} as Record<string, (input: unknown) => Promise<unknown>>,
     complete: (async () => { throw new Error('not used in core tests'); }) as (prompt: string) => Promise<unknown>,
     ...overrides,
   };
@@ -36,12 +34,6 @@ export function makeFakeServices(overrides: Partial<{
     calls,
     setOptions: (p) => Object.assign(o, p),
     now: () => (clock += 7),
-    async serverOp(op, input) {
-      calls.push({ name: 'serverOp', args: [op, input] });
-      const h = o.serverOps[op];
-      if (!h) throw Object.assign(new Error(`no fake server op ${op}`), { code: 'NODE_TYPE_UNKNOWN' });
-      return h(input);
-    },
     async probeLLM(providerId, settings): Promise<LLMRef> {
       calls.push({ name: 'probeLLM', args: [providerId, settings] });
       return {

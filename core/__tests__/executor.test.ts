@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Executor } from '../engine/executor';
 import { validateGraph, GraphInvalidError, type Graph } from '../engine/graph';
 import { _resetNodeRegistry } from '../nodes/definition';
-import { registerCoreNodes } from '../nodes';
+import { registerNodes } from '@/nodes';
 import { _resetCodeRenderers, registerCodeRenderer } from '../look/renderers';
 import staticScriptJson from '@/templates/static-script.json';
 const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
@@ -13,7 +13,7 @@ import { makeFakeServices } from './fakes';
 function setup(opts: Parameters<typeof makeFakeServices>[0] = {}, withRenderer = true) {
   _resetNodeRegistry();
   _resetCodeRenderers();
-  registerCoreNodes();
+  registerNodes();
   if (withRenderer) registerCodeRenderer('html-gsap', 'hyperframes', () => null);
   const services = makeFakeServices(opts);
   const graph = staticScriptTemplate();

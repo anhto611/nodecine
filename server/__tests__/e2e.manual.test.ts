@@ -3,7 +3,7 @@ import { copyFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Executor } from '@/core/engine/executor';
 import type { Graph } from '@/core/engine/graph';
-import { registerCoreNodes } from '@/core/nodes';
+import { registerNodes } from '@/nodes';
 import type { DirectorPlan, AudioScript } from '@/core/types/payloads';
 import type { VideoIR } from '@/core/types/ir';
 import { mediaPath, fileNameFromMediaUrl } from '@/server/paths';
@@ -19,7 +19,7 @@ const enabled = process.env.NODECINE_E2E === '1';
 
 describe.skipIf(!enabled)('github-showcase, end to end', () => {
   it('turns a repo link into a one-minute MP4', async () => {
-    registerCoreNodes();
+    registerNodes();
     const graph = structuredClone(githubShowcase.graph) as Graph;
     graph.nodes.find((n) => n.id === 'input')!.params = { value: process.env.NODECINE_E2E_REPO ?? 'expressjs/express' };
     const services = createServerServices();

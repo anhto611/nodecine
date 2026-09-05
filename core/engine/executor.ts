@@ -30,7 +30,7 @@ export interface RunOptions {
 }
 
 /**
- * Graph executor (EXECUTION_ENGINE §2–§4). Runs on the client; sequential topological order;
+ * Graph executor (EXECUTION_ENGINE §2–§4). Runs on the server behind the job queue (server/jobs.ts); sequential topological order;
  * signature cache with resource nodes always re-probed; bypass; blocked propagation; single-node runs.
  */
 type Gathered = { inputs: Record<string, Packet>; lists: Record<string, Packet[]>; block?: BlockReason; missing?: string };

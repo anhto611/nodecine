@@ -106,7 +106,7 @@ Ranh giới trách nhiệm:
 
 ### 4.6. Xem Trước Thời Gian Thực & Xuất Tệp Cục Bộ
 
-- Xem trước trực tiếp ngay trong Node Xuất Bản Video, chạy hoàn toàn phía máy khách.
+- Xem trước trực tiếp ngay trong Node Xuất Bản Video: trình phát chạy trong trình duyệt trên IR mà executor ở máy chủ đã dựng.
 - Xuất MP4 từ Node Xuất MP4 bằng phần cứng máy đang chạy ứng dụng. Bước này cần một tiến trình Node cục bộ điều khiển headless Chromium, nằm ngay trong ứng dụng self-hosted; chi tiết tại Kiến trúc Hệ thống.
 
 ### 4.7. Bảng Cài Đặt

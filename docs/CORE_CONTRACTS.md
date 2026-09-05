@@ -231,7 +231,7 @@ Ba bất biến do node này giữ:
 2. Prompt được dựng từ các nguồn tách bạch: đề bài mang ý đồ, beat mang cấu trúc, block tự nói khi nào dùng nó và viết gì (`doc.when`, `doc.example`, `hint` của từng prop), stage nói tone và trường nó vẽ được, dữ kiện mang sự thật. Không có gì trong prompt nói về một loại video cụ thể.
 3. Danh mục phải dùng được trước khi tốn một lần gọi mô hình: preflight chặn `NODE_PARAMS_INVALID` khi hai block nối vào trùng `id` (kể cả từ hai node Blocks khác nhau) hoặc một beat nêu `id` không nối.
 
-Vòng gọi mô hình (`core/director/loop.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `core/director/beats.ts`, prompt ở `core/director/prompt.ts`.
+Vòng gọi mô hình (`nodes/director/loop.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `nodes/director/beats.ts`, prompt ở `nodes/director/prompt.ts`.
 
 Hệ quả: một video GitHub showcase là *node này* + stage `developer-dark` + ba block `hook/mockup/cta` + ba beat với ba ràng buộc dữ kiện; một video trích dẫn là *node này* + stage `ink` + hai block + beat `title ×1, quote ×4`. Người dùng dựng cả hai từ canvas trống; sự khác nhau nằm trọn trong dữ liệu, và một bản mẫu chia sẻ mang theo cả giao diện vì nó mang theo các node Stage/Block.
 
@@ -247,7 +247,7 @@ Vì sao một node chứ không mỗi block một node: thử với sáu block t
 
 ### 5.11. Truy Xuất Repo (GitHub Fetcher)
 
-Node lõi `core/github-fetcher`: nhận `SourceRef`, phát `FactSheet`. Link repo GitHub thì gọi thao tác máy chủ `github-fetch-repo` (mục 9) để lấy tên, mô tả, sao, ngôn ngữ, chủ đề, lệnh cài suy từ README, trích README; trình duyệt không bao giờ gọi GitHub. Văn bản thường thì đi qua nguyên vẹn (`mode: passthrough`) để đồ thị GitHub vẫn chạy được với một đoạn mô tả gõ tay. Lỗi có mã riêng: `REPO_NOT_FOUND`, `REPO_RATE_LIMITED` (thử lại được), `REPO_NETWORK` (thử lại được). Ruột ở `core/github/`, thao tác máy chủ ở `server/github/`, thân node ở `components/nodes/GithubFetcherBody.tsx`. Đây là mẫu cho mọi node lấy dữ liệu về sau (RSS, YouTube, …): một node lõi riêng cho một nguồn, vì mỗi nguồn có đặc thù riêng.
+Node lõi `core/github-fetcher`: nhận `SourceRef`, phát `FactSheet`. Link repo GitHub thì gọi GitHub API ngay trong node (mục 9.1) để lấy tên, mô tả, sao, ngôn ngữ, chủ đề, lệnh cài suy từ README, trích README. Văn bản thường thì đi qua nguyên vẹn (`mode: passthrough`) để đồ thị GitHub vẫn chạy được với một đoạn mô tả gõ tay. Lỗi có mã riêng: `REPO_NOT_FOUND`, `REPO_RATE_LIMITED` (thử lại được), `REPO_NETWORK` (thử lại được). Cả họ ở `nodes/github/`: node, đọc link, gọi GitHub, dựng dữ kiện, thân node, test. Đây là mẫu cho mọi node lấy dữ liệu về sau (RSS, YouTube, …): một thư mục `nodes/<nguồn>/` chứa trọn họ đó, như `comfy_extras/nodes_<chủ đề>.py` của ComfyUI.
 
 ---
 
@@ -320,11 +320,11 @@ Ví dụ với bộ tổng hợp của hệ điều hành trên macOS: `say` ghi
 
 ---
 
-## 9. Thao Tác Máy Chủ và An Toàn Tiến Trình Con
+## 9. Gọi Ra Ngoài và An Toàn Tiến Trình Con
 
-### 9.1. Thao tác máy chủ (server op)
+### 9.1. Node gọi ra ngoài
 
-Node chạy trên máy khách. Khi một node cần mạng hay hệ tệp, nó gọi `services.serverOp(op, input, signal)`; ứng dụng chuyển tiếp tới `POST /api/ops/<op>`; route tra `op` trong `core/server-ops.ts` — một registry phẳng tên → hàm, rỗng ở lõi, ai cần thì đăng ký bằng `registerServerOp(op, fn)`. Tên op mang tiền tố riêng vì không gian tên là phẳng (`github-fetch-repo`). Không có phương thức riêng cho node nào trong `NodeServices`; kiểm thử thay `serverOp` bằng hàm giả.
+Node chạy trong executor ở máy chủ (ARCHITECTURE §1.2), nên một node cần mạng hay hệ tệp **gọi thẳng**, như node API của ComfyUI: Truy Xuất Repo gọi GitHub từ `nodes/github/fetch-repo.ts` ngay trong `run()`. Không còn tầng "thao tác máy chủ" hay registry trung gian. Điều còn giữ là ba luật: URL dựng lại ở phía gọi từ dữ liệu đã kiểm định (owner/name) và chỉ tới máy chủ cố định; mọi lệnh gọi có thời gian chờ và bị hủy cùng luồng; lỗi ra dưới dạng `NodeError` có mã trong bảng của Bộ Máy Thực Thi. Để test không chạm mạng, node để lệnh gọi sau một điểm thay được (`github.fetchRepo`), còn bản thân hàm gọi nhận `fetch` qua tham số.
 
 ### 9.2. Tiến trình con
 

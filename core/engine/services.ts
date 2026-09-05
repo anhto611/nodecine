@@ -4,8 +4,8 @@ import type { VideoIR } from '../types/ir';
 import type { ExportSettings, RenderProgress, RenderResult } from '../adapters/types';
 
 /**
- * Everything a node needs from outside the graph. The executor runs on the client
- * (ARCHITECTURE §1.2); the app implements this interface by calling local API routes.
+ * Everything a node needs from outside the graph. The executor runs on the server (ARCHITECTURE
+ * §1.2); `server/services.server.ts` implements this with the providers and engines directly.
  * Tests implement it with fakes.
  */
 export interface NodeServices {
@@ -21,10 +21,5 @@ export interface NodeServices {
     onProgress: (p: RenderProgress) => void,
     signal: AbortSignal,
   ): Promise<RenderResult>;
-  /**
-   * Call a server-side operation registered under `op` (CORE_CONTRACTS §9). The app forwards it to
-   * POST /api/ops/<op>; tests stub it. One flat namespace, like the node registry itself.
-   */
-  serverOp(op: string, input: unknown, signal: AbortSignal): Promise<unknown>;
   now(): number;
 }

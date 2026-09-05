@@ -1,0 +1,49 @@
+'use client';
+import type React from 'react';
+import type { BodyProps } from './kit';
+import type { NodeMeta } from '@/lib/node-meta';
+import { InputTriggerBody } from './input/body';
+import { GithubFetcherBody } from './github/body';
+import { StaticScriptBody } from './script/body';
+import { StageBody, BlocksBody } from './look/body';
+import { AiDirectorBody } from './director/body';
+import { EngineBody, LlmProviderBody, TtsProviderBody } from './resources/body';
+import { TtsBody } from './tts/body';
+import { AssemblerBody } from './assembler/body';
+import { ExportBody } from './output/export-body';
+import { VideoOutputBody } from './output/video-output-body';
+
+/** The Studio side of every node family: the body each node type draws, and its icon and library group. */
+export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
+  'core/input-trigger': InputTriggerBody,
+  'core/github-fetcher': GithubFetcherBody,
+  'core/static-script': StaticScriptBody,
+  'core/stage': StageBody,
+  'core/blocks': BlocksBody,
+  'core/ai-director': AiDirectorBody,
+  'core/llm-provider': LlmProviderBody,
+  'core/tts-provider': TtsProviderBody,
+  'core/remotion-engine': EngineBody,
+  'core/hyperframes-engine': EngineBody,
+  'core/tts-engine': TtsBody,
+  'core/timeline-assembler': AssemblerBody,
+  'core/video-output': VideoOutputBody,
+  'core/mp4-export': ExportBody,
+};
+
+export const NODE_META: Record<string, NodeMeta> = {
+  'core/input-trigger': { icon: 'bolt', group: 'source' },
+  'core/github-fetcher': { icon: 'branch', group: 'source' },
+  'core/static-script': { icon: 'doc', group: 'source' },
+  'core/stage': { icon: 'screen', group: 'look' },
+  'core/blocks': { icon: 'layers', group: 'look' },
+  'core/ai-director': { icon: 'bot', group: 'process' },
+  'core/llm-provider': { icon: 'term', group: 'provider' },
+  'core/tts-provider': { icon: 'mic', group: 'provider' },
+  'core/tts-engine': { icon: 'wave', group: 'process' },
+  'core/timeline-assembler': { icon: 'layers', group: 'process' },
+  'core/remotion-engine': { icon: 'chip', group: 'engine' },
+  'core/hyperframes-engine': { icon: 'chip', group: 'engine' },
+  'core/video-output': { icon: 'screen', group: 'output' },
+  'core/mp4-export': { icon: 'down', group: 'output' },
+};

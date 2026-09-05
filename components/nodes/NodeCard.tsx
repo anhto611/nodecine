@@ -8,8 +8,7 @@ import { NODE_META } from '@/lib/node-meta';
 import { Icon } from '@/components/icons';
 import { useT, Btn } from '@/components/ui';
 import { useNode, useRuntime, useStudio } from '@/store/useStudio';
-import { NODE_BODIES } from './bodies';
-import { VideoOutputBody } from './VideoOutputBody';
+import { NODE_BODIES } from '@/nodes/index.client';
 
 export type NcNode = Node<{ nodeId: string }, 'nc'>;
 
@@ -39,7 +38,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
   if (!def) return <div className="nc-node"><div className="nc-hdr"><span className="nc-title">{node.type}</span></div></div>;
   const meta = NODE_META[node.type];
   const IconC = meta ? Icon[meta.icon] : Icon.chip;
-  const Body = node.type === 'core/video-output' ? VideoOutputBody : NODE_BODIES[node.type];
+  const Body = NODE_BODIES[node.type];
 
   // Resource nodes overlay readiness on the success badge (EXECUTION_ENGINE §1.1 rule 2).
   const ref = def.kind === 'resource' ? Object.values(rt.outputs)[0]?.payload : undefined;

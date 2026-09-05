@@ -133,7 +133,7 @@ Mã lỗi riêng của từng gói (ví dụ `REPO_*`, `LLM_SCHEMA_INVALID`) n�
 
 *Cập nhật:* các workflow người dùng lưu không còn ở `localStorage` mà là tệp trên máy chủ (`CORE_CONTRACTS.md` §10.1); các workflow **đang mở** trên thanh tab (kể cả bản nháp chưa lưu) tự lưu vào `localStorage` dưới khóa `nodecine.tabs`, như ComfyUI giữ các workflow đang mở; tải lại trang là các tab trở lại nguyên trạng.
 
-Toàn bộ trạng thái bền vững nằm trong bộ nhớ cục bộ của trình duyệt, chia thành ba khóa tách biệt:
+Trạng thái bền vững phía trình duyệt nằm trong bộ nhớ cục bộ, chia thành các khóa tách biệt (trạng thái chạy của node thì ở executor trên máy chủ, đọc lại qua `/api/executors/<khóa>`):
 
 1. Tài liệu dự án: tên dự án, danh sách node kèm vị trí, tham số và cờ bỏ qua, danh sách dây nối.
 2. Khóa API: tách riêng để có thể xóa độc lập mà không mất đồ thị, và để không bao giờ bị vô tình đưa vào nội dung xuất hay chia sẻ. Khóa này chỉ được tạo khi có nhà cung cấp cần khóa (xem `STATUS.md`).

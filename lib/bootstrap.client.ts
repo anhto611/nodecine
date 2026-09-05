@@ -1,5 +1,5 @@
 'use client';
-import { registerCoreNodes } from '@/core/nodes';
+import { registerNodes } from '@/nodes';
 import { registerRemotionClient } from '@/engines/remotion/register.client';
 import { registerHyperframesClient } from '@/engines/hyperframes/register.client';
 import { registerTemplates } from '@/templates';
@@ -9,7 +9,7 @@ let done = false;
 export function bootstrapClient(): void {
   if (done) return;
   done = true;
-  registerCoreNodes();
+  registerNodes();
   registerRemotionClient();
   registerHyperframesClient();
   registerTemplates();

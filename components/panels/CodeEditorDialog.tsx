@@ -2,10 +2,10 @@
 import React from 'react';
 import { StageDefSchema, BlockSetSchema, type BlockDef, type StageDef } from '@/core/types/payloads';
 import { useStudio } from '@/store/useStudio';
-import { LookPreview } from '../nodes/LookPreview';
+import { LookPreview } from '@/nodes/look/preview';
 import { Btn, useT } from '../ui';
 import { Icon } from '../icons';
-import { DEFAULT_STAGE as DEFAULT_PREVIEW_STAGE } from '@/core/nodes/stage';
+import { DEFAULT_STAGE as DEFAULT_PREVIEW_STAGE } from '@/nodes/look/stage';
 
 /**
  * The code of one stage or one block, edited in a modal with the live preview beside it. Saving

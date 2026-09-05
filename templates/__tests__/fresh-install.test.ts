@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { registerCoreNodes } from '@/core/nodes';
+import { registerNodes } from '@/nodes';
 import { listNodeTypes, _resetNodeRegistry } from '@/core/nodes/definition';
 
 /**
@@ -12,7 +12,7 @@ import { listNodeTypes, _resetNodeRegistry } from '@/core/nodes/definition';
 
 beforeEach(() => {
   _resetNodeRegistry();
-      registerCoreNodes();
+      registerNodes();
 });
 
 describe('a fresh install', () => {

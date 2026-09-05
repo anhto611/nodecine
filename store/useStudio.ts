@@ -1,6 +1,6 @@
 'use client';
 import { create } from 'zustand';
-import { Executor } from '@/core/engine/executor';
+import { RemoteExecutor } from '@/lib/remote-executor';
 import { validateGraph, type Graph, type GraphIssue, type NodeInstance, GraphInvalidError } from '@/core/engine/graph';
 import type { NodeRuntime } from '@/core/engine/state';
 import { RunHistory, type RunRecord } from '@/core/engine/history';
@@ -9,11 +9,9 @@ import staticScriptJson from '@/templates/static-script.json';
 import { getTemplate, templateGraph, type TemplateDefinition, localized } from '@/core/templates/registry';
 import type { VideoIR } from '@/core/types/ir';
 import type { EngineRef } from '@/core/types/payloads';
-import { clientServices } from '@/lib/services.client';
 import { bootstrapClient } from '@/lib/bootstrap.client';
 import { loadUserTemplates, saveUserTemplates, loadProject, loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 import { workflowsApi } from '@/lib/workflows.client';
-import { provideWorkflowForRenders } from '@/lib/services.client';
 import type { Locale } from '@/lib/i18n';
 
 export type Panel = 'workflows' | 'library' | 'history' | null;
@@ -55,7 +53,8 @@ export interface StudioState {
   /** The stage node, or one block of a Blocks node, open in the code editor. */
   codeEditor: { nodeId: string; blockIndex?: number } | null;
   selectedNodeId: string | null;
-  executor: Executor | null;
+  /** The server-side executor for the active tab, mirrored here (ARCHITECTURE §1.2). */
+  executor: RemoteExecutor | null;
 
   init(): void;
   setParams(nodeId: string, patch: Record<string, unknown>): void;
@@ -113,12 +112,15 @@ export const useStudio = create<StudioState>((set, get) => {
   /** Swap the canvas to a tab's graph: executor, validation, runtimes, name. */
   const showTab = (tab: WorkflowTab) => {
     const ex = get().executor;
-    ex?.setGraph(tab.graph);
-    const runtimes: Record<string, NodeRuntime> = {};
-    if (ex) for (const [id, rt] of ex.runtimes_()) runtimes[id] = rt;
-    set({ activeTab: tab.key, graph: tab.graph, projectName: tab.name, issues: validateGraph(tab.graph), runtimes, viewingRun: null, selectedNodeId: null });
+    set({ activeTab: tab.key, graph: tab.graph, projectName: tab.name, issues: validateGraph(tab.graph), runtimes: {}, running: false, step: null, viewingRun: null, selectedNodeId: null });
     persist();
-    void ex?.probeResources();
+    void ex?.switchTo(tab.key, tab.graph, tab.name).then(() => {
+      if (get().activeTab !== tab.key) return;
+      const runtimes: Record<string, NodeRuntime> = {};
+      for (const [id, rt] of ex.runtimes_()) runtimes[id] = rt;
+      set({ runtimes, logTick: get().logTick + 1 });
+      void ex.probeResources();
+    });
   };
   const addTab = (tab: Omit<WorkflowTab, 'key'>) => {
     const full: WorkflowTab = { key: tabKey(), ...tab };
@@ -179,8 +181,7 @@ export const useStudio = create<StudioState>((set, get) => {
           : [{ key: tabKey(), fileId: null, name: 'Static Script', graph: structuredClone(staticScriptJson.graph) as Graph, dirty: false }];
       const active = tabs.find((t) => t.key === stored?.active) ?? tabs[0]!;
       const graph = active.graph;
-      provideWorkflowForRenders(() => ({ name: get().projectName, graph: get().graph }));
-      const executor = new Executor(graph, clientServices, {
+      const executor = new RemoteExecutor(active.key, graph, active.name, {
         onStateChange: (nodeId, runtime) => set((s) => ({ runtimes: { ...s.runtimes, [nodeId]: runtime } })),
         onRunStart: ({ stepTotal }) => set({ running: true, step: { nodeId: '', step: 0, total: stepTotal }, viewingRun: null }),
         onStep: ({ nodeId, step, stepTotal }) => set({ step: { nodeId, step, total: stepTotal } }),
@@ -355,8 +356,10 @@ export const useStudio = create<StudioState>((set, get) => {
         return;
       }
       try {
+        set({ running: true });
         await ex.run();
       } catch (e) {
+        set({ running: false, step: null });
         if (e instanceof GraphInvalidError) {
           set({ issues: e.issues });
           ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: e.issues[0]?.code, message: e.issues.map((i) => `${i.nodeId ?? 'graph'}: ${i.code} ${i.message}`).join('; ') });
@@ -448,6 +451,7 @@ export const useStudio = create<StudioState>((set, get) => {
     },
     setProjectName(name) {
       const { tabs, activeTab } = get();
+      get().executor?.setName(name);
       set({ projectName: name, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, name, dirty: true } : t)) });
       persist();
     },

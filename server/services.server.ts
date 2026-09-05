@@ -4,25 +4,20 @@ import type { NodeServices } from '@/core/engine/services';
 import { getLLMProviderFactory, getTTSProviderFactory } from '@/core/providers/registry';
 import { getEngineFactory } from '@/core/adapters/registry';
 import { makeEngineRef } from '@/core/adapters/types';
-import { getServerOp } from '@/core/server-ops';
 import { buildTTSRef } from '@/providers/system-tts';
 import { mediaUrl } from '@/server/paths';
 import { ensureServerRegistrations } from '@/server/register';
+import { embedWorkflow } from '@/server/video-meta';
+import { fileNameFromMediaUrl, mediaPath } from '@/server/paths';
 
 /**
- * NodeServices for a run that lives entirely on the server — a CLI, a scheduled job, an end-to-end
- * test. It does what the API routes do, without HTTP: the browser is not part of the pipeline, only
- * a way to drive it.
+ * NodeServices for a run on the server — the job queue, a CLI, an end-to-end test (ARCHITECTURE
+ * §1.2). `workflow` names the graph a render came from; when it answers, the MP4 is stamped with it.
  */
-export function createServerServices(): NodeServices {
+export function createServerServices(opts: { workflow?: () => { name: string; graph: unknown } | null } = {}): NodeServices {
   ensureServerRegistrations();
   return {
     now: () => Date.now(),
-    async serverOp(op, input, signal) {
-      const handler = getServerOp(op);
-      if (!handler) throw Object.assign(new Error(`unknown server op ${op}`), { code: 'NODE_TYPE_UNKNOWN' });
-      return handler(input, signal);
-    },
     async probeLLM(providerId, settings) {
       const f = getLLMProviderFactory(providerId);
       if (!f) throw Object.assign(new Error(`unknown llm provider ${providerId}`), { code: 'PROVIDER_NOT_CONNECTED' });
@@ -56,7 +51,13 @@ export function createServerServices(): NodeServices {
     async render(ref, ir, settings, onProgress, signal) {
       const f = getEngineFactory(ref.engineId);
       if (!f) throw Object.assign(new Error(`unknown engine ${ref.engineId}`), { code: 'ENGINE_NOT_READY' });
-      return f(ref.settings).render(ir, settings, onProgress, signal);
+      const result = await f(ref.settings).render(ir, settings, onProgress, signal);
+      const workflow = opts.workflow?.();
+      if (workflow) {
+        // Best-effort, like a ComfyUI PNG carrying its workflow: a video without the tag is still a video.
+        await embedWorkflow(mediaPath(fileNameFromMediaUrl(result.outputUrl)), { ...workflow, ir }, signal).catch(() => undefined);
+      }
+      return result;
     },
   };
 }

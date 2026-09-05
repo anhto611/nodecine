@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import type { Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { registerCoreNodes } from '../nodes';
+import { registerNodes } from '@/nodes';
 import { makeFakeServices } from './fakes';
 import { STAGE, TEXT_CARD } from './look-fixtures';
 
@@ -55,7 +55,7 @@ function graph(): Graph {
 describe('run warnings surface on the node', () => {
   beforeEach(() => {
     _resetNodeRegistry();
-    registerCoreNodes();
+    registerNodes();
     registerNodeType(fakeDirector as unknown as AnyNodeDefinition);
   });
 

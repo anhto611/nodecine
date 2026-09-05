@@ -1,6 +1,6 @@
 import type { BlockDef, StageDef } from '../types/payloads';
-import { DEFAULT_BLOCK } from '../nodes/blocks';
-import { DEFAULT_STAGE } from '../nodes/stage';
+import { DEFAULT_BLOCK } from '@/nodes/look/blocks';
+import { DEFAULT_STAGE } from '@/nodes/look/stage';
 
 /** The shipped dark stage and text card, plus a hook block with a fact-bound number, for tests. */
 export const STAGE: StageDef = DEFAULT_STAGE;

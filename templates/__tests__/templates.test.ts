@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { registerCoreNodes } from '@/core/nodes';
+import { registerNodes } from '@/nodes';
 import { getNodeType, _resetNodeRegistry } from '@/core/nodes/definition';
 import { _resetTemplates, listTemplates, templateGraph } from '@/core/templates/registry';
 import { topoSort, validateGraph } from '@/core/engine/graph';
 import { registerTemplates } from '..';
-import { AI_DIRECTOR } from '@/core/nodes/ai-director';
-import type { Beat } from '@/core/director/beats';
+import { AI_DIRECTOR } from '@/nodes/director/node';
+import type { Beat } from '@/nodes/director/beats';
 import type { BlockDef } from '@/core/types/payloads';
 
 /**
@@ -18,7 +18,7 @@ import type { BlockDef } from '@/core/types/payloads';
 beforeEach(() => {
   _resetNodeRegistry();
   _resetTemplates();
-  registerCoreNodes();
+  registerNodes();
   registerTemplates();
 });
 

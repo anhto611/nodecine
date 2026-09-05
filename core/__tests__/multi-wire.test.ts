@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import { validateGraph, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { blocks, stage } from '../nodes';
+import { blocks, stage } from '@/nodes';
 import { makeFakeServices } from './fakes';
 
 /**
