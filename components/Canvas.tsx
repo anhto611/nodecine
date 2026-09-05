@@ -112,14 +112,35 @@ function CanvasInner() {
   // walks away from the graph, the minimap's box is the union of the nodes and the viewport, so the
   // node squares shrink towards nothing and the canvas ends up empty. Keep the viewport near the graph.
   const translateExtent = React.useMemo((): [[number, number], [number, number]] => {
-    // Enough empty canvas on each side to drop a few new nodes, but small enough that part of the
-    // graph always stays on screen: the extent bounds the visible flow rect, not the graph.
-    const pad = 800;
+    const pane = paneRef.current;
+    const viewW = (pane?.clientWidth ?? 0) / zoom;
+    const viewH = (pane?.clientHeight ?? 0) / zoom;
+    // Room to drop new nodes beside the graph, but never more than half a screen of it: the extent
+    // bounds the visible rect, so a margin wider than the screen would let the graph scroll away
+    // entirely. Half a screen keeps the nearest half of the graph in view at every zoom level.
+    const padX = Math.min(800, Math.max(120, viewW / 2));
+    const padY = Math.min(800, Math.max(120, viewH / 2));
+    const grow = (lo: number, hi: number, needed: number): [number, number] => {
+      if (!(needed > hi - lo)) return [lo, hi];
+      const c = (lo + hi) / 2;
+      return [c - needed / 2, c + needed / 2];
+    };
+    // Zoomed far out the visible area can be larger than the graph plus its margin; the extent has to
+    // keep containing it, or the minimap would have to draw a viewport bigger than its own frame.
+    let [x0, x1] = grow(bounds.x - padX, bounds.x + bounds.width + padX, viewW);
+    let [y0, y1] = grow(bounds.y - padY, bounds.y + bounds.height + padY, viewH);
+    // Finally give the pannable area the shape of the canvas itself. The minimap frame is this area,
+    // so this is what anchors the frame to the real viewport: same proportions at every zoom level,
+    // the area fills the frame edge to edge, and the viewport rectangle inside it stays a true
+    // scaled-down copy of the screen.
+    const aspect = viewW > 0 && viewH > 0 ? viewW / viewH : (x1 - x0) / (y1 - y0);
+    if ((x1 - x0) / (y1 - y0) < aspect) [x0, x1] = grow(x0, x1, (y1 - y0) * aspect);
+    else [y0, y1] = grow(y0, y1, (x1 - x0) / aspect);
     return [
-      [bounds.x - pad, bounds.y - pad],
-      [bounds.x + bounds.width + pad, bounds.y + bounds.height + pad],
+      [x0, y0],
+      [x1, y1],
     ];
-  }, [bounds]);
+  }, [bounds, zoom]);
 
   const onNodesChange = (changes: NodeChange<Node>[]) => {
     setNodes((ns) => applyNodeChanges(changes, ns as Node[]) as NcNode[]);

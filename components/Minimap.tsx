@@ -57,8 +57,10 @@ export const Minimap: React.FC<{
   const ew = Math.max(1, ex2 - ex);
   const eh = Math.max(1, ey2 - ey);
 
-  // The frame mirrors the shape of the pannable area instead of letterboxing it, so the extent fills
-  // the frame edge to edge and the viewport rectangle can be dragged against all four sides.
+  // The frame IS the pannable area: same proportions, no letterboxing. The canvas gives that area
+  // its own aspect ratio, so the frame ends up a scaled copy of the real viewport and the rectangle
+  // inside it a scaled copy of the screen. The container adds a hairline of padding so the outline
+  // of a rectangle sitting on the very edge is not sliced in half.
   const scale = Math.max(ew / MAX_WIDTH, eh / MAX_HEIGHT);
   const WIDTH = ew / scale;
   const HEIGHT = eh / scale;
@@ -79,17 +81,11 @@ export const Minimap: React.FC<{
 
   const toPx = (fx: number, fy: number) => ({ x: (fx - originX) / scale, y: (fy - originY) / scale });
   /**
-   * The viewport drawn inside the frame. At the lowest zoom the visible area is wider than the whole
-   * pannable extent, so the rectangle is clipped to the frame and inset by half its stroke: without
-   * that, the left and right edges of the outline are cut off by the frame and it reads as unbordered.
+   * The viewport drawn inside the frame, at its true position and size: the extent always contains
+   * the visible area, so the rectangle keeps the aspect ratio of the canvas at every zoom level.
    */
-  const half = 0.5;
-  const raw = { x: toPx(view.x, view.y).x, y: toPx(view.x, view.y).y, w: view.w / scale, h: view.h / scale };
-  const vx0 = Math.max(half, raw.x);
-  const vy0 = Math.max(half, raw.y);
-  const vx1 = Math.min(WIDTH - half, raw.x + raw.w);
-  const vy1 = Math.min(HEIGHT - half, raw.y + raw.h);
-  const viewRect = { x: vx0, y: vy0, w: Math.max(2, vx1 - vx0), h: Math.max(2, vy1 - vy0) };
+  const p0 = toPx(view.x, view.y);
+  const viewRect = { x: p0.x, y: p0.y, w: Math.max(2, view.w / scale), h: Math.max(2, view.h / scale) };
 
   /**
    * Move the canvas so the given minimap point becomes the centre of the viewport, clamped to the
