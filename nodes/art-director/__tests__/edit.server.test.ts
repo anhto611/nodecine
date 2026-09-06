@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildLookEditPrompt, editLook, lintLookSource, type LookEditRequest } from '../edit.server';
-import { DEFAULT_STAGE } from '@/nodes/look/node';
-import { DEFAULT_BLOCK } from '@/nodes/look/blocks';
+import { DEFAULT_STAGE } from '@/nodes/art-director/node';
+import { DEFAULT_BLOCK } from '@/nodes/art-director/blocks';
 
 const { code: _c, ...stageMeta } = DEFAULT_STAGE;
 const { code: _b, ...blockMeta } = DEFAULT_BLOCK;

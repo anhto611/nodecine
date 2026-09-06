@@ -82,7 +82,7 @@ Theo mô hình dải icon dọc của ComfyUI, nằm ở mép trái ngay dưới
 Thư viện node (Node Library):
 
 - Ô tìm kiếm theo tên ở đầu panel.
-- Node xếp theo nhóm vai trò, node lõi trước rồi tới các node kèm app, mỗi nguồn một nhóm. Lõi: Nguồn (Nhập Liệu, Kịch Bản Tĩnh), Nhà cung cấp (Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn — mỗi loại cổng một node, chọn hãng bên trong node), Xử lý (Đạo Diễn AI, Giọng Đọc, Đóng Gói Timeline), Động cơ (Remotion Engine, Hyperframes Engine), Xuất (Xuất Bản Video, Xuất MP4). Mọi node trong danh sách đều có sẵn ngay sau khi cài app. Mỗi mục gồm biểu tượng, tên node, một dòng mô tả và dòng nhãn cổng vào và ra dùng đúng tên trong bảng kiểu cổng.
+- Node xếp theo nhóm vai trò, node lõi trước rồi tới các node kèm app, mỗi nguồn một nhóm. Lõi: Nguồn (Nhập Liệu, Kịch Bản Tĩnh), Nhà cung cấp (Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn — mỗi loại cổng một node, chọn hãng bên trong node), Xử lý (Biên Kịch, Giọng Đọc, Đóng Gói Timeline), Động cơ (Remotion Engine, Hyperframes Engine), Xuất (Xuất Bản Video, Xuất MP4). Mọi node trong danh sách đều có sẵn ngay sau khi cài app. Mỗi mục gồm biểu tượng, tên node, một dòng mô tả và dòng nhãn cổng vào và ra dùng đúng tên trong bảng kiểu cổng.
 - Kéo một mục thả lên canvas để tạo node tại vị trí thả; nhấp đúp để thả vào giữa vùng đang nhìn. Trong lúc kéo, một bản mờ của node bám theo con trỏ.
 - Nút "Thêm node" ở thanh công cụ đáy trái không còn tự mở danh mục riêng, mà chỉ mở panel này.
 - Mọi node đều được phép thêm nhiều lần trên cùng đồ thị. Bộ máy thực thi nạp dữ liệu vào mọi node có dây nối hợp lệ.
@@ -162,7 +162,7 @@ Mọi node chức năng trên không gian đồ thị đều tuân thủ bố c�
   - Chip xử lý: Node Động Cơ.
   - Màn hình phát: Node Xuất Bản Video.
   - Mũi tên tải xuống: Node Xuất MP4.
-  - Gói GitHub Showcase: nhánh mã nguồn cho Truy Xuất Repo, người máy cho AI Đạo Diễn.
+  - Gói GitHub Showcase: nhánh mã nguồn cho Truy Xuất Repo, người máy cho Biên Kịch.
 - Tên định danh của node, chữ in hoa đậm, kích thước nhỏ gọn.
 - Huy hiệu trạng thái xử lý ở góc trên bên phải. Với node tài nguyên, huy hiệu Hoàn thành được phủ thêm lớp sẵn sàng: xanh lá "sẵn sàng" khi mọi năng lực đều có, vàng "chưa sẵn sàng" kèm lý do khi thiếu, theo Đặc tả Bộ Máy Thực Thi mục 1.1. Chín trạng thái của bộ máy được vẽ bằng bảy huy hiệu cộng hai lớp phủ, đúng theo cột "Huy hiệu" tại Đặc tả Bộ Máy Thực Thi mục 1: `cancelled` dùng chung huy hiệu cũ; `blocked` dùng huy hiệu chờ lượt khi bị chặn bởi node phía trước, và viền vàng khi bị chặn vì năng lực của tham chiếu nhận vào; lớp phủ xanh lá hoặc vàng trên node tài nguyên là trạng thái sẵn sàng:
   - Sẵn sàng: Nền xám mờ.
@@ -223,7 +223,7 @@ Nguyên tắc chung: lỗi luôn được gắn vào đúng node gây ra nó, kh
 4. Nhà cung cấp chưa sẵn sàng: Node System TTS Provider chuyển vàng với thông báo "Thiếu ffmpeg" kèm nguyên văn lệnh cài và nút Kiểm tra lại; Node Giọng Đọc nối vào bị chặn với viền vàng nêu cùng lý do và cách khắc phục, không tiến trình nào được sinh ra. Tương tự với Node Claude Code Provider khi chưa đăng nhập, thông báo nêu lệnh đăng nhập.
 4b. Chưa nối nhà cung cấp: kiểm tra đồ thị chạy liên tục mỗi khi đồ thị thay đổi, không đợi tới lúc bấm. Ngay khi dây bị tháo, Node Giọng Đọc viền vàng với "Chưa nối node Nhà Cung Cấp vào cổng Giọng đọc" và nút Chạy Luồng bị vô hiệu hóa kèm chú giải nêu tên node và cổng còn thiếu. Không tồn tại thời điểm "bấm rồi mới biết".
 5. Bản đặc tả không qua kiểm định (`IR_INVALID`): Node Đóng Gói Timeline viền đỏ nêu đúng bất biến bị vi phạm; đây là lỗi lập trình, thông báo mời người dùng sao chép nhật ký để báo lỗi.
-6. Nhà cung cấp gặp sự cố khi chạy: tiến trình con thoát với lỗi, Node Giọng Đọc (hoặc node đạo diễn của gói) chuyển viền đỏ kèm dòng cuối của đầu ra lỗi. Node "Thử lại riêng node này" xuất hiện trực tiếp trên thẻ, cho phép chạy lại mà không làm mất kịch bản đã sinh ra trước đó.
+6. Nhà cung cấp gặp sự cố khi chạy: tiến trình con thoát với lỗi, Node Giọng Đọc (hoặc node biên kịch của gói) chuyển viền đỏ kèm dòng cuối của đầu ra lỗi. Node "Thử lại riêng node này" xuất hiện trực tiếp trên thẻ, cho phép chạy lại mà không làm mất kịch bản đã sinh ra trước đó.
 7. Chênh lệch tính năng giữa các Engine: Khi Adapter phải thay một hiệu ứng không dựng được bằng hiệu ứng cơ bản, Node Video Output hiển thị huy hiệu vàng ở đầu node kèm nội dung "Hiệu ứng chuyển cảnh phức tạp đã được thay bằng hiệu ứng mờ dần cơ bản". Đây là cảnh báo mức thông tin, không chặn luồng.
 7b. Kiểu cảnh không có renderer cho engine đang nối: Node Xuất Bản Video `blocked` viền vàng với "Remotion không có renderer cho `ns-x/scene-y`", nút Chạy Luồng vẫn hoạt động cho phần còn lại của đồ thị.
 8. Kết xuất MP4 thất bại: Node Xuất MP4 chuyển viền đỏ kèm thông báo thân thiện "Kết xuất video thất bại" và nút thử lại riêng; mã `EXPORT_FAILED` chỉ xuất hiện trong phần chi tiết mở rộng và trong Panel Nhật ký, đúng quy tắc tại Đặc tả Bộ Máy Thực Thi mục 6; nhật ký kết xuất nằm nguyên trong Panel Nhật ký để người dùng sao chép khi báo lỗi. Bản Đặc Tả Video Trung Gian vẫn được giữ nguyên nên bấm Kết xuất lại không cần chạy lại luồng.

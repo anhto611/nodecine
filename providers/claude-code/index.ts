@@ -11,7 +11,7 @@ import { exec, findBinary } from '@/server/exec';
 /**
  * Claude Code provider (CORE_CONTRACTS §7): calls the locally logged-in `claude` CLI. No API key.
  * Sandboxed per ARCHITECTURE §8.3: empty temp cwd, tools disabled, single turn, prompt via stdin.
- * `complete()` is exercised by the AI Director; Phase A only needs `probe()`.
+ * `complete()` is exercised by the Screenwriter; Phase A only needs `probe()`.
  */
 
 export const CLAUDE_CODE_ID = 'claude-code';

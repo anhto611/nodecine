@@ -18,7 +18,7 @@ Máy của người dùng
 │        ▼
 └─ Tiến trình Node của Next.js
     ├─ Điểm cuối truy xuất repo   → GitHub REST API
-    ├─ Điểm cuối AI Đạo Diễn      → tiến trình con: Claude Code CLI đã đăng nhập
+    ├─ Điểm cuối Biên Kịch      → tiến trình con: Claude Code CLI đã đăng nhập
     ├─ Điểm cuối giọng đọc        → tiến trình con: bộ tổng hợp hệ điều hành + ffmpeg
     ├─ Điểm cuối kết xuất         → Remotion Renderer → headless Chromium
     └─ Phục vụ tệp tạm            → tệp MP3 và MP4 đã tạo
@@ -115,8 +115,8 @@ nodecine/
 │  ├─ input/                      Nhập Liệu
 │  ├─ github/                     Truy Xuất Repo: node, đọc link, gọi GitHub API, dựng dữ kiện, mã lỗi, thân node, test
 │  ├─ script/                     Kịch Bản Tĩnh
-│  ├─ director/                   Đạo Diễn AI: node, beat → lược đồ đầu ra, prompt, vòng gọi mô hình, thân node, test
-│  ├─ look/                       Look (chặng giao diện sau kịch bản): node.ts, cast.ts (dàn block/tone/trường theo nội dung), thân node, form, xem trước, editor/
+│  ├─ screenwriter/               Biên Kịch: node, beat → lược đồ đầu ra, prompt, vòng gọi mô hình, thân node, test
+│  ├─ art-director/               Đạo Diễn Mỹ Thuật (chặng giao diện sau kịch bản): node.ts, cast.ts (dàn block/tone/trường theo nội dung), thân node, form, xem trước, editor/
 │  ├─ resources/                  Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn, hai node Động Cơ
 │  ├─ tts/                        Giọng Đọc
 │  ├─ transcribe/                 Căn Mốc Từ: node, align.server.ts + align/stable_ts_align.py (căn chỉnh cưỡng bức)
@@ -135,7 +135,7 @@ Quy tắc phụ thuộc bắt buộc, kiểm tra được bằng công cụ phâ
 - `core/` không được phép nhập bất cứ thứ gì từ `nodes/`, `engines/`, `providers/`, `server/`, `templates/`, `app/` hay `components/`. Nó chỉ chứa giao diện Adapter, Provider cùng các registry rỗng (engine, nhà cung cấp, renderer theo định dạng, bản mẫu); các lớp cài đặt cụ thể nằm ngoài lõi và tự đăng ký vào registry ở thời điểm khởi động ứng dụng. Nếu quy tắc này bị vi phạm, tuyên bố độc lập engine trở thành lời nói suông và Hyperframes Adapter sẽ không bao giờ cài đặt được.
 - `engines/*`, `providers/*` và `server/*` được nhập giao diện và kiểu từ `core/`, và được nhập thư viện của riêng chúng như Remotion hay React; `core/` không bao giờ nhập ngược lại. Một engine đăng ký renderer cho định dạng code nó chạy được; không gì nhập Adapter của engine khác. `templates/` chỉ chứa JSON và một tệp đăng ký; nó không import node nào.
 - `nodes/*` nhập hợp đồng và khung từ `core/`, được nhập React, `components/ui` và store để dựng thân node; `core/` không bao giờ nhập `nodes/`. `nodes/index.ts` là danh sách duy nhất; `server/register.ts` và `lib/bootstrap.client.ts` gọi `registerNodes()` từ đó.
-- **Thân node sinh từ schema** như `INPUT_TYPES` của ComfyUI và `properties[]` của n8n: một node khai tham số một lần bằng Zod, `FormBody` (`nodes/form-body.tsx`) đọc schema đó và vẽ select cho enum, ô số có biên cho số, ô chữ cho chuỗi, checkbox cho boolean; nhãn theo tên trường trong từ điển. Thân node chỉ viết tay phần schema không nói được (xem trước, danh sách beat, trình phát, dòng trạng thái) và nhúng `FormBody` cho phần còn lại, có thể chọn tập trường, thay widget hay tự vẽ một trường tại đúng vị trí của nó. Nhập Liệu, Phụ Đề, Căn Mốc Từ, Đóng Gói Timeline, tốc độ Giọng Đọc, Xuất MP4, Remotion Engine dùng cách này; Look, Đạo Diễn AI, Kịch Bản Tĩnh, Xuất Bản Video, Provider (form riêng theo nhà cung cấp) viết tay.
+- **Thân node sinh từ schema** như `INPUT_TYPES` của ComfyUI và `properties[]` của n8n: một node khai tham số một lần bằng Zod, `FormBody` (`nodes/form-body.tsx`) đọc schema đó và vẽ select cho enum, ô số có biên cho số, ô chữ cho chuỗi, checkbox cho boolean; nhãn theo tên trường trong từ điển. Thân node chỉ viết tay phần schema không nói được (xem trước, danh sách beat, trình phát, dòng trạng thái) và nhúng `FormBody` cho phần còn lại, có thể chọn tập trường, thay widget hay tự vẽ một trường tại đúng vị trí của nó. Nhập Liệu, Phụ Đề, Căn Mốc Từ, Đóng Gói Timeline, tốc độ Giọng Đọc, Xuất MP4, Remotion Engine dùng cách này; Đạo Diễn Mỹ Thuật, Biên Kịch, Kịch Bản Tĩnh, Xuất Bản Video, Provider (form riêng theo nhà cung cấp) viết tay.
 - `components/` được nhập từ `core/` và `nodes/index.client`, nhưng `core/` không bao giờ nhập ngược lại. Trình phát Remotion là một component do `engines/remotion/` cung cấp qua `mountPlayer()`, tầng giao diện chỉ gọi hàm đó chứ không nhập Remotion trực tiếp.
 - Lệnh gọi mạng ra ngoài chỉ nằm trong `nodes/*`, `providers/*` và `engines/*`, tức là trong executor ở máy chủ; `core/` và `components/` không gọi mạng.
 

@@ -1,9 +1,9 @@
 import type { BlockDef } from '@/core/types/payloads';
 
 /**
- * The default block of the Look node (CORE_CONTRACTS §2.7, §5.9): a block is a scene
+ * The default block of the Art Director node (CORE_CONTRACTS §2.7, §5.9): a block is a scene
  * archetype (payload §2.7) — id, what the model may write, how to explain it, how to draw it. A
- * workflow usually has one; wire several into the AI Director's `blocks` port and the catalogue is
+ * workflow usually has one; wire several into the Screenwriter's `blocks` port and the catalogue is
  * their union. The node's parameters *are* the definitions, so a template file is complete on its own.
  *
  * Code convention (shared with the stage, honoured by each engine's one generic renderer):

@@ -1,15 +1,18 @@
 import { z, type ZodTypeAny } from 'zod';
 import { CONTENT_KEYS, SceneContentSchema, type AudioScript, type ContentKey, type SceneContent, type SceneScript } from '@/core/types/payloads';
 
+/** What the model says over one scene: its narration plus what is on screen. */
+const SpokenSceneSchema = SceneContentSchema.extend({ narration: z.string().min(1).max(600) });
+
 /**
  * A director's beat list is configuration, not code (CORE_CONTRACTS §5.8). Each beat says what a
  * stretch of the video is for, how many scenes it takes, and which content comes from verified
  * facts rather than the model. The model writes each scene in the content vocabulary; which block
- * shows it is the Look's decision, later.
+ * shows it is the Art Director's decision, later.
  */
 
 export const BeatSchema = z.object({
-  /** A short name for the stretch: hook, quote, cta. Shown to the model, and what the Look casts by. */
+  /** A short name for the stretch: hook, quote, cta. Shown to the model, and what the Art Director casts by. */
   role: z.string().min(1).max(40),
   /** What this stretch should do, in the user's words. May be empty. */
   brief: z.string().max(600).default(''),
@@ -36,25 +39,28 @@ export function expandBeats(beats: Beat[]): ExpandedBeat[] {
   return out;
 }
 
-/** What the model returns for one scene: the content vocabulary minus the fact-bound keys, unknown keys dropped. */
+/** What the model returns for one scene: its narration and the content vocabulary minus the fact-bound keys, unknown keys dropped. */
 export function sceneSchemaFor(scene: ExpandedBeat): ZodTypeAny {
   const bound = Object.keys(scene.factBindings) as ContentKey[];
-  return bound.length ? SceneContentSchema.omit(Object.fromEntries(bound.map((k) => [k, true])) as Record<ContentKey, true>) : SceneContentSchema;
+  return bound.length ? SpokenSceneSchema.omit(Object.fromEntries(bound.map((k) => [k, true])) as Record<ContentKey, true>) : SpokenSceneSchema;
 }
 
-/** The whole answer: language, narration, and one content object per expanded beat, in order. */
+/** The whole answer: the language and one spoken scene per expanded beat, in order. */
 export function outputSchemaFor(scenes: ExpandedBeat[]) {
-  if (scenes.length === 0) throw new Error('a director needs at least one beat');
+  if (scenes.length === 0) throw new Error('a screenwriter needs at least one beat');
   const items = scenes.map((s) => sceneSchemaFor(s));
   return z
     .object({
       language: z.string().min(2).max(35),
-      audioScript: z.string().min(20).max(2400),
       scenes: z.tuple(items as [ZodTypeAny, ...ZodTypeAny[]]),
     })
     .strip();
 }
-export type DirectorOutput = { language: string; audioScript: string; scenes: SceneContent[] };
+export type SpokenScene = SceneContent & { narration: string };
+export type DirectorOutput = { language: string; scenes: SpokenScene[] };
+
+/** Words a scene of this weight gets to say: about five seconds of speech per unit of weight. */
+export const wordBudget = (weight: number): { min: number; max: number } => ({ min: Math.max(6, Math.round(13 * weight)), max: Math.max(10, Math.round(17 * weight)) });
 
 /** Fact keys the beats read; they go to the assembler, never into the prompt. */
 export function boundFactKeys(beats: Beat[]): Set<string> {
@@ -63,19 +69,25 @@ export function boundFactKeys(beats: Beat[]): Set<string> {
   return keys;
 }
 
-/** Two packets with their own hashes. Role, weight and bindings come from the beats; the content from the model. */
+/** Two packets with their own hashes. Role, weight and bindings come from the beats; narration and content from the model. */
 export function toPackets(out: DirectorOutput, scenes: ExpandedBeat[]): { scenes: SceneScript; script: AudioScript } {
   const language = out.language.toLowerCase();
+  const spoken = scenes.map((_, i) => out.scenes[i] ?? { narration: '' });
+  const narrations = spoken.map((s) => s.narration.trim());
   return {
-    script: { text: out.audioScript.trim(), language },
+    script: { text: narrations.join('\n'), language, segments: narrations },
     scenes: {
       language,
-      scenes: scenes.map((s, i) => ({
-        role: s.role,
-        weight: s.weight,
-        content: out.scenes[i] ?? {},
-        ...(Object.keys(s.factBindings).length ? { factBindings: s.factBindings } : {}),
-      })),
+      scenes: scenes.map((s, i) => {
+        const { narration, ...content } = spoken[i]!;
+        return {
+          role: s.role,
+          weight: s.weight,
+          narration: narration.trim(),
+          content,
+          ...(Object.keys(s.factBindings).length ? { factBindings: s.factBindings } : {}),
+        };
+      }),
     },
   };
 }

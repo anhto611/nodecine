@@ -9,7 +9,7 @@ import { useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
-import { useFrame } from '@/nodes/look/body';
+import { useFrame } from '@/nodes/art-director/body';
 
 /**
  * The player node (USER_FLOWS §1.4). Mounts the engine's player via the adapter registry; never imports Remotion.

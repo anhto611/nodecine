@@ -1,6 +1,6 @@
-import type { CaptionTrack, DirectorPlan, FactSheet, Voiceover } from '@/core/types/payloads';
+import type { CaptionTrack, ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
 import { IR_VERSION, type IRCaptions, type VideoIR, type TimelineEntry } from '@/core/types/ir';
-import { allocateFrames, computeTotalFrames } from './allocate';
+import { allocateFrames, computeTotalFrames, framesFromSegments } from './allocate';
 import { assertValidIR } from '@/core/types/validate-ir';
 
 /** Timeline Assembler node parameters (CORE_CONTRACTS §5.4). */
@@ -17,7 +17,7 @@ export const DEFAULT_ASSEMBLER_PARAMS: AssemblerParams = {
 };
 
 export interface BuildIRInput {
-  plan: DirectorPlan;
+  plan: ScenePlan;
   voiceover: Voiceover;
   facts?: FactSheet;
   captions?: CaptionTrack;
@@ -60,10 +60,9 @@ export function buildIR(input: BuildIRInput): VideoIR {
   const { plan, voiceover, facts, captions } = input;
 
   const { total, padTailFrames } = computeTotalFrames(voiceover.durationSeconds, p.fps, p.minTotalFrames);
-  const frames = allocateFrames(
-    total,
-    plan.scenes.map((s) => s.weight),
-  );
+  // The cut follows the speech when the voice-over came scene by scene; weights are for a voice-over that did not.
+  const bySpeech = voiceover.segments && voiceover.segments.length === plan.scenes.length;
+  const frames = bySpeech ? framesFromSegments(total, voiceover.segments!, p.fps) : allocateFrames(total, plan.scenes.map((s) => s.weight));
 
   let cursor = 0;
   const timeline: TimelineEntry[] = plan.scenes.map((scene, i) => {

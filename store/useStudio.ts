@@ -61,7 +61,7 @@ export interface StudioState {
   /** Bumps whenever a workflow file changes, so lists re-read the directory. */
   workflowsTick: number;
   settingsOpen: boolean;
-  /** The stage of a Look node, or one of its blocks, open in the code editor. */
+  /** The stage of a Art Director node, or one of its blocks, open in the code editor. */
   codeEditor: { nodeId: string; blockIndex?: number } | null;
   selectedNodeId: string | null;
   canUndo: boolean;
@@ -73,6 +73,8 @@ export interface StudioState {
   undo(): void;
   redo(): void;
   setParams(nodeId: string, patch: Record<string, unknown>): void;
+  /** A node changed its own parameters while running: into the graph and the undo history, nothing invalidated. */
+  applyParamsPatch(nodeId: string, patch: Record<string, unknown>): void;
   setNodePosition(nodeId: string, position: { x: number; y: number }): void;
   /** Many at once, for auto-layout; one persist, one dirty mark. */
   setNodePositions(positions: Record<string, { x: number; y: number }>): void;
@@ -212,6 +214,7 @@ export const useStudio = create<StudioState>((set, get) => {
         onStep: ({ nodeId, step, stepTotal }) => set({ step: { nodeId, step, total: stepTotal } }),
         onRunEnd: () => set({ running: false, step: null }),
         onHistory: (history) => set({ history }),
+        onParamsPatch: (nodeId, patch) => get().applyParamsPatch(nodeId, patch),
       });
       executor.logs.subscribe((e) => set((s) => ({ logTick: s.logTick + 1, unreadErrors: e.level === 'error' && !s.logsOpen ? s.unreadErrors + 1 : s.unreadErrors })));
       set({
@@ -299,6 +302,12 @@ export const useStudio = create<StudioState>((set, get) => {
       const next: Graph = { ...graph, nodes: graph.nodes.map((n) => (n.id === nodeId ? { ...n, params: { ...n.params, ...patch } } : n)) };
       get().executor?.invalidate(nodeId);
       refresh(next, { coalesce: `params:${nodeId}` });
+    },
+
+    applyParamsPatch(nodeId, patch) {
+      const graph = get().graph;
+      if (!graph.nodes.some((n) => n.id === nodeId)) return;
+      refresh({ ...graph, nodes: graph.nodes.map((n) => (n.id === nodeId ? { ...n, params: { ...n.params, ...patch } } : n)) }, { coalesce: `self:${nodeId}` });
     },
 
     setNodePositions(positions) {

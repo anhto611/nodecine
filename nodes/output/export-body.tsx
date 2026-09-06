@@ -9,7 +9,7 @@ import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { FormBody } from '@/nodes/form-body';
 import { RESOLUTIONS, outputSizeFor } from '@/core/look/frame';
-import { useFrame } from '@/nodes/look/body';
+import { useFrame } from '@/nodes/art-director/body';
 
 export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();

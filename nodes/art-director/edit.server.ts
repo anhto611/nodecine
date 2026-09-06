@@ -45,6 +45,20 @@ export const LookEditAnswerSchema = z.object({
 });
 export type LookEditAnswer = z.infer<typeof LookEditAnswerSchema>;
 
+/** The rules any scene code must follow, for editing and for writing a block from nothing. */
+export const codeRules = (frame: { width: number; height: number }) => [
+  'Output format: a single HTML fragment made of an optional <style> block, the markup, and an optional <script> block. No <html>, <head> or <body>.',
+  'Styles are scoped to this stage or block by the engine; write plain selectors, never !important.',
+  'Colours and fonts come from CSS variables the stage tokens provide: var(--bg), var(--fg), var(--accent), var(--line), var(--muted), var(--font-display), var(--font-body) and any other palette key listed below. Prefer them over literal colours so tones keep working.',
+  `The frame is ${describeFrame(frame)}. Safe zones: keep content inside ${describeSafeZones(safeZonesFor(frame.width, frame.height))} (the platform UI covers the rest).`,
+  'Animation uses the gsap that the script receives, scoped to this scene: register with nodecine.timeline(gsap.timeline().fromTo(...)). Use fromTo only, never from (from desyncs on seek).',
+];
+
+export const BLOCK_RULES = [
+  'A block is one scene archetype. Every prop listed below is filled by the engine into an element with data-prop="<name>" (text content; string[] props render one child per item into the first child element as a template). Use data-if="<name>" on an element that should disappear when the prop is empty.',
+  'The block markup is dropped into the stage\'s content slot, so it should not paint its own full-frame background.',
+];
+
 const RULES_COMMON = (frame: { width: number; height: number }) => [
   'Output format: a single HTML fragment made of an optional <style> block, the markup, and an optional <script> block. No <html>, <head> or <body>.',
   'Styles are scoped to this stage or block by the engine; write plain selectors, never !important.',
@@ -62,10 +76,7 @@ const RULES_STAGE = [
   `A stage's elements are the catalogue roles, each recognised by its class name: ${STAGE_ROLES.map((r) => `${r.id} (${r.kind})`).join(', ')}. Keep those class names on the elements that play those roles; do not invent new top-level elements unless the instruction asks for one.`,
 ];
 
-const RULES_BLOCK = [
-  'A block is one scene archetype. Every prop listed below is filled by the engine into an element with data-prop="<name>" (text content; string[] props render one child per item into the first child element as a template). Use data-if="<name>" on an element that should disappear when the prop is empty.',
-  'The block markup is dropped into the stage\'s content slot, so it should not paint its own full-frame background.',
-];
+const RULES_BLOCK = BLOCK_RULES;
 
 function describeStage(stage: NonNullable<LookEditRequest['stage']>): string[] {
   const out = [`Stage "${stage.name}".`];

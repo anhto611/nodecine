@@ -1,27 +1,29 @@
 import { z } from 'zod';
-import { LookDefBaseSchema, uniqueBlockIds, type SceneScript, type StageDef } from '@/core/types/payloads';
+import { LookDefBaseSchema, uniqueBlockIds, type LLMRef, type SceneScript, type StageDef } from '@/core/types/payloads';
 import { ErrorCode } from '@/core/errors';
-import { CastError, CastingSchema, castScenes } from './cast';
+import { CastError, CastingSchema, castScenes, sceneCandidates } from './cast';
+import { pickWithModel } from './cast-ai';
+import { authorBlock } from './author';
 import { DEFAULT_BLOCK } from './blocks';
 import type { NodeDefinition } from '@/core/nodes/definition';
 
 /**
- * The Look node (CORE_CONTRACTS §5.9): the visual stage of the pipeline. It comes after the script:
- * the director or the static script hands it scenes with content, and it casts a block, a tone and
+ * The Art Director node (CORE_CONTRACTS §5.9): the visual stage of the pipeline. It comes after the script:
+ * the screenwriter or the static script hands it scenes with content, and it casts a block, a tone and
  * the stage fields for each (cast.ts) and emits the plan. Its parameters are the whole look — the
  * stage (payload §2.6), the one persistent shell every scene plays on, the catalogue of blocks
  * (§2.7) that play on it — plus the casting table by role.
  *
  * The stage part: design tokens, the tones a scene may switch to, the per-scene fields it draws
  * (with the rule that teaches the model to write each), and the markup around the block's content
- * area; a block is dropped into the element marked `data-slot="content"`. One Look per workflow,
+ * area; a block is dropped into the element marked `data-slot="content"`. One Art Director per workflow,
  * between the script and the Timeline Assembler.
  *
  * Stage and block share one code convention: an HTML fragment with an inline `<style>`, tokens exposed as
  * CSS custom properties by the renderer, an optional `<script>` calling `nodecine.timeline(tl)`.
  */
 
-export const LOOK = 'core/look';
+export const ART_DIRECTOR = 'core/art-director';
 
 export const DEFAULT_STAGE: StageDef = {
   name: 'Dark',
@@ -91,22 +93,28 @@ export const DEFAULT_STAGE: StageDef = {
 };
 
 /** The look, plus who plays which role. Declared here rather than in payloads because casting is the node's, not the wire's. */
-export const LookParamsSchema = LookDefBaseSchema.extend({ casting: CastingSchema }).superRefine(uniqueBlockIds);
-export type LookParams = z.infer<typeof LookParamsSchema>;
+export const ArtDirectorParamsSchema = LookDefBaseSchema.extend({ casting: CastingSchema }).superRefine(uniqueBlockIds);
+export type ArtDirectorParams = z.infer<typeof ArtDirectorParamsSchema>;
 
-export const look: NodeDefinition<typeof LookParamsSchema> = {
-  type: LOOK,
-  version: 4,
+export const artDirector: NodeDefinition<typeof ArtDirectorParamsSchema> = {
+  type: ART_DIRECTOR,
+  version: 5,
   namespace: 'core',
   kind: 'process',
-  inputs: [{ name: 'scenes', type: 'SceneScript' }],
-  outputs: [{ name: 'plan', type: 'DirectorPlan' }],
-  paramsSchema: LookParamsSchema,
+  inputs: [
+    { name: 'scenes', type: 'SceneScript' },
+    // Wired, a model chooses among the blocks that fit each scene; unwired, the rule chooses.
+    { name: 'llm', type: 'LLMRef', required: false, requires: ['installed', 'authenticated'] },
+  ],
+  outputs: [{ name: 'plan', type: 'ScenePlan' }],
+  paramsSchema: ArtDirectorParamsSchema,
   defaultParams: { ...DEFAULT_STAGE, blocks: [DEFAULT_BLOCK], casting: [] },
   // A scene no block can show is known before anything runs; say so on the node instead of failing mid-run.
   preflight: (inputs, params) => {
     const script = inputs.scenes?.payload as SceneScript | undefined;
     if (!script) return null;
+    // With a model wired, a scene no block can show is written for, not refused.
+    if (inputs.llm) return null;
     try {
       const { casting, ...lookDef } = params;
       castScenes(script, lookDef, casting);
@@ -116,13 +124,33 @@ export const look: NodeDefinition<typeof LookParamsSchema> = {
       throw e;
     }
   },
-  run: async ({ params, inputs, log }) => {
-    const { casting, ...lookDef } = params;
-    const { plan, notes } = castScenes(inputs.scenes!.payload as SceneScript, lookDef, casting);
+  run: async ({ params, inputs, services, signal, log, progress, patchParams }) => {
+    const { casting, ...params_ } = params;
+    let lookDef = params_;
+    const script = inputs.scenes!.payload as SceneScript;
+    const ref = inputs.llm?.payload as LLMRef | undefined;
+    if (ref) {
+      // A scene no block shows whole (all of its content) gets a block written for it, used now and kept in the node.
+      const orphans = sceneCandidates(script, lookDef, casting).map((c, i) => (c.candidates.length === 0 ? i : -1)).filter((i) => i >= 0);
+      for (const i of orphans) {
+        const scene = script.scenes[i]!;
+        progress(0.1, `writing a block for scene ${i + 1}`);
+        const { block, attempts } = await authorBlock(services, ref, scene, lookDef, signal);
+        lookDef = { ...lookDef, blocks: [...lookDef.blocks, block] };
+        log('info', `wrote block "${block.id}" for scene ${i + 1} (${scene.role})${attempts > 1 ? ' on the second try' : ''} · kept in this node`);
+      }
+      if (orphans.length) patchParams({ blocks: lookDef.blocks });
+    }
+    let picks: Awaited<ReturnType<typeof pickWithModel>> = [];
+    if (ref) {
+      progress(0.2, 'casting with the model');
+      picks = await pickWithModel(services, ref, script, lookDef, casting, signal, log);
+    }
+    const { plan, notes } = castScenes(script, lookDef, casting, picks);
     for (const n of notes) log('warn', n);
-    log('info', `${plan.scenes.length} scenes cast · ${plan.scenes.map((s) => s.blockId).join(', ')}`);
+    log('info', `${plan.scenes.length} scenes cast${ref ? ' with the model' : ' by content'} · ${plan.scenes.map((s) => s.blockId).join(', ')}`);
     return { plan };
   },
 };
 
-export const DEFAULT_LOOK: LookParams = look.defaultParams;
+export const DEFAULT_ART_DIRECTOR: ArtDirectorParams = artDirector.defaultParams;

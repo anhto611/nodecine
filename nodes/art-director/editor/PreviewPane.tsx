@@ -2,7 +2,7 @@
 import React from 'react';
 import type { BlockDef, StageDef } from '@/core/types/payloads';
 import { useT } from '@/components/ui';
-import { LookPreview } from '@/nodes/look/preview';
+import { LookPreview } from '@/nodes/art-director/preview';
 import type { MeasuredRect } from '@/core/look/layout-edit';
 import { LayoutOverlay } from './LayoutOverlay';
 

@@ -131,7 +131,7 @@ export function removeFieldFromCode(code: string, name: string): string {
 
 /**
  * The catalogue of things a stage may carry (CORE_CONTRACTS §2.6). A stage is not a free canvas:
- * every element has a role the rest of the system understands — the director writes into the
+ * every element has a role the rest of the system understands — the screenwriter writes into the
  * scene fields, the engine fills the slots, the captions node targets the captions slot — so the
  * user picks a role and styles it, rather than inventing elements the pipeline cannot use.
  * The class name is the role id, which is how the code and the catalogue recognise each other.
@@ -141,7 +141,7 @@ export interface StageRole {
   kind: ElementKind;
   /** Required on every stage; cannot be removed. */
   required?: boolean;
-  /** For `field` roles: what the director is told to write. */
+  /** For `field` roles: what the screenwriter is told to write. */
   fieldRule?: string;
   /** For `text` roles: the words to start with (the user edits them). */
   defaultText?: string;

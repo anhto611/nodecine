@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerServices } from '@/server/services.server';
-import { LookEditRequestSchema, editLook } from '@/nodes/look/edit.server';
+import { LookEditRequestSchema, editLook } from '@/nodes/art-director/edit.server';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;

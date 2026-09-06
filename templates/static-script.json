@@ -12,8 +12,8 @@
   "graph": {
     "nodes": [
       {
-        "id": "look",
-        "type": "core/look",
+        "id": "art-director",
+        "type": "core/art-director",
         "params": {
           "name": "Dark",
           "frame": {
@@ -116,11 +116,11 @@
         "id": "script",
         "type": "core/static-script",
         "params": {
-          "script": "Meet NodeCine. Build short videos from a node graph, not a timeline. Wire a source to a script, a voice, and an engine, and press run.",
           "scenes": [
             {
               "role": "title",
               "weight": 1,
+              "narration": "Meet NodeCine.",
               "content": {
                 "kicker": "NodeCine",
                 "title": "Ship video from a graph",
@@ -130,6 +130,7 @@
             {
               "role": "how",
               "weight": 2,
+              "narration": "Build short videos from a node graph, not a timeline.",
               "content": {
                 "kicker": "How",
                 "title": "Nodes, not timelines"
@@ -138,6 +139,7 @@
             {
               "role": "next",
               "weight": 1,
+              "narration": "Wire a source to a script, a voice, and an engine, and press run.",
               "content": {
                 "kicker": "Next",
                 "title": "Star on GitHub"
@@ -258,7 +260,7 @@
         "id": "scenes",
         "source": "script",
         "sourcePort": "scenes",
-        "target": "look",
+        "target": "art-director",
         "targetPort": "scenes"
       },
       {
@@ -291,7 +293,7 @@
       },
       {
         "id": "plan",
-        "source": "look",
+        "source": "art-director",
         "sourcePort": "plan",
         "target": "assembler",
         "targetPort": "plan"

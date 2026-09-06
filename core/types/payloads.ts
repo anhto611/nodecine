@@ -20,14 +20,14 @@ export type FactSheet = z.infer<typeof FactSheetSchema>;
 
 /**
  * The content vocabulary (CORE_CONTRACTS §2.11): the fixed set of things a scene can say, written by
- * the director without knowing any block, and consumed by the Look when it casts a block for the
+ * the screenwriter without knowing any block, and consumed by the Art Director when it casts a block for the
  * scene. A block prop names the key that fills it (`content`), or is filled by the key of its own name.
  */
 export const CONTENT_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source'] as const;
 export type ContentKey = (typeof CONTENT_KEYS)[number];
 export const isContentKey = (k: string): k is ContentKey => (CONTENT_KEYS as readonly string[]).includes(k);
 
-/** One thing that goes into a block (CORE_CONTRACTS §2.7). The hint is shown in the Look node's props table. */
+/** One thing that goes into a block (CORE_CONTRACTS §2.7). The hint is shown in the Art Director node's props table. */
 export const BlockFieldSchema = z.object({
   type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]']),
   /** Which scene content fills this prop; absent means the prop's own name, when that is a content key. */
@@ -48,7 +48,7 @@ export type SceneCode = z.infer<typeof SceneCodeSchema>;
 
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 
-/** A scene archetype the director may pick: what to write, when to use it, how it draws. */
+/** A scene archetype the screenwriter may pick: what to write, when to use it, how it draws. */
 export const BlockDefSchema = z.object({
   id: z.string().regex(SLUG).max(60),
   name: z.string().min(1).max(80),
@@ -73,7 +73,7 @@ export const StageDefSchema = z.object({
 });
 export type StageDef = z.infer<typeof StageDefSchema>;
 
-/** Block ids unique within one look; shared by the LookDef and the Look node's parameters. */
+/** Block ids unique within one look; shared by the LookDef and the Art Director node's parameters. */
 export const uniqueBlockIds = (v: { blocks: { id: string }[] }, ctx: z.RefinementCtx): void => {
   const seen = new Set<string>();
   v.blocks.forEach((b, i) => {
@@ -84,8 +84,8 @@ export const uniqueBlockIds = (v: { blocks: { id: string }[] }, ctx: z.Refinemen
 
 /**
  * The whole look of a workflow (CORE_CONTRACTS §2.7): the stage every scene plays on and the
- * catalogue of blocks that play on it, block ids unique. It is the Look node's data; it does not
- * travel on a wire — the Look turns a scene script into a plan (§5.9) and sends that.
+ * catalogue of blocks that play on it, block ids unique. It is the Art Director node's data; it does not
+ * travel on a wire — the Art Director turns a scene script into a plan (§5.9) and sends that.
  */
 export const LookDefBaseSchema = StageDefSchema.extend({ blocks: z.array(BlockDefSchema).min(1) });
 export const LookDefSchema = LookDefBaseSchema.superRefine(uniqueBlockIds);
@@ -110,7 +110,7 @@ export type SceneSpec = z.infer<typeof SceneSpecSchema>;
  * A plan is self-contained (CORE_CONTRACTS §2.3): it carries the stage and every block its scenes
  * may use, so the assembler, the engines and a saved project need nothing registered anywhere.
  */
-export const DirectorPlanSchema = z
+export const ScenePlanSchema = z
   .object({
     language: bcp47,
     stage: StageDefSchema,
@@ -125,11 +125,14 @@ export const DirectorPlanSchema = z
       if (s.tone !== undefined && !(s.tone in plan.stage.tones)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scenes', i, 'tone'], message: `the stage has no tone "${s.tone}"` });
     });
   });
-export type DirectorPlan = z.infer<typeof DirectorPlanSchema>;
+export type ScenePlan = z.infer<typeof ScenePlanSchema>;
 
 export const AudioScriptSchema = z.object({
+  /** The whole narration; with `segments`, their join. */
   text: z.string().min(1),
   language: bcp47,
+  /** The narration scene by scene, in scene order: the TTS Engine voices each one and the cut follows (CORE_CONTRACTS §2.4). */
+  segments: z.array(z.string().min(1)).min(1).optional(),
 });
 export type AudioScript = z.infer<typeof AudioScriptSchema>;
 
@@ -153,17 +156,19 @@ export type SceneContent = z.infer<typeof SceneContentSchema>;
 
 /**
  * The scene script (CORE_CONTRACTS §2.11): the video broken into scenes with their content, before
- * any look. Written by the AI Director or typed into the Static Script; the Look casts a block, a
- * tone and the stage fields for each scene and emits the DirectorPlan.
+ * any look. Written by the Screenwriter or typed into the Static Script; the Art Director casts a block, a
+ * tone and the stage fields for each scene and emits the ScenePlan.
  */
 export const SceneScriptSchema = z.object({
   language: bcp47,
   scenes: z
     .array(
       z.object({
-        /** The beat this scene belongs to: hook, quote, cta. The Look casts by role. */
+        /** The beat this scene belongs to: hook, quote, cta. The Art Director casts by role. */
         role: z.string().min(1).max(40),
         weight: z.number().positive(),
+        /** What is said over this scene. The scene lasts as long as its narration (CORE_CONTRACTS §5.4). */
+        narration: z.string().min(1).max(600),
         content: SceneContentSchema,
         /** content key → fact key: filled from verified data at assembly, never written by the model. */
         factBindings: z.record(z.enum(CONTENT_KEYS), z.string()).optional(),
@@ -188,6 +193,8 @@ export const VoiceoverSchema = z.object({
   speed: z.number().positive(),
   /** Word timings, when a provider returned them or the Transcribe node aligned them. */
   words: z.array(WordSchema).optional(),
+  /** One entry per narration segment, in order: where it starts and how long it lasts in the file, gap included. */
+  segments: z.array(z.object({ start: z.number().nonnegative(), durationSeconds: z.number().positive() })).min(1).optional(),
 });
 export type Voiceover = z.infer<typeof VoiceoverSchema>;
 
@@ -251,7 +258,7 @@ export type TTSRef = z.infer<typeof TTSRefSchema>;
 export const PAYLOAD_SCHEMAS = {
   SourceRef: SourceRefSchema,
   FactSheet: FactSheetSchema,
-  DirectorPlan: DirectorPlanSchema,
+  ScenePlan: ScenePlanSchema,
   AudioScript: AudioScriptSchema,
   Voiceover: VoiceoverSchema,
   EngineRef: EngineRefSchema,

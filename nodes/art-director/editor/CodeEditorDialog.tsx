@@ -4,8 +4,8 @@ import { StageDefSchema, LookDefSchema, type BlockDef, type StageDef } from '@/c
 import { useStudio } from '@/store/useStudio';
 import { Btn, useT } from '@/components/ui';
 import { Icon } from '@/components/icons';
-import { DEFAULT_STAGE } from '@/nodes/look/node';
-import { useFrame } from '@/nodes/look/body';
+import { DEFAULT_STAGE } from '@/nodes/art-director/node';
+import { useFrame } from '@/nodes/art-director/body';
 import { applyBoxToCode, type MeasuredRect } from '@/core/look/layout-edit';
 import { draftStage, removeElementDraft, useDraft } from './draft';
 import { ElementsTab } from './ElementsTab';
@@ -27,7 +27,7 @@ export const CodeEditorDialog: React.FC = () => {
   const node = useStudio((s) => s.graph.nodes.find((n) => n.id === target?.nodeId));
   const setParams = useStudio((s) => s.setParams);
   const isBlock = target?.blockIndex !== undefined;
-  // The Look's parameters carry both parts; parsing them as a StageDef strips the blocks.
+  // The Art Director's parameters carry both parts; parsing them as a StageDef strips the blocks.
   const stageParsed = React.useMemo(() => StageDefSchema.safeParse(node?.params), [node]);
   const stage: StageDef | null = stageParsed.success ? stageParsed.data : null;
   const blocks = React.useMemo(() => (isBlock ? LookDefSchema.safeParse(node?.params) : null), [isBlock, node]);

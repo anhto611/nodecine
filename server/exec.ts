@@ -21,6 +21,8 @@ export interface ExecResult {
   stdout: string;
   stderr: string;
   timedOut: boolean;
+  /** stdout reached `maxOutput` and was cut; a caller parsing it must not trust it. */
+  truncated: boolean;
 }
 
 export class ExecError extends Error {
@@ -53,12 +55,17 @@ export function exec(bin: string, opts: ExecOptions = {}): Promise<ExecResult> {
     const onAbort = () => child.kill('SIGKILL');
     opts.signal?.addEventListener('abort', onAbort, { once: true });
 
-    child.stdout.on('data', (d: Buffer) => { if (stdout.length < max) stdout += d.toString('utf8').slice(0, max - stdout.length); });
+    let truncated = false;
+    child.stdout.on('data', (d: Buffer) => {
+      const text = d.toString('utf8');
+      if (stdout.length + text.length > max) truncated = true;
+      if (stdout.length < max) stdout += text.slice(0, max - stdout.length);
+    });
     child.stderr.on('data', (d: Buffer) => { if (stderr.length < max) stderr += d.toString('utf8').slice(0, max - stderr.length); });
     child.on('error', (err) => { cleanup(); reject(err); });
     child.on('close', (code) => {
       cleanup();
-      resolve({ code, stdout: scrub(stdout), stderr: scrub(stderr), timedOut });
+      resolve({ code, stdout: scrub(stdout), stderr: scrub(stderr), timedOut, truncated });
     });
     function cleanup() {
       if (timer) clearTimeout(timer);

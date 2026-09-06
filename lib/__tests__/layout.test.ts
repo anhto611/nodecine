@@ -14,7 +14,7 @@ beforeEach(() => {
 
 describe('layoutGraph', () => {
   const graph = githubShowcase.graph as Graph;
-  const sizes = Object.fromEntries(graph.nodes.map((n) => [n.id, { width: 220, height: n.type === 'core/look' ? 420 : 180 }]));
+  const sizes = Object.fromEntries(graph.nodes.map((n) => [n.id, { width: 220, height: n.type === 'core/art-director' ? 420 : 180 }]));
 
   it('lays the flow out left to right along its wires without overlaps', () => {
     const pos = layoutGraph(graph, sizes);
@@ -25,13 +25,13 @@ describe('layoutGraph', () => {
     expect(Math.min(...boxes.map((b) => b.x))).toBeGreaterThanOrEqual(0);
   });
 
-  it('hangs each resource node directly above the node that uses it, and keeps the Look in the flow', () => {
+  it('hangs each resource node directly above the node that uses it, and keeps the Art Director in the flow', () => {
     const pos = layoutGraph(graph, sizes);
-    // The Look sits between the director and the assembler on the main path, not above anything.
-    expect(pos.look!.x).toBeGreaterThan(pos.director!.x);
-    expect(pos.look!.x).toBeLessThan(pos.assembler!.x);
-    // llm-provider feeds the director; tts-provider feeds tts; engine feeds output (its first consumer).
-    for (const [resource, consumer] of [['llm-provider', 'director'], ['tts-provider', 'tts'], ['engine', 'output']] as const) {
+    // The Art Director sits between the screenwriter and the assembler on the main path, not above anything.
+    expect(pos['art-director']!.x).toBeGreaterThan(pos.screenwriter!.x);
+    expect(pos['art-director']!.x).toBeLessThan(pos.assembler!.x);
+    // llm-provider feeds the screenwriter; tts-provider feeds tts; engine feeds output (its first consumer).
+    for (const [resource, consumer] of [['llm-provider', 'screenwriter'], ['tts-provider', 'tts'], ['engine', 'output']] as const) {
       const r = pos[resource]!, c = pos[consumer]!;
       expect(r.y + sizes[resource]!.height, `${resource} above ${consumer}`).toBeLessThanOrEqual(c.y);
       // Horizontally within the consumer's slot: no wire runs backwards across the canvas.

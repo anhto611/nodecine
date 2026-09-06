@@ -15,7 +15,7 @@ import type { NodeServices } from '@/core/engine/services';
 
 const RAW = z.unknown();
 
-export interface DirectorSpec<S extends ZodTypeAny> {
+export interface ScreenwriterSpec<S extends ZodTypeAny> {
   /** What a good answer looks like. Anything else earns one retry, then fails with the raw text. */
   outputSchema: S;
   /** `strict` is set for the retry after a language mismatch; say it more firmly. */
@@ -25,16 +25,16 @@ export interface DirectorSpec<S extends ZodTypeAny> {
 }
 
 /** The parts of a node's run context this needs; a node passes itself. */
-export type DirectorContext = Pick<RunContext, 'signal' | 'progress'> & {
+export type ScreenwriterContext = Pick<RunContext, 'signal' | 'progress'> & {
   services: Pick<NodeServices, 'complete'>;
   log: (level: LogLevel, message: string, code?: string) => void;
 };
 
 /** One retry for the wrong shape and one for the wrong language, then give up with the raw text. */
-export async function runDirector<S extends ZodTypeAny>(
-  ctx: DirectorContext,
+export async function runScreenwriter<S extends ZodTypeAny>(
+  ctx: ScreenwriterContext,
   ref: LLMRef,
-  spec: DirectorSpec<S>,
+  spec: ScreenwriterSpec<S>,
   language: string,
 ): Promise<z.infer<S>> {
   let strict = false;

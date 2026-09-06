@@ -1,6 +1,6 @@
 # GitHub Repo Showcase
 
-Bản mẫu đầu tiên có mô hình ngôn ngữ, và là bằng chứng rằng khung lõi chạy được với dữ liệu thật. Mọi thứ của nó là node lõi: Truy Xuất Repo lấy dữ kiện, Đạo Diễn AI viết, một một node Look (stage và sáu block) mang giao diện; tham số ghi trong `templates/github-showcase.json`. Đồ thị 12 node cho ra video khoảng một phút, mười cảnh: hook, tổng quan, ba tính năng, cài đặt, con số, hai cảnh đối tượng, kêu gọi.
+Bản mẫu đầu tiên có mô hình ngôn ngữ, và là bằng chứng rằng khung lõi chạy được với dữ liệu thật. Mọi thứ của nó là node lõi: Truy Xuất Repo lấy dữ kiện, Biên Kịch viết, một một node Đạo Diễn Mỹ Thuật (stage và hai mươi block) mang giao diện; tham số ghi trong `templates/github-showcase.json`. Đồ thị 12 node cho ra video khoảng một phút, mười cảnh: hook, tổng quan, ba tính năng, cài đặt, con số, hai cảnh đối tượng, kêu gọi.
 
 Thứ tự triển khai: gói này thuộc **Pha B**, chỉ bắt đầu sau khi Pha A (khung lõi với Kịch Bản Tĩnh) đã qua nghiệm thu. Xem Tài liệu Yêu cầu Sản phẩm mục 4.8.
 
@@ -8,7 +8,7 @@ Thứ tự triển khai: gói này thuộc **Pha B**, chỉ bắt đầu sau khi
 
 ## 1. Đồ Thị Mẫu
 
-Mười node, mười hai dây. Sáu node lõi, hai node của gói (Truy Xuất Repo, AI Đạo Diễn), hai node tài nguyên nhà cung cấp.
+Mười node, mười hai dây. Sáu node lõi, hai node của gói (Truy Xuất Repo, Biên Kịch), hai node tài nguyên nhà cung cấp.
 
 ```
 Node Nhập Liệu (lõi)
@@ -17,8 +17,8 @@ Node Nhập Liệu (lõi)
 Node Truy Xuất Repo (gói) ──── FactSheet ────────────────┐
      │ FactSheet                                         │
      ▼                                                   │
-Node AI Đạo Diễn (gói) ◄── LLMRef ── Claude Code Provider│
-     │ DirectorPlan ─────────────────────────────────────┤
+Node Biên Kịch (gói) ◄── LLMRef ── Claude Code Provider│
+     │ ScenePlan ─────────────────────────────────────┤
      │ AudioScript                                       │
      ▼                                                   ▼
 Node Giọng Đọc (lõi) ◄── TTSRef ── System TTS Provider   │
@@ -35,7 +35,7 @@ Node Giọng Đọc (lõi) ◄── TTSRef ── System TTS Provider   │
 
 Dây `FactSheet` từ Truy Xuất Repo chạy thẳng tới Đóng Gói Timeline là điểm quan trọng nhất của gói: số sao, lệnh cài đặt và đường dẫn repo tới video mà không đi qua mô hình ngôn ngữ, nhờ cơ chế `factBindings` của lõi.
 
-Bố cục mặc định trên canvas: năm node xử lý xếp hình quạt bên trái để hai dây rẽ nhánh của `FactSheet` không cắt qua node nào; Claude Code Provider phía trên Truy Xuất Repo, System TTS Provider phía dưới AI Đạo Diễn, để dây tham chiếu ngắn; Remotion Engine nằm thấp ở giữa; Xuất Bản Video đứng cao và Xuất MP4 đứng thấp ở cột cuối, hai dây engine chạy song song dọc mép trái cột đó. Sau khi nạp, hệ thống tự căn giữa, mức thu phóng khoảng 85% đến 90% trên màn hình 1440 pixel.
+Bố cục mặc định trên canvas: năm node xử lý xếp hình quạt bên trái để hai dây rẽ nhánh của `FactSheet` không cắt qua node nào; Claude Code Provider phía trên Truy Xuất Repo, System TTS Provider phía dưới Biên Kịch, để dây tham chiếu ngắn; Remotion Engine nằm thấp ở giữa; Xuất Bản Video đứng cao và Xuất MP4 đứng thấp ở cột cuối, hai dây engine chạy song song dọc mép trái cột đó. Sau khi nạp, hệ thống tự căn giữa, mức thu phóng khoảng 85% đến 90% trên màn hình 1440 pixel.
 
 ---
 
@@ -72,9 +72,9 @@ Gọi GitHub REST API ẩn danh, hạn mức theo địa chỉ IP; đặt `GITHU
 
 ---
 
-## 3. Đạo Diễn — là node lõi, cấu hình bằng dữ liệu
+## 3. Biên Kịch — là node lõi, cấu hình bằng dữ liệu
 
-Không có node đạo diễn riêng cho GitHub. Bản mẫu dùng `core/ai-director` (Hợp đồng Lõi §5.8) với stage `developer-dark`, một node Blocks nối vào cổng `blocks`, và ba beat với ba ràng buộc dữ kiện:
+Không có node biên kịch riêng cho GitHub. Bản mẫu dùng `core/screenwriter` (Hợp đồng Lõi §5.8) với stage `developer-dark`, một node Blocks nối vào cổng `blocks`, và ba beat với ba ràng buộc dữ kiện:
 
 | Slot | Kiểu cảnh | Trọng số | Ràng buộc |
 |---|---|---|---|
@@ -86,7 +86,7 @@ Không có node đạo diễn riêng cho GitHub. Bản mẫu dùng `core/ai-dire
 
 ## 4. Stage và Block
 
-Giao diện là một node Look (stage cộng sáu block) trong JSON của bản mẫu, không có code nào ngoài đồ thị. Stage `developer-dark`: nền tối, JetBrains Mono, bốn tone `violet/green/amber/pink` đổi màu nhấn theo cảnh, trường `kicker`. Mỗi block có bảng `props` (mô hình viết những prop không ràng buộc), `doc.when` để mô hình biết khi nào dùng, và code HTML/GSAP; props ràng buộc từ dữ kiện khai `required: false` để bản kế hoạch hợp lệ trước khi Đóng Gói Timeline đè vào.
+Giao diện là một node Đạo Diễn Mỹ Thuật (stage cộng hai mươi block) trong JSON của bản mẫu, không có code nào ngoài đồ thị. Stage `developer-dark`: nền tối, JetBrains Mono, bốn tone `violet/green/amber/pink` đổi màu nhấn theo cảnh, trường `kicker`. Mỗi block có bảng `props` (mô hình viết những prop không ràng buộc), `doc.when` để mô hình biết khi nào dùng, và code HTML/GSAP; props ràng buộc từ dữ kiện khai `required: false` để bản kế hoạch hợp lệ trước khi Đóng Gói Timeline đè vào.
 
 - `hook`: `headline`, `subline`, `badgeText`, và `stars` (đè từ dữ kiện). Tiêu đề in hoa, nhãn xu hướng, huy hiệu sao; không có `stars` thì huy hiệu biến mất nhờ `data-if`.
 - `mockup`: `headline`, `featureHighlights` (đúng ba dòng), `installCommand` và `repoName` (đè từ dữ kiện). Cửa sổ terminal với lệnh cài và ba dòng tính năng.
@@ -101,7 +101,7 @@ Giao diện là một node Look (stage cộng sáu block) trong JSON của bản
 
 1. Người dùng mở studio; đồ thị mẫu mười node đã nối sẵn, tự căn giữa. Ba node tài nguyên tự probe và báo sẵn sàng. Xuất MP4 ở trạng thái bỏ qua. Không phải dán khóa nào.
 2. Dán đường dẫn repo vào Node Nhập Liệu, bấm Chạy Luồng.
-3. Nhập Liệu phát `SourceRef`; Truy Xuất Repo gọi GitHub, phát `FactSheet` ra hai dây; AI Đạo Diễn gọi Claude Code qua nhà cung cấp, tạo ba cảnh; Giọng Đọc tạo MP3 qua `say` và đo thời lượng, ví dụ 11.2 giây; Đóng Gói Timeline chia 336 khung thành 84, 168, 84, đè dữ kiện theo `factBindings`, kiểm định IR; Xuất Bản Video nạp qua Remotion và phát ngay trong node. Xuất MP4 không chạy.
+3. Nhập Liệu phát `SourceRef`; Truy Xuất Repo gọi GitHub, phát `FactSheet` ra hai dây; Biên Kịch gọi Claude Code qua nhà cung cấp, tạo ba cảnh; Giọng Đọc tạo MP3 qua `say` và đo thời lượng, ví dụ 11.2 giây; Đóng Gói Timeline chia 336 khung thành 84, 168, 84, đè dữ kiện theo `factBindings`, kiểm định IR; Xuất Bản Video nạp qua Remotion và phát ngay trong node. Xuất MP4 không chạy.
 4. Người dùng bấm Phát trên node. Số sao ở cảnh Hook đúng bằng số sao thật.
 5. Bấm Kết xuất trên Node Xuất MP4: chỉ node này chạy, tiến độ trên thân node, nhật ký vào Panel Nhật ký, xong thì tải về.
 
@@ -115,13 +115,13 @@ Giao diện là một node Look (stage cộng sáu block) trong JSON của bản
 ### Kịch bản 3: Tinh Chỉnh Tham Số Cục Bộ
 
 1. Kéo tốc độ đọc trên Node Giọng Đọc từ 1.0x lên 1.15x; node đó và mọi node phía sau chuyển sang trạng thái cũ.
-2. Bấm Chạy Luồng. Nhập Liệu, Truy Xuất Repo và AI Đạo Diễn không đổi chữ ký nên dùng lại, hiện huy hiệu "Dùng lại"; ba node tài nguyên probe lại nhưng kết quả không đổi. Không có lệnh gọi nào tới GitHub hay mô hình ngôn ngữ.
+2. Bấm Chạy Luồng. Nhập Liệu, Truy Xuất Repo và Biên Kịch không đổi chữ ký nên dùng lại, hiện huy hiệu "Dùng lại"; ba node tài nguyên probe lại nhưng kết quả không đổi. Không có lệnh gọi nào tới GitHub hay mô hình ngôn ngữ.
 3. Giọng Đọc chạy lại, kéo theo Đóng Gói Timeline và Xuất Bản Video.
 
 ### Kịch bản 3b: Đổi Ngôn Ngữ của Video
 
-1. Trên Node AI Đạo Diễn đặt `outputLanguage` là Tiếng Việt; node đó và phía sau chuyển sang cũ.
-2. Bấm Chạy Luồng. Nhập Liệu, Truy Xuất Repo và ba node tài nguyên dùng lại; AI Đạo Diễn chạy lại, sinh lời thoại và tiêu đề tiếng Việt, thử lại một lần nếu mô hình sai ngôn ngữ.
+1. Trên Node Biên Kịch đặt `outputLanguage` là Tiếng Việt; node đó và phía sau chuyển sang cũ.
+2. Bấm Chạy Luồng. Nhập Liệu, Truy Xuất Repo và ba node tài nguyên dùng lại; Biên Kịch chạy lại, sinh lời thoại và tiêu đề tiếng Việt, thử lại một lần nếu mô hình sai ngôn ngữ.
 3. Giọng Đọc nhận `language` là `vi`, tự chọn giọng tiếng Việt; không có thì dùng giọng dự phòng kèm huy hiệu vàng.
 4. Video mới có chữ và tiếng tiếng Việt. Ngôn ngữ giao diện không đổi.
 
@@ -136,8 +136,8 @@ Bổ sung vào bảng mã lỗi của lõi; cùng quy tắc hiển thị.
 | `REPO_NOT_FOUND` | Truy Xuất Repo | Không tìm thấy repo công khai tại đường dẫn này | Không |
 | `REPO_RATE_LIMITED` | Truy Xuất Repo | Đã vượt hạn mức GitHub API, thử lại sau ít phút (kèm thời điểm đặt lại) | Có |
 | `REPO_NETWORK` | Truy Xuất Repo | Không kết nối được tới GitHub | Có |
-| `LLM_SCHEMA_INVALID` | AI Đạo Diễn | Kịch bản trả về không đúng cấu trúc; cho xem nội dung thô | Có |
-| `LLM_LANGUAGE_MISMATCH` | AI Đạo Diễn | Kịch bản trả về không đúng ngôn ngữ yêu cầu | Có, một lần |
+| `LLM_SCHEMA_INVALID` | Biên Kịch | Kịch bản trả về không đúng cấu trúc; cho xem nội dung thô | Có |
+| `LLM_LANGUAGE_MISMATCH` | Biên Kịch | Kịch bản trả về không đúng ngôn ngữ yêu cầu | Có, một lần |
 
 Xử lý giao diện: `REPO_NOT_FOUND` kèm nút "Thử lại riêng node này" và nút phụ "Dùng văn bản thô thay thế"; nút phụ chuyển tiêu điểm về Node Nhập Liệu, xóa đường dẫn hỏng, đặt con trỏ sẵn để dán mô tả. Nó không đổi chế độ của Truy Xuất Repo.
 
@@ -149,8 +149,8 @@ Xử lý giao diện: `REPO_NOT_FOUND` kèm nút "Thử lại riêng node này" 
 2. Số sao trên cảnh Hook khớp chính xác số sao thật tại thời điểm truy xuất.
 3. Đổi tốc độ đọc rồi chạy lại: không gọi lại mô hình ngôn ngữ, không gọi lại GitHub.
 4. Ngắt mạng rồi chạy: Truy Xuất Repo đỏ với thông báo cụ thể, phía sau chờ, nút thử lại riêng hoạt động sau khi mạng phục hồi.
-5. Đổi ngôn ngữ trên AI Đạo Diễn sang tiếng Việt rồi chạy lại: chỉ AI Đạo Diễn và phía sau chạy lại, chữ và tiếng đều tiếng Việt, Giọng Đọc tự chọn giọng tiếng Việt.
-6. Đăng xuất Claude Code rồi chạy: Claude Code Provider vàng nêu đúng lệnh đăng nhập, AI Đạo Diễn `blocked` viền vàng cùng lý do, không tiến trình nào được sinh ra.
+5. Đổi ngôn ngữ trên Biên Kịch sang tiếng Việt rồi chạy lại: chỉ Biên Kịch và phía sau chạy lại, chữ và tiếng đều tiếng Việt, Giọng Đọc tự chọn giọng tiếng Việt.
+6. Đăng xuất Claude Code rồi chạy: Claude Code Provider vàng nêu đúng lệnh đăng nhập, Biên Kịch `blocked` viền vàng cùng lý do, không tiến trình nào được sinh ra.
 
 ---
 

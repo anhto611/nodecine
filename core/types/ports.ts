@@ -2,7 +2,7 @@
 export const PORT_TYPES = [
   'SourceRef',
   'FactSheet',
-  'DirectorPlan',
+  'ScenePlan',
   'AudioScript',
   'Voiceover',
   'VideoIR',
@@ -19,7 +19,7 @@ export type PortType = (typeof PORT_TYPES)[number];
 export const PORT_LABEL_KEYS: Record<PortType, string> = {
   SourceRef: 'port.sourceRef',
   FactSheet: 'port.factSheet',
-  DirectorPlan: 'port.directorPlan',
+  ScenePlan: 'port.scenePlan',
   AudioScript: 'port.audioScript',
   Voiceover: 'port.voiceover',
   VideoIR: 'port.videoIR',
@@ -36,7 +36,7 @@ export const PORT_LABEL_KEYS: Record<PortType, string> = {
  * as dependencies; the canvas draws them apart (resources enter from the top, dashed).
  */
 export const PORT_KIND: Record<PortType, 'flow' | 'resource'> = {
-  SourceRef: 'flow', FactSheet: 'flow', SceneScript: 'flow', DirectorPlan: 'flow', AudioScript: 'flow', Voiceover: 'flow', VideoIR: 'flow', CaptionTrack: 'flow',
+  SourceRef: 'flow', FactSheet: 'flow', SceneScript: 'flow', ScenePlan: 'flow', AudioScript: 'flow', Voiceover: 'flow', VideoIR: 'flow', CaptionTrack: 'flow',
   EngineRef: 'resource', LLMRef: 'resource', TTSRef: 'resource',
 };
 export const isResourcePort = (type: PortType): boolean => PORT_KIND[type] === 'resource';

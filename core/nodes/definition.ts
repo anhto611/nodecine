@@ -27,7 +27,7 @@ export interface PortDef {
   required?: boolean;
   /**
    * Accepts any number of wires. The packets arrive in `RunContext.lists[name]`, in edge order,
-   * instead of `inputs[name]`. `required` then means at least one. The AI Director's `blocks` port
+   * instead of `inputs[name]`. `required` then means at least one. The Screenwriter's `blocks` port
    * is the reason this exists: its catalogue is whatever is wired in.
    */
   multiple?: boolean;
@@ -66,6 +66,13 @@ export interface RunContext<P = Record<string, unknown>> {
   log: (level: LogLevel, message: string, code?: string) => void;
   /** Report progress for long-running nodes (0..1). */
   progress: (fraction: number, message?: string) => void;
+  /**
+   * Change this node's own parameters as a result of running (EXECUTION_ENGINE §3): the Art
+   * Director keeps a block a model wrote for it. The patch lands in the graph at once — the
+   * workflow shows as unsaved, the edit is undoable — and the run's signature is taken over the
+   * patched parameters, so the next run reuses this result instead of doing the work again.
+   */
+  patchParams: (patch: Record<string, unknown>) => void;
 }
 
 export interface NodeDefinition<S extends ZodTypeAny = ZodTypeAny> {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { allocateFrames, computeTotalFrames } from '../allocate';
+import { allocateFrames, computeTotalFrames, framesFromSegments } from '../allocate';
 
 describe('computeTotalFrames', () => {
   it('11.2s @30fps → 336 frames, no tail', () => {
@@ -46,5 +46,17 @@ describe('allocateFrames — invariants 3 and 4 over the whole range', () => {
     expect(() => allocateFrames(10, [])).toThrow();
     expect(() => allocateFrames(10, [1, 0])).toThrow();
     expect(() => allocateFrames(2, [1, 1, 1])).toThrow();
+  });
+});
+
+describe('framesFromSegments', () => {
+  it('gives each scene the frames of its narration and the last scene the remainder, padding included', () => {
+    // 2.35 s, 3.35 s, 1.35 s at 30 fps → 71, 101 and whatever is left of a 270-frame minimum.
+    expect(framesFromSegments(270, [{ durationSeconds: 2.35 }, { durationSeconds: 3.35 }, { durationSeconds: 1.35 }], 30)).toEqual([71, 101, 98]);
+  });
+  it('never lets a scene round to nothing, and takes frames back from the longest when the last would go negative', () => {
+    expect(framesFromSegments(3, [{ durationSeconds: 0.01 }, { durationSeconds: 0.01 }, { durationSeconds: 0.01 }], 30)).toEqual([1, 1, 1]);
+    // 9 + 9 frames asked of a 10-frame total: the last scene keeps one frame, taken back from the longest scenes in turn.
+    expect(framesFromSegments(10, [{ durationSeconds: 0.3 }, { durationSeconds: 0.3 }, { durationSeconds: 0.01 }], 30)).toEqual([4, 5, 1]);
   });
 });

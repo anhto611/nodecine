@@ -41,6 +41,8 @@ export async function alignWordsOnServer(audioUrl: string, text: string, languag
     // The narration goes in on stdin, never through argv (CORE_CONTRACTS §9.2).
     stdin: text,
     timeoutMs: 15 * 60_000,
+    // One JSON object per word: a ten-minute narration is a few hundred kilobytes, far past exec's default cap.
+    maxOutput: 8 * 1024 * 1024,
     signal,
   });
   if (r.code !== 0) {
@@ -48,7 +50,12 @@ export async function alignWordsOnServer(audioUrl: string, text: string, languag
     if (/No module named 'stable_whisper'/.test(err)) throw Object.assign(new Error('stable-ts is not installed for this interpreter'), { code: ErrorCode.PROVIDER_NOT_INSTALLED, fix: ALIGN_INSTALL_HINT });
     throw Object.assign(new Error(`aligner failed: ${err.split('\n').slice(-3).join(' ').slice(0, 400) || r.code}`), { code: ErrorCode.ALIGN_FAILED });
   }
-  const words = parseAlignerOutput(r.stdout);
+  let words: Word[];
+  try {
+    words = parseAlignerOutput(r.stdout);
+  } catch (e) {
+    throw Object.assign(new Error(`aligner output unreadable (${r.stdout.length} bytes${r.truncated ? ', cut at the output cap' : ''}): ${e instanceof Error ? e.message : String(e)}`), { code: ErrorCode.ALIGN_FAILED });
+  }
   if (!words.length) throw Object.assign(new Error('aligner returned no words'), { code: ErrorCode.ALIGN_FAILED });
   return words;
 }

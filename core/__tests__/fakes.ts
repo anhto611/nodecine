@@ -83,6 +83,12 @@ export function makeFakeServices(overrides: Partial<{
       calls.push({ name: 'complete', args: [prompt] });
       return schema.parse(await o.complete(prompt));
     },
+    async concatAudio(parts, gapSeconds) {
+      calls.push({ name: 'concatAudio', args: [parts.map((p) => p.audioUrl), gapSeconds] });
+      let start = 0;
+      const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
+      return { audioUrl: `/api/media/${contentHash({ parts: parts.map((p) => p.audioUrl), gapSeconds })}.mp3`, durationSeconds: Math.round(start * 100) / 100, segments };
+    },
     async alignWords(audioUrl, text, language, options) {
       calls.push({ name: 'alignWords', args: [audioUrl, text, language, options] });
       // Evenly spaced over a fixed span: deterministic, and enough to lay cues out.

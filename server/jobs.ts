@@ -49,7 +49,8 @@ export type HubEvent =
   | { type: 'run:end'; key: string; runId: number; ok: boolean; durationMs: number }
   | { type: 'log'; key: string; entry: LogEntry }
   | { type: 'job'; key: string; job: Job }
-  | { type: 'history'; key: string; history: RunRecord[] };
+  | { type: 'history'; key: string; history: RunRecord[] }
+  | { type: 'params'; key: string; nodeId: string; patch: Record<string, unknown> };
 
 interface Slot {
   executor: Executor;
@@ -167,6 +168,7 @@ export class JobHub {
       const holder: { slot?: Slot } = {};
       const executor = new Executor(graph ?? { nodes: [], edges: [] }, this.servicesFor(() => holder.slot), {
         onStateChange: (nodeId, runtime) => this.emit({ type: 'node', key, nodeId, runtime }),
+        onParamsPatch: (nodeId, patch) => this.emit({ type: 'params', key, nodeId, patch }),
         onRunStart: (info) => this.emit({ type: 'run:start', key, ...info }),
         onStep: (info) => this.emit({ type: 'run:step', key, ...info }),
         onRunEnd: (info) => this.emit({ type: 'run:end', key, ...info }),

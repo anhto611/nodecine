@@ -16,19 +16,19 @@ Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ đư�
 
 | Định danh kiểu | Nhãn hiển thị | Ý nghĩa | Node lõi phát | Node lõi nhận |
 | --- | --- | --- | --- | --- |
-| `SourceRef` | Dữ liệu Nguồn | Chuỗi người dùng nhập, chưa diễn giải | Nhập Liệu | Truy Xuất Repo, Đạo Diễn AI |
-| `SceneScript` | Phân cảnh | Video đã chia cảnh, mỗi cảnh một vai, một trọng số và **nội dung** theo từ vựng cố định — chưa có giao diện (2.11) | Kịch Bản Tĩnh, Đạo Diễn AI | Look |
-| `FactSheet` | Dữ kiện | Tập dữ kiện kiểm chứng được, có nguồn gốc | Truy Xuất Repo | Đạo Diễn AI, Đóng Gói Timeline |
-| `DirectorPlan` | Kế hoạch dựng | Stage, danh mục block và danh sách cảnh đã dàn (block, props, tone, trọng số) — tự chứa | Look | Đóng Gói Timeline |
-| `AudioScript` | Lời thoại | Văn bản thuyết minh kèm ngôn ngữ | Kịch Bản Tĩnh, Đạo Diễn AI | Giọng Đọc |
+| `SourceRef` | Dữ liệu Nguồn | Chuỗi người dùng nhập, chưa diễn giải | Nhập Liệu | Truy Xuất Repo, Biên Kịch |
+| `SceneScript` | Phân cảnh | Video đã chia cảnh, mỗi cảnh một vai, một trọng số và **nội dung** theo từ vựng cố định — chưa có giao diện (2.11) | Kịch Bản Tĩnh, Biên Kịch | Đạo Diễn Mỹ Thuật |
+| `FactSheet` | Dữ kiện | Tập dữ kiện kiểm chứng được, có nguồn gốc | Truy Xuất Repo | Biên Kịch, Đóng Gói Timeline |
+| `ScenePlan` | Kế hoạch dựng | Stage, danh mục block và danh sách cảnh đã dàn (block, props, tone, trọng số) — tự chứa | Đạo Diễn Mỹ Thuật | Đóng Gói Timeline |
+| `AudioScript` | Lời thoại | Văn bản thuyết minh kèm ngôn ngữ | Kịch Bản Tĩnh, Biên Kịch | Giọng Đọc |
 | `Voiceover` | Âm thanh & Thời lượng | Tệp âm thanh đã đo thời lượng, có thể kèm mốc từng từ | Giọng Đọc, Căn Mốc Từ | Đóng Gói Timeline, Căn Mốc Từ, Phụ Đề |
 | `VideoIR` | Bản đặc tả IR | Bản Đặc Tả Video Trung Gian | Đóng Gói Timeline | Xuất Bản Video, Xuất MP4 |
 | `EngineRef` | Động cơ | Tham chiếu tới một Adapter | Động Cơ | Xuất Bản Video, Xuất MP4 |
-| `LLMRef` | Mô hình ngôn ngữ | Tham chiếu tới nhà cung cấp mô hình | Nhà Cung Cấp Mô Hình Ngôn Ngữ | Đạo Diễn AI |
+| `LLMRef` | Mô hình ngôn ngữ | Tham chiếu tới nhà cung cấp mô hình | Nhà Cung Cấp Mô Hình Ngôn Ngữ | Biên Kịch |
 | `TTSRef` | Giọng đọc | Tham chiếu tới nhà cung cấp giọng | Nhà Cung Cấp Giọng Đọc | Giọng Đọc |
 | `CaptionTrack` | Phụ đề | Các dòng phụ đề trên đồng hồ của voice-over, mỗi dòng gồm các từ có mốc | Phụ Đề | Đóng Gói Timeline (tùy chọn) |
 
-Mười một kiểu cổng chia làm hai **loại dây** (`PORT_KIND` trong `core/types/ports.ts`). Dây **luồng** (`SourceRef`, `FactSheet`, `SceneScript`, `DirectorPlan`, `AudioScript`, `Voiceover`, `CaptionTrack`, `VideoIR`) là đường đi của nội dung: xong bước này mới sang bước sau. Dây **thành phần** (`LLMRef`, `TTSRef`, `EngineRef`) là một bộ phận cắm vào node dùng nó: mô hình, giọng, động cơ. Bộ máy thực thi không phân biệt hai loại (cả hai đều là phụ thuộc, mục 2 của Bộ Máy Thực Thi); chỉ canvas vẽ khác: dây luồng liền nét, vào từ trái ra bên phải; dây thành phần mảnh, đứt nét, vào cổng ở **cạnh trên** của node dùng và ra từ **cạnh dưới** của node phát, để thành phần "treo" phía trên đường đi chính. Auto-layout xếp node thành phần thành một dải ngay trên node đầu tiên dùng nó.
+Mười một kiểu cổng chia làm hai **loại dây** (`PORT_KIND` trong `core/types/ports.ts`). Dây **luồng** (`SourceRef`, `FactSheet`, `SceneScript`, `ScenePlan`, `AudioScript`, `Voiceover`, `CaptionTrack`, `VideoIR`) là đường đi của nội dung: xong bước này mới sang bước sau. Dây **thành phần** (`LLMRef`, `TTSRef`, `EngineRef`) là một bộ phận cắm vào node dùng nó: mô hình, giọng, động cơ. Bộ máy thực thi không phân biệt hai loại (cả hai đều là phụ thuộc, mục 2 của Bộ Máy Thực Thi); chỉ canvas vẽ khác: dây luồng liền nét, vào từ trái ra bên phải; dây thành phần mảnh, đứt nét, vào cổng ở **cạnh trên** của node dùng và ra từ **cạnh dưới** của node phát, để thành phần "treo" phía trên đường đi chính. Auto-layout xếp node thành phần thành một dải ngay trên node đầu tiên dùng nó.
 
 Một cổng xuất được phép nối ra nhiều cổng nhận. Một cổng nhận mặc định chỉ được phép có đúng một dây nối tới; cổng khai báo `multiple: true` nhận **bao nhiêu dây cũng được**, bắt buộc nghĩa là ít nhất một. Gói của cổng nhiều dây tới node dưới dạng danh sách `lists[tên cổng]` theo thứ tự dây, không phải `inputs[tên cổng]`; chữ ký chạy lại băm cả danh sách nên thêm hoặc bớt dây là node chạy lại. Hiện không node lõi nào khai cổng nhiều dây (cổng `blocks` cũ đã gộp vào `look`); bộ máy giữ tính năng cho node gom nhiều thứ cùng loại. Đồ thị bắt buộc không có chu trình. Node thành phần (ba loại phát `EngineRef`, `LLMRef`, `TTSRef`) không có cổng nhận nào.
 
@@ -58,15 +58,15 @@ Gói tin chỉ mang dữ liệu thành công. Trạng thái lỗi không đi qua
 - `fetchedAt` (Chuỗi ISO 8601): Mốc thời gian lấy dữ kiện.
 - `mode` (Chuỗi phân loại): `fetched` khi đã gọi nguồn ngoài, `passthrough` khi chỉ đóng gói lại văn bản người dùng.
 
-Quy ước cốt lõi: mọi giá trị trong `facts` có nguồn gốc xác định và **không bao giờ do mô hình ngôn ngữ sinh ra**. Lõi bảo vệ quy ước này bằng cấu trúc: `FactSheet` được nối thẳng vào Node Đóng Gói Timeline và đè lên props theo `factBindings` (mục 2.3), nên dữ kiện không cần đi qua node đạo diễn để tới được video.
+Quy ước cốt lõi: mọi giá trị trong `facts` có nguồn gốc xác định và **không bao giờ do mô hình ngôn ngữ sinh ra**. Lõi bảo vệ quy ước này bằng cấu trúc: `FactSheet` được nối thẳng vào Node Đóng Gói Timeline và đè lên props theo `factBindings` (mục 2.3), nên dữ kiện không cần đi qua node biên kịch để tới được video.
 
-### 2.3. `DirectorPlan`
+### 2.3. `ScenePlan`
 
 Tự chứa: mang theo sân khấu và mọi block mà các cảnh dùng, nên Đóng Gói Timeline, engine và tệp dự án không cần tra registry nào.
 
 - `language` (Chuỗi, mã BCP 47): Ngôn ngữ của toàn bộ chữ trên màn hình và lời thoại.
-- `stage` (`StageDef`, mục 2.6): Sân khấu của cả video, chép từ tham số của node Look phát ra plan.
-- `blocks` (Danh sách `BlockDef`, mục 2.7, ít nhất một, `id` không trùng): Toàn bộ danh mục block của Look, không chỉ những block được dùng.
+- `stage` (`StageDef`, mục 2.6): Sân khấu của cả video, chép từ tham số của node Đạo Diễn Mỹ Thuật phát ra plan.
+- `blocks` (Danh sách `BlockDef`, mục 2.7, ít nhất một, `id` không trùng): Toàn bộ danh mục block của Đạo Diễn Mỹ Thuật, không chỉ những block được dùng.
 - `scenes` (Danh sách, ít nhất một phần tử):
   - `blockId` (Chuỗi): `id` của một block trong `blocks`. Lược đồ từ chối plan có `blockId` không nằm trong danh mục.
   - `weight` (Số dương): Trọng số thời lượng tương đối. Đóng Gói Timeline chia tổng số khung hình theo tỷ lệ các trọng số.
@@ -77,8 +77,9 @@ Tự chứa: mang theo sân khấu và mọi block mà các cảnh dùng, nên �
 
 ### 2.4. `AudioScript`
 
-- `text` (Chuỗi): Lời thoại thuyết minh.
-- `language` (Chuỗi, mã BCP 47): Trùng với `DirectorPlan.language` của cùng lần chạy.
+- `text` (Chuỗi): Lời thoại thuyết minh, cả bài.
+- `language` (Chuỗi, mã BCP 47): Trùng với `ScenePlan.language` của cùng lần chạy.
+- `segments` (tùy chọn, danh sách chuỗi): lời thoại **theo từng cảnh**, đúng thứ tự cảnh; `text` là các đoạn này ghép bằng xuống dòng. Biên Kịch và Kịch Bản Tĩnh luôn phát kèm; Giọng Đọc đọc từng đoạn và Đóng Gói cắt cảnh theo đoạn (5.3, 5.4).
 
 ### 2.5. `Voiceover`
 
@@ -86,6 +87,7 @@ Tự chứa: mang theo sân khấu và mọi block mà các cảnh dùng, nên �
 - `durationSeconds` (Số, hai chữ số thập phân): Đo lại từ chính tệp đã tạo, không lấy ước lượng của nhà cung cấp.
 - `voiceName`, `language`, `speed`: Giọng đã dùng, ngôn ngữ của giọng đó (khác `AudioScript.language` nghĩa là đã dùng giọng dự phòng và phải kèm cảnh báo), hệ số tốc độ đã áp dụng.
 - `words` (tùy chọn, danh sách `{text, start, end}` giây tính từ đầu tệp): mốc từng từ, do nhà cung cấp trả về hoặc do node Căn Mốc Từ căn chỉnh. Không có nghĩa là chưa ai đo.
+- `segments` (tùy chọn, danh sách `{start, durationSeconds}`): mỗi đoạn lời một mục, đúng thứ tự, đo trên tệp thật, đã gồm khoảng lặng sau đoạn. Có khi `AudioScript` đến có `segments`.
 
 ### 2.6. `StageDef`
 
@@ -95,7 +97,7 @@ Stage cũng là nơi quyết định **chỗ phụ đề**: một phần tử `d
 
 - `frame` (`{width, height}`, mặc định 1080×1920): **tỉ lệ** stage được vẽ cho, chọn trong bốn preset (9:16, 16:9, 1:1, 4:5). Hai con số là hệ tọa độ thiết kế mà code stage và block viết theo, không phải số điểm ảnh của tệp: độ phân giải (1080p, 1440p, 2160p) chọn lúc Xuất MP4 và engine phóng khung thiết kế lên khi kết xuất. Kích thước video lấy từ đây qua `plan.stage`, nên không thể có chuyện stage vẽ cho 9:16 mà video đóng gói 16:9. Xem trước, vùng an toàn, kéo thả và prompt sửa bằng lời đều đọc cùng trường này.
 - Stage **không phải canvas tự do**: các thành phần lấy từ một danh mục vai trò cố định (`STAGE_ROLES` trong `core/look/stage-elements.ts`), nhận ra nhau qua tên class: `content` (chỗ block, bắt buộc), `captions` (phụ đề karaoke), `kicker` và `source` (trường theo cảnh, director viết), `signature` (chữ ký kênh, chữ cố định), `logo` (ảnh), `rule` (đường kẻ). Mỗi vai trò tối đa một; người dùng thêm từ danh mục rồi chỉnh kiểu (vị trí, kích thước, chữ, ảnh), không thêm phần tử tùy tiện. Thêm vai trò mới là thêm một mục vào danh mục, để director, engine và node Phụ Đề cùng biết. Mô hình sửa bằng lời được dặn giữ đúng các class này.
-- Sửa stage không cần viết code, theo ba đường cùng ghi vào `code.source` và các trường trên: **sửa bằng lời** (`POST /api/look/edit`, `nodes/look/edit.server.ts`: mô hình trả về code mới và, khi yêu cầu đòi hỏi, cả `tokens`, `tones`, `sceneFields` thay thế trọn vẹn; máy chủ bỏ tone ghi đè khóa không có trong palette, báo trường thêm mới chưa có `data-field`, và tóm tắt "đổi thêm" cho modal); **kéo thả** (`core/look/layout-edit.ts`: khung xem trước đo các phần tử tầng ngoài của stage, kéo thả ghi lại `left/right/top/bottom/width/height` vào đúng rule CSS, giữ cách neo; `core/look/stage-elements.ts`: thêm chữ, khối, ảnh là một phần tử lá cộng một rule, xóa và sửa nội dung chữ); **xem trước có chuyển động** (`buildLookPreview({animate})` chạy script của stage và block trên một timeline lặp, gsap inline).
+- Sửa stage không cần viết code, theo ba đường cùng ghi vào `code.source` và các trường trên: **sửa bằng lời** (`POST /api/look/edit`, `nodes/art-director/edit.server.ts`: mô hình trả về code mới và, khi yêu cầu đòi hỏi, cả `tokens`, `tones`, `sceneFields` thay thế trọn vẹn; máy chủ bỏ tone ghi đè khóa không có trong palette, báo trường thêm mới chưa có `data-field`, và tóm tắt "đổi thêm" cho modal); **kéo thả** (`core/look/layout-edit.ts`: khung xem trước đo các phần tử tầng ngoài của stage, kéo thả ghi lại `left/right/top/bottom/width/height` vào đúng rule CSS, giữ cách neo; `core/look/stage-elements.ts`: thêm chữ, khối, ảnh là một phần tử lá cộng một rule, xóa và sửa nội dung chữ); **xem trước có chuyển động** (`buildLookPreview({animate})` chạy script của stage và block trên một timeline lặp, gsap inline).
 - Ảnh và logo là **tài nguyên theo mã băm**: tải lên `POST /api/assets` (data URL ảnh, tối đa 2 MB) → `.nodecine/assets/<sha1>.<ext>`, tham chiếu bằng `/api/assets/<tên>`; máy chủ chỉ phục vụ tên hợp lệ. Khi kết xuất, engine chép các ảnh được tham chiếu vào thư mục dự án và viết lại đường dẫn. Workflow chia sẻ sang máy khác sẽ thiếu ảnh nếu không chép kèm thư mục này.
 - `name`. Stage không có id: không gì tham chiếu tới nó (mỗi workflow một stage, plan và IR chép nguyên cả stage), nên một định danh chỉ là thứ để hỏi "nó để làm gì".
 - `tokens.palette`, `tokens.fonts`: bản đồ tên → giá trị. Renderer phơi ra thành biến CSS `--<tên>` cho code của stage và block dùng chung (`--bg`, `--fg`, `--accent`, `--font-display`, …).
@@ -105,7 +107,7 @@ Stage cũng là nơi quyết định **chỗ phụ đề**: một phần tử `d
 
 ### 2.7. `BlockDef` và `LookDef`
 
-`BlockDef` là một kiểu cảnh, mang theo dưới dạng dữ liệu; đây là thứ Look dàn cho từng cảnh (5.9). `LookDef` là `StageDef` (2.6) cộng `blocks: BlockDef[]` (ít nhất một, `id` không trùng) — cả giao diện của workflow trong một gói, tham số của node Look. Nó **không đi trên dây**: Look nhận `SceneScript` và phát `DirectorPlan`.
+`BlockDef` là một kiểu cảnh, mang theo dưới dạng dữ liệu; đây là thứ Đạo Diễn Mỹ Thuật dàn cho từng cảnh (5.9). `LookDef` là `StageDef` (2.6) cộng `blocks: BlockDef[]` (ít nhất một, `id` không trùng) — cả giao diện của workflow trong một gói, tham số của node Đạo Diễn Mỹ Thuật. Nó **không đi trên dây**: Đạo Diễn Mỹ Thuật nhận `SceneScript` và phát `ScenePlan`.
 
 - `id` (slug), `name`. Quy tắc đặt id: `<slug của tên lúc tạo>` (`text-card`, `hook`), không tiền tố vì đây là chữ mô hình viết vào `blockId` và beat trỏ tới; trùng trong node thì thêm `-2`; sinh một lần khi tạo, đổi tên sau đó không đổi id, giao diện hiện id mờ cạnh tên.
 - `doc.example`: một ví dụ props hợp lệ dạng JSON. `doc.when`: dùng khi nào, không dùng khi nào — nguồn duy nhất cho cả mô hình và người.
@@ -132,10 +134,10 @@ Các dòng phụ đề trên đồng hồ của voice-over: `cues` (danh sách `
 Video đã chia cảnh nhưng chưa có giao diện — chặng kịch bản kết thúc ở đây, chặng giao diện bắt đầu từ đây.
 
 - `language` (BCP 47).
-- `scenes[]`: `{ role, weight, content, factBindings? }`. `role` là tên beat (hook, quote, cta) — Look dàn cảnh theo vai này; `weight` là trọng số thời lượng; `factBindings` là `khóaNộiDung → khóaDữKiện`.
+- `scenes[]`: `{ role, weight, narration, content, factBindings? }`. `role` là tên beat (hook, quote, cta) — Đạo Diễn Mỹ Thuật dàn cảnh theo vai này; `narration` là lời đọc trên cảnh đó, cảnh dài đúng bằng lời (5.4); `weight` chỉ còn dùng khi không có đoạn lời; `factBindings` là `khóaNộiDung → khóaDữKiện`.
 - `content`: một đối tượng chỉ dùng các khóa của **từ vựng nội dung** (`CONTENT_KEYS`), khóa nào cũng tùy chọn, cảnh viết cái nó cần: `kicker` (nhãn 1–3 từ), `title` (tiêu đề ≤ 60 ký tự, cảnh nào cũng có), `body` (1–2 câu), `points` (2–4 dòng ngắn), `number` + `label` (một con số đúng dạng hiển thị và nó là gì), `quote` + `attribution`, `code` (một lệnh), `source` (nội dung lấy từ đâu).
 
-Từ vựng là cố định để đạo diễn không cần biết block nào tồn tại: mô hình viết theo mười khóa này, block khai prop của nó nhận khóa nào (2.7), và Look ghép hai bên. Thêm khóa là sửa lõi, có chủ ý.
+Từ vựng là cố định để biên kịch không cần biết block nào tồn tại: mô hình viết theo mười khóa này, block khai prop của nó nhận khóa nào (2.7), và Đạo Diễn Mỹ Thuật ghép hai bên. Thêm khóa là sửa lõi, có chủ ý.
 
 ## 3. Bản Đặc Tả Video Trung Gian (Universal Video IR)
 
@@ -143,11 +145,11 @@ Cấu trúc duy nhất do Node Đóng Gói Timeline tạo ra, độc lập với
 
 - `irVersion` (Số nguyên): Phiên bản lược đồ, hiện là `1`. Adapter từ chối nạp phiên bản không hỗ trợ.
 - `meta`:
-  - `title` (Chuỗi), `language` (Chuỗi BCP 47): Lấy từ tham số node và `DirectorPlan`.
+  - `title` (Chuỗi), `language` (Chuỗi BCP 47): Lấy từ tham số node và `ScenePlan`.
   - `fps` (Số nguyên): Mặc định 30, do tham số của Node Đóng Gói Timeline.
   - `width`, `height` (Số nguyên): Mặc định 1080 và 1920.
   - `totalDurationInFrames` (Số nguyên).
-- `stage` (`StageDef`) và `blocks` (Danh sách `BlockDef`): Chép nguyên từ `DirectorPlan`.
+- `stage` (`StageDef`) và `blocks` (Danh sách `BlockDef`): Chép nguyên từ `ScenePlan`.
 - `audioTrack`:
   - `voiceoverUrl` (Chuỗi): Cùng định dạng với `Voiceover.audioUrl`.
   - `durationSeconds` (Số).
@@ -193,10 +195,10 @@ Lõi ship đúng những node cần để dựng được video từ một kịc
 
 ### 5.2. Kịch Bản Tĩnh (Static Script)
 
-Node phát `SceneScript` (2.11) và `AudioScript` từ nội dung gõ tay, dành cho việc dựng video không cần mô hình ngôn ngữ và để kiểm thử khung. Không cổng nhận: chặng kịch bản không cần biết giao diện, Look đứng sau sẽ dàn cảnh. Tham số:
+Node phát `SceneScript` (2.11) và `AudioScript` từ nội dung gõ tay, dành cho việc dựng video không cần mô hình ngôn ngữ và để kiểm thử khung. Không cổng nhận: chặng kịch bản không cần biết giao diện, Đạo Diễn Mỹ Thuật đứng sau sẽ dàn cảnh. Tham số:
 
-- `script` (Chuỗi nhiều dòng): Lời thoại, phát ra `AudioScript`. Không có tham số ngôn ngữ: người dùng đã dán lời thoại cuối cùng nên ngôn ngữ của văn bản chính là ngôn ngữ của video. Node nhận diện bằng hàm thuần `detectLanguage(text)` của lõi (theo hệ chữ viết; chữ Latinh có dấu riêng của tiếng Việt thì là `vi`, chữ Latinh khác coi là `en`) và điền vào `SceneScript.language` lẫn `AudioScript.language`. Đoán sai thì người dùng chọn giọng tay trên Giọng Đọc.
-- `scenes` (Danh sách chỉnh sửa trực tiếp trên thân node): mỗi mục gồm `role`, `weight` và `content` theo từ vựng (2.11) — thân node hiện một ô cho mỗi khóa đang dùng và một ô chọn để thêm khóa, `points` mỗi dòng một ý. Block, tone và trường stage là việc của Look. Mặc định là ba cảnh `title / how / next` trọng số 1, 2, 1.
+- Không còn ô lời thoại chung: `AudioScript.text` là các `narration` ghép lại, `segments` là từng đoạn. Không có tham số ngôn ngữ: người dùng đã viết lời cuối cùng nên ngôn ngữ của văn bản chính là ngôn ngữ của video. Node nhận diện bằng hàm thuần `detectLanguage(text)` của lõi (theo hệ chữ viết; chữ Latinh có dấu riêng của tiếng Việt thì là `vi`, chữ Latinh khác coi là `en`) và điền vào `SceneScript.language` lẫn `AudioScript.language`. Đoán sai thì người dùng chọn giọng tay trên Giọng Đọc.
+- `scenes` (Danh sách chỉnh sửa trực tiếp trên thân node): mỗi mục gồm `role`, `weight`, `narration` (lời đọc trên cảnh, một ô riêng) và `content` theo từ vựng (2.11) — thân node hiện một ô cho mỗi khóa đang dùng và một ô chọn để thêm khóa, `points` mỗi dòng một ý. Block, tone và trường stage là việc của Đạo Diễn Mỹ Thuật. Mặc định là ba cảnh `title / how / next`, mỗi cảnh một câu lời.
 
 Cảnh chỉ kiểm tra được khi đã biết dây nối vào, nên việc kiểm tra `blockId`, `props` và `tone` là **preflight** (chặn trước khi chạy với `NODE_PARAMS_INVALID` và câu chỉ dẫn), không phải kiểm tra liên tục. Không có `factBindings` vì không có nguồn dữ kiện; người dùng gõ thẳng giá trị.
 
@@ -204,15 +206,17 @@ Cảnh chỉ kiểm tra được khi đã biết dây nối vào, nên việc ki
 
 Nhận `AudioScript` và `TTSRef`, chọn giọng khớp ngôn ngữ theo quy tắc ở mục 8.2, gọi nhà cung cấp, đo thời lượng từ tệp đã tạo, phát `Voiceover`. Tham số: `voice` (để trống là tự chọn theo ngôn ngữ), `speed`.
 
+Khi `AudioScript` có `segments` (từ hai đoạn trở lên), node đọc **từng đoạn một** rồi nối bằng ffmpeg (`services.concatAudio`), chèn 0,35 giây lặng sau mỗi đoạn — hơi thở giữa hai ý và cũng là chỗ cảnh cắt. `Voiceover.segments` ghi đoạn nào bắt đầu ở đâu, dài bao lâu (gồm khoảng lặng), tổng đo lại trên tệp đã nối. Cách này học từ cutdown: cảnh dài đúng bằng lời của nó, không cần căn mốc từ mới khớp, và sửa lời một cảnh chỉ đọc lại cảnh đó (mỗi đoạn là một lần gọi riêng, cùng câu cùng giọng thì nhà cung cấp trả tệp đã có). Mốc từ nhà cung cấp trả theo đoạn được dời theo `start` của đoạn. Một đoạn nhà cung cấp trả lỗi upstream (504, đứt kết nối) được gọi lại đúng một lần sau hai giây; lần hai lỗi thì node lỗi.
+
 ### 5.4. Đóng Gói Timeline (Timeline Assembler)
 
-Nhận `DirectorPlan` và `Voiceover` (bắt buộc), `FactSheet` và `CaptionTrack` (tùy chọn). Tham số: `fps` (30), `minTotalFrames` (270), `title`. Kích thước khung lấy từ `plan.stage.frame`, không phải tham số ở đây. Hàm thuần, không gọi mạng, thất bại đồng nghĩa lỗi lập trình.
+Nhận `ScenePlan` và `Voiceover` (bắt buộc), `FactSheet` và `CaptionTrack` (tùy chọn). Tham số: `fps` (30), `minTotalFrames` (270), `title`. Kích thước khung lấy từ `plan.stage.frame`, không phải tham số ở đây. Hàm thuần, không gọi mạng, thất bại đồng nghĩa lỗi lập trình.
 
 Quy tắc phân bổ thời lượng, tất định:
 
 1. Số khung hình âm thanh bằng `durationSeconds × fps`, làm tròn lên.
 2. Tổng số khung hình bằng giá trị lớn hơn giữa số khung hình âm thanh và `minTotalFrames`; phần chênh ghi vào `padTailFrames`.
-3. Với mỗi cảnh trừ cảnh cuối: `durationInFrames` bằng phần nguyên (làm tròn xuống) của `tổng × weight / tổng các weight`. Cảnh cuối nhận toàn bộ phần còn lại. Cách này loại bỏ mơ hồ khi làm tròn giá trị nằm đúng giữa hai số nguyên, và đảm bảo tổng luôn khớp tuyệt đối theo cấu trúc chứ không theo may rủi. Trường hợp biên: nếu trọng số quá lệch và tổng khung quá nhỏ khiến phần nguyên của một cảnh bằng 0, cảnh đó nhận 1 khung và cảnh cuối bị trừ 1 khung tương ứng (tổng vẫn giữ nguyên, bất biến 4 ở mục 3.1 được bảo toàn); nếu sau khi mượn mà cảnh cuối cũng về 0, hoặc tổng khung nhỏ hơn số cảnh, node báo lỗi lập trình thay vì tạo IR sai.
+3. **Cắt theo lời** khi `Voiceover.segments` có đúng một mục cho mỗi cảnh: `durationInFrames` của mỗi cảnh trừ cảnh cuối bằng `durationSeconds` của đoạn nhân `fps`, làm tròn, ít nhất 1; cảnh cuối nhận phần còn lại (kể cả `padTailFrames`); nếu làm tròn dồn khiến cảnh cuối âm thì rút từng khung từ cảnh dài nhất. Không có đoạn lời thì theo trọng số: với mỗi cảnh trừ cảnh cuối, `durationInFrames` bằng phần nguyên (làm tròn xuống) của `tổng × weight / tổng các weight`. Cảnh cuối nhận toàn bộ phần còn lại. Cách này loại bỏ mơ hồ khi làm tròn giá trị nằm đúng giữa hai số nguyên, và đảm bảo tổng luôn khớp tuyệt đối theo cấu trúc chứ không theo may rủi. Trường hợp biên: nếu trọng số quá lệch và tổng khung quá nhỏ khiến phần nguyên của một cảnh bằng 0, cảnh đó nhận 1 khung và cảnh cuối bị trừ 1 khung tương ứng (tổng vẫn giữ nguyên, bất biến 4 ở mục 3.1 được bảo toàn); nếu sau khi mượn mà cảnh cuối cũng về 0, hoặc tổng khung nhỏ hơn số cảnh, node báo lỗi lập trình thay vì tạo IR sai.
 4. `startFrame` tích lũy từ 0.
 5. Đè dữ kiện: với mỗi cảnh có `factBindings`, gán `props[tênProp] = facts[khóa]` cho mọi khóa có mặt trong `FactSheet.facts`. Dữ kiện luôn thắng giá trị cùng tên đã có trong `props`.
 6. Chạy hàm kiểm định IR ở mục 3.1 trước khi phát.
@@ -241,37 +245,41 @@ Có **một node cho mỗi kiểu cổng**, không phải một node cho mỗi n
 
 Mô tả ở mục 6, 7 và 8. Cả ba dùng chung khuôn: không cổng nhận, một cổng phát, `run() = probe()`, tham chiếu là dữ liệu tuần tự hóa được.
 
-### 5.8. Đạo Diễn AI (AI Director)
+### 5.8. Biên Kịch (Screenwriter)
 
-Có **một node đạo diễn**, trong lõi. Cổng nhận: `LLMRef` bắt buộc, `FactSheet` tùy chọn và `SourceRef` tùy chọn; phát `SceneScript` (2.11) và `AudioScript`. Node **không biết giao diện**: không block, không stage, không tone. Đó là chặng sau (Look, 5.9), nên sửa giao diện không bao giờ chạy lại mô hình. Mọi thứ từng khiến mỗi loại video cần một node đạo diễn riêng đều là **tham số** hoặc **dữ liệu trên dây**:
+Có **một node biên kịch**, trong lõi. Cổng nhận: `LLMRef` bắt buộc, `FactSheet` tùy chọn và `SourceRef` tùy chọn; phát `SceneScript` (2.11) và `AudioScript`. Node **không biết giao diện**: không block, không stage, không tone. Đó là chặng sau (Đạo Diễn Mỹ Thuật, 5.9), nên sửa giao diện không bao giờ chạy lại mô hình. Mọi thứ từng khiến mỗi loại video cần một node biên kịch riêng đều là **tham số** hoặc **dữ liệu trên dây**:
 
 - `prompt` — đề bài người dùng viết. Thứ duy nhất chỉ người dùng nói được.
-- `beats` — danh sách **beat**: `{ role, brief, weight, count, factBindings }`. `role` là tên ngắn của một đoạn (hook, quote, cta), cũng là vai Look dàn theo; `brief` nói đoạn đó làm gì; `count` là số cảnh liên tiếp; `factBindings` là `khóaNộiDung → khóaDữKiện`.
+- `beats` — danh sách **beat**: `{ role, brief, weight, count, factBindings }`. `role` là tên ngắn của một đoạn (hook, quote, cta), cũng là vai Đạo Diễn Mỹ Thuật dàn theo; `brief` nói đoạn đó làm gì; `count` là số cảnh liên tiếp; `factBindings` là `khóaNộiDung → khóaDữKiện`.
 - `outputLanguage` (`auto` = ngôn ngữ của đề bài và dữ kiện).
 
-Mô hình viết **nội dung từng cảnh** theo từ vựng cố định (2.11): mỗi beat khai triển thành `count` phần tử, mỗi phần tử là đối tượng nội dung trừ các khóa đã ràng buộc dữ kiện. Lược đồ đầu ra không phụ thuộc block nào. Mô hình phải trả về đúng số cảnh, đúng thứ tự; khóa lạ bị bỏ, không bị từ chối.
+Mô hình viết **lời đọc và nội dung từng cảnh** theo từ vựng cố định (2.11): mỗi beat khai triển thành `count` phần tử, mỗi phần tử là `narration` cộng đối tượng nội dung trừ các khóa đã ràng buộc dữ kiện; ngân sách từ của lời tính theo trọng số (khoảng 13–17 từ cho một đơn vị, tức năm giây). Không còn lời thoại chung cho cả bài: lời cả bài là các đoạn ghép lại. Lược đồ đầu ra không phụ thuộc block nào. Mô hình phải trả về đúng số cảnh, đúng thứ tự; khóa lạ bị bỏ, không bị từ chối.
 
 Ba bất biến do node này giữ:
 
 1. **Khóa đã ràng buộc không bao giờ được hỏi mô hình**, và **dữ kiện đã ràng buộc không bao giờ vào prompt**. Số sao, lệnh cài, đường dẫn đi thẳng từ `FactSheet` tới Đóng Gói Timeline; mô hình không có gì để chép sai.
 2. Prompt được dựng từ các nguồn tách bạch: đề bài mang ý đồ, beat mang cấu trúc, từ vựng nội dung mang hình dạng, dữ kiện mang sự thật. Không có gì trong prompt nói về một loại video, một block hay một stage cụ thể.
-3. Đổi giao diện không tốn tiền: Look không nằm trong chữ ký của node này, nên sửa màu, font, block hay dàn cảnh chỉ chạy lại Look và Đóng Gói Timeline (hai hàm thuần).
+3. Đổi giao diện không tốn tiền: Đạo Diễn Mỹ Thuật không nằm trong chữ ký của node này, nên sửa màu, font, block hay dàn cảnh chỉ chạy lại Đạo Diễn Mỹ Thuật và Đóng Gói Timeline (hai hàm thuần).
 
-Vòng gọi mô hình (`nodes/director/loop.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `nodes/director/beats.ts`, prompt ở `nodes/director/prompt.ts`.
+Vòng gọi mô hình (`nodes/screenwriter/loop.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `nodes/screenwriter/beats.ts`, prompt ở `nodes/screenwriter/prompt.ts`.
 
-Hệ quả: một video GitHub showcase là *node này* với bảy beat và ba ràng buộc dữ kiện, rồi một Look `developer-dark` dàn sáu block theo vai; một video trích dẫn là *node này* với beat `title ×1, quote ×4`, rồi một Look `ink` hai block. Người dùng dựng cả hai từ canvas trống; sự khác nhau nằm trọn trong dữ liệu, và một bản mẫu chia sẻ mang theo cả giao diện vì nó mang theo các node Look.
+Hệ quả: một video GitHub showcase là *node này* với bảy beat và ba ràng buộc dữ kiện, rồi một Đạo Diễn Mỹ Thuật `developer-dark` với hai mươi block dàn theo nội dung (chỉ tone ghim theo vai); một video trích dẫn là *node này* với beat `title ×1, quote ×4`, rồi một Đạo Diễn Mỹ Thuật `ink` hai block. Người dùng dựng cả hai từ canvas trống; sự khác nhau nằm trọn trong dữ liệu, và một bản mẫu chia sẻ mang theo cả giao diện vì nó mang theo các node Đạo Diễn Mỹ Thuật.
 
-### 5.9. Look
+### 5.9. Đạo Diễn Mỹ Thuật (Art Director)
 
-Node `core/look`, chặng giao diện của luồng: nhận `SceneScript` (2.11) từ Đạo Diễn AI hay Kịch Bản Tĩnh, phát `DirectorPlan` (2.3) cho Đóng Gói Timeline. Tham số của node **là** giao diện: stage (2.6) cộng danh mục block diễn trên nó, `id` block không trùng, cộng bảng **dàn cảnh** `casting: [{ role, block?, tone? }]`.
+Node `core/art-director`, chặng giao diện của luồng: nhận `SceneScript` (2.11) từ Biên Kịch hay Kịch Bản Tĩnh, phát `ScenePlan` (2.3) cho Đóng Gói Timeline. Tham số của node **là** giao diện: stage (2.6) cộng danh mục block diễn trên nó, `id` block không trùng, cộng bảng **dàn cảnh** `casting: [{ role, block?, tone? }]`.
 
-**Dàn cảnh** (`nodes/look/cast.ts`, hàm thuần, không gọi mô hình): với từng cảnh, (1) nếu vai có block ghim trong `casting` và block đó hiện được cảnh thì dùng; (2) không thì chấm điểm mọi block: block thiếu prop bắt buộc mà nội dung không có (và không ràng buộc dữ kiện) bị loại, còn lại block **điền được nhiều prop nhất** thắng, hòa thì theo thứ tự danh mục; (3) đổ nội dung vào prop theo ánh xạ `content` (2.7): chuỗi, danh sách ghép chuỗi, con số đọc từ chữ ("4,321" → 4321); (4) đổi `factBindings` khóa nội dung → khóa dữ kiện thành prop → dữ kiện của block đã chọn; (5) `fields` của stage lấy từ khóa nội dung trùng tên (`kicker`, `source`), tôn trọng `options`; (6) `tone` theo vai trong `casting` nếu stage có tone đó. Block ghim mà không hiện được cảnh thì ghi cảnh báo và rơi về (2). Cảnh không block nào hiện được là lỗi `NODE_PARAMS_INVALID` từ preflight, nêu block gần nhất còn thiếu gì. Đổi tham số là đổi giao diện, lưu workflow là lưu luôn giao diện. Mặc định là stage `Dark` với ba tone `cool/warm/green`, trường `kicker`, và một block `text-card`.
+**Dàn cảnh** (`nodes/art-director/cast.ts`, hàm thuần, không gọi mô hình): với từng cảnh, (1) nếu vai có block ghim trong `casting` và block đó hiện được cảnh thì dùng; (2) không thì chấm điểm mọi block: block thiếu prop bắt buộc mà nội dung không có (và không ràng buộc dữ kiện) bị loại, còn lại block **làm rơi ít nội dung nhất** thắng (một block *hiện được trọn* cảnh khi mọi khóa nội dung cảnh có đều có prop đón, trừ khóa stage tự vẽ như `kicker`; block hiện được nhưng bỏ rơi khóa nào thì kế hoạch ghi cảnh báo nêu khóa đó), rồi block **điền được nhiều prop nhất**, hòa thì block **ít prop tùy chọn bị bỏ trống nhất** (block sinh ra cho đúng nội dung này), rồi block **ít được dùng nhất** trong lần dàn này (một dãy cảnh giống nhau không dồn hết vào thẻ đầu danh mục), rồi thứ tự danh mục; (3) đổ nội dung vào prop theo ánh xạ `content` (2.7): chuỗi, danh sách ghép chuỗi, con số đọc từ chữ ("4,321" → 4321); chữ dài hơn `max` của prop bị cắt ở ranh giới từ kèm dấu ba chấm và ghi cảnh báo, danh sách dài hơn `max` bị cắt, danh sách ngắn hơn `min` coi như không có; (4) đổi `factBindings` khóa nội dung → khóa dữ kiện thành prop → dữ kiện của block đã chọn; (5) `fields` của stage lấy từ khóa nội dung trùng tên (`kicker`, `source`), tôn trọng `options`; (6) `tone` theo vai trong `casting` nếu stage có tone đó. Block ghim mà không hiện được cảnh thì ghi cảnh báo và rơi về (2). Cảnh không block nào hiện được là lỗi `NODE_PARAMS_INVALID` từ preflight, nêu block gần nhất còn thiếu gì.
+
+**Dàn cảnh bằng mô hình** (`nodes/art-director/cast-ai.ts`): Đạo Diễn Mỹ Thuật có cổng thành phần `llm` (`LLMRef`, tùy chọn). Nối vào, node gửi một prompt cho cả video — mỗi cảnh: vai, lời đọc, nội dung trên màn hình, và **danh sách block hiện được trọn cảnh đó** do quy tắc lọc sẵn (không block nào trọn thì mới đưa các block hiện được một phần, ghi rõ mỗi block làm rơi gì); mỗi block kèm `doc.when` của nó; các tone của stage — và nhận về block (và tone) cho từng cảnh. Thứ tự ưu tiên: bảng dàn cảnh của người dùng, rồi lựa chọn của mô hình, rồi quy tắc; mô hình chọn block ngoài danh sách thì cảnh đó về quy tắc kèm cảnh báo. Trả lời sai dạng thử lại một lần; lỗi lần hai thì cả video dàn theo quy tắc kèm cảnh báo, không chặn luồng. Không có gì để hỏi (mọi cảnh đã ghim hay chỉ một block hợp) thì không gọi.
+
+**Viết block mới** (`nodes/art-director/author.ts`): khi có mô hình nối vào và một cảnh **không block nào hiện được trọn** (mọi block đều thiếu chỗ cho ít nhất một khóa nội dung), node không dừng mà nhờ mô hình viết một block cho cảnh đó: prop ánh xạ đúng các khóa nội dung cảnh có (kể cả khóa ràng buộc dữ kiện), dòng `when`, ví dụ, và code theo token của stage, cùng bộ quy tắc với sửa bằng lời cộng một block sẵn có làm mẫu giọng. Block được kiểm như block viết tay: lược đồ, lint (`data-prop` cho mọi prop, không `from()`), và phải hiện được trọn cảnh; sai thì hỏi lại một lần kèm lý do, sai nữa là lỗi `BLOCK_AUTHOR_FAILED`. Hệ quả cho một workflow mới chỉ có `text-card`: cảnh chỉ có tiêu đề và thân dùng `text-card`, cảnh có gạch đầu dòng, con số hay trích dẫn được viết block riêng ngay lần chạy đầu, và node tích lũy bộ block của chính video đó. Block dùng ngay trong lần chạy này và được **ghi vào tham số của node** (`RunContext.patchParams`, Bộ Máy Thực Thi mục 3): workflow hiện chưa lưu, block xuất hiện trong mục blocks như block người dùng thêm, sửa hay bỏ như thường, hoàn tác được. Không nối mô hình thì preflight vẫn chặn như trước. Sửa giao diện vẫn không tốn: câu trả lời của mô hình được máy chủ giữ theo prompt (Bộ Máy Thực Thi mục 3), cùng kịch bản cùng danh mục là cùng câu trả lời, không gọi lại. Đổi tham số là đổi giao diện, lưu workflow là lưu luôn giao diện. Mặc định là stage `Dark` với ba tone `cool/warm/green`, trường `kicker`, và một block `text-card`.
 
 Thân node: tên, tỉ lệ khung, ba mục gập mở (bảng màu, font, tones), mục **blocks** là danh sách mỗi dòng một block với ảnh nhỏ, bấm để mở sửa đúng block đó, có thêm, nhân bản, bỏ; mục **dàn cảnh** liệt kê các vai đọc từ node kịch bản nối vào (beat hay cảnh gõ tay), mỗi vai một ô chọn block ("theo nội dung" hay một block) và một ô chọn tone. Chỗ, dáng và code của stage lẫn block sửa trong modal (2.6).
 
 ### 5.10. Vì sao giao diện là một chặng sau kịch bản
 
-Trước đây stage và block là hai node rồi một node, nhưng luôn nối *vào* đạo diễn: mô hình chọn block và viết props của block, nên giao diện phải có trước kịch bản, và sửa một màu là chạy lại mô hình vì Look nằm trong chữ ký của đạo diễn. Đảo lại theo đúng quy trình sản xuất: kịch bản → dàn cảnh → dựng. Đạo diễn chỉ viết nội dung theo từ vựng cố định; Look đứng sau dàn block, tone, trường stage bằng quy tắc; cùng một kịch bản đổi Look chỉ cần nối lại dây; sửa giao diện chạy lại hai hàm thuần trong tích tắc. Từ "Look" là tên chung cho cả hai phần; bên trong, *stage* vẫn là cái vỏ và *block* vẫn là kiểu cảnh — `DirectorPlan` và IR giữ nguyên `stage` + `blocks`. Không còn cổng nhiều dây trong lõi.
+Trước đây stage và block là hai node rồi một node, nhưng luôn nối *vào* đạo diễn (node nay là Biên Kịch): mô hình chọn block và viết props của block, nên giao diện phải có trước kịch bản, và sửa một màu là chạy lại mô hình vì node giao diện nằm trong chữ ký của node viết kịch bản. Đảo lại theo đúng quy trình sản xuất: kịch bản → dàn cảnh → dựng. Đạo diễn chỉ viết nội dung theo từ vựng cố định; Đạo Diễn Mỹ Thuật đứng sau dàn block, tone, trường stage bằng quy tắc; cùng một kịch bản đổi Đạo Diễn Mỹ Thuật chỉ cần nối lại dây; sửa giao diện chạy lại hai hàm thuần trong tích tắc. Từ "look" vẫn là tên chung cho bộ giao diện node này giữ; bên trong, *stage* vẫn là cái vỏ và *block* vẫn là kiểu cảnh — `ScenePlan` và IR giữ nguyên `stage` + `blocks`. Không còn cổng nhiều dây trong lõi.
 
 ### 5.11. Truy Xuất Repo (GitHub Fetcher)
 
@@ -280,6 +288,8 @@ Node lõi `core/github-fetcher`: nhận `SourceRef`, phát `FactSheet`. Link rep
 ### 5.12. Căn Mốc Từ (Transcribe)
 
 Node lõi `core/transcribe`: nhận `Voiceover` và `AudioScript`, phát `Voiceover` có `words`. Là **căn chỉnh cưỡng bức**, không phải nhận dạng: văn bản đã biết, công cụ chỉ trả lời mỗi từ được đọc lúc nào, nên model nhỏ là đủ và chữ không bao giờ sai. Chạy qua `services.alignWords` → `nodes/transcribe/align.server.ts` gọi `stable-ts` bằng Python trong venv `.nodecine/tools/stable-ts` (`npm run setup:align` cài một lần; `NODECINE_ALIGN_PYTHON` ghi đè); lời thoại đi qua stdin, đường dẫn audio dựng lại từ tên băm của `audioUrl`. Kết quả qua `retime` để chữ là chữ của kịch bản, chỉ mượn mốc thời gian. Voice-over đã có `words` (nhà cung cấp trả sẵn, ví dụ ElevenLabs sau này) thì đi qua nguyên vẹn. Tham số: `model` (`small` mặc định, `medium`, `large-v3`). Thiếu công cụ báo `PROVIDER_NOT_INSTALLED` kèm lệnh cài; căn chỉnh hỏng báo `ALIGN_FAILED`.
+
+Đầu ra của bộ căn là một JSON mỗi từ một mục, dài quá trần 8 KB mặc định của `exec` từ khoảng 150 từ trở lên; node đặt trần riêng 8 MB và coi đầu ra bị cắt là lỗi `ALIGN_FAILED` nêu rõ, không đọc JSON cụt.
 
 ### 5.13. Phụ Đề (Captions)
 
@@ -334,7 +344,7 @@ Tham chiếu là dữ liệu, không phải đối tượng: không bao giờ ch
 - `probe()` như trên.
 - `complete(prompt, outputSchema, signal)`: Gửi lời nhắc, nhận về một đối tượng đã kiểm định theo `outputSchema` (Zod). Với `claude-code`: chạy tệp thực thi ở chế độ in một lần với đầu ra JSON, lời nhắc qua đầu vào chuẩn, đọc trường kết quả, kiểm định; sai cấu trúc hoặc sai ngôn ngữ thì thử lại một lần với chỉ dẫn siết chặt. Lượt gọi tính vào tài khoản Claude Code của người dùng; ứng dụng không lưu thông tin đăng nhập nào. Tiến trình được sinh trong một thư mục tạm rỗng, tắt toàn bộ công cụ và giới hạn một lượt, để mô hình không đọc được mã nguồn hay tệp của người dùng; chi tiết tại Kiến trúc Hệ thống mục 8.
 
-Node gọi `complete()` là node đạo diễn của gói; lõi không có node nào gọi mô hình ngôn ngữ.
+Node gọi `complete()` là node biên kịch của gói; lõi không có node nào gọi mô hình ngôn ngữ.
 
 ---
 
@@ -375,11 +385,11 @@ Node chạy trong executor ở máy chủ (ARCHITECTURE §1.2), nên một node 
 
 ## 10. Bản Mẫu
 
-Không có tầng "nội dung kèm app" nữa. Mọi node là node lõi (mục 5), giao diện là dữ liệu trong node Look (stage và blocks). Hai thứ cùng hình dạng nhưng khác vai, như trong ComfyUI: **bản mẫu** là đồ thị dựng sẵn ship kèm app, mở ra là một bản nháp mới; **workflow** là tệp của người dùng, lưu, đổi tên, nhập, xóa ở thanh tab và panel Workflow. Cùng lược đồ `TemplateDefinition`, nên một workflow tải xuống và một bản mẫu chia sẻ là cùng một loại tệp.
+Không có tầng "nội dung kèm app" nữa. Mọi node là node lõi (mục 5), giao diện là dữ liệu trong node Đạo Diễn Mỹ Thuật (stage và blocks). Hai thứ cùng hình dạng nhưng khác vai, như trong ComfyUI: **bản mẫu** là đồ thị dựng sẵn ship kèm app, mở ra là một bản nháp mới; **workflow** là tệp của người dùng, lưu, đổi tên, nhập, xóa ở thanh tab và panel Workflow. Cùng lược đồ `TemplateDefinition`, nên một workflow tải xuống và một bản mẫu chia sẻ là cùng một loại tệp.
 
 ### 10.1. Bản mẫu (template) là dữ liệu
 
-Một bản mẫu là **một đồ thị đã lưu**: `{ id, name, description?, category, graph }`, trong đó `graph` có đúng hình dạng `lib/storage.ts` ghi khi người dùng lưu dự án. Nó gọi tên node bằng chuỗi và không import gì; giao diện của nó nằm trong tham số của các node Look bên trong đồ thị. Registry ở `core/templates/registry.ts` kiểm định hình dạng lúc đăng ký và trả ra bản sao khi mở.
+Một bản mẫu là **một đồ thị đã lưu**: `{ id, name, description?, category, graph }`, trong đó `graph` có đúng hình dạng `lib/storage.ts` ghi khi người dùng lưu dự án. Nó gọi tên node bằng chuỗi và không import gì; giao diện của nó nằm trong tham số của các node Đạo Diễn Mỹ Thuật bên trong đồ thị. Registry ở `core/templates/registry.ts` kiểm định hình dạng lúc đăng ký và trả ra bản sao khi mở.
 
 Registry chỉ chứa **bản mẫu ship kèm** (tệp JSON dưới `templates/`). Workflow của người dùng là một thứ khác và không vào registry: chúng là **tệp trên máy chủ** trong `.nodecine/workflows/<id>.json` (đổi bằng `NODECINE_WORKFLOWS_DIR`), theo mô hình `userdata/workflows` của ComfyUI: một tệp một workflow, cùng hình dạng bản mẫu cộng `schemaVersion` và `updatedAt`, ghi nguyên tử, đọc lại thì tự nâng phiên bản. API: `GET/POST /api/workflows`, `GET/PUT/DELETE /api/workflows/<id>`, `POST /api/workflows/from-video`. `id` là tên tệp và bị lược đồ kiểm định; đường dẫn chỉ được dựng ở `server/workflows.ts`. Id `current` được giữ riêng và không liệt kê.
 

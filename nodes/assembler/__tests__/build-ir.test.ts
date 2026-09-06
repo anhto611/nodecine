@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildIR, applyFactBindings } from '../build-ir';
 import { validateIR, IRInvalidError } from '@/core/types/validate-ir';
-import type { DirectorPlan, FactSheet, Voiceover } from '@/core/types/payloads';
+import type { ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
 import { HOOK, STAGE, TEXT_CARD } from '@/core/__tests__/look-fixtures';
 
 const voiceover: Voiceover = {
@@ -12,7 +12,7 @@ const voiceover: Voiceover = {
   speed: 1,
 };
 
-const plan: DirectorPlan = {
+const plan: ScenePlan = {
   language: 'en',
   stage: STAGE,
   blocks: [TEXT_CARD, HOOK],
@@ -55,7 +55,7 @@ describe('buildIR', () => {
       fetchedAt: 'x',
       mode: 'fetched',
     };
-    const p: DirectorPlan = {
+    const p: ScenePlan = {
       ...plan,
       scenes: [{ blockId: 'hook', weight: 1, props: { headline: 'H', stars: 999999 }, factBindings: { stars: 'stars' } }],
     };
@@ -69,17 +69,17 @@ describe('buildIR', () => {
   });
 
   it('invariant 5: a scene naming a block the plan does not carry is rejected', () => {
-    const p: DirectorPlan = { ...plan, scenes: [{ blockId: 'nope', weight: 1, props: {} }] };
+    const p: ScenePlan = { ...plan, scenes: [{ blockId: 'nope', weight: 1, props: {} }] };
     expect(() => buildIR({ plan: p, voiceover })).toThrow(IRInvalidError);
   });
 
   it('invariant 5: props that do not fit the block are rejected', () => {
-    const p: DirectorPlan = { ...plan, scenes: [{ blockId: 'text-card', weight: 1, props: { headline: '' } }] };
+    const p: ScenePlan = { ...plan, scenes: [{ blockId: 'text-card', weight: 1, props: { headline: '' } }] };
     expect(() => buildIR({ plan: p, voiceover })).toThrow(/headline/);
   });
 
   it('invariant 5: a tone the stage lacks is rejected', () => {
-    const p: DirectorPlan = { ...plan, scenes: [{ blockId: 'text-card', weight: 1, props: { headline: 'A' }, tone: 'neon' }] };
+    const p: ScenePlan = { ...plan, scenes: [{ blockId: 'text-card', weight: 1, props: { headline: 'A' }, tone: 'neon' }] };
     expect(() => buildIR({ plan: p, voiceover })).toThrow(/neon/);
   });
 });

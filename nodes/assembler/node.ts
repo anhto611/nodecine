@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { buildIR, DEFAULT_ASSEMBLER_PARAMS } from '@/nodes/assembler/build-ir';
-import type { CaptionTrack, DirectorPlan, FactSheet, Voiceover } from '@/core/types/payloads';
+import type { CaptionTrack, ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { ErrorCode } from '@/core/errors';
 
@@ -17,7 +17,7 @@ export const timelineAssembler: NodeDefinition<typeof Params> = {
   namespace: 'core',
   kind: 'process',
   inputs: [
-    { name: 'plan', type: 'DirectorPlan' },
+    { name: 'plan', type: 'ScenePlan' },
     { name: 'voiceover', type: 'Voiceover' },
     { name: 'facts', type: 'FactSheet', required: false },
     { name: 'captions', type: 'CaptionTrack', required: false },
@@ -26,7 +26,7 @@ export const timelineAssembler: NodeDefinition<typeof Params> = {
   paramsSchema: Params,
   defaultParams: DEFAULT_ASSEMBLER_PARAMS,
   run: async ({ params, inputs, log }) => {
-    const plan = inputs.plan!.payload as DirectorPlan;
+    const plan = inputs.plan!.payload as ScenePlan;
     const voiceover = inputs.voiceover!.payload as Voiceover;
     const facts = inputs.facts?.payload as FactSheet | undefined;
     const captions = inputs.captions?.payload as CaptionTrack | undefined;

@@ -199,6 +199,12 @@ export class RemoteExecutor {
     es.addEventListener('run:step', (m) => { const e = JSON.parse((m as MessageEvent).data) as { nodeId: string; step: number; stepTotal: number }; this.hooks.onStep?.(e); });
     es.addEventListener('run:end', (m) => { const e = JSON.parse((m as MessageEvent).data) as { runId: number; ok: boolean; durationMs: number }; this.hooks.onRunEnd?.(e); });
     es.addEventListener('history', (m) => { const e = JSON.parse((m as MessageEvent).data) as { history: RunRecord[] }; this.hooks.onHistory?.(e.history); });
+    es.addEventListener('params', (m) => {
+      const e = JSON.parse((m as MessageEvent).data) as { nodeId: string; patch: Record<string, unknown> };
+      // Mirror it here first so the next graph push does not undo what the node just did.
+      this.graph = { ...this.graph, nodes: this.graph.nodes.map((n) => (n.id === e.nodeId ? { ...n, params: { ...n.params, ...e.patch } } : n)) };
+      this.hooks.onParamsPatch?.(e.nodeId, e.patch);
+    });
     es.addEventListener('log', (m) => { const e = JSON.parse((m as MessageEvent).data) as { entry: LogEntry }; this.logs.push(e.entry); });
     es.addEventListener('job', (m) => {
       const { job } = JSON.parse((m as MessageEvent).data) as { job: Job };

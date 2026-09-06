@@ -18,15 +18,15 @@ beforeEach(() => {
 describe('a fresh install', () => {
   it('offers these node types in the Library, and no fewer', () => {
     expect(listNodeTypes().map((d) => d.type).sort()).toEqual([
-      'core/ai-director',
+      'core/art-director',
       'core/captions',
       'core/github-fetcher',
       'core/hyperframes-engine',
       'core/input-trigger',
       'core/llm-provider',
-      'core/look',
       'core/mp4-export',
       'core/remotion-engine',
+      'core/screenwriter',
       'core/static-script',
       'core/timeline-assembler',
       'core/transcribe',

@@ -12,8 +12,8 @@
   "graph": {
     "nodes": [
       {
-        "id": "look",
-        "type": "core/look",
+        "id": "art-director",
+        "type": "core/art-director",
         "params": {
           "name": "Ink",
           "frame": {
@@ -161,8 +161,8 @@
         }
       },
       {
-        "id": "director",
-        "type": "core/ai-director",
+        "id": "screenwriter",
+        "type": "core/screenwriter",
         "params": {
           "prompt": "A short vertical video of motivational quote cards on the subject. Quotes are one or two sentences each, under 200 characters, with who said them — or a source such as \"an old proverb\" when unsure. Never attribute a quote to a famous person who did not say it. Keep one tone across every card. The narration introduces and connects the quotes rather than reading them aloud; warm and unhurried.",
           "outputLanguage": "auto",
@@ -280,9 +280,9 @@
     "edges": [
       {
         "id": "scenes",
-        "source": "director",
+        "source": "screenwriter",
         "sourcePort": "scenes",
-        "target": "look",
+        "target": "art-director",
         "targetPort": "scenes"
       },
       {
@@ -294,7 +294,7 @@
       },
       {
         "id": "c2",
-        "source": "director",
+        "source": "screenwriter",
         "sourcePort": "script",
         "target": "transcribe",
         "targetPort": "script"
@@ -317,19 +317,19 @@
         "id": "e1",
         "source": "input",
         "sourcePort": "source",
-        "target": "director",
+        "target": "screenwriter",
         "targetPort": "source"
       },
       {
         "id": "e2",
         "source": "llm-provider",
         "sourcePort": "llm",
-        "target": "director",
+        "target": "screenwriter",
         "targetPort": "llm"
       },
       {
         "id": "e3",
-        "source": "director",
+        "source": "screenwriter",
         "sourcePort": "script",
         "target": "tts",
         "targetPort": "script"
@@ -343,7 +343,7 @@
       },
       {
         "id": "plan",
-        "source": "look",
+        "source": "art-director",
         "sourcePort": "plan",
         "target": "assembler",
         "targetPort": "plan"
@@ -368,6 +368,13 @@
         "sourcePort": "engine",
         "target": "output",
         "targetPort": "engine"
+      },
+      {
+        "id": "look-llm",
+        "source": "llm-provider",
+        "sourcePort": "llm",
+        "target": "art-director",
+        "targetPort": "llm"
       }
     ]
   }

@@ -19,7 +19,7 @@ const fakeDirector: NodeDefinition<typeof Params> = {
   kind: 'source',
   inputs: [],
   outputs: [
-    { name: 'plan', type: 'DirectorPlan' },
+    { name: 'plan', type: 'ScenePlan' },
     { name: 'script', type: 'AudioScript' },
   ],
   paramsSchema: Params,

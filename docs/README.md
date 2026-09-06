@@ -1,6 +1,6 @@
 # Tài liệu NodeCine
 
-Docs chia theo mã nguồn: **lõi** (mọi node, hai engine, các nhà cung cấp) và **bản mẫu** (đồ thị JSON dựng lại được từ canvas trống, mang theo giao diện của chính nó trong node Look). Đọc lõi trước; phần kia chỉ có nghĩa khi đã hiểu lõi.
+Docs chia theo mã nguồn: **lõi** (mọi node, hai engine, các nhà cung cấp) và **bản mẫu** (đồ thị JSON dựng lại được từ canvas trống, mang theo giao diện của chính nó trong node Đạo Diễn Mỹ Thuật). Đọc lõi trước; phần kia chỉ có nghĩa khi đã hiểu lõi.
 
 Một quy ước xuyên suốt: **`STATUS.md` nói cái gì đã dựng xong, mọi tài liệu khác nói luật.** Thêm một provider hay một engine chỉ sửa `STATUS.md`; sửa tài liệu luật nghĩa là hợp đồng đổi.
 
@@ -18,7 +18,7 @@ Một quy ước xuyên suốt: **`STATUS.md` nói cái gì đã dựng xong, m�
 
 ## Bản mẫu
 
-6. [`templates/github-showcase.md`](templates/github-showcase.md) — GitHub Repo Showcase. Node Truy Xuất Repo và dữ kiện, stage `developer-dark` và ba block, đồ thị mười bốn node dùng Đạo Diễn AI, Kịch bản 1 đến 3b, lỗi và tiêu chí nghiệm thu.
+6. [`templates/github-showcase.md`](templates/github-showcase.md) — GitHub Repo Showcase. Node Truy Xuất Repo và dữ kiện, stage `developer-dark` và ba block, đồ thị mười bốn node dùng Biên Kịch, Kịch bản 1 đến 3b, lỗi và tiêu chí nghiệm thu.
 7. [`templates/quote-cards.md`](templates/quote-cards.md) — Thẻ Trích Dẫn. Stage `ink` và hai block, đồ thị mười một node không mạng; bốn điểm khác về cấu trúc so với bản trên.
 
 ## Thuật ngữ
@@ -30,9 +30,11 @@ Thuật ngữ chuyên ngành giữ nguyên tiếng Anh trong cả code lẫn tà
 | node của đồ thị | `node` | node — không dịch |
 | vỏ giao diện cố định mà mọi cảnh của một workflow diễn ra trên đó: nền, vùng an toàn, chỗ phụ đề, bộ xương cảnh, bảng màu, font, hệ tone | phần stage của `LookDef`, `plan.stage` | stage *(sân khấu)* |
 | archetype cảnh cắm vào stage: lược đồ props, `doc`, code HTML/GSAP | `blocks[]` của `LookDef`, kiểu `BlockDef` | block *(khối)* |
-| giao diện của một workflow: stage cộng danh mục block cộng bảng dàn cảnh; chặng đứng sau kịch bản, nhận phân cảnh và phát kế hoạch dựng | node `core/look`, cổng vào `SceneScript`, cổng ra `DirectorPlan` | look |
+| node giữ giao diện và khoác nó lên kịch bản: stage cộng danh mục block cộng bảng dàn cảnh; chặng đứng sau kịch bản, nhận phân cảnh (và tùy chọn một mô hình để chọn block) và phát kế hoạch dựng | node `core/art-director`, cổng vào `SceneScript` + `llm`, cổng ra `ScenePlan` | Đạo Diễn Mỹ Thuật *(Art Director)* |
+| bộ giao diện mà Đạo Diễn Mỹ Thuật giữ: stage cộng block — dữ liệu, không phải node | `LookDef`, `core/look/`, modal sửa giao diện | look |
+| node viết lời đọc và nội dung từng cảnh từ đề bài và beat, không biết block | node `core/screenwriter`, phát `SceneScript` + `AudioScript` | Biên Kịch *(Screenwriter)* |
 | video đã chia cảnh với nội dung theo từ vựng cố định, chưa có giao diện | cổng `SceneScript`, `CONTENT_KEYS` | phân cảnh |
-| một mục trong danh sách của Đạo Diễn AI: vai trò, brief, số cảnh, các block được phép | `beat` | beat *(nhịp)* |
+| một mục trong danh sách của Biên Kịch: vai trò, brief, số cảnh, ràng buộc dữ kiện | `beat` | beat *(nhịp)* |
 | một ô thời gian trong timeline = một block + props + tone | `scene` | cảnh |
 | biến thể màu theo cảnh, đổi nền lẫn màu nhấn cùng lúc | `tone` | tone |
 | khung hình video — **chỉ** nghĩa này | `frame`, `fps`, `totalDurationInFrames` | khung hình |

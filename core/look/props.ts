@@ -3,7 +3,7 @@ import type { BlockDef, BlockField, StageDef } from '../types/payloads';
 
 /**
  * A block's `props` table is the only description of what goes into it (CORE_CONTRACTS §2.7).
- * Everything that needs a shape derives it from here — what the director asks the model for, what
+ * Everything that needs a shape derives it from here — what the screenwriter asks the model for, what
  * the Static Script accepts, what the IR validator checks — so no block has a hand-written schema.
  */
 

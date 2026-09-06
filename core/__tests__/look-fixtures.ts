@@ -1,6 +1,6 @@
 import type { BlockDef, StageDef } from '../types/payloads';
-import { DEFAULT_BLOCK } from '@/nodes/look/blocks';
-import { DEFAULT_STAGE } from '@/nodes/look/node';
+import { DEFAULT_BLOCK } from '@/nodes/art-director/blocks';
+import { DEFAULT_STAGE } from '@/nodes/art-director/node';
 
 /** The shipped dark stage and text card, plus a hook block with a fact-bound number, for tests. */
 export const STAGE: StageDef = DEFAULT_STAGE;
@@ -29,10 +29,10 @@ export const CARD: BlockDef = {
   code: { format: 'html-gsap', source: '<div></div>' },
 };
 
-/** A Look node for a test graph: the stage, the blocks, and who plays which role. */
-export const lookNode = (id = 'look', blocks: BlockDef[] = [TEXT_CARD], casting: { role: string; block?: string; tone?: string }[] = [], stage: StageDef = STAGE) => ({
+/** A Art Director node for a test graph: the stage, the blocks, and who plays which role. */
+export const lookNode = (id = 'art-director', blocks: BlockDef[] = [TEXT_CARD], casting: { role: string; block?: string; tone?: string }[] = [], stage: StageDef = STAGE) => ({
   id,
-  type: 'core/look',
+  type: 'core/art-director',
   params: { ...stage, blocks, casting },
   bypassed: false,
   position: { x: 0, y: 0 },

@@ -8,19 +8,21 @@ import { FormBody } from '@/nodes/form-body';
 import { pickVoice, voiceSpeaks } from './node';
 
 /**
- * Which language the narration will be in, before there is a narration. The script payload is the
- * truth once the upstream node has run; until then the director's own setting is the best guess,
- * and the interface language after that. Without this the list showed English voices to someone
- * who had set everything to Vietnamese and simply had not pressed Run yet.
+ * Which language the narration will be in. An explicit output language on the upstream node is
+ * what the next run will produce, so it wins even over a script that already exists — the old
+ * script may be from before the setting changed. Otherwise the script payload is the truth once
+ * the upstream node has run and is not stale; until then the interface language is the guess.
+ * Without this the list showed English voices to someone who had just switched to Vietnamese.
  */
 function useScriptLanguage(nodeId: string, script: AudioScript | undefined): { lang: string; source: 'script' | 'guess' } {
   const graph = useStudio((s) => s.graph);
   const locale = useStudio((s) => s.locale);
-  if (script?.language) return { lang: script.language, source: 'script' };
   const edge = graph.edges.find((e) => e.target === nodeId && e.targetPort === 'script');
   const upstream = edge ? graph.nodes.find((n) => n.id === edge.source) : undefined;
+  const upstreamState = useStudio((s) => (upstream ? s.runtimes[upstream.id]?.state : undefined));
   const set = upstream?.params.outputLanguage;
   if (typeof set === 'string' && set && set !== 'auto') return { lang: set, source: 'guess' };
+  if (script?.language && upstreamState !== 'stale') return { lang: script.language, source: 'script' };
   return { lang: locale, source: 'guess' };
 }
 

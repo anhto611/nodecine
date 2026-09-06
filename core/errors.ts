@@ -11,7 +11,7 @@ export const ErrorCode = {
   LLM_UPSTREAM: 'LLM_UPSTREAM',
   /** A provider could not get schema-valid JSON out of the model. Thrown by providers, so core's. */
   LLM_SCHEMA_INVALID: 'LLM_SCHEMA_INVALID',
-  /** The director asked for one language and the model wrote in another, twice. */
+  /** The screenwriter asked for one language and the model wrote in another, twice. */
   LLM_LANGUAGE_MISMATCH: 'LLM_LANGUAGE_MISMATCH',
   TTS_UPSTREAM: 'TTS_UPSTREAM',
   TTS_AUDIO_UNREADABLE: 'TTS_AUDIO_UNREADABLE',

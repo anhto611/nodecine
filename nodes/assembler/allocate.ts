@@ -15,6 +15,33 @@ export function computeTotalFrames(
   return { total, audioFrames, padTailFrames: total - audioFrames };
 }
 
+/**
+ * Frames per scene from the voice-over's own segments (CORE_CONTRACTS §5.4): each scene lasts as
+ * long as its narration, rounded to frames; the last scene takes the remainder so the total,
+ * padding included, is covered exactly. Frames borrowed the same way as weights when a scene rounds to 0.
+ */
+export function framesFromSegments(total: number, segments: { durationSeconds: number }[], fps: number): number[] {
+  if (segments.length === 0) throw new Error('at least one segment is required');
+  if (total < segments.length) throw new Error(`${total} frames cannot cover ${segments.length} scenes`);
+  const out: number[] = [];
+  let used = 0;
+  for (let i = 0; i < segments.length - 1; i++) {
+    const frames = Math.max(1, Math.round((segments[i] as { durationSeconds: number }).durationSeconds * fps));
+    out.push(frames);
+    used += frames;
+  }
+  out.push(total - used);
+  // Rounding up several short scenes can leave nothing for the last: take frames back from the longest.
+  while ((out[out.length - 1] as number) <= 0) {
+    let longest = 0;
+    for (let i = 1; i < out.length - 1; i++) if ((out[i] as number) > (out[longest] as number)) longest = i;
+    if ((out[longest] as number) <= 1) throw new Error('cannot allocate: segments do not fit the total');
+    out[longest] = (out[longest] as number) - 1;
+    out[out.length - 1] = (out[out.length - 1] as number) + 1;
+  }
+  return out;
+}
+
 export function allocateFrames(total: number, weights: number[]): number[] {
   if (!Number.isInteger(total) || total <= 0) throw new Error('total must be a positive integer');
   if (weights.length === 0) throw new Error('at least one scene is required');

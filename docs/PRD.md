@@ -6,7 +6,7 @@ Tên dự án: NodeCine
 ## 1. Tuyên ngôn Sứ mệnh & Vấn đề Cốt lõi
 
 - Vấn đề thực tế: Việc làm video ngắn (TikTok, Shorts, Reels, X video) để quảng bá một dự án mã nguồn mở hoặc repo GitHub thường đòi hỏi nhiều giờ dựng tay trên CapCut, Premiere, hoặc phụ thuộc vào các công cụ tự động dạng "hộp đen" tạo ra video chất lượng thấp, không thể tùy biến.
-- Sứ mệnh của NodeCine: Kết hợp khả năng lập trình video chuẩn xác từng khung hình của Remotion/Canvas với sự linh hoạt của đồ thị luồng (DAG Canvas). AI Agent đóng vai trò Đạo diễn (AI Director) hỗ trợ sáng tạo kịch bản phân cảnh, trong khi các tác vụ kỹ thuật (tạo giọng nói TTS, căn chỉnh khung hình, kết xuất video) được tự động hóa tuyệt đối.
+- Sứ mệnh của NodeCine: Kết hợp khả năng lập trình video chuẩn xác từng khung hình của Remotion/Canvas với sự linh hoạt của đồ thị luồng (DAG Canvas). AI Agent đóng vai trò Đạo diễn (Screenwriter) hỗ trợ sáng tạo kịch bản phân cảnh, trong khi các tác vụ kỹ thuật (tạo giọng nói TTS, căn chỉnh khung hình, kết xuất video) được tự động hóa tuyệt đối.
 
 ## 2. Người dùng Mục tiêu & Các Kịch bản Ứng dụng (Target Personas & Use Cases)
 
@@ -74,8 +74,8 @@ Nguyên tắc phân chia node, theo mô hình ComfyUI: mỗi node một trách n
 ### 4.3. Bộ Node Lõi
 
 1. Nhập Liệu (Input Trigger): Ô văn bản, phát Dữ liệu Nguồn, không diễn giải, không gọi mạng.
-2. Kịch Bản Tĩnh (Static Script): Người dùng gõ tay lời thoại và danh sách cảnh (vai, trọng số, nội dung theo từ vựng cố định); Look đứng sau dàn block và tone. Phát Kịch bản Phân cảnh và Lời thoại. Là cách dựng video không cần mô hình ngôn ngữ, và là node dùng để nghiệm thu khung.
-2b. Đạo Diễn AI (AI Director): Node đạo diễn duy nhất. Nhận `LLMRef` và tùy chọn `FactSheet` hoặc `SourceRef`; người dùng viết đề bài và các beat (vai trò, mô tả, số cảnh, block được phép, ràng buộc dữ kiện). Mô hình chọn block cho từng cảnh; lược đồ đầu ra sinh từ bảng props của block; dữ kiện đã ràng buộc không đi qua mô hình. Một video GitHub hay một video trích dẫn khác nhau chỉ ở tham số của node này và các node Stage/Block nối vào.
+2. Kịch Bản Tĩnh (Static Script): Người dùng gõ tay lời thoại và danh sách cảnh (vai, trọng số, nội dung theo từ vựng cố định); Đạo Diễn Mỹ Thuật đứng sau dàn block và tone. Phát Kịch bản Phân cảnh và Lời thoại. Là cách dựng video không cần mô hình ngôn ngữ, và là node dùng để nghiệm thu khung.
+2b. Biên Kịch (Screenwriter): Node biên kịch duy nhất. Nhận `LLMRef` và tùy chọn `FactSheet` hoặc `SourceRef`; người dùng viết đề bài và các beat (vai trò, mô tả, số cảnh, block được phép, ràng buộc dữ kiện). Mô hình chọn block cho từng cảnh; lược đồ đầu ra sinh từ bảng props của block; dữ kiện đã ràng buộc không đi qua mô hình. Một video GitHub hay một video trích dẫn khác nhau chỉ ở tham số của node này và các node Stage/Block nối vào.
 2c. Stage và Blocks: hai node nguồn mang giao diện dưới dạng dữ liệu — sân khấu chung (token, tone, trường theo cảnh, markup) và danh mục kiểu cảnh (mỗi block: props, tài liệu cho mô hình, code HTML/GSAP). Một workflow mang theo giao diện của chính nó, nên bản mẫu chia sẻ là đủ.
 3. Nhà Cung Cấp Mô Hình Ngôn Ngữ: **một** node tài nguyên phát `LLMRef`, chọn nhà cung cấp ngay trong node theo mẫu Load Checkpoint của ComfyUI — thêm nhà cung cấp không thêm node. Thân node hiện `capabilities` từ `probe()` và các tham số riêng của nhà cung cấp đang chọn; đường dẫn tệp thực thi và địa chỉ máy chủ chỉ đến từ biến môi trường, không bao giờ từ đồ thị. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
 4. Nhà Cung Cấp Giọng Đọc: **một** node tài nguyên phát `TTSRef`, cùng cơ chế chọn nhà cung cấp như trên. Thân node liệt kê giọng mà `probe()` tìm được. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
@@ -121,7 +121,7 @@ Ranh giới trách nhiệm:
 Khung phải chạy được và qua nghiệm thu trước khi bất kỳ gói nào bắt đầu. Lý do: mọi quyết định của gói đều xây trên hợp đồng lõi, và lỗi ở lõi phát hiện sau khi có gói sẽ tốn gấp nhiều lần.
 
 - **Pha A — khung lõi.** Tầng lõi, ba registry, bộ node lõi, giao diện Studio, đa ngôn ngữ, Remotion Adapter. Đồ thị nghiệm thu là **đồ thị Kịch Bản Tĩnh** bảy node: Kịch Bản Tĩnh, Giọng Đọc Nguồn, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Xuất Bản Video, Xuất MP4. Không mạng, không mô hình ngôn ngữ, không khóa.
-- **Pha B — bản mẫu đầu tiên có mô hình ngôn ngữ.** GitHub Repo Showcase: node Truy Xuất Repo, stage `developer-dark`, ba block và một đồ thị mười bốn node dùng Đạo Diễn AI, theo `templates/github-showcase.md`. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
+- **Pha B — bản mẫu đầu tiên có mô hình ngôn ngữ.** GitHub Repo Showcase: node Truy Xuất Repo, stage `developer-dark`, ba block và một đồ thị mười bốn node dùng Biên Kịch, theo `templates/github-showcase.md`. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
 
 Pha nào đã qua nghiệm thu, xem `STATUS.md`.
 
@@ -167,14 +167,14 @@ Tiêu chí riêng của bản mẫu nằm tại `templates/github-showcase.md` m
 - Thời gian kết xuất tham chiếu: một video 12 giây ở độ phân giải 1080x1920 nên hoàn tất kết xuất trong khoảng dưới 90 giây trên máy tính xách tay đời mới. Đây là chỉ tiêu tham chiếu để phát hiện suy giảm hiệu năng, không phải cam kết với người dùng.
 - Ngôn ngữ giao diện: đa ngôn ngữ ngay từ v0.1, mặc định tiếng Anh, kèm sẵn tiếng Việt. Toàn bộ chuỗi hiển thị nằm trong tệp từ điển theo mã ngôn ngữ, không có chuỗi nào mã hóa cứng trong thành phần giao diện. Người dùng đổi trong Cài đặt, lựa chọn lưu cục bộ. Ngôn ngữ giao diện và ngôn ngữ của video là hai thứ độc lập.
 - Font chữ: JetBrains Mono (SIL OFL 1.1) cho cả video lẫn giao diện Studio, đóng gói cục bộ trong kho mã, không tải từ mạng lúc chạy. Đây là điều kiện để kết xuất tất định và để ứng dụng chạy được khi ngắt mạng. Font phải có đủ dấu tiếng Việt, đã kiểm tra với JetBrains Mono.
-- Ngôn ngữ của video: với Kịch Bản Tĩnh là ngôn ngữ của lời thoại đã dán, tự nhận diện; với node đạo diễn của gói là tham số `outputLanguage` (mặc định `auto` bằng ngôn ngữ nguồn), vì chỉ ở đó mới có bước viết lại lời. Danh sách ngôn ngữ có thể chọn là giao của những gì mô hình ngôn ngữ viết được và những gì nhà cung cấp giọng đọc có giọng; ngôn ngữ không có giọng vẫn chọn được nhưng Node Giọng Đọc sẽ cảnh báo và dùng giọng dự phòng.
+- Ngôn ngữ của video: với Kịch Bản Tĩnh là ngôn ngữ của lời thoại đã dán, tự nhận diện; với node biên kịch của gói là tham số `outputLanguage` (mặc định `auto` bằng ngôn ngữ nguồn), vì chỉ ở đó mới có bước viết lại lời. Danh sách ngôn ngữ có thể chọn là giao của những gì mô hình ngôn ngữ viết được và những gì nhà cung cấp giọng đọc có giọng; ngôn ngữ không có giọng vẫn chọn được nhưng Node Giọng Đọc sẽ cảnh báo và dùng giọng dự phòng.
 
 ## 8. Định hướng Sau v0.1 (Ngoài Phạm vi Hiện tại)
 
 Các hạng mục dưới đây đã được cân nhắc và cố ý loại khỏi v0.1. Chúng được ghi lại ở đây để tránh việc vô tình thiết kế chặn đường chúng:
 
 - Định dạng block `react` cho Remotion Engine: code block là mã một component React dạng chuỗi, dịch lúc chạy trong trình duyệt và trong bundle kết xuất; node Stage/Block có ô chọn định dạng.
-- Node đạo diễn generic dùng chung cho mọi gói, nhận "công thức" gồm lời nhắc và lược đồ cảnh từ gói thay vì mỗi gói tự viết node.
+- Node biên kịch generic dùng chung cho mọi gói, nhận "công thức" gồm lời nhắc và lược đồ cảnh từ gói thay vì mỗi gói tự viết node.
 - Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng JSON, mỗi bản mang stage và block của nó; node lấy dữ liệu mới (RSS, YouTube) là node lõi riêng.
 - Họ node truy xuất dữ liệu mở rộng: Reddit Fetcher, CSV và Google Sheet Loader, Market API Fetcher. Chúng dùng chung vị trí và vai trò với Node Truy Xuất Repo trong đồ thị.
 - Nhà cung cấp cần khóa API: Anthropic, ElevenLabs và các dịch vụ đám mây khác. Tất cả cắm vào cùng cổng `LLMRef` hoặc `TTSRef` đã có, và vào cùng hai node nhà cung cấp — cái phải làm thêm là két giữ khóa, không phải node mới.

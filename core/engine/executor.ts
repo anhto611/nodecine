@@ -19,6 +19,8 @@ import type { NodeServices } from './services';
 
 export interface ExecutorHooks {
   onStateChange?: (nodeId: string, runtime: NodeRuntime) => void;
+  /** A node changed its own parameters while running (RunContext.patchParams). */
+  onParamsPatch?: (nodeId: string, patch: Record<string, unknown>) => void;
   onRunStart?: (info: { runId: number; stepTotal: number }) => void;
   onRunEnd?: (info: { runId: number; ok: boolean; durationMs: number }) => void;
   onStep?: (info: { nodeId: string; step: number; stepTotal: number }) => void;
@@ -305,6 +307,9 @@ export class Executor {
     const startedAt = this.services.now();
     this.setState(nodeId, { state: 'running', reused: false, progress: undefined, warnings: undefined });
     const warnings: { code?: string; message: string }[] = [];
+    // A forced run (Shift+Run, Retry, a single node) wants a new answer, not the one on disk.
+    const services: NodeServices = opts.force ? { ...this.services, complete: (ref, prompt, schema, sig) => this.services.complete(ref, prompt, schema, sig, { fresh: true }) } : this.services;
+    let patched: Record<string, unknown> | null = null;
     try {
       const raw = await def.run({
         nodeId,
@@ -312,12 +317,17 @@ export class Executor {
         inputs: gathered.inputs,
         lists: gathered.lists,
         signal,
-        services: this.services,
+        services,
         log: (level, message, code) => {
           if (level === 'warn') warnings.push({ code, message });
           this.log(nodeId, level, message, code);
         },
         progress: (fraction, message) => this.setState(nodeId, { progress: { fraction, message } }),
+        patchParams: (patch) => {
+          patched = { ...(patched ?? {}), ...patch };
+          this.graph = { ...this.graph, nodes: this.graph.nodes.map((n) => (n.id === nodeId ? { ...n, params: { ...n.params, ...patch } } : n)) };
+          this.hooks.onParamsPatch?.(nodeId, patch);
+        },
       });
       if (signal.aborted) throw new NodeError(ErrorCode.RUN_CANCELLED, 'cancelled');
 
@@ -334,7 +344,9 @@ export class Executor {
       }
       const result = def.outputs.length === 0 ? raw : undefined;
       const durationMs = this.services.now() - startedAt;
-      this.setState(nodeId, { state: 'success', outputs, signature, durationMs, reused: false, result, progress: undefined, warnings: warnings.length ? warnings : undefined });
+      // Signed over what the node ended up with, so a run after a self-patch reuses this one.
+      const finalSignature = patched ? computeSignature({ type: def.type, version: def.version, params: nodeById(this.graph, nodeId)!.params, inputHashes }) : signature;
+      this.setState(nodeId, { state: 'success', outputs, signature: finalSignature, durationMs, reused: false, result, progress: undefined, warnings: warnings.length ? warnings : undefined });
       this.log(nodeId, 'info', `done in ${durationMs}ms`);
       return 'success';
     } catch (err) {

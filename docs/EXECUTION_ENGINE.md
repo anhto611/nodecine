@@ -26,7 +26,7 @@ Node tài nguyên (Nhà Cung Cấp Mô Hình Ngôn Ngữ, Nhà Cung Cấp Giọn
 
 1. `probe()` không bao giờ đưa node vào `error` vì lý do "chưa sẵn sàng". Công cụ chưa cài, chưa đăng nhập, thiếu ffmpeg, engine chưa hỗ trợ đều là câu trả lời hợp lệ: node vẫn `success`, gói dữ liệu mang `capabilities` với trường tương ứng là `unavailable` kèm `reason` và `fix`. Node chỉ vào `error` khi chính `probe()` vỡ, ví dụ quá thời gian chờ.
 2. Tầng thứ hai, trạng thái sẵn sàng, được suy ra từ gói dữ liệu chứ không phải từ máy trạng thái: mọi năng lực `ready` thì huy hiệu xanh lá "sẵn sàng"; có năng lực `unavailable` thì huy hiệu vàng "chưa sẵn sàng" kèm lý do. Đây là lớp phủ hiển thị trên huy hiệu `success`, không phải trạng thái thứ mười.
-3. Node tiêu thụ tự quyết dựa trên `capabilities`: nếu năng lực nó cần là `unavailable`, nó chuyển sang `blocked` với viền vàng và thông báo lấy từ `reason` và `fix` của node tài nguyên. Viền vàng phân biệt "chặn vì năng lực" với "chặn vì node phía trước lỗi", vì cách khắc phục khác nhau. Ví dụ: Node Giọng Đọc `blocked` với "Thiếu ffmpeg, chạy `brew install ffmpeg`" trong khi Node System TTS Provider `success` và vàng; node đạo diễn của gói `blocked` tương tự khi Claude Code chưa đăng nhập.
+3. Node tiêu thụ tự quyết dựa trên `capabilities`: nếu năng lực nó cần là `unavailable`, nó chuyển sang `blocked` với viền vàng và thông báo lấy từ `reason` và `fix` của node tài nguyên. Viền vàng phân biệt "chặn vì năng lực" với "chặn vì node phía trước lỗi", vì cách khắc phục khác nhau. Ví dụ: Node Giọng Đọc `blocked` với "Thiếu ffmpeg, chạy `brew install ffmpeg`" trong khi Node System TTS Provider `success` và vàng; node biên kịch của gói `blocked` tương tự khi Claude Code chưa đăng nhập.
 
 Bộ máy tự chạy toàn bộ node tài nguyên một lần khi mở studio và mỗi khi Cài đặt thay đổi đường dẫn tệp thực thi, để trạng thái sẵn sàng hiện ra trước khi người dùng bấm Chạy Luồng. Node tài nguyên là ngoại lệ của bộ nhớ đệm chữ ký: `probe()` chạy lại ở mọi lần Chạy Luồng, vì thế giới bên ngoài (đăng xuất, gỡ ffmpeg) đổi mà chữ ký không đổi. Chi phí chỉ vài trăm mili giây. Nếu kết quả `probe()` giống hệt lần trước, mã băm của tham chiếu không đổi và mọi node phía sau vẫn được dùng lại như bình thường; nếu khác, chỉ node tiêu thụ trực tiếp chạy lại. Nút "Kiểm tra lại" trên thân node là thao tác chạy riêng node đó ngoài lần Chạy Luồng.
 
@@ -56,7 +56,7 @@ Chữ ký của một node là mã băm ổn định tính từ bốn thành ph�
 3. Toàn bộ tham số cấu hình của node, đã chuẩn hóa thứ tự trường.
 4. Danh sách mã băm nội dung của mọi gói dữ liệu đi vào các cổng nhận của node.
 
-Hệ quả trực tiếp: đổi tốc độ đọc chỉ làm thay đổi thành phần thứ ba của Node Giọng Đọc. Chữ ký của node phát Kịch bản Phân cảnh phía trước (Kịch Bản Tĩnh, hoặc node đạo diễn của gói cùng mọi node trước nó) không đổi, nên được dùng lại và không phát sinh lệnh gọi nào ra ngoài. Chữ ký của Node Đóng Gói Timeline thay đổi vì mã băm đầu vào từ Node Giọng Đọc đã khác, nên node này chạy lại, và đó là điều mong muốn.
+Hệ quả trực tiếp: đổi tốc độ đọc chỉ làm thay đổi thành phần thứ ba của Node Giọng Đọc. Chữ ký của node phát Kịch bản Phân cảnh phía trước (Kịch Bản Tĩnh, hoặc node biên kịch của gói cùng mọi node trước nó) không đổi, nên được dùng lại và không phát sinh lệnh gọi nào ra ngoài. Chữ ký của Node Đóng Gói Timeline thay đổi vì mã băm đầu vào từ Node Giọng Đọc đã khác, nên node này chạy lại, và đó là điều mong muốn.
 
 Chạy riêng một node: người dùng có thể yêu cầu bộ máy chạy đúng một node, dùng gói dữ liệu đang có trên các dây vào mà không duyệt lại đồ thị. Thao tác này phục vụ nút thử lại trên node đang lỗi, nút Kiểm tra lại trên node tài nguyên và nút Kết xuất trên Node Xuất MP4. Nếu một dây vào chưa có gói dữ liệu, yêu cầu bị từ chối trước khi chạy, kèm tên cổng còn thiếu.
 
@@ -70,6 +70,10 @@ Bốn trường hợp bắt buộc bỏ qua bộ nhớ đệm:
 Ghi chú về node truy xuất dữ kiện của gói: dữ kiện lấy từ nguồn ngoài thay đổi theo thời gian, nên kết quả dùng lại có thể đã cũ. Lõi chấp nhận điều này: node hiển thị `fetchedAt` trên thân kèm node làm mới thủ công, thay vì tự động vô hiệu hóa bộ nhớ đệm theo thời gian, vì tự làm mới sẽ khiến mọi lần chạy lại đều tốn hạn mức nguồn ngoài.
 
 ---
+
+**Node sửa tham số của chính nó.** `RunContext.patchParams(patch)` là đường duy nhất để một node đổi tham số của mình trong lúc chạy (hiện chỉ Đạo Diễn Mỹ Thuật dùng, để giữ block do mô hình viết). Bộ máy ghi patch vào đồ thị ngay, phát sự kiện `params` (JobHub → SSE → store, vào lịch sử hoàn tác, workflow chuyển sang chưa lưu), và **ký kết quả trên tham số đã vá**: lần chạy sau với đồ thị đã mang patch có cùng chữ ký nên dùng lại, không làm lại việc. Đồ thị khách gửi lên sau đó chỉ xác nhận điều máy chủ đã biết.
+
+**Bộ nhớ câu trả lời mô hình.** `services.complete` trên máy chủ ghi mọi câu trả lời xuống `.nodecine/cache/llm/<băm(nhà cung cấp, prompt)>.json` (đổi bằng `NODECINE_CACHE_DIR`) và trả lại từ đó khi gặp lại đúng prompt: sau khi restart, hay khi một node đứng sau Đạo Diễn Mỹ Thuật chạy lại vì sửa giao diện, không tốn thêm một lần gọi và kết quả y hệt. Chạy ép (Shift+Run, Thử lại, chạy một node) đi kèm `fresh` nên hỏi lại thật sự. Bộ nhớ này nằm ngoài đồ thị và ngoài chữ ký; xóa thư mục chỉ khiến lần chạy tới gọi lại.
 
 ## 4. Hủy Luồng Đang Chạy
 
@@ -168,7 +172,7 @@ Trạng thái node trong bộ nhớ (kết quả từng node, chữ ký bộ nh�
 - Mỗi node phát dòng nhật ký qua một kênh chung với cấu trúc: mốc thời gian mili giây, định danh node, mức độ gồm thông tin, cảnh báo và lỗi, mã lỗi nếu có, và thông điệp.
 - Bộ máy thực thi tự ghi các mốc: bắt đầu luồng, bắt đầu và kết thúc từng node kèm thời gian, node được dùng lại từ bộ nhớ đệm, hủy, và kết thúc luồng.
 - Tiến trình kết xuất đưa đầu ra của Remotion vào cùng kênh này với định danh node là Xuất MP4.
-- Nội dung nhật ký được lọc khóa API và mã thông báo trước khi ghi, theo quy tắc tại Kiến trúc Hệ thống mục 4. Đầu ra chuẩn của tiến trình con được đưa vào nhật ký với định danh của node tiêu thụ, cắt ở 8 KB mỗi lần gọi.
+- Nội dung nhật ký được lọc khóa API và mã thông báo trước khi ghi, theo quy tắc tại Kiến trúc Hệ thống mục 4. Đầu ra chuẩn của tiến trình con được đưa vào nhật ký với định danh của node tiêu thụ, cắt ở 8 KB mỗi lần gọi; tiến trình mà đầu ra **là dữ liệu** (bộ căn mốc từ trả JSON từng từ) tự nâng trần (`maxOutput`), và kết quả bị cắt được đánh dấu `truncated` để bên gọi báo lỗi thay vì đọc JSON cụt.
 
 ## 9. Ranh giới Kiểm thử
 
@@ -176,4 +180,4 @@ Tài liệu này đặt ra ba nhóm kiểm thử bắt buộc của lõi; gói c
 
 1. Kiểm thử phân bổ khung hình và kiểm định IR. Với một tập thời lượng âm thanh trải từ dưới ngưỡng tối thiểu tới trên ngưỡng, và với các bộ trọng số khác nhau kể cả một cảnh duy nhất, khẳng định tổng các cảnh luôn bằng đúng tổng số khung hình, cảnh liền nhau không khe hở, không cảnh nào có thời lượng bằng 0, cùng đầu vào luôn cho cùng kết quả; và hàm kiểm định IR từ chối mọi bản đặc tả dựng tay vi phạm một trong năm bất biến.
 2. Kiểm thử chữ ký node. Khẳng định việc đổi tham số của một node chỉ làm thay đổi chữ ký của chính node đó và các node phía sau, không ảnh hưởng node phía trước; và node tài nguyên probe lại nhưng mã băm không đổi thì phía sau vẫn dùng lại.
-3. Kiểm thử đè dữ kiện. Với một `FactSheet` và một `DirectorPlan` có `factBindings`, khẳng định giá trị trong IR luôn bằng giá trị trong `facts`, kể cả khi `props` gốc có cùng tên với giá trị khác; và không có `factBindings` thì `props` giữ nguyên.
+3. Kiểm thử đè dữ kiện. Với một `FactSheet` và một `ScenePlan` có `factBindings`, khẳng định giá trị trong IR luôn bằng giá trị trong `facts`, kể cả khi `props` gốc có cùng tên với giá trị khác; và không có `factBindings` thì `props` giữ nguyên.

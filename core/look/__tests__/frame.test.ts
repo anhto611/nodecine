@@ -7,9 +7,9 @@ describe('frameOf', () => {
   it('reads the stage, falls back to portrait, and ignores junk', () => {
     expect(frameOf(staticScript.graph as Graph)).toEqual({ width: 1080, height: 1920 });
     expect(frameOf({ nodes: [] })).toEqual({ width: 1080, height: 1920 });
-    const g = { nodes: [{ id: 'a', type: 'core/look', params: { frame: { width: 1920, height: 1080 } }, bypassed: false, position: { x: 0, y: 0 } }] } as unknown as Graph;
+    const g = { nodes: [{ id: 'a', type: 'core/art-director', params: { frame: { width: 1920, height: 1080 } }, bypassed: false, position: { x: 0, y: 0 } }] } as unknown as Graph;
     expect(frameOf(g)).toEqual({ width: 1920, height: 1080 });
-    const bad = { nodes: [{ id: 'a', type: 'core/look', params: { frame: { width: -3, height: 'x' } }, bypassed: false, position: { x: 0, y: 0 } }] } as unknown as Graph;
+    const bad = { nodes: [{ id: 'a', type: 'core/art-director', params: { frame: { width: -3, height: 'x' } }, bypassed: false, position: { x: 0, y: 0 } }] } as unknown as Graph;
     expect(frameOf(bad)).toEqual({ width: 1080, height: 1920 });
   });
   it('names the orientation', () => {

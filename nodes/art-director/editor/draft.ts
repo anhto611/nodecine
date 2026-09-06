@@ -39,7 +39,7 @@ export function useDraft(initial: string, resetKey: string) {
   return { source, parts, changes, setChanges, dirty, commit, undo, redo, markSaved, typeSource: setSource, sourceRef, partsRef };
 }
 
-/** Removing an element that draws a scene field removes the field too, or the director keeps writing into nothing. */
+/** Removing an element that draws a scene field removes the field too, or the screenwriter keeps writing into nothing. */
 export function removeElementDraft(cur: Draft, cls: string, stage: StageDef | null): Partial<Draft> {
   const field = fieldNameOf(cur.source, cls);
   return {

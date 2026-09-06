@@ -75,14 +75,16 @@ describe('Phase A run', () => {
     const { executor, services, graph } = setup();
     await executor.run();
     const probes = () => services.calls.filter((c) => c.name.startsWith('probe')).length;
+    // Three scenes, three narrations: the TTS engine voices each and joins them.
     const synths = () => services.calls.filter((c) => c.name === 'synthesize').length;
-    expect(synths()).toBe(1);
+    expect(synths()).toBe(3);
+    expect(services.calls.filter((c) => c.name === 'concatAudio')).toHaveLength(1);
 
     await executor.run();
     expect(executor.runtime('script').reused).toBe(true);
     expect(executor.runtime('tts').reused).toBe(true);
     expect(executor.runtime('assembler').reused).toBe(true);
-    expect(synths()).toBe(1);
+    expect(synths()).toBe(3);
     // resource nodes always re-probe (EXECUTION_ENGINE §1.1) but their unchanged hash lets downstream reuse
     expect(probes()).toBe(4);
     expect(executor.runtime('tts-provider').reused).toBe(false);
@@ -91,7 +93,7 @@ describe('Phase A run', () => {
     executor.invalidate('tts');
     expect(executor.runtime('assembler').state).toBe('stale');
     await executor.run();
-    expect(synths()).toBe(2);
+    expect(synths()).toBe(6);
     expect(executor.runtime('script').reused).toBe(true);
     expect(executor.runtime('tts').reused).toBe(false);
     expect(executor.runtime('assembler').reused).toBe(false);
@@ -100,7 +102,8 @@ describe('Phase A run', () => {
 
   it('a Vietnamese script is detected and picks a Vietnamese voice with no extra input', async () => {
     const { executor, graph, services } = setup();
-    graph.nodes.find((n) => n.id === 'script')!.params.script = 'Gặp NodeCine. Dựng video ngắn từ đồ thị node.';
+    const vi = graph.nodes.find((n) => n.id === 'script')!.params as { scenes: { narration: string }[] };
+    vi.scenes = vi.scenes.map((s) => ({ ...s, narration: 'Gặp NodeCine. Dựng video ngắn từ đồ thị node.' }));
     await executor.run();
     const synth = services.calls.find((c) => c.name === 'synthesize')!;
     expect(synth.args[1]).toBe('linh');
@@ -108,7 +111,8 @@ describe('Phase A run', () => {
 
   it('missing voice for the language falls back and logs TTS_VOICE_LANGUAGE_MISMATCH without failing', async () => {
     const { executor, graph } = setup({ voices: [{ id: 'samantha', displayName: 'Samantha', language: 'en-US' }] });
-    graph.nodes.find((n) => n.id === 'script')!.params.script = 'ノードグラフから短い動画を作る。';
+    const ja = graph.nodes.find((n) => n.id === 'script')!.params as { scenes: { narration: string }[] };
+    ja.scenes = ja.scenes.map((s) => ({ ...s, narration: 'ノードグラフから短い動画を作る。' }));
     const { ok } = await executor.run();
     expect(ok).toBe(true);
     expect(executor.logs.all().some((l) => l.code === 'TTS_VOICE_LANGUAGE_MISMATCH')).toBe(true);

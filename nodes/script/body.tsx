@@ -5,29 +5,28 @@ import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useParams, type BodyProps } from '@/nodes/kit';
 
-type SceneRow = { role: string; weight: number; content: SceneContent };
+type SceneRow = { role: string; weight: number; narration: string; content: SceneContent };
 
-/** Body of the Static Script: the narration, then the scenes, each a role, a weight and its content in the vocabulary. */
+/** Body of the Static Script: the scenes, each a role, a weight, what the voice says over it, and its content in the vocabulary. */
 export const StaticScriptBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const [p, set] = useParams<{ script: string; scenes: SceneRow[] }>(nodeId);
+  const [p, set] = useParams<{ scenes: SceneRow[] }>(nodeId);
   const scenes = p.scenes ?? [];
   const update = (i: number, patch: Partial<SceneRow>) => set({ scenes: scenes.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
   const remove = (i: number) => set({ scenes: scenes.filter((_, j) => j !== i) });
-  const add = () => set({ scenes: [...scenes, { role: `scene ${scenes.length + 1}`, weight: 1, content: { title: '' } }] });
+  const add = () => set({ scenes: [...scenes, { role: `scene ${scenes.length + 1}`, weight: 1, narration: '', content: { title: '' } }] });
   return (
     <>
-      <div className="nc-k">{t('node.script')}</div>
-      <textarea className={`nc-textarea ${stopFlow}`} value={p.script ?? ''} onChange={(e) => set({ script: e.target.value })} />
-      <div className="nc-k" style={{ marginTop: 4 }}>{t('node.scenes')}</div>
+      <div className="nc-k">{t('node.scenes')}</div>
       {scenes.map((s, i) => (
         <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 3, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <div className="nc-scene-row">
             <span className="nc-k" style={{ color: 'var(--accent-2)' }}>{i + 1}</span>
-            <input className={`nc-input ${stopFlow}`} style={{ flex: 1, minWidth: 0 }} value={s.role} title={t('director.role')} onChange={(e) => update(i, { role: e.target.value })} />
+            <input className={`nc-input ${stopFlow}`} style={{ flex: 1, minWidth: 0 }} value={s.role} title={t('screenwriter.role')} onChange={(e) => update(i, { role: e.target.value })} />
             <input className={`nc-input ${stopFlow}`} style={{ width: 38 }} type="number" min={0.1} step={0.5} value={s.weight} title={t('node.weight')} onChange={(e) => update(i, { weight: Number(e.target.value) || 1 })} />
             <button className={`nc-chip ${stopFlow}`} onClick={() => remove(i)} disabled={scenes.length <= 1} title="remove"><Icon.x size={9} /></button>
           </div>
+          <textarea className={`nc-textarea ${stopFlow}`} rows={2} placeholder={t('node.script')} title={t('node.script')} value={s.narration ?? ''} onChange={(e) => update(i, { narration: e.target.value })} />
           <ContentEditor content={s.content ?? {}} onChange={(content) => update(i, { content })} />
         </div>
       ))}

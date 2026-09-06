@@ -1,19 +1,19 @@
 'use client';
 import React from 'react';
 import { BlockDefSchema, StageDefSchema, type BlockDef, type LookDef, type StageDef } from '@/core/types/payloads';
-import type { Casting } from '@/nodes/look/cast';
+import type { Casting } from '@/nodes/art-director/cast';
 
 const BlockDefSchemaOk = (b: unknown): b is BlockDef => BlockDefSchema.safeParse(b).success;
 import { Kv, useT, stopFlow } from '@/components/ui';
 import { useStudio } from '@/store/useStudio';
-import { DEFAULT_BLOCK as DEFAULT_TEXT_CARD } from '@/nodes/look/blocks';
-import { DEFAULT_STAGE } from '@/nodes/look/node';
-import { LookPreview } from '@/nodes/look/preview';
+import { DEFAULT_BLOCK as DEFAULT_TEXT_CARD } from '@/nodes/art-director/blocks';
+import { DEFAULT_STAGE } from '@/nodes/art-director/node';
+import { LookPreview } from '@/nodes/art-director/preview';
 import { FRAME_PRESETS, frameOf } from '@/core/look/frame';
-import { FontsEditor, PaletteEditor, PropsEditor, Section, TonesEditor } from '@/nodes/look/forms';
+import { FontsEditor, PaletteEditor, PropsEditor, Section, TonesEditor } from '@/nodes/art-director/forms';
 
 /**
- * The roles the script upstream will send, read from that node's parameters (the director's beats or
+ * The roles the script upstream will send, read from that node's parameters (the screenwriter's beats or
  * the static script's scenes) so the casting table can be filled before anything has run.
  */
 export function useUpstreamRoles(nodeId: string): string[] {
@@ -33,7 +33,7 @@ export function useFrame(): { width: number; height: number } {
 }
 
 /**
- * Bodies for the Look node. Their parameters are the whole definition, so the body is a
+ * Bodies for the Art Director node. Their parameters are the whole definition, so the body is a
  * small form over the parts a person edits by hand: identity, the code, and — for a block — what the
  * model may write and when to use it. The blocks section shows the catalogue as a list and edits one
  * block at a time. Structured parts (palette, fonts, tones, scene fields, props) have form editors
@@ -72,7 +72,7 @@ export function slugFor(name: string, taken: string[]): string {
   return id;
 }
 
-export const LookBody: React.FC<BodyProps> = ({ nodeId }) => {
+export const ArtDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const [p, set] = useParams<LookDef & { casting: Casting }>(nodeId);
   const roles = useUpstreamRoles(nodeId);

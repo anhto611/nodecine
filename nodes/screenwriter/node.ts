@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { ErrorCode, NodeError } from '@/core/errors';
-import { runDirector } from '@/nodes/director/loop';
-import { buildDirectorPrompt } from '@/nodes/director/prompt';
-import { BeatSchema, boundFactKeys, expandBeats, outputSchemaFor, toPackets } from '@/nodes/director/beats';
+import { runScreenwriter } from '@/nodes/screenwriter/loop';
+import { buildScreenwriterPrompt } from '@/nodes/screenwriter/prompt';
+import { BeatSchema, boundFactKeys, expandBeats, outputSchemaFor, toPackets } from '@/nodes/screenwriter/beats';
 import { resolveOutputLanguage } from '@/core/text/languages';
 import type { FactSheet, LLMRef, SourceRef } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
@@ -15,9 +15,9 @@ const Params = z.object({
   beats: z.array(BeatSchema).min(1).max(24),
 });
 
-export const AI_DIRECTOR = 'core/ai-director';
+export const SCREENWRITER = 'core/screenwriter';
 
-export const DEFAULT_AI_DIRECTOR: z.infer<typeof Params> = {
+export const DEFAULT_SCREENWRITER: z.infer<typeof Params> = {
   prompt: 'A short, warm introduction to the subject. Plain language, one idea per scene.',
   outputLanguage: 'auto',
   beats: [
@@ -29,7 +29,7 @@ export const DEFAULT_AI_DIRECTOR: z.infer<typeof Params> = {
 
 /**
  * The one director (CORE_CONTRACTS §5.8). It asks a language model for a narration and, for every
- * scene of every beat, what the scene says in the content vocabulary — no block, no stage: the Look
+ * scene of every beat, what the scene says in the content vocabulary — no block, no stage: the Art Director
  * casts those afterwards. It hands
  * the Timeline Assembler a self-contained plan: stage, blocks, scenes.
  *
@@ -39,8 +39,8 @@ export const DEFAULT_AI_DIRECTOR: z.infer<typeof Params> = {
  * through the Facts port, never through the model. That is what lets a user build a GitHub showcase,
  * a quote reel or anything else from a blank canvas, and share the result as a template that is only data.
  */
-export const aiDirector: NodeDefinition<typeof Params> = {
-  type: AI_DIRECTOR,
+export const screenwriter: NodeDefinition<typeof Params> = {
+  type: SCREENWRITER,
   version: 2,
   namespace: 'core',
   kind: 'process',
@@ -55,7 +55,7 @@ export const aiDirector: NodeDefinition<typeof Params> = {
     { name: 'script', type: 'AudioScript' },
   ],
   paramsSchema: Params,
-  defaultParams: DEFAULT_AI_DIRECTOR,
+  defaultParams: DEFAULT_SCREENWRITER,
 
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const facts = inputs.facts?.payload as FactSheet | undefined;
@@ -76,14 +76,14 @@ export const aiDirector: NodeDefinition<typeof Params> = {
       throw new NodeError(ErrorCode.NODE_PARAMS_INVALID, e instanceof Error ? e.message : String(e), false);
     }
 
-    const out = await runDirector({ services, signal, log, progress }, ref, {
+    const out = await runScreenwriter({ services, signal, log, progress }, ref, {
       outputSchema,
-      buildPrompt: (lang, strict) => buildDirectorPrompt({ brief: params.prompt, subject, facts, excludeFacts, scenes, language: lang, strict }),
+      buildPrompt: (lang, strict) => buildScreenwriterPrompt({ brief: params.prompt, subject, facts, excludeFacts, scenes, language: lang, strict }),
       languageOf: (o) => o.language,
     }, language);
 
     const packets = toPackets({ ...out, language }, scenes);
-    log('info', `narration ${packets.script.text.split(/\s+/).length} words · ${packets.scenes.scenes.map((s) => s.content.title ?? s.role).join(' | ')}`);
+    log('info', `narration ${packets.script.text.split(/\s+/).length} words in ${packets.scenes.scenes.length} scenes · ${packets.scenes.scenes.map((s) => s.content.title ?? s.role).join(' | ')}`);
     return packets;
   },
 };

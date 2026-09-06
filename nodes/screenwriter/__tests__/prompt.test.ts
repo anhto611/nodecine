@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildDirectorPrompt, factsForPrompt } from '@/nodes/director/prompt';
-import { expandBeats } from '@/nodes/director/beats';
+import { buildScreenwriterPrompt, factsForPrompt } from '@/nodes/screenwriter/prompt';
+import { expandBeats } from '@/nodes/screenwriter/beats';
 import { describeBlockField } from '@/core/look/props';
 import type { FactSheet } from '@/core/types/payloads';
 
@@ -36,41 +36,42 @@ describe('factsForPrompt', () => {
   });
 });
 
-describe('buildDirectorPrompt', () => {
+describe('buildScreenwriterPrompt', () => {
   const scenes = expandBeats([
     { role: 'open', brief: 'Name the subject.', weight: 0.5, count: 1, factBindings: {} },
     { role: 'proof', brief: '', weight: 1, count: 2, factBindings: { number: 'stars' } },
   ]);
 
   it('carries the brief, the count, the language, the beats and the content vocabulary — and no block', () => {
-    const p = buildDirectorPrompt({ brief: 'Introduce widget to busy people.', facts: sheet, excludeFacts: new Set(['stars']), scenes, language: 'vi', strict: false });
+    const p = buildScreenwriterPrompt({ brief: 'Introduce widget to busy people.', facts: sheet, excludeFacts: new Set(['stars']), scenes, language: 'vi', strict: false });
     expect(p).toContain('Introduce widget to busy people.');
     expect(p).toContain('video with 3 scenes');
     expect(p).toContain('Vietnamese');
     expect(p).toContain('exactly 3 scenes');
-    expect(p).toContain('1. open — Name the subject.');
-    expect(p).toContain('2. proof (do not write: number)');
-    expect(p).toContain('3. proof (do not write: number)');
+    expect(p).toContain('1. open — Name the subject. (say 7–10 words)');
+    expect(p).toContain('2. proof (say 13–17 words; do not write: number)');
+    expect(p).toContain('3. proof (say 13–17 words; do not write: number)');
+    expect(p).toContain('"narration"');
     for (const key of ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source']) expect(p).toContain(`- ${key}: `);
     expect(p).not.toMatch(/\bblock\b/i);
     expect(p).not.toMatch(/\bstage\b/i);
   });
 
   it('never asks the model for a fact-bound key, and says so', () => {
-    const p = buildDirectorPrompt({ brief: 'x', facts: sheet, excludeFacts: new Set(['stars']), scenes, language: 'en', strict: false });
+    const p = buildScreenwriterPrompt({ brief: 'x', facts: sheet, excludeFacts: new Set(['stars']), scenes, language: 'en', strict: false });
     expect(p).toContain('the keys "number" are filled in later');
     expect(p).not.toContain('4321');
   });
 
   it('gets stricter only on the language retry', () => {
-    const soft = buildDirectorPrompt({ brief: 'x', excludeFacts: new Set(), scenes, language: 'vi', strict: false });
-    const hard = buildDirectorPrompt({ brief: 'x', excludeFacts: new Set(), scenes, language: 'vi', strict: true });
+    const soft = buildScreenwriterPrompt({ brief: 'x', excludeFacts: new Set(), scenes, language: 'vi', strict: false });
+    const hard = buildScreenwriterPrompt({ brief: 'x', excludeFacts: new Set(), scenes, language: 'vi', strict: true });
     expect(soft).not.toContain('mandatory');
     expect(hard).toContain('mandatory');
   });
 
   it('works with no facts', () => {
-    const p = buildDirectorPrompt({ brief: 'Four quotes about patience.', excludeFacts: new Set(), scenes, language: 'en', strict: false });
+    const p = buildScreenwriterPrompt({ brief: 'Four quotes about patience.', excludeFacts: new Set(), scenes, language: 'en', strict: false });
     expect(p).not.toContain('Facts about the subject');
   });
 });
