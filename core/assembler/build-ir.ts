@@ -1,5 +1,5 @@
-import type { DirectorPlan, FactSheet, Voiceover } from '../types/payloads';
-import { IR_VERSION, type VideoIR, type TimelineEntry } from '../types/ir';
+import type { CaptionTrack, DirectorPlan, FactSheet, Voiceover } from '../types/payloads';
+import { IR_VERSION, type IRCaptions, type VideoIR, type TimelineEntry } from '../types/ir';
 import { allocateFrames, computeTotalFrames } from './allocate';
 import { assertValidIR } from './validate-ir';
 
@@ -24,6 +24,7 @@ export interface BuildIRInput {
   plan: DirectorPlan;
   voiceover: Voiceover;
   facts?: FactSheet;
+  captions?: CaptionTrack;
   params?: Partial<AssemblerParams>;
 }
 
@@ -41,9 +42,26 @@ export function applyFactBindings(
   return out;
 }
 
+/** Seconds on the voice-over's clock → frames on the video's; a word never gets fewer than one frame. */
+export function captionsToFrames(track: CaptionTrack, fps: number, totalFrames: number): IRCaptions {
+  const frame = (s: number) => Math.min(totalFrames - 1, Math.max(0, Math.round(s * fps)));
+  const cues = track.cues
+    .map((c) => {
+      const startFrame = frame(c.start);
+      const durationInFrames = Math.max(1, frame(c.end) - startFrame);
+      const words = c.words.map((w) => {
+        const ws = frame(w.start);
+        return { text: w.text, startFrame: ws, durationInFrames: Math.max(1, frame(w.end) - ws) };
+      });
+      return { startFrame, durationInFrames, words };
+    })
+    .filter((c) => c.words.length > 0);
+  return { cues };
+}
+
 export function buildIR(input: BuildIRInput): VideoIR {
   const p = { ...DEFAULT_ASSEMBLER_PARAMS, ...input.params };
-  const { plan, voiceover, facts } = input;
+  const { plan, voiceover, facts, captions } = input;
 
   const { total, padTailFrames } = computeTotalFrames(voiceover.durationSeconds, p.fps, p.minTotalFrames);
   const frames = allocateFrames(
@@ -84,6 +102,7 @@ export function buildIR(input: BuildIRInput): VideoIR {
       padTailFrames,
     },
     timeline,
+    ...(captions && captions.cues.length ? { captions: captionsToFrames(captions, p.fps, total) } : {}),
   };
 
   assertValidIR(ir);

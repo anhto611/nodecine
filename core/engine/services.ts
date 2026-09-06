@@ -1,5 +1,5 @@
 import type { ZodTypeAny, z } from 'zod';
-import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover } from '../types/payloads';
+import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover, Word } from '../types/payloads';
 import type { VideoIR } from '../types/ir';
 import type { ExportSettings, RenderProgress, RenderResult } from '../adapters/types';
 
@@ -21,5 +21,10 @@ export interface NodeServices {
     onProgress: (p: RenderProgress) => void,
     signal: AbortSignal,
   ): Promise<RenderResult>;
+  /**
+   * Word timings for a voice-over whose text is known: forced alignment, not transcription. Returns
+   * the words of `text` in order, each with its start and end in seconds.
+   */
+  alignWords(audioUrl: string, text: string, language: string, options: { model: string }, signal: AbortSignal): Promise<Word[]>;
   now(): number;
 }

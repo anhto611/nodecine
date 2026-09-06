@@ -222,6 +222,9 @@ export class Executor {
         if (!packet && single) return { inputs, lists, missing: port.name };
         if (!single) {
           if (upstreamNode.bypassed) {
+            // An optional port behind a bypassed node is an unwired optional port: a workflow ships
+            // its Captions nodes bypassed and the Assembler renders without subtitles.
+            if (port.required === false && !port.multiple) continue;
             return fail({ kind: 'upstream', code: ErrorCode.NODE_BYPASSED_UPSTREAM, message: `upstream node ${edge.source} is bypassed`, nodeId: edge.source });
           }
           if (!packet || upstream.state === 'error' || upstream.state === 'cancelled' || upstream.state === 'blocked') {

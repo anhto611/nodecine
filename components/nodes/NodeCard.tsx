@@ -26,6 +26,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
   const issues = React.useMemo(() => allIssues.filter((i) => i.nodeId === data.nodeId && i.severity === 'error'), [allIssues, data.nodeId]);
   const runNode = useStudio((s) => s.runNode);
   const running = useStudio((s) => s.running);
+  const toggleBypass = useStudio((s) => s.toggleBypass);
   const graph = useStudio((s) => s.graph);
   const runtimes = useStudio((s) => s.runtimes);
   if (!node || !rt) return null;
@@ -58,6 +59,14 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
         <IconC size={12} />
         <span className="nc-title" title={t(`node.desc.${node.type}`)}>{t(`node.${node.type}`)}</span>
         {badge}
+        <button
+          className={`nc-hdr-toggle nodrag nopan ${node.bypassed ? 'on' : ''}`}
+          title={`${t(node.bypassed ? 'node.bypassOff' : 'node.bypass')} · Ctrl+B`}
+          onClick={(e) => { e.stopPropagation(); toggleBypass(node.id); }}
+          aria-pressed={node.bypassed}
+        >
+          <Icon.stop size={9} />
+        </button>
       </div>
       {(def.inputs.length > 0 || def.outputs.length > 0) && (
         <div className="nc-ports">

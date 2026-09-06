@@ -20,10 +20,21 @@ export function splitCode(source: string): { markup: string; styles: string[]; s
 
 /** Put the block's markup inside the stage's `data-slot="content"` element. */
 export function fillSlot(stageMarkup: string, inner: string): string {
-  const m = /<([a-zA-Z][\w-]*)\b[^>]*\bdata-slot=["']content["'][^>]*>/.exec(stageMarkup);
-  if (!m) return `${stageMarkup}${inner}`;
-  const at = m.index + m[0].length;
-  return `${stageMarkup.slice(0, at)}${inner}${stageMarkup.slice(at)}`;
+  return fillNamedSlot(stageMarkup, 'content', inner);
+}
+
+/** The opening tag of `data-slot="<name>"` in the markup, or null. */
+export function findSlot(markup: string, name: string): { index: number; tag: string } | null {
+  const m = new RegExp(`<([a-zA-Z][\\w-]*)\\b[^>]*\\bdata-slot=["']${name}["'][^>]*>`).exec(markup);
+  return m ? { index: m.index, tag: m[0] } : null;
+}
+
+/** Drops `inner` into the named slot; a stage without that slot gets it appended at the end. */
+export function fillNamedSlot(markup: string, name: string, inner: string): string {
+  const slot = findSlot(markup, name);
+  if (!slot) return `${markup}${inner}`;
+  const at = slot.index + slot.tag.length;
+  return `${markup.slice(0, at)}${inner}${markup.slice(at)}`;
 }
 
 /** Stage tokens as CSS custom properties: `palette.bg` → `--bg`, `fonts.display` → `--font-display`. */

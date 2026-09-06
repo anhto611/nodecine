@@ -95,6 +95,10 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-hdr { height: 24px; display: flex; align-items: center; gap: 6px; padding: 0 7px; background: var(--bg-node-hdr); border-bottom: 1px solid var(--line); border-radius: 5px 5px 0 0; color: var(--tx-2); }
 .nc-title { font-size: var(--fs-body); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .nc-badge { display: flex; align-items: center; gap: 4px; font-size: var(--fs-hint); letter-spacing: .03em; white-space: nowrap; }
+/* Bypass, on every node's header: dim until switched on, then the warning colour like the dashed border. */
+.nc-hdr-toggle { flex: 0 0 auto; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; background: none; color: var(--tx-3); cursor: pointer; padding: 0; }
+.nc-hdr-toggle:hover { border-color: var(--line-3); color: var(--tx); }
+.nc-hdr-toggle.on { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .nc-body { padding: 5px 7px 7px; display: flex; flex-direction: column; gap: 3px; }
 .nc-ports { padding: 4px 9px 0; display: flex; flex-direction: column; }
 .nc-port-row { height: 18px; display: flex; align-items: center; font-size: var(--fs-hint); color: var(--tx-3); white-space: nowrap; }
@@ -135,8 +139,12 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-lid { font-size: var(--fs-body); color: var(--tx-2); margin-top: 2px; line-height: 1.45; }
 .nc-lip { font-size: var(--fs-hint); color: var(--tx-3); margin-top: 3px; }
 .nc-logs { height: 220px; background: var(--bg-sunk); border-top: 1px solid var(--line-2); display: flex; flex-direction: column; }
-.nc-lg-h { height: 32px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 1px solid var(--line); font-size: var(--fs-body); }
-.nc-chip { padding: 2px 7px; border: 1px solid var(--line-2); border-radius: 3px; color: var(--tx-3); font-size: var(--fs-hint); background: none; cursor: pointer; font: inherit; }
+.nc-lg-h { height: 32px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 1px solid var(--line); font-size: var(--fs-body); white-space: nowrap; }
+.nc-lg-h > .nc-btn { flex: 0 0 auto; white-space: nowrap; }
+/* One chip per node: more than fit scroll sideways instead of wrapping the row. */
+.nc-lg-filters { display: flex; gap: 6px; align-items: center; min-width: 0; flex: 1 1 auto; overflow-x: auto; scrollbar-width: none; }
+.nc-lg-filters::-webkit-scrollbar { display: none; }
+.nc-chip { padding: 2px 7px; border: 1px solid var(--line-2); border-radius: 3px; color: var(--tx-3); font-size: var(--fs-hint); background: none; cursor: pointer; font: inherit; white-space: nowrap; flex: 0 0 auto; }
 .nc-chip.on { border-color: var(--accent); color: var(--accent-2); background: var(--accent-sunk); }
 .nc-ll { display: flex; gap: 14px; padding: 0 12px; white-space: nowrap; font-size: var(--fs-body); line-height: 1.7; }
 .nc-ll .ts { color: var(--tx-3); flex: 0 0 96px; } .nc-ll .nn { flex: 0 0 140px; } .nc-ll .ms { color: var(--tx-2); overflow: hidden; text-overflow: ellipsis; }

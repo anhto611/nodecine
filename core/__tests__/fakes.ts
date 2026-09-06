@@ -83,6 +83,13 @@ export function makeFakeServices(overrides: Partial<{
       calls.push({ name: 'complete', args: [prompt] });
       return schema.parse(await o.complete(prompt));
     },
+    async alignWords(audioUrl, text, language, options) {
+      calls.push({ name: 'alignWords', args: [audioUrl, text, language, options] });
+      // Evenly spaced over a fixed span: deterministic, and enough to lay cues out.
+      const words = text.trim().split(/\s+/).filter(Boolean);
+      const step = 0.3;
+      return words.map((w, i) => ({ text: w, start: Math.round(i * step * 1000) / 1000, end: Math.round((i * step + 0.25) * 1000) / 1000 }));
+    },
     async render(_ref, ir, settings, onProgress, signal) {
       calls.push({ name: 'render', args: [settings] });
       for (let f = 0; f <= ir.meta.totalDurationInFrames; f += Math.ceil(ir.meta.totalDurationInFrames / 4)) {

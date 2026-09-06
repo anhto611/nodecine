@@ -20,6 +20,12 @@ export const TimelineEntrySchema = z.object({
 });
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
 
+export const CaptionWordSchema = z.object({ text: z.string().min(1), startFrame: z.number().int().nonnegative(), durationInFrames: z.number().int().positive() });
+export const CaptionCueSchema = z.object({ startFrame: z.number().int().nonnegative(), durationInFrames: z.number().int().positive(), words: z.array(CaptionWordSchema).min(1) });
+/** Captions on the frame clock, optional: an IR without them is the same video without subtitles. */
+export const IRCaptionsSchema = z.object({ cues: z.array(CaptionCueSchema) });
+export type IRCaptions = z.infer<typeof IRCaptionsSchema>;
+
 export const VideoIRSchema = z.object({
   irVersion: z.literal(IR_VERSION),
   meta: z.object({
@@ -38,5 +44,6 @@ export const VideoIRSchema = z.object({
     padTailFrames: z.number().int().nonnegative(),
   }),
   timeline: z.array(TimelineEntrySchema).min(1),
+  captions: IRCaptionsSchema.optional(),
 });
 export type VideoIR = z.infer<typeof VideoIRSchema>;

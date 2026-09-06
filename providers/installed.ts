@@ -24,8 +24,8 @@ export interface ProviderDescriptor {
   fields: SettingField[];
   defaultSettings: Record<string, unknown>;
   /**
-   * Settings that hold a credential. Empty everywhere today — v0.1 ships without API keys — but the
-   * field is here so the providers that need one later have somewhere to declare it.
+   * Settings that hold a credential. Still empty everywhere: the hosted voices (ElevenLabs, Vbee)
+   * read their keys from the environment, so no credential ever sits in a graph.
    */
   secretSettings?: string[];
 }
@@ -46,6 +46,29 @@ export const PROVIDERS: ProviderDescriptor[] = [
     kind: 'tts',
     nameKey: 'provider.piper',
     noteKey: 'provider.piper.note',
+    fields: [RATE_FIELD],
+    defaultSettings: { rate: 1 },
+  },
+  {
+    id: 'elevenlabs',
+    kind: 'tts',
+    nameKey: 'provider.elevenlabs',
+    noteKey: 'provider.elevenlabs.note',
+    fields: [
+      { name: 'model', label: 'node.model', type: 'select', options: [
+        { value: 'eleven_multilingual_v2', label: 'Multilingual v2' },
+        { value: 'eleven_turbo_v2_5', label: 'Turbo v2.5' },
+        { value: 'eleven_flash_v2_5', label: 'Flash v2.5' },
+      ] },
+      { name: 'rate', label: 'node.rate', type: 'number', min: 0.7, max: 1.2, step: 0.05 },
+    ],
+    defaultSettings: { model: 'eleven_multilingual_v2', rate: 1 },
+  },
+  {
+    id: 'vbee',
+    kind: 'tts',
+    nameKey: 'provider.vbee',
+    noteKey: 'provider.vbee.note',
     fields: [RATE_FIELD],
     defaultSettings: { rate: 1 },
   },

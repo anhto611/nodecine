@@ -8,12 +8,16 @@ const Params = z.object({
   speed: z.number().min(0.5).max(2).default(1),
 });
 
-/** Voice selection rule (CORE_CONTRACTS §8.2). Returns the voice and whether it is a fallback. */
+/** Voice selection rule (CORE_CONTRACTS §8.2). Returns the voice and whether it is a fallback. Exported for the body. */
+export const voiceSpeaks = (v: Voice, language: string): boolean => v.language === 'mul' || v.language.toLowerCase() === language.toLowerCase() || v.language.toLowerCase().startsWith(language.toLowerCase() + '-');
+
 export function pickVoice(ref: TTSRef, language: string, preferred?: string): { voice: Voice; fallback: boolean } {
   const lang = language.toLowerCase();
-  const matches = (v: Voice) => v.language.toLowerCase() === lang || v.language.toLowerCase().startsWith(lang + '-');
-  const chosen = preferred ? ref.voices.find((v) => v.id === preferred && matches(v)) : undefined;
-  if (chosen) return { voice: chosen, fallback: false };
+  // `mul` (BCP 47: multiple languages) is a voice that speaks whatever the script is in, like ElevenLabs'.
+  const matches = (v: Voice) => voiceSpeaks(v, lang);
+  // An explicit choice is the user's to make: it is honoured even across languages, with a warning.
+  const chosen = preferred ? ref.voices.find((v) => v.id === preferred) : undefined;
+  if (chosen) return { voice: chosen, fallback: !matches(chosen) };
   const first = ref.voices.find(matches);
   if (first) return { voice: first, fallback: false };
   const def = ref.voices.find((v) => v.id === ref.settings.defaultVoice) ?? ref.voices[0];

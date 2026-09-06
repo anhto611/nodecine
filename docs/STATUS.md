@@ -21,7 +21,9 @@ Lý do tách: trước đây mỗi lần thêm một provider là phải sửa c
 
 Cả ba là **tệp JSON** dưới `templates/`, cùng hình dạng tệp dự án; `templates/__tests__` xác nhận mỗi bản dựng lại được từ canvas trống bằng node trong Thư viện. Workflow của người dùng tách khỏi bản mẫu: **lưu** (Ctrl+S), **đổi tên**, **nhập** từ JSON hoặc từ MP4 do NodeCine kết xuất (kéo thả vào canvas cũng được), **tải xuống** — tất cả ở thanh tab và panel Workflow, là tệp trong `.nodecine/workflows/` theo mô hình userdata của ComfyUI (`server/workflows.ts`, `app/api/workflows`). Trình duyệt bản mẫu chỉ hiện bản mẫu kèm app. Thanh tab dưới header giữ các workflow đang mở (dấu • khi chưa lưu, Ctrl+S lưu, Ctrl+Shift+S lưu thành, + mở bản nháp mới); panel *Workflow* ở dải trái (phím W) liệt kê tab đang mở và tệp đã lưu với mở/đổi tên/tải/xóa. Các tab tự lưu vào `localStorage` (`nodecine.tabs`). MP4 kết xuất mang theo workflow và IR trong metadata (`server/video-meta.ts`).
 
-**Node lõi** — mười bốn loại: Nhập Liệu, Truy Xuất Repo, Kịch Bản Tĩnh, **Stage**, **Blocks**, **Đạo Diễn AI**, Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Hyperframes Engine, Xuất Bản Video, Xuất MP4.
+**Node lõi** — mười sáu loại: Nhập Liệu, Truy Xuất Repo, Kịch Bản Tĩnh, **Stage**, **Blocks**, **Đạo Diễn AI**, Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn, Giọng Đọc, **Căn Mốc Từ**, **Phụ Đề**, Đóng Gói Timeline, Remotion Engine, Hyperframes Engine, Xuất Bản Video, Xuất MP4.
+
+**Phụ đề karaoke** (`CORE_CONTRACTS.md` §2.10, §5.12, §5.13): Căn Mốc Từ căn chỉnh cưỡng bức bằng `stable-ts` (venv cục bộ, `npm run setup:align`, model `small` tải ~460 MB lần đầu; đã chạy thật trên giọng Vbee tiếng Việt: 9 từ, 3,2 s), Phụ Đề gom từ thành dòng theo luật của cutdown (chỉ giữ `maxChars`), Đóng Gói Timeline ghi vào IR, Stage quyết định chỗ và dáng qua `data-slot="captions"` (+ `data-caption-style`, `--caption-on`), HyperFrames đổ dòng vào chỗ đó và tô từ đang đọc. Đã render thật và soi khung hình. Ba bản mẫu mang sẵn hai node ở trạng thái bỏ qua. Chưa có: mốc từ trả sẵn từ ElevenLabs (`/with-timestamps`), Remotion.
 
 **Stage và Blocks** (`CORE_CONTRACTS.md` §2.6–2.8, §4, §5.9–5.10) — hai node nguồn mang giao diện dưới dạng dữ liệu: Stage là sân khấu chung của mọi cảnh, Blocks là **danh mục** kiểu cảnh (một node, nhiều block; thân node là danh sách mở từng block), mỗi block có bảng `props`, tài liệu cho mô hình và code `html-gsap`. Project cũ với mỗi block một node tự gộp (schema v6). Đã xong: kiểu cổng `StageDef`/`BlockDef`; **cổng nhiều dây** (`PortDef.multiple`, `RunContext.lists`, chữ ký băm cả danh sách); Đạo Diễn AI và Kịch Bản Tĩnh nhận `stage` + `blocks`; `DirectorPlan` và IR **tự chứa** (mang stage và block, `blockId` thay `sceneType`, `tone`/`fields` theo cảnh, bất biến 5 kiểm tra props theo block); ba bản mẫu viết lại với node Stage/Block mang code chuyển từ các cảnh React cũ (`text-card`, `hook`, `mockup`, `cta`, `quote`; stage `dark`, `developer-dark`, `ink`); thân node sửa được mọi phần. Renderer `html-gsap` là engine Hyperframes (xem bảng Engine); scene registry cũ đã gỡ.
 
@@ -31,7 +33,7 @@ Hai node nhà cung cấp theo mẫu Load Checkpoint của ComfyUI: **một node 
 
 **Bộ máy chạy ở máy chủ** (`server/jobs.ts`, `lib/remote-executor.ts`, `ARCHITECTURE.md` §1.2): bấm Chạy là nộp việc vào hàng đợi, executor theo từng tab giữ kết quả và bộ đệm, trạng thái về qua SSE, tải lại trang hay đóng tab không mất việc, nhiều video xếp hàng chạy lần lượt. Các route theo từng dịch vụ cũ đã gỡ. Việc và lịch sử chạy ghi xuống đĩa (`.nodecine/jobs/<id>.json`, `EXECUTION_ENGINE.md` §7.2): khởi động lại máy chủ vẫn còn lịch sử kèm bản đặc tả và các MP4 đã xuất; việc dở dang lúc tiến trình cũ chết được đánh dấu hủy.
 
-**Mọi node ở `nodes/<họ>/`** (định nghĩa, ruột, thân node, test cạnh nhau; `nodes/index.ts` là danh sách duy nhất), `core/` chỉ còn khung. **Không còn `extras/`.** Truy Xuất Repo là node `core/github-fetcher`, cả họ ở `nodes/github/`, gọi GitHub thẳng như node API của ComfyUI; project cũ tự đổi tên node (schema v5). Người dùng mới cài thấy đủ 14 loại node lõi trong Thư viện; `templates/__tests__/fresh-install.test.ts` ghim đúng tập này.
+**Mọi node ở `nodes/<họ>/`** (định nghĩa, ruột, thân node, test cạnh nhau; `nodes/index.ts` là danh sách duy nhất), `core/` chỉ còn khung. **Không còn `extras/`.** Truy Xuất Repo là node `core/github-fetcher`, cả họ ở `nodes/github/`, gọi GitHub thẳng như node API của ComfyUI; project cũ tự đổi tên node (schema v5). Người dùng mới cài thấy đủ 16 loại node lõi trong Thư viện; `templates/__tests__/fresh-install.test.ts` ghim đúng tập này.
 
 **Engine**
 
@@ -44,7 +46,7 @@ Hyperframes Engine giờ là **thư viện HyperFrames thật** (`@hyperframes/c
 
 Remotion Engine còn trong Thư viện nhưng chưa đăng ký renderer cho định dạng nào: nối nó vào Xuất Bản Video là node chặn `ENGINE_SCENE_UNSUPPORTED: html-gsap`. Nó sẽ có việc khi có định dạng block `react`; xem `PRD.md` mục 8.
 
-**Nhà cung cấp** — bốn, không cái nào cần khóa API:
+**Nhà cung cấp** — sáu; bốn cục bộ không cần khóa, hai giọng đám mây đọc khóa từ `.env.local`:
 
 | Nhà cung cấp | Loại | Transport | Cần gì |
 |---|---|---|---|
@@ -52,6 +54,8 @@ Remotion Engine còn trong Thư viện nhưng chưa đăng ký renderer cho đ�
 | Ollama | Mô hình ngôn ngữ | `api` | Máy chủ ollama cục bộ + model đã kéo |
 | Giọng hệ điều hành | Giọng đọc | `local` | macOS (`say`) + ffmpeg |
 | Piper | Giọng đọc | `local` | `piper` + mô hình giọng `.onnx` + ffmpeg |
+| ElevenLabs | Giọng đọc | `api` | `ELEVENLABS_API_KEY` + ffprobe; 29 ngôn ngữ trên một mô hình, giọng liệt kê là `mul` |
+| Vbee | Giọng đọc | `api` | `VBEE_TOKEN` + `VBEE_APP_ID` + ffprobe; giọng Việt theo vùng miền, danh mục lấy từ Vbee lúc probe |
 
 Không cái nào bắt buộc phải có. Thiếu thì node nhà cung cấp vẫn `success` màu vàng, ghi rõ thiếu gì và câu lệnh cài; node tiêu thụ phía sau tự chặn.
 
@@ -61,7 +65,7 @@ Không cái nào bắt buộc phải có. Thiếu thì node nhà cung cấp vẫ
 
 Những chỗ này đã định nghĩa trong tài liệu và có sẵn trong kiểu dữ liệu, nhưng chưa có cài đặt nào kích hoạt. Chúng không phải việc bỏ sót — có mặt sẵn để thứ cần chúng sau này không phải sửa hợp đồng.
 
-- **Két khóa API.** `ProviderRegistration.secretSettings` đã có trong registry và rỗng ở mọi nhà cung cấp. Mã lỗi `KEY_MISSING`, `KEY_INVALID` đã có chuỗi hiển thị nhưng chưa chỗ nào ném. Ô lưu riêng trong localStorage thì mới có trong đặc tả (`EXECUTION_ENGINE.md` §7.1 nói ba khóa) chứ **chưa có trong `lib/storage.ts`** — code mới dùng hai khóa, dự án và giao diện.
+- **Két khóa API trong app.** `ProviderRegistration.secretSettings` vẫn rỗng ở mọi nhà cung cấp: ElevenLabs và Vbee lấy khóa từ biến môi trường (`providers/api-shared.ts`, `envFirst`), node báo `KEY_MISSING` / `KEY_INVALID` khi thiếu hay bị từ chối. Chưa có ô nhập khóa trong giao diện và chưa có chỗ lưu riêng phía trình duyệt; khi nào cần thì `secretSettings` là nơi khai báo.
 - **Dự phòng hiệu ứng.** Adapter gặp hiệu ứng không dựng được thì tự thay bằng mờ dần và cảnh báo mức thông tin. Chưa Adapter nào kích hoạt.
 - **Hai engine cùng phát một lúc.** Bố cục cho phép đặt hai Node Xuất Bản Video cạnh nhau; hiện chỉ một cái phát được tại một thời điểm.
 - **Chạy song song.** Bộ máy chạy tuần tự theo thứ tự tô-pô. Đồ thị cỡ mười node và node thắt nằm ở lệnh gọi ra ngoài nên song song chưa đáng đánh đổi độ phức tạp báo tiến độ.

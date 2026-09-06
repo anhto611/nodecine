@@ -9,6 +9,8 @@ import { StageBody, BlocksBody } from './look/body';
 import { AiDirectorBody } from './director/body';
 import { EngineBody, LlmProviderBody, TtsProviderBody } from './resources/body';
 import { TtsBody } from './tts/body';
+import { TranscribeBody } from './transcribe/body';
+import { CaptionsBody } from './captions/body';
 import { AssemblerBody } from './assembler/body';
 import { ExportBody } from './output/export-body';
 import { VideoOutputBody } from './output/video-output-body';
@@ -26,6 +28,8 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/remotion-engine': EngineBody,
   'core/hyperframes-engine': EngineBody,
   'core/tts-engine': TtsBody,
+  'core/transcribe': TranscribeBody,
+  'core/captions': CaptionsBody,
   'core/timeline-assembler': AssemblerBody,
   'core/video-output': VideoOutputBody,
   'core/mp4-export': ExportBody,
@@ -41,6 +45,8 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/llm-provider': { icon: 'term', group: 'provider' },
   'core/tts-provider': { icon: 'mic', group: 'provider' },
   'core/tts-engine': { icon: 'wave', group: 'process' },
+  'core/transcribe': { icon: 'wave', group: 'process' },
+  'core/captions': { icon: 'doc', group: 'process' },
   'core/timeline-assembler': { icon: 'layers', group: 'process' },
   'core/remotion-engine': { icon: 'chip', group: 'engine' },
   'core/hyperframes-engine': { icon: 'chip', group: 'engine' },

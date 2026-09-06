@@ -27,9 +27,11 @@ export const LogsPanel: React.FC = () => {
     <div className="nc-logs">
       <div className="nc-lg-h">
         <span style={{ textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--tx-2)', marginRight: 6 }}>{t('logs.title')}</span>
-        <button className={`nc-chip ${filter === null ? 'on' : ''}`} onClick={() => setFilter(null)}>{t('logs.all')}</button>
-        {nodeIds.filter((id) => entries.some((e) => e.nodeId === id)).map((id) => <button key={id} className={`nc-chip ${filter === id ? 'on' : ''}`} onClick={() => setFilter(id)}>{label(id)}</button>)}
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('logs.search')} className="nc-input" style={{ marginLeft: 'auto', width: 170, height: 22 }} />
+        <div className="nc-lg-filters">
+          <button className={`nc-chip ${filter === null ? 'on' : ''}`} onClick={() => setFilter(null)}>{t('logs.all')}</button>
+          {nodeIds.filter((id) => entries.some((e) => e.nodeId === id)).map((id) => <button key={id} className={`nc-chip ${filter === id ? 'on' : ''}`} onClick={() => setFilter(id)}>{label(id)}</button>)}
+        </div>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('logs.search')} className="nc-input" style={{ marginLeft: 'auto', width: 170, flex: '0 0 170px', height: 22 }} />
         <button className="nc-btn nc-btn-sm" onClick={copy}><Icon.copy size={10} /> {t('logs.copy')}</button>
         <button className="nc-btn nc-btn-sm" onClick={() => executor?.logs.clear()}><Icon.trash size={10} /> {t('logs.clear')}</button>
         <button className="nc-chip" style={{ border: 0 }} onClick={toggleLogs}><Icon.x size={12} /></button>

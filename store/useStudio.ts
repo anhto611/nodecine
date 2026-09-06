@@ -356,8 +356,8 @@ export const useStudio = create<StudioState>((set, get) => {
           ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: e.issues[0]?.code, message: e.issues.map((i) => `${i.nodeId ?? 'graph'}: ${i.code} ${i.message}`).join('; ') });
           return;
         }
-        ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', message: e instanceof Error ? e.message : String(e) });
-        throw e;
+        // The log bar is where a failed run is read; an uncaught rejection would only add the dev overlay.
+        ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: (e as { code?: string }).code, message: e instanceof Error ? e.message : String(e) });
       }
     },
 

@@ -20,6 +20,7 @@ describe('a fresh install', () => {
     expect(listNodeTypes().map((d) => d.type).sort()).toEqual([
       'core/ai-director',
       'core/blocks',
+      'core/captions',
       'core/github-fetcher',
       'core/hyperframes-engine',
       'core/input-trigger',
@@ -29,6 +30,7 @@ describe('a fresh install', () => {
       'core/stage',
       'core/static-script',
       'core/timeline-assembler',
+      'core/transcribe',
       'core/tts-engine',
       'core/tts-provider',
       'core/video-output',

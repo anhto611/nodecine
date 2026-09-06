@@ -16,6 +16,10 @@ export const ErrorCode = {
   TTS_UPSTREAM: 'TTS_UPSTREAM',
   TTS_AUDIO_UNREADABLE: 'TTS_AUDIO_UNREADABLE',
   TTS_VOICE_LANGUAGE_MISMATCH: 'TTS_VOICE_LANGUAGE_MISMATCH',
+  /** The aligner could not run or returned nothing usable. */
+  ALIGN_FAILED: 'ALIGN_FAILED',
+  /** The Captions node got a voice-over without word timings. */
+  CAPTIONS_NO_WORDS: 'CAPTIONS_NO_WORDS',
   FACTS_NOT_CONNECTED: 'FACTS_NOT_CONNECTED',
   IR_INVALID: 'IR_INVALID',
   IR_VERSION_UNSUPPORTED: 'IR_VERSION_UNSUPPORTED',

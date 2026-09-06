@@ -7,6 +7,8 @@ import { stage } from './look/stage';
 import { blocks } from './look/blocks';
 import { hyperframesEngine, llmProvider, remotionEngine, ttsProvider } from './resources/node';
 import { ttsEngine } from './tts/node';
+import { transcribe } from './transcribe/node';
+import { captions } from './captions/node';
 import { timelineAssembler } from './assembler/node';
 import { mp4Export, videoOutput } from './output/node';
 
@@ -26,6 +28,8 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   llmProvider,
   ttsProvider,
   ttsEngine,
+  transcribe,
+  captions,
   timelineAssembler,
   remotionEngine,
   hyperframesEngine,
@@ -37,7 +41,7 @@ export function registerNodes(): void {
   for (const def of ALL_NODES) registerNodeType(def);
 }
 
-export { inputTrigger, githubFetcher, staticScript, stage, blocks, aiDirector, llmProvider, ttsProvider, ttsEngine, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
+export { inputTrigger, githubFetcher, staticScript, stage, blocks, aiDirector, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
 export { pickVoice } from './tts/node';
 export { DEFAULT_STATIC_SCRIPT } from './script/node';
 export { AI_DIRECTOR, DEFAULT_AI_DIRECTOR } from './director/node';

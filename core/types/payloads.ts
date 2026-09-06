@@ -113,14 +113,29 @@ export type AudioScript = z.infer<typeof AudioScriptSchema>;
 /** Media URLs are always app-relative (ARCHITECTURE §6). Never a filesystem path. */
 export const MediaUrlSchema = z.string().regex(/^\/api\/media\/[a-f0-9]{16,64}\.[a-z0-9]+$/);
 
+/** One spoken word: seconds from the start of the voice-over. */
+export const WordSchema = z.object({ text: z.string().min(1), start: z.number().nonnegative(), end: z.number().nonnegative() });
+export type Word = z.infer<typeof WordSchema>;
+
 export const VoiceoverSchema = z.object({
   audioUrl: MediaUrlSchema,
   durationSeconds: z.number().positive(),
   voiceName: z.string(),
   language: bcp47,
   speed: z.number().positive(),
+  /** Word timings, when a provider returned them or the Transcribe node aligned them. */
+  words: z.array(WordSchema).optional(),
 });
 export type Voiceover = z.infer<typeof VoiceoverSchema>;
+
+/** How the spoken word is marked; read off the stage's caption slot, never carried by the track. */
+export const CAPTION_STYLES = ['karaoke', 'reveal'] as const;
+export type CaptionStyle = (typeof CAPTION_STYLES)[number];
+/** Caption lines on the voice-over's clock (CORE_CONTRACTS §2.10): what is said, when. Where and how is the stage's. */
+export const CaptionTrackSchema = z.object({
+  cues: z.array(z.object({ start: z.number().nonnegative(), end: z.number().nonnegative(), words: z.array(WordSchema).min(1) })),
+});
+export type CaptionTrack = z.infer<typeof CaptionTrackSchema>;
 
 /** One capability as reported by probe() (EXECUTION_ENGINE §1.1). */
 export const CapabilitySchema = z.discriminatedUnion('status', [
@@ -179,6 +194,7 @@ export const PAYLOAD_SCHEMAS = {
   EngineRef: EngineRefSchema,
   LLMRef: LLMRefSchema,
   TTSRef: TTSRefSchema,
+  CaptionTrack: CaptionTrackSchema,
   StageDef: StageDefSchema,
   BlockSet: BlockSetSchema,
 } as const;

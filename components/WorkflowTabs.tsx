@@ -45,13 +45,21 @@ export const WorkflowTabs: React.FC = () => {
     }
   };
 
-  // Ctrl/Cmd+S saves the active tab, Shift for Save as.
+  // Ctrl/Cmd+S saves the active tab, Shift for Save as; Ctrl/Cmd+B bypasses the selected node.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         if (e.shiftKey) setNaming(useStudio.getState().projectName);
         else void doSave();
+      }
+      // Ctrl/Cmd+B bypasses the selected node, like ComfyUI.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+        const { selectedNodeId, toggleBypass } = useStudio.getState();
+        if (selectedNodeId) {
+          e.preventDefault();
+          toggleBypass(selectedNodeId);
+        }
       }
     };
     window.addEventListener('keydown', onKey);

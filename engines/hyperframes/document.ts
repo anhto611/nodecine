@@ -1,6 +1,7 @@
 import type { VideoIR } from '@/core/types/ir';
 import type { BlockDef } from '@/core/types/payloads';
-import { BIND_SCRIPT, baseStyles, esc, sceneMarkup, scopedCss, splitCode, tokenVars } from '@/core/look/markup';
+import { BIND_SCRIPT, baseStyles, esc, fillNamedSlot, findSlot, sceneMarkup, scopedCss, splitCode, tokenVars } from '@/core/look/markup';
+import { CAPTION_STYLES, type CaptionStyle } from '@/core/types/payloads';
 
 export { splitCode, fillSlot, tokenVars } from '@/core/look/markup';
 
@@ -91,11 +92,56 @@ export const BOOTSTRAP = String.raw`
 
   var master = gsap.timeline({ paused: true });
   timelines.forEach(function (entry) { entry.tl.paused(false); master.add(entry.tl, entry.at); });
+
+  // Captions sit inside each scene's caption slot, so the stage's own CSS positions and styles
+  // them. Lines and words are switched on the master timeline at absolute times; the CSS holds the
+  // initial state (line hidden, reveal words transparent), so a seek reads the same frame as a play.
+  data.scenes.forEach(function (scene) {
+    (scene.captions || []).forEach(function (cue) {
+      var line = document.getElementById(cue.id);
+      if (!line) return;
+      master.set(line, { autoAlpha: 1 }, cue.show);
+      master.set(line, { autoAlpha: 0 }, cue.hide);
+      cue.words.forEach(function (w) {
+        var el = document.getElementById(w.id);
+        if (!el) return;
+        if (cue.style === 'reveal') master.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.18, ease: 'power1.out' }, w.at);
+        else master.set(el, { color: 'var(--caption-on, var(--accent))' }, w.at);
+      });
+    });
+  });
   master.set({}, {}, data.duration);
   window.__timelines = window.__timelines || {};
   window.__timelines[data.compositionId] = master;
 })();
 `;
+
+/** `data-caption-style` on the stage's caption slot; karaoke unless it says reveal. */
+export function captionStyleOf(slotTag: string): CaptionStyle {
+  const m = /\bdata-caption-style=["']([a-z]+)["']/.exec(slotTag);
+  const v = m?.[1] as CaptionStyle | undefined;
+  return v && CAPTION_STYLES.includes(v) ? v : 'karaoke';
+}
+
+/**
+ * What every caption needs regardless of stage (a line starts hidden, words sit inline), plus the
+ * default band for a stage that declares no slot: inside the portrait safe zone, in the stage's body
+ * font and foreground, the spoken word in the accent colour. A stage that has its own slot styles
+ * it in its own CSS and may set `--caption-on` for the highlight.
+ */
+export function captionStyles(width: number, height: number, withDefaultSlot: boolean): string {
+  const portrait = height > width;
+  const size = Math.round((portrait ? width : height) * 0.042);
+  return [
+    // Hidden lines must not take up room: every line is anchored to the slot's bottom edge, so the
+    // one that is showing sits where the stage put the slot, whatever came before it.
+    `.nc-cap-line { position: absolute; left: 0; right: 0; bottom: 0; visibility: hidden; opacity: 0; text-wrap: balance; }`,
+    `.nc-cap-w { display: inline-block; }`,
+    ...(withDefaultSlot
+      ? [`.nc-captions-default { position: absolute; left: ${portrait ? 72 : 96}px; right: ${portrait ? 168 : 96}px; bottom: ${portrait ? 720 : 96}px; text-align: center; font: 700 ${size}px/1.3 var(--font-body, sans-serif); color: color-mix(in srgb, var(--fg, #fff) 82%, transparent); text-shadow: 0 2px 12px rgba(0,0,0,.55); pointer-events: none; }`]
+      : []),
+  ].join('\n');
+}
 
 export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): string {
   const { width, height, fps, totalDurationInFrames } = ir.meta;
@@ -105,21 +151,41 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
   const blockCode = new Map([...blocks].map(([id, b]) => [id, splitCode(b.code.source)]));
 
   const duration = totalDurationInFrames / fps;
-  const scenes = ir.timeline.map((s) => {
+  // The stage decides where captions go and how they look (its `data-slot="captions"`); a stage
+  // that declares no slot gets the default band inside the safe zone.
+  const captionSlot = findSlot(stageCode.markup, 'captions');
+  const stageMarkup = ir.captions && !captionSlot ? `${stageCode.markup}<div class="nc-captions-default" data-slot="captions"></div>` : stageCode.markup;
+  const captionStyle = captionStyleOf(captionSlot?.tag ?? '');
+  const scenes = ir.timeline.map((s, si) => {
     const bc = blockCode.get(s.blockId)!;
-    const markup = sceneMarkup(stageCode.markup, bc.markup, s.blockId);
+    const sceneStart = s.startFrame;
+    const sceneEnd = s.startFrame + s.durationInFrames;
+    // Every line spoken while this scene is on screen; a line across a cut is drawn in both scenes.
+    const cues = (ir.captions?.cues ?? [])
+      .map((c, ci) => ({ c, ci }))
+      .filter(({ c }) => c.startFrame < sceneEnd && c.startFrame + c.durationInFrames > sceneStart)
+      .map(({ c, ci }) => ({
+        id: `nc-cap-${si}-${ci}`,
+        show: c.startFrame / fps,
+        hide: (c.startFrame + c.durationInFrames) / fps,
+        style: captionStyle,
+        words: c.words.map((w, wi) => ({ id: `nc-cap-${si}-${ci}-w${wi}`, text: w.text, at: w.startFrame / fps })),
+      }));
+    const cuesHtml = cues.map((cue) => `<div id="${cue.id}" class="nc-cap-line">${cue.words.map((w) => `<span id="${w.id}" class="nc-cap-w"${captionStyle === 'reveal' ? ' style="opacity:0"' : ''}>${esc(w.text)}</span>`).join(' ')}</div>`).join('');
+    const markup = fillNamedSlot(sceneMarkup(stageMarkup, bc.markup, s.blockId), 'captions', cuesHtml);
     return {
       id: s.id,
       start: s.startFrame / fps,
       duration: s.durationInFrames / fps,
       html: `<div id="${esc(s.id)}" class="clip nc-scene" data-start="${s.startFrame / fps}" data-duration="${s.durationInFrames / fps}" data-track-index="0" data-stage${s.tone ? ` data-tone="${esc(s.tone)}"` : ''} style="${esc(tokenVars(stage, s.tone))}">${markup}</div>`,
-      data: { id: s.id, start: s.startFrame / fps, props: s.props, fields: s.fields ?? {}, scripts: [...stageCode.scripts, ...bc.scripts] },
+      data: { id: s.id, start: s.startFrame / fps, props: s.props, fields: s.fields ?? {}, scripts: [...stageCode.scripts, ...bc.scripts], captions: cues.map((cue) => ({ id: cue.id, show: cue.show, hide: cue.hide, style: cue.style, words: cue.words.map((w) => ({ id: w.id, at: w.at })) })) },
     };
   });
 
   const styles = [
     baseStyles(stage, width, height, o.fontBase),
     `.clip { position: absolute; inset: 0; visibility: hidden; overflow: hidden; }`,
+    ...(ir.captions ? [captionStyles(width, height, !captionSlot)] : []),
     scopedCss('[data-stage]', stageCode.styles.join('\n')),
     ...[...blockCode].map(([id, bc]) => scopedCss(`[data-block="${id}"]`, bc.styles.join('\n'))),
   ].filter(Boolean);

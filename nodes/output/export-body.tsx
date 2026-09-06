@@ -5,18 +5,16 @@ import type { VideoIR } from '@/core/types/ir';
 import { readCapability } from '@/core/nodes/definition';
 import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
-import { useInputPayload, useNode, useRuntime, useStudio } from '@/store/useStudio';
+import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import { useParams, type BodyProps } from '@/nodes/kit';
 
 export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const [p, set] = useParams<{ codec: string; quality: string; fileName: string }>(nodeId);
   const rt = useRuntime(nodeId);
-  const node = useNode(nodeId);
   const running = useStudio((s) => s.running);
   const runNode = useStudio((s) => s.runNode);
   const cancel = useStudio((s) => s.cancel);
-  const toggleBypass = useStudio((s) => s.toggleBypass);
   const ir = useInputPayload<VideoIR>(nodeId, 'ir');
   const engine = useInputPayload<EngineRef>(nodeId, 'engine');
   const canRender = !!ir && !!engine && readCapability(engine, 'render')?.status === 'ready' && !running;
@@ -44,7 +42,6 @@ export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
         <Btn small primary className={stopFlow} disabled={!canRender} onClick={() => void runNode(nodeId)} style={{ flex: 1, justifyContent: 'center' }} title={!ir ? t('node.waiting', { port: t('port.videoIR') }) : !engine ? t('node.waiting', { port: t('port.engineRef') }) : readCapability(engine, 'render')?.reason}>
           <Icon.play size={9} /> {t('node.render')}
         </Btn>
-        <button className={`nc-chip ${node?.bypassed ? '' : 'on'} ${stopFlow}`} onClick={() => toggleBypass(nodeId)} title="Ctrl+B">{t('node.bypass')}</button>
       </div>
     </>
   );

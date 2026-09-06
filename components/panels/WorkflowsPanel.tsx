@@ -15,10 +15,8 @@ export const WorkflowsPanel: React.FC = () => {
   const t = useT();
   const locale = useStudio((s) => s.locale);
   const tabs = useStudio((s) => s.tabs);
-  const active = useStudio((s) => s.activeTab);
   const tick = useStudio((s) => s.workflowsTick);
   const setPanel = useStudio((s) => s.setPanel);
-  const activate = useStudio((s) => s.activateTab);
   const create = useStudio((s) => s.newWorkflow);
   const open = useStudio((s) => s.openWorkflow);
   const rename = useStudio((s) => s.renameWorkflow);
@@ -62,14 +60,6 @@ export const WorkflowsPanel: React.FC = () => {
       {importError && <div style={{ padding: '6px 12px', fontSize: 'var(--fs-body)', color: 'var(--err)', borderBottom: '1px solid var(--line)' }}>{t('workflows.importBad', { why: importError })}</div>}
       <div style={{ padding: '6px 12px', fontSize: 'var(--fs-hint)', color: 'var(--tx-3)', borderBottom: '1px solid var(--line)' }}>{t('workflows.where')}</div>
       <div style={{ overflowY: 'auto', flex: 1 }}>
-        <div className="nc-pn-sub">{t('workflows.open')}</div>
-        {tabs.map((tab) => (
-          <div key={tab.key} className={`nc-wf ${tab.key === active ? 'on' : ''}`} onClick={() => activate(tab.key)}>
-            <Icon.doc size={11} />
-            <span className="nc-wf-name">{tab.name || t('tabs.untitled')}{tab.dirty && <span className="nc-tab-dot">•</span>}</span>
-            <span className="nc-wf-meta">{tab.fileId ? `${tab.fileId}.json` : t('tabs.draft')}</span>
-          </div>
-        ))}
         <div className="nc-pn-sub">{t('workflows.saved')}</div>
         {files === null && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>…</div>}
         {files?.length === 0 && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>{t('workflows.empty')}</div>}

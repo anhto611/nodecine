@@ -155,12 +155,11 @@ Quy tắc phụ thuộc bắt buộc, kiểm tra được bằng công cụ phâ
 - Node System TTS Provider gọi bộ tổng hợp của hệ điều hành, không có khái niệm đăng nhập.
 - GitHub API dùng hạn mức ẩn danh theo địa chỉ IP. Người dùng có thể đặt biến môi trường chứa mã thông báo GitHub để nâng hạn mức; đây là tùy chọn, không bắt buộc.
 
-Khi có nhà cung cấp cần khóa API, quy tắc sau áp dụng:
+Hai giọng đọc đám mây (ElevenLabs, Vbee) cần khóa, và quy tắc đang áp dụng là:
 
-1. Người dùng nhập khóa trong cửa sổ Cài đặt. Khóa được ghi vào bộ nhớ cục bộ của trình duyệt, tách khỏi tài liệu dự án.
-2. Node Nhà Cung Cấp chỉ giữ một định danh trỏ tới khóa, không giữ khóa. Tệp dự án chia sẻ ra ngoài vì thế không bao giờ chứa khóa.
-3. Khi một node cần khóa, bộ máy thực thi đọc khóa ra và gửi kèm trong phần thân yêu cầu tới điểm cuối cục bộ tương ứng. Điểm cuối loại bỏ khóa ngay khi yêu cầu kết thúc, không ghi nhật ký, không ghi ra đĩa.
-4. Khóa lấy từ biến môi trường của tiến trình máy chủ được ưu tiên hơn khóa gửi từ máy khách.
+1. Khóa là hạ tầng của máy chạy, như đường dẫn tệp thực thi: đọc từ biến môi trường của tiến trình máy chủ (`ELEVENLABS_API_KEY`, `VBEE_TOKEN`, `VBEE_APP_ID`, đặt trong `.env.local`; đúng tên các dịch vụ tự dùng, không tiền tố). Không có ô nhập khóa trong giao diện, không lưu ở trình duyệt.
+2. Node Nhà Cung Cấp chỉ giữ tên nhà cung cấp và các tùy chọn thường (mô hình, tốc độ). Tệp workflow chia sẻ ra ngoài vì thế không bao giờ chứa khóa; `secretSettings` trong registry vẫn rỗng và chỉ dùng tới khi có nhà cung cấp buộc phải mang khóa trong tùy chọn.
+3. `probe()` báo `KEY_MISSING` khi thiếu và `KEY_INVALID` khi dịch vụ từ chối, kèm câu hướng dẫn đặt biến; node tiêu thụ phía sau tự chặn. Lời thoại đi trong thân yêu cầu, không bao giờ trong URL.
 
 Quy tắc ghi nhật ký, áp dụng luôn: mọi thông báo lỗi chuyển ngược về máy khách phải được lọc bỏ chuỗi giống khóa hoặc mã thông báo trước khi gửi, kể cả khi tiến trình con vô tình in chúng ra.
 

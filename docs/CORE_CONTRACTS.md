@@ -12,7 +12,7 @@ Tài liệu liên quan: Kiến trúc Hệ thống mô tả nơi từng phần th
 
 ### 1.1. Kiểu cổng
 
-Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ được phép tạo khi định danh kiểu ở cổng xuất trùng khớp tuyệt đối với định danh kiểu ở cổng nhận. Không có cơ chế ép kiểu ngầm. Lõi định nghĩa mười một kiểu; không thứ gì ngoài lõi được thêm kiểu cổng mới, chỉ được định nghĩa hình dạng cụ thể của `payload` bên trong các kiểu có sẵn.
+Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ được phép tạo khi định danh kiểu ở cổng xuất trùng khớp tuyệt đối với định danh kiểu ở cổng nhận. Không có cơ chế ép kiểu ngầm. Lõi định nghĩa mười hai kiểu; không thứ gì ngoài lõi được thêm kiểu cổng mới, chỉ được định nghĩa hình dạng cụ thể của `payload` bên trong các kiểu có sẵn.
 
 | Định danh kiểu | Nhãn hiển thị | Ý nghĩa | Node lõi phát | Node lõi nhận |
 | --- | --- | --- | --- | --- |
@@ -20,13 +20,14 @@ Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ đư�
 | `FactSheet` | Dữ kiện | Tập dữ kiện kiểm chứng được, có nguồn gốc | Truy Xuất Repo | Đạo Diễn AI, Đóng Gói Timeline |
 | `DirectorPlan` | Kịch bản Phân cảnh | Stage, danh mục block và danh sách cảnh (block, props, tone, trọng số) — tự chứa | Kịch Bản Tĩnh, Đạo Diễn AI | Đóng Gói Timeline |
 | `AudioScript` | Lời thoại | Văn bản thuyết minh kèm ngôn ngữ | Kịch Bản Tĩnh, Đạo Diễn AI | Giọng Đọc |
-| `Voiceover` | Âm thanh & Thời lượng | Tệp âm thanh đã đo thời lượng | Giọng Đọc | Đóng Gói Timeline |
+| `Voiceover` | Âm thanh & Thời lượng | Tệp âm thanh đã đo thời lượng, có thể kèm mốc từng từ | Giọng Đọc, Căn Mốc Từ | Đóng Gói Timeline, Căn Mốc Từ, Phụ Đề |
 | `VideoIR` | Bản đặc tả IR | Bản Đặc Tả Video Trung Gian | Đóng Gói Timeline | Xuất Bản Video, Xuất MP4 |
 | `EngineRef` | Động cơ | Tham chiếu tới một Adapter | Động Cơ | Xuất Bản Video, Xuất MP4 |
 | `LLMRef` | Mô hình ngôn ngữ | Tham chiếu tới nhà cung cấp mô hình | Nhà Cung Cấp Mô Hình Ngôn Ngữ | Đạo Diễn AI |
 | `TTSRef` | Giọng đọc | Tham chiếu tới nhà cung cấp giọng | Nhà Cung Cấp Giọng Đọc | Giọng Đọc |
 | `StageDef` | Stage | Sân khấu: token thiết kế, tone, trường theo cảnh, markup bao quanh block | Stage | Đạo Diễn AI, Kịch Bản Tĩnh |
 | `BlockSet` | Blocks | Danh mục block của một node Blocks: mỗi block là một kiểu cảnh (props mô hình được viết, tài liệu, code vẽ), `id` không trùng trong node | Blocks | Đạo Diễn AI, Kịch Bản Tĩnh — cổng `blocks` **nhiều dây**, danh mục là hợp của mọi dây |
+| `CaptionTrack` | Phụ đề | Các dòng phụ đề trên đồng hồ của voice-over, mỗi dòng gồm các từ có mốc | Phụ Đề | Đóng Gói Timeline (tùy chọn) |
 
 Một cổng xuất được phép nối ra nhiều cổng nhận. Một cổng nhận mặc định chỉ được phép có đúng một dây nối tới; cổng khai báo `multiple: true` nhận **bao nhiêu dây cũng được**, bắt buộc nghĩa là ít nhất một. Gói của cổng nhiều dây tới node dưới dạng danh sách `lists[tên cổng]` theo thứ tự dây, không phải `inputs[tên cổng]`; chữ ký chạy lại băm cả danh sách nên thêm hoặc bớt dây là node chạy lại. Cổng nhiều dây hiện có là cổng `blocks` (kiểu `BlockSet`) của Đạo Diễn AI và Kịch Bản Tĩnh. Đồ thị bắt buộc không có chu trình. Node tài nguyên (ba loại phát `EngineRef`, `LLMRef`, `TTSRef`) không có cổng nhận nào.
 
@@ -83,10 +84,13 @@ Tự chứa: mang theo sân khấu và mọi block mà các cảnh dùng, nên �
 - `audioUrl` (Chuỗi): Luôn ở dạng `/api/media/<mã băm>.mp3` tương đối với gốc ứng dụng, theo Kiến trúc Hệ thống mục 6. Không bao giờ là đường dẫn hệ tệp.
 - `durationSeconds` (Số, hai chữ số thập phân): Đo lại từ chính tệp đã tạo, không lấy ước lượng của nhà cung cấp.
 - `voiceName`, `language`, `speed`: Giọng đã dùng, ngôn ngữ của giọng đó (khác `AudioScript.language` nghĩa là đã dùng giọng dự phòng và phải kèm cảnh báo), hệ số tốc độ đã áp dụng.
+- `words` (tùy chọn, danh sách `{text, start, end}` giây tính từ đầu tệp): mốc từng từ, do nhà cung cấp trả về hoặc do node Căn Mốc Từ căn chỉnh. Không có nghĩa là chưa ai đo.
 
 ### 2.6. `StageDef`
 
 Sân khấu — cái vỏ hiển thị bền qua mọi cảnh của một workflow (xem thuật ngữ ở `README.md`). Mỗi workflow một stage.
+
+Stage cũng là nơi quyết định **chỗ phụ đề**: một phần tử `data-slot="captions"` trong markup, CSS của stage đặt vị trí, font, cỡ, màu chữ thường và biến `--caption-on` cho màu từ đang đọc; thuộc tính `data-caption-style="karaoke"` (mặc định, cả dòng hiện và từ đang đọc đổi màu) hay `"reveal"` (từ hiện dần theo nhịp đọc). Ba stage trong bản mẫu khai chỗ này ở vùng an toàn dưới. Không khai thì engine dùng dải mặc định.
 
 - `id` (slug), `name`.
 - `tokens.palette`, `tokens.fonts`: bản đồ tên → giá trị. Renderer phơi ra thành biến CSS `--<tên>` cho code của stage và block dùng chung (`--bg`, `--fg`, `--accent`, `--font-display`, …).
@@ -114,6 +118,10 @@ Dùng chung cho stage và block: `{ format: 'html-gsap', source }`, `source` t�
 
 ---
 
+### 2.10. `CaptionTrack`
+
+Các dòng phụ đề trên đồng hồ của voice-over: `cues` (danh sách `{start, end, words}` giây, mỗi `words` là các từ có mốc). Chỉ có **nói gì, lúc nào**; nằm ở đâu, font gì, màu tô ra sao là của Stage (mục 2.6). Một dòng không bao giờ sống quá lúc dòng sau bắt đầu, nên không có hai dòng chồng nhau. Cách gom từ thành dòng ở `core/captions/cues.ts`: theo câu trước, rồi tối ưu tổng chi phí ngắt dòng (dấu câu miễn phí, ngắt sau từ nối hay giữa một con số viết bằng chữ bị phạt nặng); mang từ cutdown, nơi các luật này đã đo trên lời thoại tiếng Việt thật.
+
 ## 3. Bản Đặc Tả Video Trung Gian (Universal Video IR)
 
 Cấu trúc duy nhất do Node Đóng Gói Timeline tạo ra, độc lập với engine **và độc lập với mọi node**. Tự chứa: mang theo stage và các block nó dùng, nên một engine vẽ được IR mà không cần đăng ký gì, và một IR đã lưu phát lại được ở bất kỳ đâu. Đây là ranh giới giữa phần dựng nội dung và phần kết xuất.
@@ -135,6 +143,7 @@ Cấu trúc duy nhất do Node Đóng Gói Timeline tạo ra, độc lập với
   - `startFrame`, `durationInFrames` (Số nguyên).
   - `props` (Đối tượng): Đã đè dữ kiện theo `factBindings`.
   - `tone`, `fields` (tùy chọn): Chép từ cảnh trong plan.
+- `captions` (tùy chọn): `cues` của `CaptionTrack` đã đổi sang khung hình: `{startFrame, durationInFrames, words: [{text, startFrame, durationInFrames}]}`; mỗi từ ít nhất một khung, không dòng nào vượt quá tổng khung. Không có `captions` là cùng video đó không phụ đề; số hiệu IR không đổi vì trường này chỉ thêm.
 
 ### 3.1. Bất biến do lõi kiểm định
 
@@ -249,6 +258,14 @@ Vì sao một node chứ không mỗi block một node: thử với sáu block t
 
 Node lõi `core/github-fetcher`: nhận `SourceRef`, phát `FactSheet`. Link repo GitHub thì gọi GitHub API ngay trong node (mục 9.1) để lấy tên, mô tả, sao, ngôn ngữ, chủ đề, lệnh cài suy từ README, trích README. Văn bản thường thì đi qua nguyên vẹn (`mode: passthrough`) để đồ thị GitHub vẫn chạy được với một đoạn mô tả gõ tay. Lỗi có mã riêng: `REPO_NOT_FOUND`, `REPO_RATE_LIMITED` (thử lại được), `REPO_NETWORK` (thử lại được). Cả họ ở `nodes/github/`: node, đọc link, gọi GitHub, dựng dữ kiện, thân node, test. Đây là mẫu cho mọi node lấy dữ liệu về sau (RSS, YouTube, …): một thư mục `nodes/<nguồn>/` chứa trọn họ đó, như `comfy_extras/nodes_<chủ đề>.py` của ComfyUI.
 
+### 5.12. Căn Mốc Từ (Transcribe)
+
+Node lõi `core/transcribe`: nhận `Voiceover` và `AudioScript`, phát `Voiceover` có `words`. Là **căn chỉnh cưỡng bức**, không phải nhận dạng: văn bản đã biết, công cụ chỉ trả lời mỗi từ được đọc lúc nào, nên model nhỏ là đủ và chữ không bao giờ sai. Chạy qua `services.alignWords` → `server/align.ts` gọi `stable-ts` bằng Python trong venv `.nodecine/tools/stable-ts` (`npm run setup:align` cài một lần; `NODECINE_ALIGN_PYTHON` ghi đè); lời thoại đi qua stdin, đường dẫn audio dựng lại từ tên băm của `audioUrl`. Kết quả qua `retime` để chữ là chữ của kịch bản, chỉ mượn mốc thời gian. Voice-over đã có `words` (nhà cung cấp trả sẵn, ví dụ ElevenLabs sau này) thì đi qua nguyên vẹn. Tham số: `model` (`small` mặc định, `medium`, `large-v3`). Thiếu công cụ báo `PROVIDER_NOT_INSTALLED` kèm lệnh cài; căn chỉnh hỏng báo `ALIGN_FAILED`.
+
+### 5.13. Phụ Đề (Captions)
+
+Node lõi `core/captions`: nhận `Voiceover` có `words`, phát `CaptionTrack` (mục 2.10). Hàm thuần. Tham số duy nhất: `maxChars` (26), vì số ký tự một dòng chứa được là số đo bề rộng chỗ phụ đề mà stage dành ra. Voice-over không có `words` là lỗi `CAPTIONS_NO_WORDS` kèm hướng dẫn nối qua Căn Mốc Từ. Ba bản mẫu đều mang sẵn cặp Căn Mốc Từ → Phụ Đề ở trạng thái bỏ qua, nối vào cổng `captions` tùy chọn của Đóng Gói Timeline; bật hai node là có phụ đề, tắt là video như cũ (quy tắc cổng tùy chọn sau node bị bỏ qua ở Bộ Máy Thực Thi mục 2). Engine HyperFrames đổ các dòng vào chỗ `data-slot="captions"` của stage trong từng cảnh (dòng cắt ngang hai cảnh được vẽ ở cả hai), bật tắt dòng và tô từ trên timeline gốc; stage không khai chỗ thì engine thêm dải mặc định trong vùng an toàn dưới.
+
 ---
 
 ## 6. Adapter và Node Động Cơ
@@ -306,15 +323,15 @@ Node gọi `complete()` là node đạo diễn của gói; lõi không có node 
 
 ### 8.1. Cấu trúc `TTSRef`
 
-- `providerId`: định danh nhà cung cấp đang chọn trên node. Hiện có `system-tts` (chỉ macOS) và `piper` (chạy cục bộ trên mọi hệ điều hành).
-- `displayName`, `transport` (`local`).
+- `providerId`: định danh nhà cung cấp đang chọn trên node. Hiện có `system-tts` (chỉ macOS), `piper` (cục bộ, mọi hệ điều hành), `elevenlabs` và `vbee` (đám mây, khóa từ biến môi trường).
+- `displayName`, `transport` (`local` cho bộ tổng hợp trên máy, `api` cho dịch vụ đám mây).
 - `capabilities`: `installed` (bộ tổng hợp sẵn sàng, gồm cả việc có mô hình giọng hay chưa với Piper), `encoder` (ffmpeg).
-- `voices`: Danh sách `{id, displayName, language}` lấy từ hệ điều hành lúc `probe()`.
+- `voices`: Danh sách `{id, displayName, language}` lấy lúc `probe()` từ hệ điều hành, thư mục mô hình, hay danh mục của dịch vụ. `language` là BCP 47; giá trị `mul` nghĩa là giọng nói được mọi ngôn ngữ (ElevenLabs chạy một mô hình đa ngữ), và Node Giọng Đọc coi `mul` là khớp với mọi lời thoại.
 - `settings`: `defaultVoice`, `rate`.
 
 ### 8.2. Quy tắc chọn giọng tại Node Giọng Đọc
 
-Nếu người dùng đã chọn một giọng khớp ngôn ngữ lời thoại, dùng giọng đó; nếu không, dùng giọng đầu tiên khớp ngôn ngữ; nếu không có giọng nào khớp, dùng `defaultVoice` và phát cảnh báo `TTS_VOICE_LANGUAGE_MISMATCH`, không dừng luồng.
+Nếu người dùng đã chọn một giọng, dùng giọng đó, kể cả khi nó không khớp ngôn ngữ lời thoại (khi đó phát cảnh báo `TTS_VOICE_LANGUAGE_MISMATCH`, không dừng luồng: lựa chọn rõ ràng là của người dùng); nếu không chọn, dùng giọng đầu tiên khớp ngôn ngữ; nếu không có giọng nào khớp, dùng `defaultVoice` và phát cùng cảnh báo. Trên giao diện, node liệt kê giọng khớp ngôn ngữ lên đầu và mọi giọng khác theo nhóm ngôn ngữ; khi chưa có lời thoại, ngôn ngữ lấy từ cài đặt của director rồi tới ngôn ngữ giao diện.
 
 Ví dụ với bộ tổng hợp của hệ điều hành trên macOS: `say` ghi AIFF vào thư mục tệp tạm, ffmpeg chuyển sang MP3, đo thời lượng từ tệp MP3. Hệ điều hành chưa hỗ trợ thì `probe()` báo `installed: unavailable`; ứng dụng không giả vờ có giọng.
 

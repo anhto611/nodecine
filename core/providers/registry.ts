@@ -17,8 +17,9 @@ export interface ProviderRegistration<F> {
   settingsSchema: ZodTypeAny;
   defaultSettings: Record<string, unknown>;
   /**
-   * Setting names that hold a credential. Nothing reads this yet — v0.1 ships no API keys — but a
-   * provider that needs one declares it here so the key handling has a single place to look.
+   * Setting names that hold a credential. Nothing reads this yet: the hosted providers take their
+   * keys from the environment, so no credential sits in a graph. A provider that must carry one in
+   * its settings declares it here so the key handling has a single place to look.
    */
   secretSettings?: string[];
 }

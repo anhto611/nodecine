@@ -21,7 +21,9 @@ export async function POST(req: Request) {
     const job = jobHub().submit(parsed.data);
     return NextResponse.json({ job });
   } catch (e) {
-    if (e instanceof GraphInvalidError) return NextResponse.json({ error: 'GRAPH_INVALID', message: e.message, issues: e.issues }, { status: 400 });
+    // Matched by shape, not instanceof: in dev the hub outlives a hot reload and throws the class from the previous module graph.
+    const issues = (e as { issues?: unknown }).issues;
+    if (e instanceof GraphInvalidError || (e instanceof Error && e.name === 'GraphInvalidError' && Array.isArray(issues))) return NextResponse.json({ error: 'GRAPH_INVALID', message: e.message, issues }, { status: 400 });
     return NextResponse.json({ error: (e as { code?: string }).code ?? 'JOB_INVALID', message: e instanceof Error ? e.message : String(e) }, { status: 400 });
   }
 }
