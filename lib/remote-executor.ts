@@ -16,6 +16,12 @@ import type { Job } from '@/server/jobs';
 type Snapshot = { runtimes: Record<string, NodeRuntime>; logs: LogEntry[]; running: boolean; pending: Job[]; history?: RunRecord[] };
 export type RemoteHooks = ExecutorHooks & { onHistory?: (history: RunRecord[]) => void };
 
+async function getJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} failed (${res.status})`);
+  return (await res.json()) as T;
+}
+
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string; issues?: GraphIssue[] };
@@ -36,6 +42,24 @@ export class RemoteExecutor {
   private waiting = new Map<string, (job: Job) => void>();
   private pushGraph: ReturnType<typeof setTimeout> | null = null;
   private runningJob: string | null = null;
+  /**
+   * Every request to the server goes out in the order it was issued. Without this an invalidate sent
+   * from a param edit could land after the single-node job that followed it, and mark the fresh
+   * result stale again — which is what "switching provider does not reload" looked like.
+   */
+  private chain: Promise<void> = Promise.resolve();
+  /**
+   * Jobs the stream reported finished. A short job can finish before the POST that created it
+   * returns, so its done event arrives before anyone waits for it; without this record that wait
+   * never ends and the store stays "running" until a reload.
+   */
+  private finished = new Map<string, Job>();
+
+  private inOrder<T>(fn: () => Promise<T>): Promise<T> {
+    const next = this.chain.then(fn, fn);
+    this.chain = next.then(() => undefined, () => undefined);
+    return next;
+  }
 
   constructor(key: string, graph: Graph, name: string, private readonly hooks: RemoteHooks = {}) {
     this.key = key;
@@ -126,14 +150,26 @@ export class RemoteExecutor {
 
   private async submit(kind: 'run' | 'node' | 'probe', extra: { nodeId?: string; force?: boolean }): Promise<Job> {
     if (this.pushGraph) { clearTimeout(this.pushGraph); this.pushGraph = null; }
-    const { job } = await postJson<{ job: Job }>('/api/jobs', { key: this.key, kind, graph: this.graph, name: this.name, ...extra });
+    const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', { key: this.key, kind, graph: this.graph, name: this.name, ...extra }));
+    const early = this.finished.get(job.id);
+    if (early) { this.finished.delete(job.id); return early; }
     if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return job;
-    return new Promise<Job>((resolve) => { this.waiting.set(job.id, resolve); });
+    return new Promise<Job>((resolve) => {
+      this.waiting.set(job.id, resolve);
+      // Belt and braces: if the stream drops the event, ask the server directly now and then.
+      const poll = setInterval(async () => {
+        if (!this.waiting.has(job.id)) { clearInterval(poll); return; }
+        try {
+          const { job: now } = await getJson<{ job: Job }>(`/api/jobs/${encodeURIComponent(job.id)}`);
+          if (now && (now.status === 'done' || now.status === 'failed' || now.status === 'cancelled')) { this.waiting.delete(job.id); clearInterval(poll); resolve(now); }
+        } catch { /* next tick */ }
+      }, 2000);
+    });
   }
 
   private async send(body: unknown, quiet: boolean): Promise<void> {
     try {
-      await postJson(`/api/executors/${encodeURIComponent(this.key)}`, body);
+      await this.inOrder(() => postJson(`/api/executors/${encodeURIComponent(this.key)}`, body));
     } catch (e) {
       if (!quiet) this.logs.push({ ts: Date.now(), nodeId: 'server', level: 'warn', message: `could not reach the executor: ${e instanceof Error ? e.message : String(e)}` });
     }
@@ -170,8 +206,9 @@ export class RemoteExecutor {
       if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') {
         if (this.runningJob === job.id) this.runningJob = null;
         if (job.error && job.status === 'failed') this.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: job.error.code, message: job.error.message });
-        this.waiting.get(job.id)?.(job);
-        this.waiting.delete(job.id);
+        const waiter = this.waiting.get(job.id);
+        if (waiter) { waiter(job); this.waiting.delete(job.id); }
+        else { this.finished.set(job.id, job); if (this.finished.size > 50) this.finished.delete(this.finished.keys().next().value!); }
       }
     });
   }

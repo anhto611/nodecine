@@ -34,6 +34,39 @@ export function fileNameFromMediaUrl(url: string): string {
   return m[1]!;
 }
 
+/**
+ * Assets a look refers to (logos, images): content-addressed files under `.nodecine/assets`, served
+ * as `/api/assets/<hash>.<ext>`, never cleaned up (a workflow may point at them for years).
+ */
+export function assetsDir(): string {
+  return path.resolve(process.cwd(), process.env.NODECINE_ASSETS_DIR ?? '.nodecine/assets');
+}
+
+export const ASSET_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' };
+
+export async function ensureAssetsDir(): Promise<string> {
+  const dir = assetsDir();
+  await mkdir(dir, { recursive: true });
+  return dir;
+}
+
+export function assetUrl(fileName: string): string {
+  if (!NAME.test(fileName)) throw new Error(`Invalid asset file name: ${fileName}`);
+  return `/api/assets/${fileName}`;
+}
+
+export function assetPath(fileName: string): string {
+  if (!NAME.test(fileName)) throw new Error(`Invalid asset file name: ${fileName}`);
+  const p = path.join(assetsDir(), fileName);
+  if (path.dirname(p) !== assetsDir()) throw new Error('Path escapes the assets dir');
+  return p;
+}
+
+/** Every `/api/assets/<name>` a piece of code refers to, once each. */
+export function assetNamesIn(text: string): string[] {
+  return [...new Set([...text.matchAll(/\/api\/assets\/([a-f0-9]{16,64}\.[a-z0-9]+)/g)].map((m) => m[1]!))];
+}
+
 /** Delete files older than `maxAgeMs` (default 24h). Runs at startup; no background job in v0.1. */
 export async function cleanupTmp(maxAgeMs = 24 * 60 * 60 * 1000): Promise<number> {
   const dir = await ensureTmpDir();

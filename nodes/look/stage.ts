@@ -15,8 +15,11 @@ import type { NodeDefinition } from '@/core/nodes/definition';
 export const STAGE = 'core/stage';
 
 export const DEFAULT_STAGE: StageDef = {
-  id: 'dark',
   name: 'Dark',
+  frame: {
+    width: 1080,
+    height: 1920,
+  },
   tokens: {
     palette: {
       bg: '#0b0c10',

@@ -60,19 +60,17 @@ export const WorkflowsPanel: React.FC = () => {
       {importError && <div style={{ padding: '6px 12px', fontSize: 'var(--fs-body)', color: 'var(--err)', borderBottom: '1px solid var(--line)' }}>{t('workflows.importBad', { why: importError })}</div>}
       <div style={{ padding: '6px 12px', fontSize: 'var(--fs-hint)', color: 'var(--tx-3)', borderBottom: '1px solid var(--line)' }}>{t('workflows.where')}</div>
       <div style={{ overflowY: 'auto', flex: 1 }}>
-        <div className="nc-pn-sub">{t('workflows.saved')}</div>
         {files === null && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>…</div>}
         {files?.length === 0 && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>{t('workflows.empty')}</div>}
         {files?.map((f) => {
           const isOpen = tabs.some((x) => x.fileId === f.id);
           return (
-            <div key={f.id} className={`nc-wf ${isOpen ? 'open' : ''}`} onDoubleClick={() => void open(f.id)}>
-              <Icon.doc size={11} />
+            <div key={f.id} className={`nc-wf ${isOpen ? 'open' : ''}`} onClick={() => { if (!renaming && confirm !== f.id) void open(f.id); }}>
               <div style={{ minWidth: 0, flex: 1 }}>
                 {renaming?.id === f.id ? (
-                  <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                    <input className="nc-input" autoFocus value={renaming.name} onChange={(e) => setRenaming({ id: f.id, name: e.target.value })} onKeyDown={async (e) => { if (e.key === 'Enter') { await rename(f.id, renaming.name); setRenaming(null); } if (e.key === 'Escape') setRenaming(null); }} />
-                    <Btn small primary onClick={async () => { await rename(f.id, renaming.name); setRenaming(null); }}>{t('workflows.renameDo')}</Btn>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    <input className="nc-input" style={{ flex: 1, minWidth: 0 }} autoFocus value={renaming.name} onChange={(e) => setRenaming({ id: f.id, name: e.target.value })} onKeyDown={async (e) => { if (e.key === 'Enter') { await rename(f.id, renaming.name); setRenaming(null); } if (e.key === 'Escape') setRenaming(null); }} />
+                    <Btn small primary style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }} onClick={async () => { await rename(f.id, renaming.name); setRenaming(null); }}>{t('workflows.renameDo')}</Btn>
                   </div>
                 ) : (
                   <>
@@ -80,7 +78,12 @@ export const WorkflowsPanel: React.FC = () => {
                     <div className="nc-wf-meta">{t('workflows.meta', { n: f.nodes, at: new Date(f.updatedAt).toLocaleString() })}</div>
                   </>
                 )}
-                {confirm === f.id ? (
+                {renaming?.id === f.id ? (
+                  <div className="nc-wf-actions" onClick={(e) => e.stopPropagation()}>
+                    <span style={{ color: 'var(--tx-3)' }}>{t('workflows.renameHint')}</span>
+                    <button className="nc-chip" onClick={() => setRenaming(null)}>{t('workflows.renameCancel')}</button>
+                  </div>
+                ) : confirm === f.id ? (
                   <div className="nc-wf-actions" onClick={(e) => e.stopPropagation()}>
                     <span style={{ color: 'var(--err)' }}>{t('workflows.deleteAsk')}</span>
                     <button className="nc-chip on" onClick={() => { void remove(f.id); setConfirm(null); }}>{t('workflows.delete')}</button>
@@ -88,7 +91,6 @@ export const WorkflowsPanel: React.FC = () => {
                   </div>
                 ) : (
                   <div className="nc-wf-actions" onClick={(e) => e.stopPropagation()}>
-                    <button className="nc-chip" onClick={() => void open(f.id)}>{t('workflows.openDo')}</button>
                     <button className="nc-chip" onClick={() => setRenaming({ id: f.id, name: localized(f.name, locale, f.id) })}>{t('workflows.rename')}</button>
                     <button className="nc-chip" onClick={() => void download(f.id)}>{t('workflows.download')}</button>
                     <button className="nc-chip" onClick={() => setConfirm(f.id)}>{t('workflows.delete')}</button>

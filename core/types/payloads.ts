@@ -59,8 +59,9 @@ export type BlockSet = z.infer<typeof BlockSetSchema>;
 
 /** The persistent shell every scene plays on; one per workflow (CORE_CONTRACTS §2.6). */
 export const StageDefSchema = z.object({
-  id: z.string().regex(SLUG).max(60),
   name: z.string().min(1).max(80),
+  /** The frame this stage is drawn for; the video takes its size from here (CORE_CONTRACTS §2.6). */
+  frame: z.object({ width: z.number().int().min(16).max(8192), height: z.number().int().min(16).max(8192) }).default({ width: 1080, height: 1920 }),
   tokens: z.object({ palette: z.record(z.string()), fonts: z.record(z.string()) }),
   /** Named palette overrides a scene may switch to; keys are what the model writes into `tone`. */
   tones: z.record(z.record(z.string())).default({}),

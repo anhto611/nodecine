@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Voiceover } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { ErrorCode } from '@/core/errors';
-import { buildCaptionTrack } from '@/core/captions/cues';
+import { buildCaptionTrack } from '@/nodes/captions/cues';
 
 const Params = z.object({
   /** Characters a line may hold: a measurement of the caption slot the stage draws, so it lives here, not there. */

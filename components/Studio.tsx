@@ -12,7 +12,7 @@ import { HistoryPanel } from './panels/HistoryPanel';
 import { LogsPanel } from './panels/LogsPanel';
 import { TemplateBrowser } from './panels/TemplateBrowser';
 import { SettingsDialog } from './panels/SettingsDialog';
-import { CodeEditorDialog } from './panels/CodeEditorDialog';
+import { CodeEditorDialog } from '@/nodes/look/editor/CodeEditorDialog';
 
 /** Studio shell: header, rail, optional left panel, canvas, optional bottom logs, modals. */
 export const Studio: React.FC = () => {

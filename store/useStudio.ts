@@ -4,13 +4,15 @@ import { RemoteExecutor } from '@/lib/remote-executor';
 import { validateGraph, type Graph, type GraphIssue, type NodeInstance, GraphInvalidError } from '@/core/engine/graph';
 import type { NodeRuntime } from '@/core/engine/state';
 import type { RunRecord } from '@/core/engine/history';
+import { UndoStack } from '@/lib/undo-stack';
+import { contentHash } from '@/core/hash';
 import { getNodeType } from '@/core/nodes/definition';
 import staticScriptJson from '@/templates/static-script.json';
 import { getTemplate, templateGraph, type TemplateDefinition, localized } from '@/core/templates/registry';
 import type { VideoIR } from '@/core/types/ir';
 import type { EngineRef } from '@/core/types/payloads';
 import { bootstrapClient } from '@/lib/bootstrap.client';
-import { loadUserTemplates, saveUserTemplates, loadProject, loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
+import { loadUserTemplates, saveUserTemplates, loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 import { workflowsApi } from '@/lib/workflows.client';
 import type { Locale } from '@/lib/i18n';
 
@@ -24,7 +26,16 @@ export interface WorkflowTab {
   name: string;
   graph: Graph;
   dirty: boolean;
+  /**
+   * Hash of name + graph as last saved (or as opened, for a clean template). `dirty` is derived from
+   * it, so undoing back to the saved state clears the dot; absent means "always dirty" (a draft).
+   */
+  savedHash?: string;
 }
+
+/** What "unsaved" compares against: the name and the graph, the two things a file holds. */
+export const savedHashOf = (name: string, graph: Graph): string => contentHash({ name, graph });
+const dirtyOf = (tab: WorkflowTab, name: string, graph: Graph): boolean => (tab.savedHash ? savedHashOf(name, graph) !== tab.savedHash : true);
 /** A registered template id (core/templates/registry). */
 export type TemplateId = string;
 
@@ -53,10 +64,14 @@ export interface StudioState {
   /** The stage node, or one block of a Blocks node, open in the code editor. */
   codeEditor: { nodeId: string; blockIndex?: number } | null;
   selectedNodeId: string | null;
+  canUndo: boolean;
+  canRedo: boolean;
   /** The server-side executor for the active tab, mirrored here (ARCHITECTURE §1.2). */
   executor: RemoteExecutor | null;
 
   init(): void;
+  undo(): void;
+  redo(): void;
   setParams(nodeId: string, patch: Record<string, unknown>): void;
   setNodePosition(nodeId: string, position: { x: number; y: number }): void;
   /** Many at once, for auto-layout; one persist, one dirty mark. */
@@ -110,7 +125,7 @@ export const useStudio = create<StudioState>((set, get) => {
   /** Swap the canvas to a tab's graph: executor, validation, runtimes, name. */
   const showTab = (tab: WorkflowTab) => {
     const ex = get().executor;
-    set({ activeTab: tab.key, graph: tab.graph, projectName: tab.name, issues: validateGraph(tab.graph), runtimes: {}, running: false, step: null, viewingRun: null, selectedNodeId: null, history: [] });
+    set({ activeTab: tab.key, graph: tab.graph, projectName: tab.name, issues: validateGraph(tab.graph), runtimes: {}, running: false, step: null, viewingRun: null, selectedNodeId: null, history: [], canUndo: stackFor(tab.key).canUndo, canRedo: stackFor(tab.key).canRedo });
     persist();
     void ex?.switchTo(tab.key, tab.graph, tab.name).then(() => {
       if (get().activeTab !== tab.key) return;
@@ -121,7 +136,8 @@ export const useStudio = create<StudioState>((set, get) => {
     });
   };
   const addTab = (tab: Omit<WorkflowTab, 'key'>) => {
-    const full: WorkflowTab = { key: tabKey(), ...tab };
+    // A tab that opens clean remembers what clean looks like.
+    const full: WorkflowTab = { key: tabKey(), ...tab, ...(!tab.dirty && !tab.savedHash ? { savedHash: savedHashOf(tab.name, tab.graph) } : {}) };
     set({ tabs: [...get().tabs, full] });
     showTab(full);
     return full;
@@ -130,14 +146,25 @@ export const useStudio = create<StudioState>((set, get) => {
     const { locale, panel, logsOpen } = get();
     saveUiPrefs({ locale, panel, logsOpen });
   };
-  const refresh = (graph: Graph) => {
+  // One undo history per open tab, in memory only: a reload starts with a clean slate, like ComfyUI.
+  const undoStacks = new Map<string, UndoStack<Graph>>();
+  const stackFor = (key: string) => { let s = undoStacks.get(key); if (!s) { s = new UndoStack<Graph>(); undoStacks.set(key, s); } return s; };
+  const syncUndoFlags = () => { const s = stackFor(get().activeTab); set({ canUndo: s.canUndo, canRedo: s.canRedo }); };
+  /** Puts a graph on the active tab and the executor without touching the undo history. */
+  const apply = (graph: Graph) => {
     const ex = get().executor;
     ex?.setGraph(graph);
     const runtimes: Record<string, NodeRuntime> = {};
     if (ex) for (const [id, rt] of ex.runtimes_()) runtimes[id] = rt;
     const { tabs, activeTab } = get();
-    set({ graph, issues: validateGraph(graph), runtimes, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, graph, dirty: true } : t)) });
+    set({ graph, issues: validateGraph(graph), runtimes, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, graph, dirty: dirtyOf(t, t.name, graph) } : t)) });
     persist();
+  };
+  /** Every edit goes through here: the graph before it becomes an undo step, coalesced for typing. */
+  const refresh = (graph: Graph, opts: { coalesce?: string } = {}) => {
+    stackFor(get().activeTab).record(get().graph, opts);
+    apply(graph);
+    syncUndoFlags();
   };
 
   return {
@@ -162,6 +189,8 @@ export const useStudio = create<StudioState>((set, get) => {
     settingsOpen: false,
     codeEditor: null,
     selectedNodeId: null,
+    canUndo: false,
+    canRedo: false,
     executor: null,
 
     init() {
@@ -171,12 +200,10 @@ export const useStudio = create<StudioState>((set, get) => {
       // The tabs that were open, or the single project an older build saved, or a first open: the
       // core template as data, so no registry has to be ready yet.
       const stored = loadTabs();
-      const saved = stored ? null : loadProject();
+      // A tab stored clean is, by definition, at its saved state: give it the hash it predates.
       const tabs: WorkflowTab[] = stored?.tabs.length
-        ? stored.tabs
-        : saved
-          ? [{ key: tabKey(), fileId: null, name: saved.name, graph: saved.graph, dirty: true }]
-          : [{ key: tabKey(), fileId: null, name: 'Static Script', graph: structuredClone(staticScriptJson.graph) as Graph, dirty: false }];
+        ? stored.tabs.map((t) => (t.savedHash || t.dirty ? t : { ...t, savedHash: savedHashOf(t.name, t.graph) }))
+        : [{ key: tabKey(), fileId: null, name: 'Static Script', graph: structuredClone(staticScriptJson.graph) as Graph, dirty: false }];
       const active = tabs.find((t) => t.key === stored?.active) ?? tabs[0]!;
       const graph = active.graph;
       const executor = new RemoteExecutor(active.key, graph, active.name, {
@@ -237,6 +264,7 @@ export const useStudio = create<StudioState>((set, get) => {
       const i = tabs.findIndex((t) => t.key === key);
       if (i < 0) return;
       const rest = tabs.filter((t) => t.key !== key);
+      undoStacks.delete(key);
       set({ tabs: rest });
       if (rest.length === 0) { get().newWorkflow(); return; }
       if (activeTab === key) showTab(rest[Math.min(i, rest.length - 1)]!);
@@ -249,7 +277,7 @@ export const useStudio = create<StudioState>((set, get) => {
       if (!tab.fileId) return 'needs-name';
       const existing = await workflowsApi.read(tab.fileId).catch(() => null);
       await workflowsApi.replace(tab.fileId, { name: tab.name, ...(existing?.description ? { description: existing.description } : {}), graph: tab.graph });
-      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, dirty: false } : t)), workflowsTick: get().workflowsTick + 1 });
+      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, dirty: false, savedHash: savedHashOf(t.name, t.graph) } : t)), workflowsTick: get().workflowsTick + 1 });
       persist();
       return 'saved';
     },
@@ -260,7 +288,7 @@ export const useStudio = create<StudioState>((set, get) => {
       const base = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workflow';
       const id = `${base}-${Date.now().toString(36)}`;
       await workflowsApi.save({ id, name: name.trim(), graph: structuredClone(tab.graph) });
-      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, fileId: id, name: name.trim(), dirty: false } : t)), projectName: name.trim(), workflowsTick: get().workflowsTick + 1 });
+      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, fileId: id, name: name.trim(), dirty: false, savedHash: savedHashOf(name.trim(), t.graph) } : t)), projectName: name.trim(), workflowsTick: get().workflowsTick + 1 });
       persist();
     },
 
@@ -270,7 +298,7 @@ export const useStudio = create<StudioState>((set, get) => {
       if (!node) return;
       const next: Graph = { ...graph, nodes: graph.nodes.map((n) => (n.id === nodeId ? { ...n, params: { ...n.params, ...patch } } : n)) };
       get().executor?.invalidate(nodeId);
-      refresh(next);
+      refresh(next, { coalesce: `params:${nodeId}` });
     },
 
     setNodePositions(positions) {
@@ -280,10 +308,19 @@ export const useStudio = create<StudioState>((set, get) => {
       const moved = Object.entries(positions).filter(([id, pos]) => { const n = graph.nodes.find((x) => x.id === id); return n && (n.position.x !== pos.x || n.position.y !== pos.y); });
       if (!moved.length) return;
       const next: Graph = { ...graph, nodes: graph.nodes.map((n) => (positions[n.id] ? { ...n, position: positions[n.id]! } : n)) };
-      const { tabs, activeTab } = get();
-      set({ graph: next, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, graph: next, dirty: true } : t)) });
-      get().executor?.setGraph(next);
-      persist();
+      refresh(next);
+    },
+
+    undo() {
+      const prev = stackFor(get().activeTab).undo(get().graph);
+      if (prev) { apply(prev); set({ selectedNodeId: null }); }
+      syncUndoFlags();
+    },
+
+    redo() {
+      const next = stackFor(get().activeTab).redo(get().graph);
+      if (next) { apply(next); set({ selectedNodeId: null }); }
+      syncUndoFlags();
     },
 
     setNodePosition(nodeId, position) {
@@ -390,7 +427,7 @@ export const useStudio = create<StudioState>((set, get) => {
     async deleteWorkflow(id) {
       await workflowsApi.remove(id).catch(() => undefined);
       // A tab that was this file goes on as a draft; nothing on the canvas is lost.
-      set({ tabs: get().tabs.map((t) => (t.fileId === id ? { ...t, fileId: null, dirty: true } : t)), workflowsTick: get().workflowsTick + 1 });
+      set({ tabs: get().tabs.map((t) => (t.fileId === id ? { ...t, fileId: null, dirty: true, savedHash: undefined } : t)), workflowsTick: get().workflowsTick + 1 });
       persist();
     },
 
@@ -443,7 +480,7 @@ export const useStudio = create<StudioState>((set, get) => {
     setProjectName(name) {
       const { tabs, activeTab } = get();
       get().executor?.setName(name);
-      set({ projectName: name, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, name, dirty: true } : t)) });
+      set({ projectName: name, tabs: tabs.map((t) => (t.key === activeTab ? { ...t, name, dirty: dirtyOf(t, name, t.graph) } : t)) });
       persist();
     },
     setPanel(panel) {

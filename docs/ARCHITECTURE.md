@@ -71,8 +71,8 @@ nodecine/
 │  ├─ types/                      Kiểu cổng, lược đồ dữ liệu, Bản đặc tả IR
 │  ├─ nodes/definition.ts         Hợp đồng node (NodeDefinition, PortDef, RunContext) và registry node rỗng; các node ở nodes/
 │  ├─ engine/                     Bộ máy thực thi đồ thị, chữ ký node, bộ nhớ đệm
-│  ├─ assembler/                  Phân bổ khung hình theo trọng số, đè dữ kiện, kiểm định IR
 │  ├─ look/                       Bảng props của block → lược đồ Zod; registry renderer theo định dạng code
+│  │  ├─ editor/                 Modal của Stage/Block: tab Thành phần (danh mục vai trò, kéo thả, thuộc tính), tab Code (CodeMirror), sửa bằng lời, xem trước; edit.server.ts là phần máy chủ
 │  ├─ templates/registry.ts       Registry bản mẫu: kiểm định JSON, trả bản sao đồ thị; rỗng ở lõi
 │  ├─ text/                       Nhận diện ngôn ngữ theo hệ chữ; chính sách ngôn ngữ đầu ra
 │  ├─ adapters/                   CHỈ giao diện Adapter và registry rỗng; không có lớp cài đặt nào ở đây
@@ -117,7 +117,9 @@ nodecine/
 │  ├─ look/                       Stage và Blocks: node, thân node, xem trước
 │  ├─ resources/                  Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn, hai node Động Cơ
 │  ├─ tts/                        Giọng Đọc
-│  ├─ assembler/                  Đóng Gói Timeline
+│  ├─ transcribe/                 Căn Mốc Từ: node, align.server.ts + align/stable_ts_align.py (căn chỉnh cưỡng bức)
+│  ├─ captions/                   Phụ Đề: node, cues.ts (gom từ thành dòng)
+│  ├─ assembler/                  Đóng Gói Timeline: phân bổ khung hình theo trọng số, đè dữ kiện, dựng IR (kiểm định IR ở core/types/validate-ir.ts)
 │  └─ output/                     Xuất Bản Video, Xuất MP4
 ├─ components/                    Thành phần giao diện Studio (canvas, dải, panel, thẻ node); thân node nằm ở nodes/
 ├─ locales/                       Từ điển chuỗi hiển thị

@@ -15,8 +15,11 @@
         "id": "stage",
         "type": "core/stage",
         "params": {
-          "id": "developer-dark",
           "name": "Developer dark",
+          "frame": {
+            "width": 1080,
+            "height": 1920
+          },
           "tokens": {
             "palette": {
               "bg": "#0b0c10",
@@ -464,8 +467,6 @@
         "type": "core/timeline-assembler",
         "params": {
           "fps": 30,
-          "width": 1080,
-          "height": 1920,
           "minTotalFrames": 270,
           "title": "GitHub showcase"
         },

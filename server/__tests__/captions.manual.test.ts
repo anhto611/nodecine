@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { stat } from 'node:fs/promises';
 import { createServerServices } from '../services.server';
-import { buildCaptionTrack, retime } from '@/core/captions/cues';
-import { buildIR } from '@/core/assembler/build-ir';
+import { buildCaptionTrack, retime } from '@/nodes/captions/cues';
+import { buildIR } from '@/nodes/assembler/build-ir';
 import { mediaUrl } from '../paths';
 import staticScript from '@/templates/static-script.json';
 import type { BlockDef, StageDef } from '@/core/types/payloads';
@@ -37,7 +37,8 @@ describe.skipIf(!enabled)('captions, for real', () => {
       params: { title: 'Captions check', minTotalFrames: 30 },
     });
     const engine = await services.probeEngine('hyperframes', {});
-    const out = await services.render(engine, ir, { codec: 'h264', quality: 'high', fileName: 'captions-check.mp4' }, () => undefined, new AbortController().signal);
+    const resolution = (process.env.NODECINE_MANUAL_RESOLUTION ?? '1080p') as '1080p' | '1440p' | '2160p';
+    const out = await services.render(engine, ir, { codec: 'h264', quality: 'high', fileName: 'captions-check.mp4', resolution }, () => undefined, new AbortController().signal);
     console.log('mp4', out.outputUrl, out.bytes);
     expect((await stat(`.nodecine/tmp/${out.outputUrl.split('/').pop()}`)).size).toBeGreaterThan(10_000);
   }, 600_000);

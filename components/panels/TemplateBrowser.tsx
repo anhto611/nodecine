@@ -58,7 +58,7 @@ export const TemplateBrowser: React.FC = () => {
       {/* Grows with the window and stays inside it. The app's floor is a 1280×800 screen; the
           card row adapts to whatever width this lands on. */}
       <div className="nc-modal" style={{ width: 'min(1400px, 94vw)', height: 'min(820px, 90vh)' }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ height: 52, display: 'flex', alignItems: 'center', gap: 12, padding: '0 18px', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ height: 52, display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px', borderBottom: '1px solid var(--line)' }}>
           <button className="nc-chip nc-tpl-sidebtn" style={{ border: 0, padding: '5px 7px' }} onClick={() => setSideOpen((v) => !v)} title={t('templates.categories')}><Icon.layers size={13} /></button>
           <span style={{ color: 'var(--accent-2)' }}><Icon.tpl size={15} /></span>
           <span style={{ fontWeight: 700, fontSize: 'var(--fs-title)' }}>{t('templates.title')}</span>
@@ -69,7 +69,7 @@ export const TemplateBrowser: React.FC = () => {
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           <div className={`nc-tpl-side ${sideOpen ? 'open' : ''}`}>
             {[['all', 'templates.all'] as const, ...cats].map(([id, key]) => (
-              <button key={id} className={`nc-chip ${cat === id ? 'on' : ''}`} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 'var(--fs-label)', border: 0 }} onClick={() => pick(id)}>{key.startsWith('templates.') ? t(key) : key}</button>
+              <button key={id} className={`nc-chip ${cat === id ? 'on' : ''}`} style={{ textAlign: 'left', padding: '7px 12px', fontSize: 'var(--fs-label)', border: 0 }} onClick={() => pick(id)}>{key.startsWith('templates.') ? t(key) : key}</button>
             ))}
           </div>
           {/* Columns follow the width instead of always being three: cards keep a readable floor
@@ -77,7 +77,7 @@ export const TemplateBrowser: React.FC = () => {
               from its items' content and does not count a height that `aspect-ratio` derived — a
               square picture ended up taller than its row and the card, stretched to that row,
               clipped it. A flex line has no such height to agree on. */}
-          <div style={{ flex: 1, padding: 16, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', gap: 14 }} onClick={() => sideOpen && setSideOpen(false)}>
+          <div style={{ flex: 1, padding: 12, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', gap: 14 }} onClick={() => sideOpen && setSideOpen(false)}>
             {CARDS.map((c) => {
               const name = c.name;
               return (
@@ -106,7 +106,7 @@ export const TemplateBrowser: React.FC = () => {
             {SPACERS.map((_, i) => <div key={`spacer-${i}`} style={{ ...CARD, height: 0 }} aria-hidden />)}
           </div>
         </div>
-        <div style={{ borderTop: '1px solid var(--line)', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ borderTop: '1px solid var(--line)', padding: '12px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('templates.warning')}</span>
           <div style={{ flex: 1 }} />
           <Btn onClick={() => close(false)}>{t('templates.cancel')}</Btn>

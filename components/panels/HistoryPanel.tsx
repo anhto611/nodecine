@@ -15,7 +15,7 @@ export const HistoryPanel: React.FC = () => {
     <aside className="nc-panel">
       <div className="nc-pn-h">{t('history.title')}<button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => setPanel('history')}><Icon.x size={12} /></button></div>
       <div style={{ overflowY: 'auto', flex: 1 }}>
-        {history.length === 0 && <div style={{ padding: 14, color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>{t('history.empty')}</div>}
+        {history.length === 0 && <div style={{ padding: 12, color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>{t('history.empty')}</div>}
         {history.map((r) => {
           const on = viewing === r.seq || (viewing == null && r === history[0]);
           return (

@@ -48,6 +48,7 @@ const ExportParams = z.object({
   codec: z.enum(['h264', 'h265']).default('h264'),
   quality: z.enum(['high', 'medium', 'low']).default('high'),
   fileName: z.string().min(1).default('nodecine.mp4'),
+  resolution: z.enum(['1080p', '1440p', '2160p']).default('1080p'),
 });
 
 /** CORE_CONTRACTS §5.6 — bypassed by default; runs when the user presses Render. */
@@ -62,14 +63,14 @@ export const mp4Export: NodeDefinition<typeof ExportParams> = {
   ],
   outputs: [],
   paramsSchema: ExportParams,
-  defaultParams: { codec: 'h264', quality: 'high', fileName: 'nodecine.mp4' },
+  defaultParams: { codec: 'h264', quality: 'high', fileName: 'nodecine.mp4', resolution: '1080p' },
   defaultBypassed: true,
   preflight: sceneSupportPreflight,
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const ir = inputs.ir!.payload as VideoIR;
     const engine = inputs.engine!.payload as EngineRef;
     const fileName = params.fileName.replace(/[^\w.-]+/g, '-');
-    log('info', `start · ${params.codec} · ${params.quality} · ${fileName}`);
+    log('info', `start · ${params.codec} · ${params.quality} · ${params.resolution} · ${fileName}`);
     const result = await services.render(
       engine,
       ir,

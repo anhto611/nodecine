@@ -27,7 +27,7 @@ export const LibraryPanel: React.FC = () => {
   return (
     <aside className="nc-panel">
       <div className="nc-pn-h">{t('rail.library')}<button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => setPanel('library')}><Icon.x size={12} /></button></div>
-      <div style={{ margin: '10px 12px 4px', height: 28, background: 'var(--bg-sunk)', border: '1px solid var(--line-2)', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 7, padding: '0 9px', color: 'var(--tx-3)' }}>
+      <div style={{ margin: '10px 12px 4px', height: 28, background: 'var(--bg-sunk)', border: '1px solid var(--line-2)', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 7, padding: '0 12px', color: 'var(--tx-3)' }}>
         <Icon.search /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('library.search')} style={{ background: 'none', border: 0, outline: 'none', color: 'var(--tx)', font: 'inherit', fontSize: 'var(--fs-body)', width: '100%' }} />
       </div>
       <div style={{ overflowY: 'auto', flex: 1 }}>

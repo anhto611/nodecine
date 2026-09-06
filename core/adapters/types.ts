@@ -7,6 +7,8 @@ export interface ExportSettings {
   codec: 'h264' | 'h265';
   quality: 'high' | 'medium' | 'low';
   fileName: string;
+  /** Output resolution by short side; the design coordinates stay the stage's and are scaled at render (CORE_CONTRACTS §5.6). */
+  resolution?: '1080p' | '1440p' | '2160p';
 }
 
 export interface RenderProgress {

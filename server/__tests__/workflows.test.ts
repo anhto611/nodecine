@@ -3,7 +3,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { CURRENT_WORKFLOW_ID, deleteWorkflow, listWorkflows, readWorkflow, toWorkflowFile, workflowIdFor, workflowsDir, writeWorkflow } from '../workflows';
-import { PROJECT_SCHEMA_VERSION } from '@/lib/migrate';
+import { PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 
 let dir = '';
 beforeAll(async () => {
@@ -56,12 +56,12 @@ describe('workflow files', () => {
     expect((await readWorkflow(CURRENT_WORKFLOW_ID))?.name).toBe('canvas');
   });
 
-  it('brings a file from an older app forward on read', async () => {
-    const old = { id: 'old', name: 'Old', category: 'mine', schemaVersion: 4, graph: { nodes: [{ id: 'f', type: 'github-showcase/github-fetcher', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] } };
-    await writeFile(path.join(dir, 'old.json'), JSON.stringify(old));
-    const wf = await readWorkflow('old');
-    expect(wf?.graph.nodes[0]!.type).toBe('core/github-fetcher');
-    expect(wf?.schemaVersion).toBe(PROJECT_SCHEMA_VERSION);
+  it('does not read a file from another schema version (no migrators), and leaves it on disk', async () => {
+    const other = { id: 'other', name: 'Other', category: 'mine', schemaVersion: PROJECT_SCHEMA_VERSION + 1, graph: { nodes: [], edges: [] } };
+    await writeFile(path.join(dir, 'other.json'), JSON.stringify(other));
+    expect(await readWorkflow('other')).toBeNull();
+    expect((await listWorkflows()).some((w) => w.id === 'other')).toBe(false);
+    expect((await readFile(path.join(dir, 'other.json'), 'utf8')).length).toBeGreaterThan(0);
   });
 
   it('skips a file that no longer parses instead of failing the list', async () => {

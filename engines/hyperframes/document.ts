@@ -27,6 +27,10 @@ export interface DocumentOptions {
   voiceoverSrc: string;
   /** Directory the JetBrains Mono faces are served from, without trailing slash. */
   fontBase: string;
+  /** Render scale: the page is laid out in design pixels and zoomed, so 2 turns 1080×1920 into 2160×3840. */
+  scale?: number;
+  /** Where `/api/assets/<name>` files are for this document: a folder next to index.html for a render; unset in the browser. */
+  assetBase?: string;
 }
 
 /** Marker the HyperFrames player looks for before deciding to inject a runtime of its own. */
@@ -145,6 +149,10 @@ export function captionStyles(width: number, height: number, withDefaultSlot: bo
 
 export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): string {
   const { width, height, fps, totalDurationInFrames } = ir.meta;
+  const scale = o.scale && o.scale > 0 ? o.scale : 1;
+  // The file's pixels; everything inside stays in design coordinates and is zoomed by the root.
+  const outW = Math.round(width * scale / 2) * 2;
+  const outH = Math.round(height * scale / 2) * 2;
   const stage = ir.stage;
   const blocks = new Map(ir.blocks.map((b) => [b.id, b] as [string, BlockDef]));
   const stageCode = splitCode(stage.code.source);
@@ -185,6 +193,10 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
   const styles = [
     baseStyles(stage, width, height, o.fontBase),
     `.clip { position: absolute; inset: 0; visibility: hidden; overflow: hidden; }`,
+    // The runtime sizes the composition root from data-width/height (the file's pixels), so the
+    // scenes live in an inner frame that keeps the design size and is scaled as one picture. A
+    // transform, not `zoom`: zoom left bottom-anchored offsets unscaled.
+    ...(scale !== 1 ? [`html, body, [data-composition-id] { width: ${outW}px; height: ${outH}px; }`, `.nc-frame { position: absolute; left: 0; top: 0; width: ${width}px; height: ${height}px; transform: scale(${scale}); transform-origin: 0 0; overflow: hidden; }`] : []),
     ...(ir.captions ? [captionStyles(width, height, !captionSlot)] : []),
     scopedCss('[data-stage]', stageCode.styles.join('\n')),
     ...[...blockCode].map(([id, bc]) => scopedCss(`[data-block="${id}"]`, bc.styles.join('\n'))),
@@ -194,18 +206,18 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
 
   // The page may load media and fonts, run its own inline scripts, and nothing else: no fetch, no
   // external scripts, no images from the network. The runtime is inlined for the same reason.
-  const csp = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src http: https: blob: data:; font-src http: https: data:; connect-src 'none'";
+  const csp = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src http: https: data: blob:; media-src http: https: blob: data:; font-src http: https: data:; connect-src 'none'";
 
   // Script order matters: gsap, then the HyperFrames runtime, then the page. The runtime owns
   // `window.__timelines` (it installs a registry there), so a timeline registered before it loads
   // is lost, the producer waits its full readiness timeout, and nothing animates.
-  return [
+  const page = [
     `<!doctype html>`,
     `<html lang="${esc(ir.meta.language)}" data-resolution="${height > width ? 'portrait' : 'landscape'}">`,
     `<head>`,
     `<meta charset="utf-8">`,
     `<meta http-equiv="Content-Security-Policy" content="${csp}">`,
-    `<meta name="viewport" content="width=${width}, height=${height}">`,
+    `<meta name="viewport" content="width=${outW}, height=${outH}">`,
     `<title>${esc(ir.meta.title)}</title>`,
     `<script>${o.gsapSource}</script>`,
     RUNTIME_MARKER,
@@ -213,8 +225,8 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     `<style>\n${styles.join('\n')}\n</style>`,
     `</head>`,
     `<body>`,
-    `<div id="${COMPOSITION_ID}" data-composition-id="${COMPOSITION_ID}" data-start="0" data-duration="${duration}" data-width="${width}" data-height="${height}" data-fps="${fps}">`,
-    ...scenes.map((s) => s.html),
+    `<div id="${COMPOSITION_ID}" data-composition-id="${COMPOSITION_ID}" data-start="0" data-duration="${duration}" data-width="${outW}" data-height="${outH}" data-fps="${fps}">`,
+    ...(scale !== 1 ? [`<div class="nc-frame">`, ...scenes.map((s) => s.html), `</div>`] : scenes.map((s) => s.html)),
     `<audio id="voiceover" data-start="0" data-duration="${ir.audioTrack.durationSeconds}" data-track-index="1" src="${esc(o.voiceoverSrc)}"></audio>`,
     `</div>`,
     `<script type="application/json" id="nodecine-data">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`,
@@ -223,4 +235,6 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     `</body>`,
     `</html>`,
   ].join('\n');
+  // For a render the assets sit beside index.html; the names are hashed, so a plain replace is exact.
+  return o.assetBase ? page.replace(/\/api\/assets\/([a-f0-9]{16,64}\.[a-z0-9]+)/g, `${o.assetBase}/$1`) : page;
 }

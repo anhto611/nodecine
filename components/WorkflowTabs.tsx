@@ -48,10 +48,21 @@ export const WorkflowTabs: React.FC = () => {
   // Ctrl/Cmd+S saves the active tab, Shift for Save as; Ctrl/Cmd+B bypasses the selected node.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // The code editor owns Ctrl+S / Ctrl+Z while it is open; saving the workflow from inside it was a surprise.
+      if (useStudio.getState().codeEditor) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         if (e.shiftKey) setNaming(useStudio.getState().projectName);
         else void doSave();
+      }
+      // Ctrl/Cmd+Z undoes a graph edit (Shift, or Ctrl+Y, redoes) — unless the cursor is in a text
+      // field, where the browser's own undo is the one the user means.
+      const mod = e.metaKey || e.ctrlKey;
+      const inField = !!(e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
+      if (mod && !inField && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+        e.preventDefault();
+        const { undo, redo } = useStudio.getState();
+        if (e.key.toLowerCase() === 'y' || e.shiftKey) redo(); else undo();
       }
       // Ctrl/Cmd+B bypasses the selected node, like ComfyUI.
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {

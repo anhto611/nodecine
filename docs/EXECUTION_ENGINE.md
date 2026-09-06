@@ -145,12 +145,11 @@ Bộ máy chạy ở máy chủ (mục 8 và `ARCHITECTURE.md` §1.2), nên kế
 
 Trạng thái node trong bộ nhớ (kết quả từng node, chữ ký bộ nhớ đệm) và nhật ký (2.000 dòng) vẫn là của executor theo từng khóa trong tiến trình máy chủ: tải lại trang là thấy lại qua `GET /api/executors/<khóa>`, nhưng khởi động lại máy chủ thì mọi node xử lý về `idle` và cần chạy lại; ba node tài nguyên tự `probe()` sau khi nạp theo mục 1.1. Tệp âm thanh và MP4 vẫn nằm trong thư mục tạm theo vòng đời riêng, nên một mục lịch sử cũ có thể trỏ tới tệp đã bị dọn (mục 8.1).
 
-### 7.3. Đánh phiên bản và nâng cấp
+### 7.3. Đánh phiên bản
 
-- Tài liệu dự án mang một trường số hiệu phiên bản lược đồ.
-- Khi ứng dụng khởi động và gặp số hiệu thấp hơn phiên bản hiện hành, một chuỗi hàm nâng cấp được áp dụng lần lượt để đưa tài liệu lên phiên bản mới.
-- Khi gặp số hiệu cao hơn phiên bản hiện hành, tức người dùng đã hạ cấp ứng dụng, tài liệu không bao giờ được ghi đè. Ứng dụng hiển thị cảnh báo và mở một dự án trống, giữ nguyên dữ liệu cũ.
-- Bản Đặc Tả Video Trung Gian mang số hiệu phiên bản riêng, độc lập với số hiệu phiên bản của tài liệu dự án, vì hai thứ này thay đổi theo nhịp khác nhau.
+- Mọi tài liệu lưu ra (tệp workflow, danh sách tab trong trình duyệt) mang một số hiệu phiên bản lược đồ (`PROJECT_SCHEMA_VERSION` trong `lib/storage.ts`).
+- **Không có hàm nâng cấp.** Tài liệu mang số hiệu khác phiên bản hiện hành thì không được đọc: tệp workflow không hiện trong danh sách, tab đã lưu bị bỏ và ứng dụng mở sạch. Quyết định này là của người dùng lúc còn chưa có workflow nào đáng giữ; khi lược đồ đổi thì tăng số hiệu, và nếu về sau cần giữ tệp cũ thì viết hàm nâng cấp lúc đó.
+- Bản Đặc Tả Video Trung Gian mang số hiệu phiên bản riêng, độc lập với số hiệu phiên bản của tài liệu, vì hai thứ này thay đổi theo nhịp khác nhau.
 
 ---
 

@@ -15,7 +15,7 @@ export const AssemblerBody: React.FC<BodyProps> = ({ nodeId }) => {
   const colors = ['var(--accent)', 'var(--accent-2)', 'var(--ok)', 'var(--run)', 'var(--warn)'];
   return (
     <>
-      <Kv k={t('node.total')} v={ir ? `${ir.meta.totalDurationInFrames} ${t('node.frames')}` : '—'} dim={!ir} />
+      <Kv k={t('node.total')} v={ir ? `${ir.meta.totalDurationInFrames} ${t('node.frames')} · ${ir.meta.width}×${ir.meta.height}` : '—'} dim={!ir} />
       <Kv k={t('node.fps')} v={<input className={`nc-input ${stopFlow}`} type="number" value={p.fps} onChange={(e) => set({ fps: Number(e.target.value) || 30 })} />} />
       <Kv k={t('node.minFrames')} v={<input className={`nc-input ${stopFlow}`} type="number" value={p.minTotalFrames} onChange={(e) => set({ minTotalFrames: Number(e.target.value) || 0 })} />} />
       <Kv k={t('node.title')} v={<input className={`nc-input ${stopFlow}`} value={p.title} onChange={(e) => set({ title: e.target.value })} />} />

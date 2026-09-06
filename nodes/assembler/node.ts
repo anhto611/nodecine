@@ -1,18 +1,16 @@
 import { z } from 'zod';
-import { buildIR, DEFAULT_ASSEMBLER_PARAMS } from '@/core/assembler/build-ir';
+import { buildIR, DEFAULT_ASSEMBLER_PARAMS } from '@/nodes/assembler/build-ir';
 import type { CaptionTrack, DirectorPlan, FactSheet, Voiceover } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { ErrorCode } from '@/core/errors';
 
 const Params = z.object({
   fps: z.number().int().positive().default(30),
-  width: z.number().int().positive().default(1080),
-  height: z.number().int().positive().default(1920),
   minTotalFrames: z.number().int().nonnegative().default(270),
   title: z.string().default('Untitled'),
 });
 
-/** CORE_CONTRACTS §5.4 — pure function; facts are optional. */
+/** CORE_CONTRACTS §5.4 — pure function; facts are optional. The frame size is the stage's, not a parameter here. */
 export const timelineAssembler: NodeDefinition<typeof Params> = {
   type: 'core/timeline-assembler',
   version: 1,

@@ -1,21 +1,17 @@
-import type { CaptionTrack, DirectorPlan, FactSheet, Voiceover } from '../types/payloads';
-import { IR_VERSION, type IRCaptions, type VideoIR, type TimelineEntry } from '../types/ir';
+import type { CaptionTrack, DirectorPlan, FactSheet, Voiceover } from '@/core/types/payloads';
+import { IR_VERSION, type IRCaptions, type VideoIR, type TimelineEntry } from '@/core/types/ir';
 import { allocateFrames, computeTotalFrames } from './allocate';
-import { assertValidIR } from './validate-ir';
+import { assertValidIR } from '@/core/types/validate-ir';
 
 /** Timeline Assembler node parameters (CORE_CONTRACTS §5.4). */
 export interface AssemblerParams {
   fps: number;
-  width: number;
-  height: number;
   minTotalFrames: number;
   title: string;
 }
 
 export const DEFAULT_ASSEMBLER_PARAMS: AssemblerParams = {
   fps: 30,
-  width: 1080,
-  height: 1920,
   minTotalFrames: 270,
   title: 'Untitled',
 };
@@ -90,8 +86,8 @@ export function buildIR(input: BuildIRInput): VideoIR {
       title: p.title,
       language: plan.language,
       fps: p.fps,
-      width: p.width,
-      height: p.height,
+      width: plan.stage.frame.width,
+      height: plan.stage.frame.height,
       totalDurationInFrames: total,
     },
     stage: plan.stage,

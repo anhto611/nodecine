@@ -34,6 +34,7 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
   const script = rt?.outputs.script?.payload as AudioScript | undefined;
   const raw = (rt?.error?.details as { raw?: unknown } | undefined)?.raw;
 
+  const [open, setOpen] = React.useState<number | null>(null);
   const set = (patch: Partial<Params>) => setParams(nodeId, patch);
   const updateBeat = (i: number, patch: Partial<Beat>) => set({ beats: beats.map((b, j) => (j === i ? { ...b, ...patch } : b)) });
   const removeBeat = (i: number) => set({ beats: beats.filter((_, j) => j !== i) });
@@ -64,38 +65,52 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
       {beats.map((b, i) => {
         const allowed = b.blocks.length ? blocks.filter((x) => b.blocks.includes(x.id)) : blocks;
         const missing = b.blocks.filter((id) => !blocks.some((x) => x.id === id));
+        const bound = Object.keys(b.factBindings).length;
+        const isOpen = open === i;
+        // One line per beat, the way the Blocks node lists its catalogue; only the beat being edited unfolds.
         return (
-          <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 3, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <div className="nc-scene-row">
-              <span className="nc-k" style={{ color: 'var(--accent-2)' }}>{i + 1}</span>
-              <input className={`nc-input ${stopFlow}`} style={{ flex: 1, minWidth: 0 }} value={b.role} title={t('director.role')} onChange={(e) => updateBeat(i, { role: e.target.value })} />
-              <input className={`nc-input ${stopFlow}`} style={{ width: 30 }} type="number" min={0.1} step={0.5} value={b.weight} title={t('node.weight')} onChange={(e) => updateBeat(i, { weight: Number(e.target.value) || 1 })} />
-              <span className="nc-k">{t('director.count')}</span>
-              <input className={`nc-input ${stopFlow}`} style={{ width: 30 }} type="number" min={1} max={12} step={1} value={b.count} onChange={(e) => updateBeat(i, { count: Math.max(1, Math.min(12, Math.round(Number(e.target.value) || 1))) })} />
-              <button className={`nc-chip ${stopFlow}`} onClick={() => removeBeat(i)} disabled={beats.length <= 1} title="remove"><Icon.x size={9} /></button>
+          <div key={i} style={{ border: `1px solid ${isOpen ? 'var(--line-3)' : 'var(--line)'}`, borderRadius: 3, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div className="nc-scene-row" style={{ cursor: 'pointer' }} onClick={() => setOpen(isOpen ? null : i)}>
+              <span className="nc-k" style={{ color: 'var(--accent-2)', flex: '0 0 auto' }}>{isOpen ? '▾' : '▸'} {i + 1}</span>
+              <span className="nc-k" style={{ color: 'var(--tx)', flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.role || t('director.role')}</span>
+              <span className="nc-k" style={{ flex: '0 0 auto' }} title={`${t('node.weight')} ${b.weight}`}>{b.count}× · {b.weight}w</span>
+              <span className="nc-k" style={{ flex: '0 0 auto', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }} title={b.blocks.join(', ') || t('director.anyBlock')}>{b.blocks.length ? b.blocks.join(',') : '*'}</span>
+              {bound > 0 && <span className="nc-k" style={{ flex: '0 0 auto' }} title={t('director.bind')}>{bound}⚲</span>}
+              {missing.length > 0 && <span style={{ color: 'var(--err)', flex: '0 0 auto' }} title="not wired">!</span>}
             </div>
-            <textarea className={`nc-textarea ${stopFlow}`} rows={2} placeholder={t('director.beatBrief')} value={b.brief} onChange={(e) => updateBeat(i, { brief: e.target.value })} />
-            <div className="nc-kv">
-              <span className="nc-k">{t('director.blocks')}</span>
-              <span style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'flex-end' }}>
-                {blocks.map((x) => (
-                  <button key={x.id} className={`nc-chip ${b.blocks.includes(x.id) ? 'on' : ''} ${stopFlow}`} onClick={() => toggleBlock(i, x.id)}>{x.id}</button>
+            {isOpen && (
+              <>
+                <div className="nc-scene-row">
+                  <input className={`nc-input ${stopFlow}`} style={{ flex: 1, minWidth: 0 }} value={b.role} title={t('director.role')} onChange={(e) => updateBeat(i, { role: e.target.value })} />
+                  <input className={`nc-input ${stopFlow}`} style={{ width: 30 }} type="number" min={0.1} step={0.5} value={b.weight} title={t('node.weight')} onChange={(e) => updateBeat(i, { weight: Number(e.target.value) || 1 })} />
+                  <span className="nc-k">{t('director.count')}</span>
+                  <input className={`nc-input ${stopFlow}`} style={{ width: 30 }} type="number" min={1} max={12} step={1} value={b.count} onChange={(e) => updateBeat(i, { count: Math.max(1, Math.min(12, Math.round(Number(e.target.value) || 1))) })} />
+                  <button className={`nc-chip ${stopFlow}`} onClick={() => { removeBeat(i); setOpen(null); }} disabled={beats.length <= 1} title="remove"><Icon.x size={9} /></button>
+                </div>
+                <textarea className={`nc-textarea ${stopFlow}`} rows={2} placeholder={t('director.beatBrief')} value={b.brief} onChange={(e) => updateBeat(i, { brief: e.target.value })} />
+                <div className="nc-kv">
+                  <span className="nc-k">{t('director.blocks')}</span>
+                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'flex-end' }}>
+                    {blocks.map((x) => (
+                      <button key={x.id} className={`nc-chip ${b.blocks.includes(x.id) ? 'on' : ''} ${stopFlow}`} onClick={() => toggleBlock(i, x.id)}>{x.id}</button>
+                    ))}
+                    {missing.map((id) => (
+                      <button key={id} className={`nc-chip on ${stopFlow}`} style={{ borderColor: 'var(--err)', color: 'var(--err)' }} title="not wired" onClick={() => toggleBlock(i, id)}>{id}</button>
+                    ))}
+                    {b.blocks.length === 0 ? <span className="nc-dim">{t('director.anyBlock')}</span> : null}
+                  </span>
+                </div>
+                {propKeys(allowed).map((k) => (
+                  <Kv key={k} k={k} v={
+                    <input className={`nc-input ${stopFlow}`} placeholder={t('director.bindNone')} title={t('director.bind')} value={b.factBindings[k] ?? ''} onChange={(e) => bind(i, k, e.target.value)} />
+                  } />
                 ))}
-                {missing.map((id) => (
-                  <button key={id} className={`nc-chip on ${stopFlow}`} style={{ borderColor: 'var(--err)', color: 'var(--err)' }} title="not wired" onClick={() => toggleBlock(i, id)}>{id}</button>
-                ))}
-                {b.blocks.length === 0 ? <span className="nc-dim">{t('director.anyBlock')}</span> : null}
-              </span>
-            </div>
-            {propKeys(allowed).map((k) => (
-              <Kv key={k} k={k} v={
-                <input className={`nc-input ${stopFlow}`} placeholder={t('director.bindNone')} title={t('director.bind')} value={b.factBindings[k] ?? ''} onChange={(e) => bind(i, k, e.target.value)} />
-              } />
-            ))}
+              </>
+            )}
           </div>
         );
       })}
-      <Btn small className={stopFlow} onClick={addBeat} style={{ alignSelf: 'flex-start' }}><Icon.plus size={10} /> {t('node.addScene')}</Btn>
+      <Btn small className={stopFlow} onClick={() => { addBeat(); setOpen(beats.length); }} style={{ alignSelf: 'flex-start' }}><Icon.plus size={10} /> {t('node.addScene')}</Btn>
 
       {script && plan && (
         <>

@@ -10,6 +10,8 @@ import { createHyperframesAdapter } from './adapter';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { buildHyperframesDocument } from './document';
 import { vendorSource } from './vendor.server';
+import { renderScaleFor } from '@/core/look/frame';
+import { assetNamesIn, assetPath } from '@/server/paths';
 
 /**
  * Server registration: real render through @hyperframes/producer. The composition is written as a
@@ -30,9 +32,14 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
 
   await copyFile(mediaPath(fileNameFromMediaUrl(ir.audioTrack.voiceoverUrl)), path.join(projectDir, 'voiceover.mp3'));
   for (const f of FONTS) await copyFile(path.resolve(process.cwd(), 'public/fonts', f), path.join(projectDir, 'fonts', f));
+  // Images the stage or blocks refer to come along, by their hashed names.
+  const assets = assetNamesIn(JSON.stringify([ir.stage.code.source, ...ir.blocks.map((b) => b.code.source)]));
+  if (assets.length) await mkdir(path.join(projectDir, 'assets'), { recursive: true });
+  for (const a of assets) await copyFile(assetPath(a), path.join(projectDir, 'assets', a)).catch(() => undefined);
 
   const [gsapSource, runtimeSource] = await Promise.all([vendorSource('gsap.js'), vendorSource('hyperframes-runtime.js')]);
-  const html = buildHyperframesDocument(ir, { gsapSource, runtimeSource, voiceoverSrc: 'voiceover.mp3', fontBase: 'fonts' });
+  const scale = renderScaleFor({ width: ir.meta.width, height: ir.meta.height }, settings.resolution ?? '1080p');
+  const html = buildHyperframesDocument(ir, { gsapSource, runtimeSource, voiceoverSrc: 'voiceover.mp3', fontBase: 'fonts', scale, assetBase: 'assets' });
   await writeFile(path.join(projectDir, 'index.html'), html, 'utf8');
 
   const fileName = `${key}.mp4`;

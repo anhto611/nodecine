@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { allocateFrames, computeTotalFrames } from '../assembler/allocate';
+import { allocateFrames, computeTotalFrames } from '../allocate';
 
 describe('computeTotalFrames', () => {
   it('11.2s @30fps → 336 frames, no tail', () => {

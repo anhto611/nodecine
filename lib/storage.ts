@@ -1,12 +1,19 @@
 'use client';
 import type { Graph } from '@/core/engine/graph';
 import type { Locale } from './i18n';
-import { PROJECT_SCHEMA_VERSION, migrateProject, type ProjectDoc } from './migrate';
 
-export { PROJECT_SCHEMA_VERSION, migrateProject, type ProjectDoc };
+/**
+ * Schema version stamped on every saved document. There are no migrators: a document from another
+ * version is not read, and the app starts clean. Bump this when the saved shape changes.
+ */
+export const PROJECT_SCHEMA_VERSION = 1;
 
-/** The project key is read once to migrate what an older build saved; the open tabs replaced it. */
-const PROJECT_KEY = 'nodecine.project';
+export interface ProjectDoc {
+  schemaVersion: number;
+  name: string;
+  graph: Graph;
+}
+
 const UI_KEY = 'nodecine.ui';
 /** Templates the user saved from the canvas or pasted in. Data only, same shape as a shipped one. */
 const TEMPLATES_KEY = 'nodecine.templates';
@@ -33,23 +40,10 @@ function safeSet(key: string, value: string): void {
   }
 }
 
-/** Returns null when nothing is stored or the stored doc is from a newer app (EXECUTION_ENGINE §7.3). */
-export function loadProject(): ProjectDoc | null {
-  const raw = safeGet(PROJECT_KEY);
-  if (!raw) return null;
-  try {
-    const doc = JSON.parse(raw) as ProjectDoc;
-    if (typeof doc.schemaVersion !== 'number' || doc.schemaVersion > PROJECT_SCHEMA_VERSION) return null;
-    return migrateProject(doc);
-  } catch {
-    return null;
-  }
-}
-
 export interface TabsDoc {
   schemaVersion: number;
   active: string;
-  tabs: { key: string; fileId: string | null; name: string; graph: Graph; dirty: boolean }[];
+  tabs: { key: string; fileId: string | null; name: string; graph: Graph; dirty: boolean; savedHash?: string }[];
 }
 
 export function loadTabs(): TabsDoc | null {
@@ -57,9 +51,9 @@ export function loadTabs(): TabsDoc | null {
   if (!raw) return null;
   try {
     const doc = JSON.parse(raw) as TabsDoc;
-    if (typeof doc.schemaVersion !== 'number' || doc.schemaVersion > PROJECT_SCHEMA_VERSION || !Array.isArray(doc.tabs)) return null;
-    const tabs = doc.tabs.map((t) => ({ ...t, graph: migrateProject({ schemaVersion: doc.schemaVersion, name: t.name, graph: t.graph }).graph }));
-    return { ...doc, schemaVersion: PROJECT_SCHEMA_VERSION, tabs };
+    // Another version's tabs are not read (EXECUTION_ENGINE §7.3): the app starts clean.
+    if (doc.schemaVersion !== PROJECT_SCHEMA_VERSION || !Array.isArray(doc.tabs)) return null;
+    return doc;
   } catch {
     return null;
   }

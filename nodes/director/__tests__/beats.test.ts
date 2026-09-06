@@ -88,7 +88,7 @@ describe('toPackets', () => {
     expect(DirectorPlanSchema.safeParse(plan).success).toBe(true);
     expect(plan.language).toBe('en');
     expect(script.text).toBe('Hello there.');
-    expect(plan.stage.id).toBe('dark');
+    expect(plan.stage.name).toBe('Dark');
     expect(plan.blocks.map((b) => b.id)).toEqual(['text-card', 'hook', 'card']);
     expect(plan.scenes.map((s) => s.blockId)).toEqual(['text-card', 'hook', 'hook']);
     expect(plan.scenes[0]!.tone).toBe('cool');

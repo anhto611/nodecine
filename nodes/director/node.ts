@@ -90,7 +90,7 @@ export const aiDirector: NodeDefinition<typeof Params> = {
     // The source for "auto" is whatever the model will read: the brief, and the facts it may see.
     const factText = facts ? Object.entries(facts.facts).filter(([k]) => !excludeFacts.has(k)).map(([, v]) => (typeof v === 'string' ? v : '')).join('\n') : '';
     const language = resolveOutputLanguage(params.outputLanguage, `${subject ?? ''}\n${params.prompt}\n${factText}`);
-    log('info', `${scenes.length} scenes · ${catalogue.length} blocks · stage ${stage.id} · output language ${language}${params.outputLanguage === 'auto' ? ' (detected)' : ''} · provider ${ref.providerId}`);
+    log('info', `${scenes.length} scenes · ${catalogue.length} blocks · stage ${stage.name} · output language ${language}${params.outputLanguage === 'auto' ? ' (detected)' : ''} · provider ${ref.providerId}`);
 
     let outputSchema;
     try {

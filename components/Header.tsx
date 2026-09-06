@@ -18,7 +18,7 @@ export const Header: React.FC = () => {
   const disabled = issues.length > 0;
 
   return (
-    <header style={{ height: 56, flex: '0 0 56px', borderBottom: '1px solid var(--line)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', gap: 14, padding: '0 14px' }}>
+    <header style={{ height: 56, flex: '0 0 56px', borderBottom: '1px solid var(--line)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', gap: 14, padding: '0 12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
         <span style={{ width: 22, height: 22, borderRadius: 4, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="2.4" /><circle cx="18" cy="12" r="2.4" /><circle cx="6" cy="18" r="2.4" /><line x1="8.2" y1="7.2" x2="15.8" y2="10.8" /><line x1="8.2" y1="16.8" x2="15.8" y2="13.2" /></svg>

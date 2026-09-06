@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { TemplateDefinitionSchema, type TemplateDefinition } from '@/core/templates/registry';
-import { PROJECT_SCHEMA_VERSION, migrateProject } from '@/lib/migrate';
+import { PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 
 /**
  * Workflows as files on the server (CORE_CONTRACTS §10.1) — the way ComfyUI keeps a user's
@@ -52,10 +52,9 @@ async function readFileAs(p: string): Promise<WorkflowFile | null> {
     throw e;
   }
   const doc = JSON.parse(text) as Partial<WorkflowFile>;
-  const version = typeof doc.schemaVersion === 'number' ? doc.schemaVersion : PROJECT_SCHEMA_VERSION;
-  // A file written by an older app is brought forward the same way a saved project is.
-  const graph = version < PROJECT_SCHEMA_VERSION && doc.graph ? migrateProject({ schemaVersion: version, name: String(doc.id ?? ''), graph: doc.graph }).graph : doc.graph;
-  const def = TemplateDefinitionSchema.parse({ ...doc, graph });
+  // No migrators: a file from another schema version is not a workflow this app can open.
+  if (typeof doc.schemaVersion === 'number' && doc.schemaVersion !== PROJECT_SCHEMA_VERSION) return null;
+  const def = TemplateDefinitionSchema.parse(doc);
   return { ...def, schemaVersion: PROJECT_SCHEMA_VERSION, updatedAt: typeof doc.updatedAt === 'string' ? doc.updatedAt : new Date(0).toISOString() };
 }
 

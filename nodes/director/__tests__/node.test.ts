@@ -74,8 +74,8 @@ describe('core/ai-director', () => {
     expect(ok).toBe(true);
 
     const rt = ex.runtimes_().get('dir')!;
-    const plan = rt.outputs.plan!.payload as { stage: { id: string }; blocks: { id: string }[]; scenes: { blockId: string; tone?: string; fields?: Record<string, string>; factBindings?: Record<string, string>; props: Record<string, unknown> }[] };
-    expect(plan.stage.id).toBe('dark');
+    const plan = rt.outputs.plan!.payload as { stage: { name: string }; blocks: { id: string }[]; scenes: { blockId: string; tone?: string; fields?: Record<string, string>; factBindings?: Record<string, string>; props: Record<string, unknown> }[] };
+    expect(plan.stage.name).toBe('Dark');
     expect(plan.blocks.map((b) => b.id)).toEqual(['text-card', 'hook']);
     expect(plan.scenes.map((s) => s.blockId)).toEqual(['text-card', 'hook', 'text-card']);
     expect(plan.scenes[0]!.tone).toBe('cool');

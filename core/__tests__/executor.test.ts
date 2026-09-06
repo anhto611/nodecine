@@ -6,7 +6,7 @@ import { registerNodes } from '@/nodes';
 import { _resetCodeRenderers, registerCodeRenderer } from '../look/renderers';
 import staticScriptJson from '@/templates/static-script.json';
 const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
-import { validateIR } from '../assembler/validate-ir';
+import { validateIR } from '../types/validate-ir';
 import type { VideoIR } from '../types/ir';
 import { makeFakeServices } from './fakes';
 

@@ -1,4 +1,4 @@
-import { VideoIRSchema, type VideoIR } from '../types/ir';
+import { VideoIRSchema, type VideoIR } from './ir';
 import { propsSchemaFor } from '../look/props';
 
 /**

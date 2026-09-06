@@ -92,7 +92,11 @@ Sân khấu — cái vỏ hiển thị bền qua mọi cảnh của một workfl
 
 Stage cũng là nơi quyết định **chỗ phụ đề**: một phần tử `data-slot="captions"` trong markup, CSS của stage đặt vị trí, font, cỡ, màu chữ thường và biến `--caption-on` cho màu từ đang đọc; thuộc tính `data-caption-style="karaoke"` (mặc định, cả dòng hiện và từ đang đọc đổi màu) hay `"reveal"` (từ hiện dần theo nhịp đọc). Ba stage trong bản mẫu khai chỗ này ở vùng an toàn dưới. Không khai thì engine dùng dải mặc định.
 
-- `id` (slug), `name`.
+- `frame` (`{width, height}`, mặc định 1080×1920): **tỉ lệ** stage được vẽ cho, chọn trong bốn preset (9:16, 16:9, 1:1, 4:5). Hai con số là hệ tọa độ thiết kế mà code stage và block viết theo, không phải số điểm ảnh của tệp: độ phân giải (1080p, 1440p, 2160p) chọn lúc Xuất MP4 và engine phóng khung thiết kế lên khi kết xuất. Kích thước video lấy từ đây qua `plan.stage`, nên không thể có chuyện stage vẽ cho 9:16 mà video đóng gói 16:9. Xem trước, vùng an toàn, kéo thả và prompt sửa bằng lời đều đọc cùng trường này.
+- Stage **không phải canvas tự do**: các thành phần lấy từ một danh mục vai trò cố định (`STAGE_ROLES` trong `core/look/stage-elements.ts`), nhận ra nhau qua tên class: `content` (chỗ block, bắt buộc), `captions` (phụ đề karaoke), `kicker` và `source` (trường theo cảnh, director viết), `signature` (chữ ký kênh, chữ cố định), `logo` (ảnh), `rule` (đường kẻ). Mỗi vai trò tối đa một; người dùng thêm từ danh mục rồi chỉnh kiểu (vị trí, kích thước, chữ, ảnh), không thêm phần tử tùy tiện. Thêm vai trò mới là thêm một mục vào danh mục, để director, engine và node Phụ Đề cùng biết. Mô hình sửa bằng lời được dặn giữ đúng các class này.
+- Sửa stage không cần viết code, theo ba đường cùng ghi vào `code.source` và các trường trên: **sửa bằng lời** (`POST /api/look/edit`, `nodes/look/edit.server.ts`: mô hình trả về code mới và, khi yêu cầu đòi hỏi, cả `tokens`, `tones`, `sceneFields` thay thế trọn vẹn; máy chủ bỏ tone ghi đè khóa không có trong palette, báo trường thêm mới chưa có `data-field`, và tóm tắt "đổi thêm" cho modal); **kéo thả** (`core/look/layout-edit.ts`: khung xem trước đo các phần tử tầng ngoài của stage, kéo thả ghi lại `left/right/top/bottom/width/height` vào đúng rule CSS, giữ cách neo; `core/look/stage-elements.ts`: thêm chữ, khối, ảnh là một phần tử lá cộng một rule, xóa và sửa nội dung chữ); **xem trước có chuyển động** (`buildLookPreview({animate})` chạy script của stage và block trên một timeline lặp, gsap inline).
+- Ảnh và logo là **tài nguyên theo mã băm**: tải lên `POST /api/assets` (data URL ảnh, tối đa 2 MB) → `.nodecine/assets/<sha1>.<ext>`, tham chiếu bằng `/api/assets/<tên>`; máy chủ chỉ phục vụ tên hợp lệ. Khi kết xuất, engine chép các ảnh được tham chiếu vào thư mục dự án và viết lại đường dẫn. Workflow chia sẻ sang máy khác sẽ thiếu ảnh nếu không chép kèm thư mục này.
+- `name`. Stage không có id: không gì tham chiếu tới nó (mỗi workflow một stage, plan và IR chép nguyên cả stage), nên một định danh chỉ là thứ để hỏi "nó để làm gì".
 - `tokens.palette`, `tokens.fonts`: bản đồ tên → giá trị. Renderer phơi ra thành biến CSS `--<tên>` cho code của stage và block dùng chung (`--bg`, `--fg`, `--accent`, `--font-display`, …).
 - `tones`: bản đồ tên tone → phần ghi đè bảng màu. Tên tone là giá trị mô hình được viết vào trường `tone` của cảnh.
 - `sceneFields[]`: `{ name, rule, options? }` — trường theo cảnh mà stage tự vẽ (ví dụ `kicker`), kèm quy tắc dạy mô hình cách viết; `options` giới hạn giá trị.
@@ -102,7 +106,7 @@ Stage cũng là nơi quyết định **chỗ phụ đề**: một phần tử `d
 
 `BlockDef` là một kiểu cảnh, mang theo dưới dạng dữ liệu; đây là thứ Đạo Diễn AI chọn cho từng cảnh. `BlockSet` là thứ đi trên dây: `{ blocks: BlockDef[] }` của một node Blocks, ít nhất một, `id` không trùng trong node.
 
-- `id` (slug), `name`.
+- `id` (slug), `name`. Quy tắc đặt id: `<slug của tên lúc tạo>` (`text-card`, `hook`), không tiền tố vì đây là chữ mô hình viết vào `blockId` và beat trỏ tới; trùng trong node thì thêm `-2`; sinh một lần khi tạo, đổi tên sau đó không đổi id, giao diện hiện id mờ cạnh tên.
 - `doc.example`: một ví dụ props hợp lệ dạng JSON. `doc.when`: dùng khi nào, không dùng khi nào — nguồn duy nhất cho cả mô hình và người.
 - `props`: bản đồ tên → `{ type, hint?, required (mặc định true), max?, min? }`, `type ∈ string | text | number | boolean | color | string[]`. Lược đồ đầu ra của đạo diễn sinh từ đây.
 - `code`: xem 2.8.
@@ -120,7 +124,7 @@ Dùng chung cho stage và block: `{ format: 'html-gsap', source }`, `source` t�
 
 ### 2.10. `CaptionTrack`
 
-Các dòng phụ đề trên đồng hồ của voice-over: `cues` (danh sách `{start, end, words}` giây, mỗi `words` là các từ có mốc). Chỉ có **nói gì, lúc nào**; nằm ở đâu, font gì, màu tô ra sao là của Stage (mục 2.6). Một dòng không bao giờ sống quá lúc dòng sau bắt đầu, nên không có hai dòng chồng nhau. Cách gom từ thành dòng ở `core/captions/cues.ts`: theo câu trước, rồi tối ưu tổng chi phí ngắt dòng (dấu câu miễn phí, ngắt sau từ nối hay giữa một con số viết bằng chữ bị phạt nặng); mang từ cutdown, nơi các luật này đã đo trên lời thoại tiếng Việt thật.
+Các dòng phụ đề trên đồng hồ của voice-over: `cues` (danh sách `{start, end, words}` giây, mỗi `words` là các từ có mốc). Chỉ có **nói gì, lúc nào**; nằm ở đâu, font gì, màu tô ra sao là của Stage (mục 2.6). Một dòng không bao giờ sống quá lúc dòng sau bắt đầu, nên không có hai dòng chồng nhau. Cách gom từ thành dòng ở `nodes/captions/cues.ts`: theo câu trước, rồi tối ưu tổng chi phí ngắt dòng (dấu câu miễn phí, ngắt sau từ nối hay giữa một con số viết bằng chữ bị phạt nặng); mang từ cutdown, nơi các luật này đã đo trên lời thoại tiếng Việt thật.
 
 ## 3. Bản Đặc Tả Video Trung Gian (Universal Video IR)
 
@@ -191,7 +195,7 @@ Nhận `AudioScript` và `TTSRef`, chọn giọng khớp ngôn ngữ theo quy t�
 
 ### 5.4. Đóng Gói Timeline (Timeline Assembler)
 
-Nhận `DirectorPlan` và `Voiceover` (bắt buộc), `FactSheet` (tùy chọn). Tham số: `fps` (30), `width` (1080), `height` (1920), `minTotalFrames` (270). Hàm thuần, không gọi mạng, thất bại đồng nghĩa lỗi lập trình.
+Nhận `DirectorPlan` và `Voiceover` (bắt buộc), `FactSheet` và `CaptionTrack` (tùy chọn). Tham số: `fps` (30), `minTotalFrames` (270), `title`. Kích thước khung lấy từ `plan.stage.frame`, không phải tham số ở đây. Hàm thuần, không gọi mạng, thất bại đồng nghĩa lỗi lập trình.
 
 Quy tắc phân bổ thời lượng, tất định:
 
@@ -217,6 +221,8 @@ Nhận `VideoIR` và `EngineRef`, bỏ qua mặc định. Tham số `ExportSetti
 - `fileName`: Không kèm đường dẫn, mặc định theo tên dự án, ký tự không hợp lệ thay bằng gạch ngang.
 
 Hành vi: khi đang bỏ qua, Chạy Luồng không chạm tới; bấm Kết xuất là chạy riêng node theo Đặc tả Bộ Máy Thực Thi mục 3; node bị vô hiệu hóa khi thiếu dây, khi `EngineRef.capabilities.render` không phải `ready`, hoặc khi thiếu renderer cho một `sceneType`. Trong lúc chạy hiện tiến độ và nút Hủy; xong hiện tên tệp, dung lượng, node Tải xuống; kết quả gắn vào lịch sử chạy. Nhiều node xuất trên cùng đồ thị là hợp lệ.
+
+Tham số `resolution` (`1080p` mặc định, `1440p`, `2160p`) chọn độ phân giải theo cạnh ngắn của khung: `1080p` đúng bằng hệ tọa độ thiết kế của stage, `2160p` phóng khung 1080×1920 thành 2160×3840. Engine HyperFrames giữ nguyên bố cục theo pixel thiết kế và `transform: scale` gốc composition theo hệ số, nên code stage và block không cần biết độ phân giải.
 
 ### 5.7. Node tài nguyên: Động Cơ, Mô Hình Ngôn Ngữ, Giọng Đọc
 
@@ -260,7 +266,7 @@ Node lõi `core/github-fetcher`: nhận `SourceRef`, phát `FactSheet`. Link rep
 
 ### 5.12. Căn Mốc Từ (Transcribe)
 
-Node lõi `core/transcribe`: nhận `Voiceover` và `AudioScript`, phát `Voiceover` có `words`. Là **căn chỉnh cưỡng bức**, không phải nhận dạng: văn bản đã biết, công cụ chỉ trả lời mỗi từ được đọc lúc nào, nên model nhỏ là đủ và chữ không bao giờ sai. Chạy qua `services.alignWords` → `server/align.ts` gọi `stable-ts` bằng Python trong venv `.nodecine/tools/stable-ts` (`npm run setup:align` cài một lần; `NODECINE_ALIGN_PYTHON` ghi đè); lời thoại đi qua stdin, đường dẫn audio dựng lại từ tên băm của `audioUrl`. Kết quả qua `retime` để chữ là chữ của kịch bản, chỉ mượn mốc thời gian. Voice-over đã có `words` (nhà cung cấp trả sẵn, ví dụ ElevenLabs sau này) thì đi qua nguyên vẹn. Tham số: `model` (`small` mặc định, `medium`, `large-v3`). Thiếu công cụ báo `PROVIDER_NOT_INSTALLED` kèm lệnh cài; căn chỉnh hỏng báo `ALIGN_FAILED`.
+Node lõi `core/transcribe`: nhận `Voiceover` và `AudioScript`, phát `Voiceover` có `words`. Là **căn chỉnh cưỡng bức**, không phải nhận dạng: văn bản đã biết, công cụ chỉ trả lời mỗi từ được đọc lúc nào, nên model nhỏ là đủ và chữ không bao giờ sai. Chạy qua `services.alignWords` → `nodes/transcribe/align.server.ts` gọi `stable-ts` bằng Python trong venv `.nodecine/tools/stable-ts` (`npm run setup:align` cài một lần; `NODECINE_ALIGN_PYTHON` ghi đè); lời thoại đi qua stdin, đường dẫn audio dựng lại từ tên băm của `audioUrl`. Kết quả qua `retime` để chữ là chữ của kịch bản, chỉ mượn mốc thời gian. Voice-over đã có `words` (nhà cung cấp trả sẵn, ví dụ ElevenLabs sau này) thì đi qua nguyên vẹn. Tham số: `model` (`small` mặc định, `medium`, `large-v3`). Thiếu công cụ báo `PROVIDER_NOT_INSTALLED` kèm lệnh cài; căn chỉnh hỏng báo `ALIGN_FAILED`.
 
 ### 5.13. Phụ Đề (Captions)
 

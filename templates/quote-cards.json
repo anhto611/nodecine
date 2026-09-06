@@ -15,8 +15,11 @@
         "id": "stage",
         "type": "core/stage",
         "params": {
-          "id": "ink",
           "name": "Ink",
+          "frame": {
+            "width": 1080,
+            "height": 1920
+          },
           "tokens": {
             "palette": {
               "bg": "#f4f1ea",
@@ -248,8 +251,6 @@
         "type": "core/timeline-assembler",
         "params": {
           "fps": 30,
-          "width": 1080,
-          "height": 1920,
           "minTotalFrames": 300,
           "title": "Quote cards"
         },

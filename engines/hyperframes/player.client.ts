@@ -30,6 +30,9 @@ function vendorSources() {
   return vendor;
 }
 
+/** gsap's source, for a preview that plays the look's scripts; cached with the player's vendor bundle. */
+export const gsapSource = (): Promise<string> => vendorSources().then((v) => v.gsapSource);
+
 let elementDefined: Promise<void> | null = null;
 const defineElement = () => (elementDefined ??= import('@hyperframes/player').then(() => undefined));
 

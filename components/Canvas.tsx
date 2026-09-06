@@ -44,6 +44,11 @@ function CanvasInner() {
   const runtimes = useStudio((s) => s.runtimes);
   const setNodePosition = useStudio((s) => s.setNodePosition);
   const setNodePositions = useStudio((s) => s.setNodePositions);
+  const modalOpen = useStudio((s) => !!s.codeEditor);
+  const undo = useStudio((s) => s.undo);
+  const redo = useStudio((s) => s.redo);
+  const canUndo = useStudio((s) => s.canUndo);
+  const canRedo = useStudio((s) => s.canRedo);
   const removeNodes = useStudio((s) => s.removeNodes);
   const removeEdges = useStudio((s) => s.removeEdges);
   const connect = useStudio((s) => s.connect);
@@ -134,7 +139,7 @@ function CanvasInner() {
         fitViewOptions={{ padding: 0.08 }}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
-        deleteKeyCode={['Delete', 'Backspace']}
+        deleteKeyCode={modalOpen ? null : ['Delete', 'Backspace']}
         proOptions={{ hideAttribution: true }}
         style={{ background: 'var(--bg-canvas)' }}
       >
@@ -165,6 +170,8 @@ function CanvasInner() {
           <button className="nc-tbtn" title={t('canvas.zoomIn')} onClick={() => rf.zoomIn()}><Icon.plus /></button>
           <button className="nc-tbtn" title={t('canvas.zoomOut')} onClick={() => rf.zoomOut()}><Icon.minus /></button>
           <button className="nc-tbtn" title={t('canvas.fit')} onClick={() => rf.fitView({ padding: 0.08 })}><Icon.fit /></button>
+          <button className="nc-tbtn" title={t('canvas.undo')} disabled={!canUndo} onClick={undo}><Icon.undo /></button>
+          <button className="nc-tbtn" title={t('canvas.redo')} disabled={!canRedo} onClick={redo}><Icon.redo /></button>
           <button className="nc-tbtn" title={t('canvas.layout')} onClick={() => {
             // Measured sizes come from React Flow; a node not yet measured gets the default.
             const sizes = Object.fromEntries(rf.getNodes().map((n) => [n.id, { width: n.measured?.width ?? 220, height: n.measured?.height ?? 180 }]));

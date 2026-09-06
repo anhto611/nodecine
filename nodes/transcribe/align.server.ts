@@ -2,8 +2,8 @@ import path from 'node:path';
 import { access } from 'node:fs/promises';
 import { ErrorCode } from '@/core/errors';
 import type { Word } from '@/core/types/payloads';
-import { exec, findBinary } from './exec';
-import { fileNameFromMediaUrl, mediaPath } from './paths';
+import { exec, findBinary } from '@/server/exec';
+import { fileNameFromMediaUrl, mediaPath } from '@/server/paths';
 
 /**
  * Forced alignment on the server (CORE_CONTRACTS §5.12): a stable-ts script reads the narration on
@@ -12,7 +12,7 @@ import { fileNameFromMediaUrl, mediaPath } from './paths';
  * the audio path is rebuilt from the media URL's hashed name, never taken from the graph.
  */
 
-export const ALIGN_SCRIPT = path.join(process.cwd(), 'server', 'align', 'stable_ts_align.py');
+export const ALIGN_SCRIPT = path.join(process.cwd(), 'nodes', 'transcribe', 'align', 'stable_ts_align.py');
 export const ALIGN_VENV_PYTHON = path.join(process.cwd(), '.nodecine', 'tools', 'stable-ts', 'bin', 'python');
 export const ALIGN_INSTALL_HINT = 'npm run setup:align';
 

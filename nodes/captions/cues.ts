@@ -1,4 +1,4 @@
-import type { CaptionTrack, Word } from '../types/payloads';
+import type { CaptionTrack, Word } from '@/core/types/payloads';
 
 /**
  * Grouping words into caption lines (CORE_CONTRACTS §2.10). Ported from cutdown's

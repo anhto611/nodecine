@@ -7,10 +7,13 @@ import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import { useParams, type BodyProps } from '@/nodes/kit';
+import { RESOLUTIONS, outputSizeFor } from '@/core/look/frame';
+import { useFrame } from '@/nodes/look/body';
 
 export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const [p, set] = useParams<{ codec: string; quality: string; fileName: string }>(nodeId);
+  const [p, set] = useParams<{ codec: string; quality: string; fileName: string; resolution: string }>(nodeId);
+  const frame = useFrame();
   const rt = useRuntime(nodeId);
   const running = useStudio((s) => s.running);
   const runNode = useStudio((s) => s.runNode);
@@ -31,6 +34,7 @@ export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
   return (
     <>
       <Kv k={t('node.codec')} v={<select className={`nc-select ${stopFlow}`} value={p.codec} onChange={(e) => set({ codec: e.target.value })}><option value="h264">H.264</option><option value="h265">H.265</option></select>} />
+      <Kv k={t('node.resolution')} v={<select className={`nc-select ${stopFlow}`} value={p.resolution ?? '1080p'} onChange={(e) => set({ resolution: e.target.value })}>{RESOLUTIONS.map((r) => { const o = outputSizeFor(ir ? { width: ir.meta.width, height: ir.meta.height } : frame, r); return <option key={r} value={r}>{r} · {o.width}×{o.height}</option>; })}</select>} />
       <Kv k={t('node.quality')} v={<select className={`nc-select ${stopFlow}`} value={p.quality} onChange={(e) => set({ quality: e.target.value })}>{['high', 'medium', 'low'].map((q) => <option key={q} value={q}>{t(`node.quality.${q}`)}</option>)}</select>} />
       <Kv k={t('node.fileName')} v={<input className={`nc-input ${stopFlow}`} value={p.fileName} onChange={(e) => set({ fileName: e.target.value })} />} />
       {result?.outputUrl && rt?.state === 'success' && (

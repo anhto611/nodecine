@@ -5,7 +5,7 @@ type P = { size?: number; className?: string };
 const base = (size: number) => ({ width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const });
 
 /** Stroke icons on a 24-grid. No emoji anywhere in the UI. */
-export const Icon: Record<IconKey | 'lib' | 'hist' | 'logs' | 'gear' | 'tpl' | 'play' | 'stop' | 'plus' | 'minus' | 'fit' | 'check' | 'warn' | 'spin' | 'retry' | 'x' | 'search' | 'star' | 'copy' | 'trash', React.FC<P>> = {
+export const Icon: Record<IconKey | 'lib' | 'hist' | 'logs' | 'gear' | 'tpl' | 'play' | 'stop' | 'plus' | 'minus' | 'fit' | 'check' | 'warn' | 'spin' | 'retry' | 'x' | 'search' | 'star' | 'copy' | 'trash' | 'undo' | 'redo', React.FC<P>> = {
   bolt: ({ size = 14, className }) => <svg {...base(size)} className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>,
   doc: ({ size = 14, className }) => <svg {...base(size)} className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="13" y2="17" /></svg>,
   term: ({ size = 14, className }) => <svg {...base(size)} className={className}><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>,
@@ -31,6 +31,8 @@ export const Icon: Record<IconKey | 'lib' | 'hist' | 'logs' | 'gear' | 'tpl' | '
   warn: ({ size = 12, className }) => <svg {...base(size)} className={className}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
   spin: ({ size = 12, className }) => <svg {...base(size)} className={`nc-spin ${className ?? ''}`} strokeWidth={2.4}><path d="M12 3a9 9 0 0 1 9 9" /><circle cx="12" cy="12" r="9" opacity=".18" /></svg>,
   retry: ({ size = 11, className }) => <svg {...base(size)} className={className} strokeWidth={2.2}><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>,
+  undo: ({ size = 12, className }) => <svg {...base(size)} className={className}><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>,
+  redo: ({ size = 12, className }) => <svg {...base(size)} className={className}><path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></svg>,
   x: ({ size = 14, className }) => <svg {...base(size)} className={className}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>,
   search: ({ size = 12, className }) => <svg {...base(size)} className={className}><circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" /></svg>,
   star: ({ size = 10, className }) => <svg {...base(size)} className={className} fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.6 22 9.6 17 14.5 18.2 21.5 12 18.2 5.8 21.5 7 14.5 2 9.6 8.91 8.6 12 2" /></svg>,

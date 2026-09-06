@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildIR, applyFactBindings } from '../assembler/build-ir';
-import { validateIR, IRInvalidError } from '../assembler/validate-ir';
-import type { DirectorPlan, FactSheet, Voiceover } from '../types/payloads';
-import { HOOK, STAGE, TEXT_CARD } from './look-fixtures';
+import { buildIR, applyFactBindings } from '../build-ir';
+import { validateIR, IRInvalidError } from '@/core/types/validate-ir';
+import type { DirectorPlan, FactSheet, Voiceover } from '@/core/types/payloads';
+import { HOOK, STAGE, TEXT_CARD } from '@/core/__tests__/look-fixtures';
 
 const voiceover: Voiceover = {
   audioUrl: '/api/media/0123456789abcdef.mp3',
@@ -34,7 +34,7 @@ describe('buildIR', () => {
     ]);
     expect(ir.audioTrack.padTailFrames).toBe(0);
     expect(ir.meta.language).toBe('en');
-    expect(ir.stage.id).toBe('dark');
+    expect(ir.stage.name).toBe('Dark');
     expect(ir.blocks.map((b) => b.id)).toEqual(['text-card', 'hook']);
     expect(ir.timeline[0]!.fields).toEqual({ kicker: 'ONE' });
     expect(ir.timeline[1]!.tone).toBe('cool');

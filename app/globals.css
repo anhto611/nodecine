@@ -54,6 +54,8 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
   background-repeat: no-repeat; background-position: right 6px center; background-size: 9px; }
 .nc-select:disabled { opacity: .5; }
 .nc-input:focus, .nc-select:focus, .nc-textarea:focus { outline: none; border-color: var(--accent); }
+.nc-color { width: 22px; height: 22px; flex: none; padding: 0; border: 1px solid var(--line-2); border-radius: 3px; background: none; cursor: pointer; }
+.nc-color::-webkit-color-swatch-wrapper { padding: 2px; } .nc-color::-webkit-color-swatch { border: 0; border-radius: 2px; }
 .nc-textarea { resize: vertical; min-height: 44px; line-height: 1.45; }
 /* A row is a label and whatever it names. The label is short, known and the only way to tell the
    rows apart, so it keeps its natural width; the value is arbitrary text and gives way instead.
@@ -110,6 +112,8 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--accent-2); }
 .react-flow__attribution { display: none; }
 /* The svg paints square corners, so it has to be clipped to the rounded box or the ring cuts across them. */
+/* Same 12 px inset as the tool strip, the header, the tab bar and the status bar. */
+.react-flow__panel { margin: 12px; }
 .react-flow__minimap { border-radius: 4px; box-shadow: 0 0 0 1px var(--line-2); overflow: hidden; }
 .nc-bar { height: 6px; background: var(--bg-sunk); border-radius: 3px; overflow: hidden; border: 1px solid var(--line); }
 .nc-bar > div { height: 100%; background: var(--run); }
@@ -154,7 +158,7 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-modal { background: var(--bg-panel); border: 1px solid var(--line-3); border-radius: 9px; box-shadow: 0 30px 80px rgba(0,0,0,.8); overflow: hidden; position: relative; display: flex; flex-direction: column; }
 /* The category list keeps a column of its own while there is room for one. Under 1100px that width
    is worth more to the cards, so it folds into a drawer opened from a button in the header. */
-.nc-tpl-side { width: 200px; flex-shrink: 0; border-right: 1px solid var(--line); padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+.nc-tpl-side { width: 200px; flex-shrink: 0; border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 2px; }
 .nc-tpl-sidebtn { display: none; }
 @media (max-width: 1100px) {
   .nc-tpl-side { position: absolute; left: 0; top: 52px; bottom: 0; z-index: 2; background: var(--bg-panel); box-shadow: 8px 0 32px rgba(0,0,0,.6); transform: translateX(-100%); transition: transform .16s ease; }
@@ -169,7 +173,8 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-tools { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; z-index: 5; }
 .nc-tbar { display: flex; background: rgba(10,10,11,.86); border: 1px solid var(--line-2); border-radius: 4px; overflow: hidden; }
 .nc-tbtn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx-2); border: 0; border-right: 1px solid var(--line); background: none; cursor: pointer; }
-.nc-tbtn:last-child { border-right: 0; } .nc-tbtn:hover { background: var(--bg-raise); color: var(--tx); }
+.nc-tbtn:last-child { border-right: 0; } .nc-tbtn:hover:not(:disabled) { background: var(--bg-raise); color: var(--tx); }
+.nc-tbtn:disabled { opacity: .35; cursor: default; }
 .nc-zoom { font-size: var(--fs-body); color: var(--tx-3); padding: 0 9px; display: flex; align-items: center; border-right: 1px solid var(--line); }
 
 /* Workflow tab bar under the header (ComfyUI-style). */
@@ -186,7 +191,7 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-tab-ask { display: flex; gap: 4px; }
 .nc-tab-add { flex: 0 0 30px; width: 30px; padding: 0; margin: 0; border: 0; background: none; color: var(--tx-3); cursor: pointer; display: flex; align-items: center; justify-content: center; font: inherit; line-height: 1; }
 .nc-tab-add:hover { color: var(--tx); background: var(--bg-raise); }
-.nc-tabs-actions { display: flex; align-items: center; gap: 6px; padding: 0 10px; border-left: 1px solid var(--line); }
+.nc-tabs-actions { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-left: 1px solid var(--line); }
 /* Workflows panel rows. */
 .nc-pn-sub { padding: 8px 12px 4px; font-size: var(--fs-hint); text-transform: uppercase; letter-spacing: .1em; color: var(--tx-3); }
 .nc-wf { display: flex; align-items: flex-start; gap: 8px; padding: 7px 12px; border-bottom: 1px solid var(--line); font-size: var(--fs-body); color: var(--tx-2); cursor: pointer; }
@@ -200,9 +205,20 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 /* Look previews: a 9:16 still, scaled to the width it gets. */
 .nc-preview { position: relative; width: 100%; overflow: hidden; border-radius: 3px; background: #000; border: 1px solid var(--line-2); }
 .nc-preview iframe { position: absolute; left: 0; top: 0; }
+/* Safe-zone guides over a preview: where the platform UI sits is hatched, what is left is outlined. */
+.nc-guides { position: absolute; inset: 0; pointer-events: none; }
+.nc-guide-band { position: absolute; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--warn) 22%, transparent) 0 6px, transparent 6px 14px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, transparent); }
+.nc-guide-label { position: absolute; font: 600 10px/1 var(--mono); color: var(--warn); background: color-mix(in srgb, var(--bg-panel) 80%, transparent); padding: 1px 4px; border-radius: 2px; }
+.nc-guide-safe { position: absolute; border: 1px dashed color-mix(in srgb, var(--ok) 70%, transparent); }
+/* Layout editor: one box per stage element over the preview; drag to move, edges to resize. */
+.nc-layout { position: absolute; inset: 0; }
+.nc-layout-box { border: 1px solid color-mix(in srgb, var(--accent) 75%, transparent); background: color-mix(in srgb, var(--accent) 6%, transparent); box-sizing: border-box; cursor: move; }
+.nc-layout-box:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.nc-layout-box.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.nc-layout-label { position: absolute; left: 0; top: -14px; font: 600 9px/12px var(--mono); color: #fff; background: var(--accent); padding: 0 4px; border-radius: 2px 2px 0 0; pointer-events: none; white-space: nowrap; }
 
 /* Status strip under the canvas; the logs drawer opens beneath it. */
-.nc-status { height: 24px; flex: 0 0 24px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: var(--bg-panel); border-top: 1px solid var(--line); font-size: var(--fs-body); color: var(--tx-3); }
+.nc-status { height: 24px; flex: 0 0 24px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--bg-panel); border-top: 1px solid var(--line); font-size: var(--fs-body); color: var(--tx-3); }
 .nc-status-btn { display: flex; align-items: center; gap: 5px; height: 18px; padding: 0 8px; border: 0; border-radius: 3px; background: none; color: var(--tx-2); font: inherit; cursor: pointer; }
 .nc-status-btn:hover { background: var(--bg-raise); color: var(--tx); }
 .nc-status-btn.on { background: var(--accent-sunk); color: var(--accent-2); }

@@ -9,7 +9,7 @@ import { mediaUrl } from '@/server/paths';
 import { ensureServerRegistrations } from '@/server/register';
 import { embedWorkflow } from '@/server/video-meta';
 import { fileNameFromMediaUrl, mediaPath } from '@/server/paths';
-import { alignWordsOnServer } from '@/server/align';
+import { alignWordsOnServer } from '@/nodes/transcribe/align.server';
 
 /**
  * NodeServices for a run on the server — the job queue, a CLI, an end-to-end test (ARCHITECTURE

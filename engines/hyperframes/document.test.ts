@@ -82,4 +82,15 @@ describe('buildHyperframesDocument', () => {
     expect(html).toContain("connect-src 'none'");
     expect(html).toContain("script-src 'unsafe-inline' 'unsafe-eval'");
   });
+
+  it('renders at a higher resolution by zooming the design frame, leaving the scenes in design pixels', () => {
+    const html = buildHyperframesDocument(ir, { ...opts, scale: 2 });
+    expect(html).toContain('data-width="2160" data-height="3840"');
+    expect(html).toContain('<meta name="viewport" content="width=2160, height=3840">');
+    expect(html).toContain('html, body, [data-composition-id] { width: 2160px; height: 3840px; }');
+    expect(html).toContain('.nc-frame { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform: scale(2); transform-origin: 0 0;');
+    // The scenes sit inside the design-sized frame, not directly in the root.
+    expect(html).toMatch(/<div class="nc-frame">\s*<div id="scene-1-text-card" class="clip nc-scene"/);
+    expect(buildHyperframesDocument(ir, opts)).not.toContain('nc-frame');
+  });
 });

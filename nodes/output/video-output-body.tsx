@@ -9,6 +9,7 @@ import { useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
+import { useFrame } from '@/nodes/look/body';
 
 /**
  * The player node (USER_FLOWS §1.4). Mounts the engine's player via the adapter registry; never imports Remotion.
@@ -16,6 +17,7 @@ import type { BodyProps } from '@/nodes/kit';
  */
 export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
+  const videoFrame = useFrame();
   const rt = useRuntime(nodeId);
   const wiredIr = useInputPayload<VideoIR>(nodeId, 'ir');
   const engine = useInputPayload<EngineRef>(nodeId, 'engine');
@@ -60,7 +62,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
 
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ width: '100%', aspectRatio: '9 / 16', background: '#000', border: '1px solid var(--line-2)', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
+      <div style={{ width: '100%', aspectRatio: ir ? `${ir.meta.width} / ${ir.meta.height}` : `${videoFrame.width} / ${videoFrame.height}`, background: '#000', border: '1px solid var(--line-2)', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
         {showPlayer ? (
           // Keyed so a new IR gets a fresh container: the previous nested root unmounts asynchronously
           // and must not share an element with the next createRoot().

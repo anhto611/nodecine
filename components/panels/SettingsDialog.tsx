@@ -22,12 +22,12 @@ export const SettingsDialog: React.FC = () => {
   return (
     <div className="nc-modal-bg" onClick={() => close(false)}>
       <div className="nc-modal" style={{ width: 620 }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 11, padding: '0 19px', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 11, padding: '0 12px', borderBottom: '1px solid var(--line)' }}>
           <span style={{ color: 'var(--tx-2)' }}><Icon.gear /></span><span style={{ fontWeight: 700, fontSize: 'var(--fs-title)' }}>{t('settings.title')}</span>
           <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => close(false)}><Icon.x /></button>
         </div>
-        <div style={{ padding: '20px 19px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{ background: 'var(--bg-sunk)', border: '1px solid var(--line)', borderRadius: 5, padding: '12px 13px', display: 'flex', gap: 11, fontSize: 'var(--fs-label)', color: 'var(--tx-2)', lineHeight: 1.65 }}>
+        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ background: 'var(--bg-sunk)', border: '1px solid var(--line)', borderRadius: 5, padding: '12px', display: 'flex', gap: 11, fontSize: 'var(--fs-label)', color: 'var(--tx-2)', lineHeight: 1.65 }}>
             <span style={{ color: 'var(--ok)', flex: '0 0 auto', marginTop: 2 }}><Icon.check size={14} /></span>
             <span>{t('settings.noKeys')}</span>
           </div>
@@ -40,7 +40,7 @@ export const SettingsDialog: React.FC = () => {
           {field(t('settings.ffmpegBin'), <code style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)' }}>NODECINE_FFMPEG_BIN · PATH</code>)}
           {field(t('settings.tmpDir'), <code style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)' }}>NODECINE_TMP_DIR · .nodecine/tmp</code>, t('settings.envHint'))}
         </div>
-        <div style={{ borderTop: '1px solid var(--line)', padding: '14px 19px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ borderTop: '1px solid var(--line)', padding: '12px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('settings.footer')}</span>
           <div style={{ flex: 1 }} />
           <Btn onClick={() => close(false)}>{t('settings.close')}</Btn>
