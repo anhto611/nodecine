@@ -1,7 +1,7 @@
 import React from 'react';
 import { Composition } from 'remotion';
 import { COMPOSITION_ID, NodeCineVideo, type VideoProps } from './Video';
-import { DEFAULT_STAGE } from '@/nodes/look/stage';
+import { DEFAULT_STAGE } from '@/nodes/look/node';
 import { DEFAULT_BLOCK } from '@/nodes/look/blocks';
 
 const placeholder: VideoProps = {

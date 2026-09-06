@@ -2,13 +2,13 @@
 import React from 'react';
 import type { DirectorPlan } from '@/core/types/payloads';
 import type { VideoIR } from '@/core/types/ir';
-import { Kv, useT, stopFlow } from '@/components/ui';
+import { Kv, useT } from '@/components/ui';
+import { FormBody } from '@/nodes/form-body';
 import { useInputPayload, useRuntime } from '@/store/useStudio';
-import { useParams, type BodyProps } from '@/nodes/kit';
+import type { BodyProps } from '@/nodes/kit';
 
 export const AssemblerBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const [p, set] = useParams<{ fps: number; minTotalFrames: number; title: string }>(nodeId);
   const rt = useRuntime(nodeId);
   const plan = useInputPayload<DirectorPlan>(nodeId, 'plan');
   const ir = rt?.outputs.ir?.payload as VideoIR | undefined;
@@ -16,9 +16,7 @@ export const AssemblerBody: React.FC<BodyProps> = ({ nodeId }) => {
   return (
     <>
       <Kv k={t('node.total')} v={ir ? `${ir.meta.totalDurationInFrames} ${t('node.frames')} · ${ir.meta.width}×${ir.meta.height}` : '—'} dim={!ir} />
-      <Kv k={t('node.fps')} v={<input className={`nc-input ${stopFlow}`} type="number" value={p.fps} onChange={(e) => set({ fps: Number(e.target.value) || 30 })} />} />
-      <Kv k={t('node.minFrames')} v={<input className={`nc-input ${stopFlow}`} type="number" value={p.minTotalFrames} onChange={(e) => set({ minTotalFrames: Number(e.target.value) || 0 })} />} />
-      <Kv k={t('node.title')} v={<input className={`nc-input ${stopFlow}`} value={p.title} onChange={(e) => set({ title: e.target.value })} />} />
+      <FormBody nodeId={nodeId} />
       <div className="nc-alloc">
         {(ir?.timeline ?? plan?.scenes ?? []).map((s, i, arr) => {
           const w = 'durationInFrames' in s ? s.durationInFrames : (s as { weight: number }).weight;

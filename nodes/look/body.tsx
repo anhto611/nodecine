@@ -1,29 +1,28 @@
 'use client';
 import React from 'react';
-import { BlockDefSchema, BlockSetSchema, StageDefSchema, type BlockDef, type BlockSet, type StageDef } from '@/core/types/payloads';
+import { BlockDefSchema, StageDefSchema, type BlockDef, type LookDef, type StageDef } from '@/core/types/payloads';
+import type { Casting } from '@/nodes/look/cast';
 
 const BlockDefSchemaOk = (b: unknown): b is BlockDef => BlockDefSchema.safeParse(b).success;
 import { Kv, useT, stopFlow } from '@/components/ui';
 import { useStudio } from '@/store/useStudio';
 import { DEFAULT_BLOCK as DEFAULT_TEXT_CARD } from '@/nodes/look/blocks';
-import { DEFAULT_STAGE } from '@/nodes/look/stage';
+import { DEFAULT_STAGE } from '@/nodes/look/node';
 import { LookPreview } from '@/nodes/look/preview';
 import { FRAME_PRESETS, frameOf } from '@/core/look/frame';
 import { FontsEditor, PaletteEditor, PropsEditor, Section, TonesEditor } from '@/nodes/look/forms';
 
 /**
- * The stage and blocks wired into a node, read from the source nodes' parameters rather than from
- * run results, so a body can offer them before anything has run. Definitions the schema rejects are
- * left out, the way the executor would leave them out.
+ * The roles the script upstream will send, read from that node's parameters (the director's beats or
+ * the static script's scenes) so the casting table can be filled before anything has run.
  */
-export function useWiredLook(nodeId: string): { stage?: StageDef; blocks: BlockDef[] } {
+export function useUpstreamRoles(nodeId: string): string[] {
   const graph = useStudio((s) => s.graph);
   return React.useMemo(() => {
-    const paramsOf = (port: string) =>
-      graph.edges.filter((e) => e.target === nodeId && e.targetPort === port).map((e) => graph.nodes.find((n) => n.id === e.source)?.params);
-    const stage = paramsOf('stage').map((p) => StageDefSchema.safeParse(p)).find((r) => r.success)?.data;
-    const blocks = paramsOf('blocks').map((p) => BlockSetSchema.safeParse(p)).filter((r) => r.success).flatMap((r) => r.data!.blocks);
-    return { stage, blocks };
+    const edge = graph.edges.find((e) => e.target === nodeId && e.targetPort === 'scenes');
+    const params = graph.nodes.find((n) => n.id === edge?.source)?.params as { beats?: { role: string }[]; scenes?: { role: string }[] } | undefined;
+    const roles = (params?.beats ?? params?.scenes ?? []).map((x) => x.role).filter(Boolean);
+    return [...new Set(roles)];
   }, [graph, nodeId]);
 }
 
@@ -33,22 +32,10 @@ export function useFrame(): { width: number; height: number } {
   return React.useMemo(() => frameOf({ nodes }), [nodes]);
 }
 
-/** The stage wired to the same consumer as this node, so a block thumbnail wears the right look. */
-function useStageFor(nodeId: string): StageDef {
-  const graph = useStudio((s) => s.graph);
-  return React.useMemo(() => {
-    const out = graph.edges.find((e) => e.source === nodeId);
-    const stageEdge = out ? graph.edges.find((e) => e.target === out.target && e.targetPort === 'stage') : undefined;
-    const p = stageEdge ? graph.nodes.find((n) => n.id === stageEdge.source)?.params : undefined;
-    const r = StageDefSchema.safeParse(p);
-    return r.success ? r.data : DEFAULT_STAGE;
-  }, [graph, nodeId]);
-}
-
 /**
- * Bodies for the Stage and Blocks nodes. Their parameters are the whole definition, so the body is a
+ * Bodies for the Look node. Their parameters are the whole definition, so the body is a
  * small form over the parts a person edits by hand: identity, the code, and — for a block — what the
- * model may write and when to use it. The Blocks node shows its catalogue as a list and edits one
+ * model may write and when to use it. The blocks section shows the catalogue as a list and edits one
  * block at a time. Structured parts (palette, fonts, tones, scene fields, props) have form editors
  * in `forms.tsx`; the Zod schema on the node is the last line of defence, not the interface.
  */
@@ -85,12 +72,13 @@ export function slugFor(name: string, taken: string[]): string {
   return id;
 }
 
-export const StageBody: React.FC<BodyProps> = ({ nodeId }) => {
+export const LookBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const [p, set] = useParams<StageDef>(nodeId);
+  const [p, set] = useParams<LookDef & { casting: Casting }>(nodeId);
+  const roles = useUpstreamRoles(nodeId);
   const tokens = p.tokens ?? { palette: {}, fonts: {} };
   const frame = p.frame ?? { width: 1080, height: 1920 };
-  const [open, setOpen] = React.useState<'palette' | 'fonts' | 'tones' | null>(null);
+  const [open, setOpen] = React.useState<'palette' | 'fonts' | 'tones' | 'blocks' | 'casting' | null>(null);
   const openCode = useStudio((s) => s.setCodeEditor);
   const valid = StageDefSchema.safeParse(p);
   return (
@@ -114,11 +102,62 @@ export const StageBody: React.FC<BodyProps> = ({ nodeId }) => {
         <div className="nc-hint">{t('look.tonesHint')}</div>
         <TonesEditor tones={p.tones ?? {}} palette={tokens.palette} onChange={(tones) => set({ tones })} />
       </Section>
+      <Section title={t('node.blocksSection')} count={(p.blocks ?? []).length} open={open === 'blocks'} onToggle={() => setOpen(open === 'blocks' ? null : 'blocks')}>
+        <div className="nc-hint">{t('look.blocksHint')}</div>
+        <BlocksSection nodeId={nodeId} stage={valid.success ? valid.data : DEFAULT_STAGE} />
+      </Section>
+      <Section title={t('look.casting')} count={(p.casting ?? []).filter((c) => c.block || c.tone).length} open={open === 'casting'} onToggle={() => setOpen(open === 'casting' ? null : 'casting')}>
+        <div className="nc-hint">{t('look.castingHint')}</div>
+        <CastingTable roles={roles} casting={p.casting ?? []} blocks={(p.blocks ?? []).map((b) => b.id)} tones={Object.keys(p.tones ?? {})} onChange={(casting) => set({ casting })} />
+      </Section>
     </>
   );
 };
 
-/** The form for one block; the Blocks node shows it for the selected entry. */
+/**
+ * Who plays which role: one row per role the script sends, a block (or "by content") and a tone.
+ * Roles that are cast but no longer upstream stay listed, dimmed, so a choice is never lost silently.
+ */
+const CastingTable: React.FC<{ roles: string[]; casting: Casting; blocks: string[]; tones: string[]; onChange: (c: Casting) => void }> = ({ roles, casting, blocks, tones, onChange }) => {
+  const t = useT();
+  const all = [...roles, ...casting.map((c) => c.role).filter((r) => !roles.includes(r))];
+  const entry = (role: string) => casting.find((c) => c.role === role);
+  const update = (role: string, patch: { block?: string; tone?: string }) => {
+    const cur = entry(role) ?? { role };
+    const next = { ...cur, ...patch };
+    if (!next.block) delete next.block;
+    if (!next.tone) delete next.tone;
+    const rest = casting.filter((c) => c.role !== role);
+    onChange(next.block || next.tone ? [...rest, next] : rest);
+  };
+  if (all.length === 0) return <div className="nc-hint">{t('look.noRoles')}</div>;
+  return (
+    <>
+      {all.map((role) => {
+        const c = entry(role);
+        const stale = !roles.includes(role);
+        return (
+          <div key={role} className="nc-scene-row" title={stale ? t('look.roleGone') : undefined} style={stale ? { opacity: 0.5 } : undefined}>
+            <span className="nc-k" style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--tx)' }}>{role}</span>
+            <select className={`nc-select ${stopFlow}`} style={{ width: 96 }} value={c?.block ?? ''} onChange={(e) => update(role, { block: e.target.value })}>
+              <option value="">{t('look.castAuto')}</option>
+              {blocks.map((id) => <option key={id} value={id}>{id}</option>)}
+              {c?.block && !blocks.includes(c.block) ? <option value={c.block}>{c.block} !</option> : null}
+            </select>
+            {tones.length > 0 && (
+              <select className={`nc-select ${stopFlow}`} style={{ width: 72 }} value={c?.tone ?? ''} onChange={(e) => update(role, { tone: e.target.value })}>
+                <option value="">{t('node.toneBase')}</option>
+                {tones.map((x) => <option key={x} value={x}>{x}</option>)}
+              </select>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+};
+
+/** The form for one block; the blocks section shows it for the selected entry. */
 const BlockEditor: React.FC<{ block: BlockDef; onChange: (patch: Partial<BlockDef>) => void }> = ({ block: p, onChange: set }) => {
   const t = useT();
   const [propsOpen, setPropsOpen] = React.useState(false);
@@ -138,11 +177,10 @@ const BlockEditor: React.FC<{ block: BlockDef; onChange: (patch: Partial<BlockDe
   );
 };
 
-/** A catalogue: one row per block, the selected one open for editing; add, duplicate, remove. */
-export const BlocksBody: React.FC<BodyProps> = ({ nodeId }) => {
+/** The block catalogue of a stage: one row per block, the selected one open for editing; add, duplicate, remove. */
+const BlocksSection: React.FC<BodyProps & { stage: StageDef }> = ({ nodeId, stage }) => {
   const t = useT();
-  const [p, set] = useParams<BlockSet>(nodeId);
-  const stage = useStageFor(nodeId);
+  const [p, set] = useParams<Pick<LookDef, 'blocks'>>(nodeId);
   const frame = useFrame();
   const openCode = useStudio((s) => s.setCodeEditor);
   const list = p.blocks ?? [];

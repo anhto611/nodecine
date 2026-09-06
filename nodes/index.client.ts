@@ -5,7 +5,7 @@ import type { NodeMeta } from '@/lib/node-meta';
 import { InputTriggerBody } from './input/body';
 import { GithubFetcherBody } from './github/body';
 import { StaticScriptBody } from './script/body';
-import { StageBody, BlocksBody } from './look/body';
+import { LookBody } from './look/body';
 import { AiDirectorBody } from './director/body';
 import { EngineBody, LlmProviderBody, TtsProviderBody } from './resources/body';
 import { TtsBody } from './tts/body';
@@ -20,8 +20,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/input-trigger': InputTriggerBody,
   'core/github-fetcher': GithubFetcherBody,
   'core/static-script': StaticScriptBody,
-  'core/stage': StageBody,
-  'core/blocks': BlocksBody,
+  'core/look': LookBody,
   'core/ai-director': AiDirectorBody,
   'core/llm-provider': LlmProviderBody,
   'core/tts-provider': TtsProviderBody,
@@ -39,8 +38,7 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/input-trigger': { icon: 'bolt', group: 'source' },
   'core/github-fetcher': { icon: 'branch', group: 'source' },
   'core/static-script': { icon: 'doc', group: 'source' },
-  'core/stage': { icon: 'screen', group: 'look' },
-  'core/blocks': { icon: 'layers', group: 'look' },
+  'core/look': { icon: 'screen', group: 'look' },
   'core/ai-director': { icon: 'bot', group: 'process' },
   'core/llm-provider': { icon: 'term', group: 'provider' },
   'core/tts-provider': { icon: 'mic', group: 'provider' },

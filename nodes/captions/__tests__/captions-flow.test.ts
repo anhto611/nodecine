@@ -114,7 +114,7 @@ describe('the HyperFrames document with captions', () => {
   it('falls back to a default band when the stage declares no caption slot, and honours data-caption-style', async () => {
     const services = makeFakeServices();
     const g = on(graph(), 'transcribe', 'captions');
-    const stageNode = g.nodes.find((n) => n.type === 'core/stage')!;
+    const stageNode = g.nodes.find((n) => n.type === 'core/look')!;
     const src = (stageNode.params as { code: { source: string } }).code.source;
     (stageNode.params as { code: { source: string } }).code.source = src.replace(/<div class="captions" data-slot="captions"[^>]*><\/div>/, '');
     const ex = new Executor(g, services);
@@ -130,7 +130,7 @@ describe('the HyperFrames document with captions', () => {
   });
 
   it('draws nothing extra when the IR has no captions', () => {
-    const ir = { irVersion: 1, meta: { title: 't', language: 'en', fps: 30, width: 1080, height: 1920, totalDurationInFrames: 30 }, stage: (staticScript.graph.nodes.find((n) => n.type === 'core/stage')!.params as unknown as VideoIR['stage']), blocks: (staticScript.graph.nodes.find((n) => n.type === 'core/blocks')!.params as unknown as { blocks: VideoIR['blocks'] }).blocks, audioTrack: { voiceoverUrl: '/api/media/0123456789abcdef.mp3', durationSeconds: 1, padTailFrames: 0 }, timeline: [{ id: 's1', blockId: 'text-card', startFrame: 0, durationInFrames: 30, props: { headline: 'x' } }] } as VideoIR;
+    const ir = { irVersion: 1, meta: { title: 't', language: 'en', fps: 30, width: 1080, height: 1920, totalDurationInFrames: 30 }, stage: (staticScript.graph.nodes.find((n) => n.type === 'core/look')!.params as unknown as VideoIR['stage']), blocks: (staticScript.graph.nodes.find((n) => n.type === 'core/look')!.params as unknown as { blocks: VideoIR['blocks'] }).blocks, audioTrack: { voiceoverUrl: '/api/media/0123456789abcdef.mp3', durationSeconds: 1, padTailFrames: 0 }, timeline: [{ id: 's1', blockId: 'text-card', startFrame: 0, durationInFrames: 30, props: { headline: 'x' } }] } as VideoIR;
     const html = buildHyperframesDocument(ir, { gsapSource: '', runtimeSource: '', voiceoverSrc: 'vo.mp3', fontBase: '/fonts' });
     expect(html).not.toContain('nc-cap-line');
     expect(html).not.toContain('nc-captions-default');

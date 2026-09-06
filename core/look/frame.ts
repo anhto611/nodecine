@@ -1,7 +1,7 @@
 import type { Graph } from '../engine/graph';
 
 /**
- * The video's frame size belongs to the Stage (`frame` in its definition): a stage is drawn for one
+ * The video's frame size belongs to the Look (`frame` on its stage part): a stage is drawn for one
  * frame, and the Assembler takes the video's size from the plan's stage. Everything that draws a look
  * before a run — node previews, the code modal, the safe-zone guides, the prompt sent to a model —
  * reads the same field. No stage in the graph: portrait.
@@ -40,7 +40,7 @@ export function outputSizeFor(frame: FrameSize, resolution: Resolution = '1080p'
 }
 
 export function frameOf(graph: Pick<Graph, 'nodes'>): FrameSize {
-  const stage = graph.nodes.find((n) => n.type === 'core/stage');
+  const stage = graph.nodes.find((n) => n.type === 'core/look');
   const f = (stage?.params as { frame?: { width?: unknown; height?: unknown } } | undefined)?.frame;
   const width = typeof f?.width === 'number' && f.width > 0 ? Math.round(f.width) : DEFAULT_FRAME.width;
   const height = typeof f?.height === 'number' && f.height > 0 ? Math.round(f.height) : DEFAULT_FRAME.height;

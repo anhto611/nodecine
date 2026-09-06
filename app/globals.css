@@ -107,8 +107,15 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .react-flow__handle { width: 8px; height: 8px; background: var(--bg-node); border: 1.5px solid var(--line-3); }
 .react-flow__handle.on { border-color: var(--accent); background: var(--accent-sunk); }
 .react-flow__handle-left { left: -5px; } .react-flow__handle-right { right: -5px; }
-.react-flow__edge-path { stroke: #2f333b; stroke-width: 1.3; }
-.react-flow__edge.active .react-flow__edge-path { stroke: var(--accent); stroke-width: 1.7; }
+.react-flow__handle-top { top: -5px; } .react-flow__handle-bottom { bottom: -5px; }
+.react-flow__handle.res { border-radius: 2px; border-style: dashed; }
+.nc-port-row-res { gap: 10px; flex-wrap: wrap; height: auto; min-height: 18px; }
+.nc-port-res { white-space: nowrap; }
+/* Two kinds of wire: the flow (content, step to step) is solid and firm; a resource (a part plugged into a node) is thin and dashed. */
+.react-flow__edge-path { stroke: var(--line-3); stroke-width: 1.6; }
+.react-flow__edge.nc-edge-resource .react-flow__edge-path { stroke: var(--tx-3); stroke-width: 1.1; opacity: .8; }
+.react-flow__edge.active .react-flow__edge-path { stroke: var(--accent); stroke-width: 1.8; }
+.react-flow__edge.nc-edge-resource.active .react-flow__edge-path { stroke: color-mix(in srgb, var(--accent) 70%, var(--tx-3)); stroke-width: 1.2; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--accent-2); }
 .react-flow__attribution { display: none; }
 /* The svg paints square corners, so it has to be clipped to the rounded box or the ring cuts across them. */
@@ -212,10 +219,12 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-guide-safe { position: absolute; border: 1px dashed color-mix(in srgb, var(--ok) 70%, transparent); }
 /* Layout editor: one box per stage element over the preview; drag to move, edges to resize. */
 .nc-layout { position: absolute; inset: 0; }
-.nc-layout-box { border: 1px solid color-mix(in srgb, var(--accent) 75%, transparent); background: color-mix(in srgb, var(--accent) 6%, transparent); box-sizing: border-box; cursor: move; }
-.nc-layout-box:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.nc-layout-box.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.nc-layout-label { position: absolute; left: 0; top: -14px; font: 600 9px/12px var(--mono); color: #fff; background: var(--accent); padding: 0 4px; border-radius: 2px 2px 0 0; pointer-events: none; white-space: nowrap; }
+/* Quiet until touched: a faint outline per element, the name only on the one under the pointer or selected. */
+.nc-layout-box { border: 1px dashed color-mix(in srgb, var(--accent) 35%, transparent); background: transparent; box-sizing: border-box; cursor: move; }
+.nc-layout-box:hover { border-style: solid; border-color: color-mix(in srgb, var(--accent) 80%, transparent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.nc-layout-box.on { border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.nc-layout-label { display: none; position: absolute; left: -1px; top: -15px; font: 600 9px/12px var(--mono); color: #fff; background: var(--accent); padding: 0 4px; border-radius: 2px 2px 0 0; pointer-events: none; white-space: nowrap; z-index: 1; }
+.nc-layout-box:hover > .nc-layout-label, .nc-layout-box.on > .nc-layout-label { display: block; }
 
 /* Status strip under the canvas; the logs drawer opens beneath it. */
 .nc-status { height: 24px; flex: 0 0 24px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--bg-panel); border-top: 1px solid var(--line); font-size: var(--fs-body); color: var(--tx-3); }

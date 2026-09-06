@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STAGE_ROLES, addImageToCode, addRoleToCode, addShapeToCode, addTextToCode, elementKindOf, elementTextOf, fieldNameOf, nextClass, removeElementFromCode, removeFieldFromCode, rolesIn, setElementText } from '../stage-elements';
-import { DEFAULT_STAGE } from '@/nodes/look/stage';
+import { DEFAULT_STAGE } from '@/nodes/look/node';
 
 const src = DEFAULT_STAGE.code.source;
 

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { getNodeType } from '@/core/nodes/definition';
-import { PORT_LABEL_KEYS } from '@/core/types/ports';
+import { PORT_LABEL_KEYS, isResourcePort } from '@/core/types/ports';
 import { readCapability } from '@/core/nodes/definition';
 import { NODE_META } from '@/lib/node-meta';
 import { Icon } from '@/components/icons';
@@ -51,6 +51,12 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
   // A resource node offers its re-check whenever it is not busy. Tying it to `success` took the
   // button away exactly when a setting had just changed and the node had gone stale — the one
   // moment the user has a reason to press it.
+  const flowIns = def.inputs.filter((p) => !isResourcePort(p.type));
+  const resourceIns = def.inputs.filter((p) => isResourcePort(p.type));
+  const flowOuts = def.outputs.filter((p) => !isResourcePort(p.type));
+  const resourceOuts = def.outputs.filter((p) => isResourcePort(p.type));
+  // The resource row, when there is one, sits above the flow rows and shifts their handles down.
+  const rowOffset = resourceIns.length > 0 ? 1 : 0;
   const hasRetry = rt.state === 'error' || (def.kind === 'resource' && rt.state !== 'running' && rt.state !== 'queued');
 
   return (
@@ -70,17 +76,25 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
       </div>
       {(def.inputs.length > 0 || def.outputs.length > 0) && (
         <div className="nc-ports">
-          {def.inputs.map((p) => {
-            const name = ['EngineRef', 'LLMRef', 'TTSRef'].includes(p.type) ? connectedName(p.name) : undefined;
-            return (
-              <div key={`in-${p.name}`} className="nc-port-row">
-                {t(PORT_LABEL_KEYS[p.type])}{p.required === false ? ` · ${t('port.optional')}` : ''}{name ? <span style={{ color: 'var(--accent-2)' }}> · {name}</span> : null}
-              </div>
-            );
-          })}
-          {def.outputs.map((p) => (
+          {resourceIns.length > 0 && (
+            <div className="nc-port-row nc-port-row-res" title={t('port.resources')}>
+              {resourceIns.map((p) => {
+                const name = connectedName(p.name);
+                return <span key={p.name} className="nc-port-res">▾ {t(PORT_LABEL_KEYS[p.type])}{name ? <span style={{ color: 'var(--accent-2)' }}> {name}</span> : null}{p.required === false ? <span className="nc-dim"> · {t('port.optional')}</span> : null}</span>;
+              })}
+            </div>
+          )}
+          {flowIns.map((p) => (
+            <div key={`in-${p.name}`} className="nc-port-row">
+              {t(PORT_LABEL_KEYS[p.type])}{p.required === false ? ` · ${t('port.optional')}` : ''}
+            </div>
+          ))}
+          {flowOuts.map((p) => (
             <div key={`out-${p.name}`} className="nc-port-row" style={{ justifyContent: 'flex-end' }}>{t(PORT_LABEL_KEYS[p.type])}</div>
           ))}
+          {resourceOuts.length > 0 && (
+            <div className="nc-port-row nc-port-row-res" style={{ justifyContent: 'flex-end' }}>{resourceOuts.map((p) => <span key={p.name} className="nc-port-res">{t(PORT_LABEL_KEYS[p.type])} ▾</span>)}</div>
+          )}
         </div>
       )}
       <div className="nc-body">
@@ -107,11 +121,17 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
           </Btn>
         )}
       </div>
-      {def.inputs.map((p, i) => (
-        <Handle key={p.name} type="target" position={Position.Left} id={p.name} className={rt.state === 'success' || rt.state === 'running' ? 'on' : ''} style={{ top: handleTop(i) }} />
+      {flowIns.map((p, i) => (
+        <Handle key={p.name} type="target" position={Position.Left} id={p.name} className={rt.state === 'success' || rt.state === 'running' ? 'on' : ''} style={{ top: handleTop(rowOffset + i) }} />
       ))}
-      {def.outputs.map((p, i) => (
-        <Handle key={p.name} type="source" position={Position.Right} id={p.name} className={rt.state === 'success' ? 'on' : ''} style={{ top: handleTop(def.inputs.length + i) }} />
+      {flowOuts.map((p, i) => (
+        <Handle key={p.name} type="source" position={Position.Right} id={p.name} className={rt.state === 'success' ? 'on' : ''} style={{ top: handleTop(rowOffset + flowIns.length + i) }} />
+      ))}
+      {resourceIns.map((p, i) => (
+        <Handle key={p.name} type="target" position={Position.Top} id={p.name} className={`res ${rt.state === 'success' || rt.state === 'running' ? 'on' : ''}`} style={{ left: `${((i + 1) * 100) / (resourceIns.length + 1)}%` }} title={t(PORT_LABEL_KEYS[p.type])} />
+      ))}
+      {resourceOuts.map((p, i) => (
+        <Handle key={p.name} type="source" position={Position.Bottom} id={p.name} className={`res ${rt.state === 'success' ? 'on' : ''}`} style={{ left: `${((i + 1) * 100) / (resourceOuts.length + 1)}%` }} title={t(PORT_LABEL_KEYS[p.type])} />
       ))}
     </div>
   );

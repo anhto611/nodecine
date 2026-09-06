@@ -10,8 +10,7 @@ import type { BlockDef } from '@/core/types/payloads';
 
 /**
  * The one promise a shipped template makes: a user could have built it from a blank canvas. That
- * means every node type is one the Library offers, every block a director may pick is a Block node
- * wired into it, and every parameter is one the node's own schema accepts. If a
+ * means every node type is one the Library offers, every block the Look casts is one it carries, and every parameter is one the node's own schema accepts. If a
  * template needs anything a user cannot reach, it is not a template — it is code in disguise.
  */
 
@@ -22,11 +21,10 @@ beforeEach(() => {
   registerTemplates();
 });
 
-/** Every block of every Blocks node wired into a node's `blocks` port. */
-function wiredBlocks(t: ReturnType<typeof listTemplates>[number], nodeId: string): BlockDef[] {
-  return t.graph.edges
-    .filter((e) => e.target === nodeId && e.targetPort === 'blocks')
-    .flatMap((e) => (t.graph.nodes.find((n) => n.id === e.source)!.params as unknown as { blocks: BlockDef[] }).blocks);
+/** The Look downstream of a script node: the node its `scenes` port feeds. */
+function lookAfter(t: ReturnType<typeof listTemplates>[number], nodeId: string) {
+  const edge = t.graph.edges.find((e) => e.source === nodeId && e.sourcePort === 'scenes');
+  return t.graph.nodes.find((n) => n.id === edge?.target && n.type === 'core/look');
 }
 
 describe('shipped templates', () => {
@@ -50,27 +48,28 @@ describe('shipped templates', () => {
     }
   });
 
-  it('give every director and script a stage and only blocks that are wired into it', () => {
+  it('send every director and script into a Look whose casting names only blocks it has, for roles it will get', () => {
     for (const t of listTemplates()) {
       for (const n of t.graph.nodes.filter((n) => n.type === AI_DIRECTOR || n.type === 'core/static-script')) {
-        expect(t.graph.edges.some((e) => e.target === n.id && e.targetPort === 'stage'), `${t.id}/${n.id}: stage`).toBe(true);
-        const wired = wiredBlocks(t, n.id).map((b) => b.id);
-        expect(wired.length, `${t.id}/${n.id}: blocks`).toBeGreaterThan(0);
-        const named = n.type === AI_DIRECTOR ? (n.params.beats as Beat[]).flatMap((b) => b.blocks) : (n.params.scenes as { blockId: string }[]).map((s) => s.blockId);
-        for (const id of named) expect(wired, `${t.id}/${n.id}: ${id}`).toContain(id);
+        const look = lookAfter(t, n.id);
+        expect(look, `${t.id}/${n.id}: look`).toBeDefined();
+        const blocks = (look!.params.blocks as BlockDef[]).map((b) => b.id);
+        const roles = n.type === AI_DIRECTOR ? (n.params.beats as Beat[]).map((b) => b.role) : (n.params.scenes as { role: string }[]).map((s) => s.role);
+        for (const c of look!.params.casting as { role: string; block?: string; tone?: string }[]) {
+          expect(roles, `${t.id}: cast role ${c.role}`).toContain(c.role);
+          if (c.block) expect(blocks, `${t.id}: cast block ${c.block}`).toContain(c.block);
+          if (c.tone) expect(Object.keys(look!.params.tones as Record<string, unknown>), `${t.id}: cast tone ${c.tone}`).toContain(c.tone);
+        }
       }
     }
   });
 
-  it('bind facts only to props the beat\'s blocks actually have', () => {
+  it('bind facts to content keys some block of the Look actually shows', () => {
     for (const t of listTemplates()) {
       for (const n of t.graph.nodes.filter((n) => n.type === AI_DIRECTOR)) {
-        const wired = wiredBlocks(t, n.id);
-        for (const beat of n.params.beats as Beat[]) {
-          const allowed = beat.blocks.length ? wired.filter((b) => beat.blocks.includes(b.id)) : wired;
-          const keys = new Set(allowed.flatMap((b) => Object.keys(b.props)));
-          for (const prop of Object.keys(beat.factBindings)) expect(keys.has(prop), `${t.id}: ${beat.role}.${prop}`).toBe(true);
-        }
+        const blocks = lookAfter(t, n.id)!.params.blocks as BlockDef[];
+        const shown = new Set(blocks.flatMap((b) => Object.entries(b.props).map(([name, f]) => f.content ?? name)));
+        for (const beat of n.params.beats as Beat[]) for (const key of Object.keys(beat.factBindings)) expect(shown.has(key), `${t.id}: ${beat.role}.${key}`).toBe(true);
       }
     }
   });

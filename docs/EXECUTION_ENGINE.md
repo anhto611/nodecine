@@ -42,7 +42,8 @@ Khi người dùng sửa một tham số của node, node đó và toàn bộ no
 2. Kiểm tra tính đầy đủ: mọi cổng nhận bắt buộc phải có đúng một dây nối tới. Thiếu dây nối là lỗi mức đồ thị, không phải lỗi mức node. Kiểm tra này chạy liên tục theo mỗi thay đổi của đồ thị, kết quả hiện ngay trên node liên quan và trên nút Chạy Luồng bị vô hiệu hóa, nên không có bước kiểm tra riêng lúc bấm. Số lượng Node Xuất Bản Video và Node Xuất MP4 không bị giới hạn, kể cả bằng không; đồ thị không có node đích nào chỉ nhận cảnh báo `GRAPH_NO_SINK` chứ không bị chặn, vì người dùng có thể đang dựng dở.
 3. Node ở trạng thái `bypassed` bị bỏ qua khi duyệt. Nếu một node phía sau cần đầu ra của node bị bỏ qua ở một cổng **bắt buộc**, node đó chuyển sang `blocked` với thông báo nêu tên node bị bỏ qua. Cổng **tùy chọn** nối vào node bị bỏ qua được coi như không nối: Đóng Gói Timeline vẫn chạy khi cặp Căn Mốc Từ → Phụ Đề trong bản mẫu đang bỏ qua, chỉ không có phụ đề. Node Xuất MP4 bị bỏ qua không node nào phụ thuộc, nên luồng chạy hết các node còn lại.
 4. Các node được chạy theo thứ tự tô-pô, tuần tự, kể cả với những node về lý thuyết có thể chạy song song. Đồ thị mẫu chỉ có khoảng mười node và node thắt cổ chai nằm ở lệnh gọi ra ngoài, nên chạy song song không mang lại lợi ích đáng kể mà lại làm phức tạp việc báo tiến độ.
-5. Trước khi chạy một node, bộ máy tính chữ ký của node đó. Nếu chữ ký trùng với chữ ký của kết quả đang lưu, node được bỏ qua và kết quả cũ được tái sử dụng.
+5. Dây luồng và dây thành phần (Hợp Đồng Lõi mục 1.1) là một với bộ máy: một node chờ mọi dây vào của nó, dù dây đó mang nội dung hay mang stage, mô hình, giọng, động cơ. Sự phân biệt chỉ nằm ở cách vẽ trên canvas.
+6. Trước khi chạy một node, bộ máy tính chữ ký của node đó. Nếu chữ ký trùng với chữ ký của kết quả đang lưu, node được bỏ qua và kết quả cũ được tái sử dụng.
 
 ---
 

@@ -6,11 +6,13 @@ import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition } from '@/core/nodes/definition';
 import { AI_DIRECTOR } from '@/nodes/director/node';
 import { makeFakeServices } from '@/core/__tests__/fakes';
-import { HOOK, TEXT_CARD, lookNodes } from '@/core/__tests__/look-fixtures';
+import { HOOK, TEXT_CARD, lookNode } from '@/core/__tests__/look-fixtures';
+import type { DirectorPlan, SceneScript } from '@/core/types/payloads';
 
 /**
- * The GitHub showcase, rebuilt from parts a user can reach: a fact source, a stage, two blocks, and
- * the one director with a brief and three beats — one of them with the star count bound to a fact.
+ * The GitHub showcase, rebuilt from parts a user can reach: a fact source, the one director with a
+ * brief and three beats — one of them with the star count bound to a fact — and, after it, a Look
+ * with two blocks that casts what the director wrote.
  */
 
 const facts = {
@@ -30,13 +32,13 @@ const factSource: AnyNodeDefinition = {
 const director = (params: Record<string, unknown>) => ({ id: 'dir', type: AI_DIRECTOR, params, bypassed: false, position: { x: 0, y: 0 } });
 const llm = { id: 'llm', type: 'core/llm-provider', params: { providerId: 'claude-code', settings: {} }, bypassed: false, position: { x: 0, y: 0 } };
 const factsNode = { id: 'facts', type: 'test/facts', params: {}, bypassed: false, position: { x: 0, y: 0 } };
-const look = lookNodes('dir', [TEXT_CARD, HOOK]);
+const look = lookNode('look', [TEXT_CARD, HOOK], [{ role: 'hook', block: 'hook' }, { role: 'open', tone: 'cool' }]);
 const graph = (params: Record<string, unknown>, withFacts: boolean): Graph => ({
-  nodes: [...look.nodes, ...(withFacts ? [factsNode] : []), llm, director(params)],
+  nodes: [...(withFacts ? [factsNode] : []), llm, director(params), look],
   edges: [
-    ...look.edges,
     { id: 'e1', source: 'llm', sourcePort: 'llm', target: 'dir', targetPort: 'llm' },
     ...(withFacts ? [{ id: 'e2', source: 'facts', sourcePort: 'facts', target: 'dir', targetPort: 'facts' }] : []),
+    { id: 'e3', source: 'dir', sourcePort: 'scenes', target: 'look', targetPort: 'scenes' },
   ],
 });
 
@@ -44,9 +46,9 @@ const showcaseParams = {
   prompt: 'Introduce this project to busy developers. Confident, no hype.',
   outputLanguage: 'en',
   beats: [
-    { role: 'open', brief: '', weight: 0.5, count: 1, blocks: ['text-card'], factBindings: {} },
-    { role: 'hook', brief: 'What it is.', weight: 1, count: 1, blocks: ['hook'], factBindings: { stars: 'stars' } },
-    { role: 'close', brief: '', weight: 1, count: 1, blocks: [], factBindings: { headline: 'name' } },
+    { role: 'open', brief: '', weight: 0.5, count: 1, factBindings: {} },
+    { role: 'hook', brief: 'What it is.', weight: 1, count: 1, factBindings: { number: 'stars' } },
+    { role: 'close', brief: '', weight: 1, count: 1, factBindings: { title: 'name' } },
   ],
 };
 
@@ -54,9 +56,9 @@ const goodAnswer = {
   language: 'en',
   audioScript: 'Meet widget, the tiniest way to build widgets for the web. Install it, wire it up, and ship.',
   scenes: [
-    { block: 'text-card', tone: 'cool', fields: { kicker: 'MEET' }, props: { headline: 'MEET WIDGET' } },
-    { block: 'hook', props: { headline: 'TINY WIDGETS, BIG WEB', stars: 1 } },
-    { block: 'text-card', props: { headline: 'ignored, bound to name' } },
+    { kicker: 'MEET', title: 'MEET WIDGET' },
+    { title: 'TINY WIDGETS, BIG WEB', number: '1' },
+    { body: 'ignored, title is bound to name' },
   ],
 };
 
@@ -67,30 +69,35 @@ beforeEach(() => {
 });
 
 describe('core/ai-director', () => {
-  it('rebuilds the GitHub showcase from a brief, a look and three beats, and keeps facts out of the prompt', async () => {
+  it('writes the scenes from a brief and three beats, keeps facts out of the prompt, and the Look casts them', async () => {
     const services = makeFakeServices({ complete: async () => goodAnswer });
     const ex = new Executor(graph(showcaseParams, true), services);
     const { ok } = await ex.run();
     expect(ok).toBe(true);
 
-    const rt = ex.runtimes_().get('dir')!;
-    const plan = rt.outputs.plan!.payload as { stage: { name: string }; blocks: { id: string }[]; scenes: { blockId: string; tone?: string; fields?: Record<string, string>; factBindings?: Record<string, string>; props: Record<string, unknown> }[] };
+    const script = ex.runtimes_().get('dir')!.outputs.scenes!.payload as SceneScript;
+    expect(script.scenes.map((s) => s.role)).toEqual(['open', 'hook', 'close']);
+    // The model's value for a bound key is dropped; the assembler fills it from the fact later.
+    expect('number' in script.scenes[1]!.content).toBe(false);
+    expect(script.scenes[1]!.factBindings).toEqual({ number: 'stars' });
+
+    const plan = ex.runtimes_().get('look')!.outputs.plan!.payload as DirectorPlan;
     expect(plan.stage.name).toBe('Dark');
     expect(plan.blocks.map((b) => b.id)).toEqual(['text-card', 'hook']);
     expect(plan.scenes.map((s) => s.blockId)).toEqual(['text-card', 'hook', 'text-card']);
     expect(plan.scenes[0]!.tone).toBe('cool');
     expect(plan.scenes[0]!.fields).toEqual({ kicker: 'MEET' });
+    // Bound content becomes a binding on the block's prop that shows it.
     expect(plan.scenes[1]!.factBindings).toEqual({ stars: 'stars' });
-    // The model's value for a bound prop is dropped; the assembler fills it from the fact later.
     expect('stars' in plan.scenes[1]!.props).toBe(false);
-    expect('headline' in plan.scenes[2]!.props).toBe(false);
+    expect(plan.scenes[2]!.factBindings).toEqual({ headline: 'name' });
 
     const prompt = services.calls.find((c) => c.name === 'complete')!.args[0] as string;
     expect(prompt).toContain('Introduce this project');
     expect(prompt).toContain('Tiny widgets for the web.');
     expect(prompt).not.toContain('4321'); // bound → never shown to the model
     expect(prompt).toContain('github.com/acme/widget'); // not bound → shown
-    expect(prompt).toContain('An opening line; stars come from data.'); // the block's own doc
+    expect(prompt).not.toContain('An opening line; stars come from data.'); // no block doc in the prompt any more
   });
 
   it('holds the model to the exact scene count', async () => {
@@ -107,23 +114,9 @@ describe('core/ai-director', () => {
     expect(ex.runtimes_().get('dir')!.state).toBe('success');
   });
 
-  it('holds the model to the beat\'s block list', async () => {
-    let calls = 0;
-    const services = makeFakeServices({
-      complete: async () => {
-        calls++;
-        return calls === 1 ? { ...goodAnswer, scenes: [goodAnswer.scenes[0], { block: 'text-card', props: { headline: 'wrong block' } }, goodAnswer.scenes[2]] } : goodAnswer;
-      },
-    });
-    const ex = new Executor(graph(showcaseParams, true), services);
-    await ex.run();
-    expect(calls).toBe(2);
-    expect(ex.runtimes_().get('dir')!.state).toBe('success');
-  });
-
   it('works with no facts wired in at all', async () => {
-    const services = makeFakeServices({ complete: async () => ({ language: 'en', audioScript: goodAnswer.audioScript, scenes: [{ block: 'text-card', props: { headline: 'A' } }, { block: 'hook', props: { headline: 'B' } }] }) });
-    const params = { ...showcaseParams, beats: [{ role: 'x', brief: '', weight: 1, count: 2, blocks: [], factBindings: {} }] };
+    const services = makeFakeServices({ complete: async () => ({ language: 'en', audioScript: goodAnswer.audioScript, scenes: [{ title: 'A' }, { title: 'B' }] }) });
+    const params = { ...showcaseParams, beats: [{ role: 'x', brief: '', weight: 1, count: 2, factBindings: {} }] };
     const ex = new Executor(graph(params, false), services);
     const { ok } = await ex.run();
     expect(ok).toBe(true);
@@ -131,34 +124,23 @@ describe('core/ai-director', () => {
     expect(prompt).not.toContain('Facts about the subject');
   });
 
-  it('blocks before spending a model call when a beat names a block that is not wired', async () => {
+  it('does not run the director again when only the look changes', async () => {
     const services = makeFakeServices({ complete: async () => goodAnswer });
-    const params = { ...showcaseParams, beats: [{ role: 'x', brief: '', weight: 1, count: 1, blocks: ['ghost'], factBindings: {} }] };
-    const ex = new Executor(graph(params, false), services);
-    const { ok } = await ex.run();
-    expect(ok).toBe(false);
-    const rt = ex.runtimes_().get('dir')!;
-    expect(rt.state).toBe('blocked');
-    expect(rt.blockedBy?.code).toBe('NODE_PARAMS_INVALID');
-    expect(rt.blockedBy?.message).toContain('ghost');
-    expect(services.calls.some((c) => c.name === 'complete')).toBe(false);
-  });
-
-  it('blocks when two wired Blocks nodes carry the same id', async () => {
-    const services = makeFakeServices({ complete: async () => goodAnswer });
-    const g = graph(showcaseParams, false);
-    g.nodes.push({ id: 'blocks-dupe', type: 'core/blocks', params: { blocks: [{ ...HOOK }] }, bypassed: false, position: { x: 0, y: 0 } });
-    g.edges.push({ id: 'look-dupe', source: 'blocks-dupe', sourcePort: 'blocks', target: 'dir', targetPort: 'blocks' });
+    const g = graph(showcaseParams, true);
     const ex = new Executor(g, services);
     await ex.run();
-    const rt = ex.runtimes_().get('dir')!;
-    expect(rt.state).toBe('blocked');
-    expect(rt.blockedBy?.message).toContain('hook');
+    const lookNodeInGraph = g.nodes.find((n) => n.id === 'look')!;
+    lookNodeInGraph.params = { ...lookNodeInGraph.params, tokens: { palette: { bg: '#000000' }, fonts: {} } };
+    ex.setGraph(g);
+    await ex.run();
+    expect(services.calls.filter((c) => c.name === 'complete')).toHaveLength(1);
+    expect(ex.runtimes_().get('dir')!.reused).toBe(true);
+    expect(ex.runtimes_().get('look')!.reused).toBe(false);
   });
 
   it('detects the output language from the brief when asked to', async () => {
-    const services = makeFakeServices({ complete: async () => ({ language: 'vi', audioScript: 'Một lời dẫn đủ dài để tính là một đoạn.', scenes: [{ block: 'text-card', props: { headline: 'XIN CHÀO' } }] }) });
-    const params = { ...showcaseParams, prompt: 'Giới thiệu dự án này cho lập trình viên bận rộn.', outputLanguage: 'auto', beats: [{ role: 'x', brief: '', weight: 1, count: 1, blocks: ['text-card'], factBindings: {} }] };
+    const services = makeFakeServices({ complete: async () => ({ ...goodAnswer, language: 'vi', scenes: [{ title: 'Xin chào' }] }) });
+    const params = { ...showcaseParams, prompt: 'Giới thiệu dự án này cho lập trình viên bận rộn.', outputLanguage: 'auto', beats: [{ role: 'x', brief: '', weight: 1, count: 1, factBindings: {} }] };
     const ex = new Executor(graph(params, false), services);
     await ex.run();
     const prompt = services.calls.find((c) => c.name === 'complete')!.args[0] as string;

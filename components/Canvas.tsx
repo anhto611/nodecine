@@ -21,6 +21,7 @@ import { useStudio } from '@/store/useStudio';
 import { NodeCard, type NcNode } from './nodes/NodeCard';
 import { Icon } from './icons';
 import { useT } from './ui';
+import { edgeKind } from '@/core/engine/graph';
 
 const nodeTypes = { nc: NodeCard };
 
@@ -28,6 +29,7 @@ const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 2;
 
 type GraphNode = { id: string; position: { x: number; y: number } };
+
 function syncNodes(prev: NcNode[], graphNodes: GraphNode[]): NcNode[] {
   const byId = new Map(prev.map((n) => [n.id, n]));
   return graphNodes.map((n) => {
@@ -77,7 +79,9 @@ function CanvasInner() {
         sourceHandle: e.sourcePort,
         target: e.target,
         targetHandle: e.targetPort,
-        className: runtimes[e.source]?.outputs[e.sourcePort] && runtimes[e.source]?.state === 'success' ? 'active' : '',
+        // React Flow's own animated edge: a dashed stroke that marches along the wire. Resource wires use it.
+        animated: edgeKind(graph, e) === 'resource',
+        className: `${edgeKind(graph, e) === 'resource' ? 'nc-edge-resource' : 'nc-edge-flow'} ${runtimes[e.source]?.outputs[e.sourcePort] && runtimes[e.source]?.state === 'success' ? 'active' : ''}`,
       })),
     [graph.edges, runtimes],
   );

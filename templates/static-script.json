@@ -12,8 +12,8 @@
   "graph": {
     "nodes": [
       {
-        "id": "stage",
-        "type": "core/stage",
+        "id": "look",
+        "type": "core/look",
         "params": {
           "name": "Dark",
           "frame": {
@@ -59,18 +59,7 @@
           "code": {
             "format": "html-gsap",
             "source": "<style>\n  .stage { position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 65%); color: var(--fg); font-family: var(--font-body); }\n  .stage .kicker { position: absolute; left: 72px; top: 200px; font: 600 28px/1 var(--font-body); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }\n  .stage .content { position: absolute; left: 72px; right: 168px; top: 260px; bottom: 680px; display: flex; flex-direction: column; justify-content: center; }\n  .stage .rule { position: absolute; left: 72px; right: 168px; bottom: 640px; height: 2px; background: var(--line); }\n  .stage .captions { position: absolute; left: 72px; right: 168px; bottom: 720px; text-align: center; font: 700 44px/1.3 var(--font-body); color: color-mix(in srgb, var(--fg) 85%, transparent); text-shadow: 0 2px 10px color-mix(in srgb, var(--bg) 70%, transparent); --caption-on: var(--accent); }\n</style>\n<div class=\"stage\">\n  <div class=\"kicker\" data-field=\"kicker\"></div>\n  <div class=\"content\" data-slot=\"content\"></div>\n  <div class=\"rule\"></div>\n  <div class=\"captions\" data-slot=\"captions\" data-caption-style=\"karaoke\"></div>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".kicker\", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.4, ease: \"power2.out\" }, 0)\n    .fromTo(\".rule\", { scaleX: 0, transformOrigin: \"left center\" }, { scaleX: 1, duration: 0.6, ease: \"power2.out\" }, 0.1));\n</script>"
-          }
-        },
-        "bypassed": false,
-        "position": {
-          "x": 50,
-          "y": 40
-        }
-      },
-      {
-        "id": "blocks",
-        "type": "core/blocks",
-        "params": {
+          },
           "blocks": [
             {
               "id": "text-card",
@@ -84,7 +73,8 @@
                   "type": "string",
                   "hint": "up to six words, title case",
                   "required": true,
-                  "max": 60
+                  "max": 60,
+                  "content": "title"
                 },
                 "body": {
                   "type": "text",
@@ -98,12 +88,28 @@
                 "source": "<style>\n  .card { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 32px; }\n  .card h1 { font: 800 88px/1.05 var(--font-display); color: var(--fg); margin: 0; letter-spacing: -0.01em; }\n  .card p  { font: 400 38px/1.4 var(--font-body); color: var(--muted); margin: 0; max-width: 760px; }\n  .card .bar { width: 120px; height: 10px; border-radius: 5px; background: var(--accent); transform-origin: left center; }\n</style>\n<div class=\"card\">\n  <div class=\"bar\"></div>\n  <h1 data-prop=\"headline\"></h1>\n  <p data-prop=\"body\" data-if=\"body\"></p>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".card .bar\", { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: \"power2.out\" }, 0)\n    .fromTo(\".card h1\", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: \"power3.out\" }, 0.2)\n    .fromTo(\".card p\", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: \"power3.out\" }, 0.5));\n</script>"
               }
             }
+          ],
+          "casting": [
+            {
+              "role": "title",
+              "block": "text-card"
+            },
+            {
+              "role": "how",
+              "block": "text-card",
+              "tone": "cool"
+            },
+            {
+              "role": "next",
+              "block": "text-card",
+              "tone": "warm"
+            }
           ]
         },
         "bypassed": false,
         "position": {
-          "x": 50,
-          "y": 380
+          "x": 1030,
+          "y": 557
         }
       },
       {
@@ -113,44 +119,36 @@
           "script": "Meet NodeCine. Build short videos from a node graph, not a timeline. Wire a source to a script, a voice, and an engine, and press run.",
           "scenes": [
             {
-              "blockId": "text-card",
+              "role": "title",
               "weight": 1,
-              "props": {
-                "headline": "Ship video from a graph",
+              "content": {
+                "kicker": "NodeCine",
+                "title": "Ship video from a graph",
                 "body": "NodeCine v0.1"
-              },
-              "fields": {
-                "kicker": "NodeCine"
               }
             },
             {
-              "blockId": "text-card",
+              "role": "how",
               "weight": 2,
-              "props": {
-                "headline": "Nodes, not timelines"
-              },
-              "tone": "cool",
-              "fields": {
-                "kicker": "How"
+              "content": {
+                "kicker": "How",
+                "title": "Nodes, not timelines"
               }
             },
             {
-              "blockId": "text-card",
+              "role": "next",
               "weight": 1,
-              "props": {
-                "headline": "Star on GitHub"
-              },
-              "tone": "warm",
-              "fields": {
-                "kicker": "Next"
+              "content": {
+                "kicker": "Next",
+                "title": "Star on GitHub"
               }
             }
           ]
         },
         "bypassed": false,
         "position": {
-          "x": 410,
-          "y": 220
+          "x": 40,
+          "y": 390
         }
       },
       {
@@ -164,8 +162,8 @@
         },
         "bypassed": false,
         "position": {
-          "x": 720,
-          "y": 580
+          "x": 370,
+          "y": 40
         }
       },
       {
@@ -176,8 +174,8 @@
         },
         "bypassed": false,
         "position": {
-          "x": 970,
-          "y": 430
+          "x": 370,
+          "y": 276
         }
       },
       {
@@ -188,8 +186,8 @@
         },
         "bypassed": true,
         "position": {
-          "x": 970,
-          "y": 630
+          "x": 700,
+          "y": 337
         }
       },
       {
@@ -202,8 +200,8 @@
         },
         "bypassed": true,
         "position": {
-          "x": 1240,
-          "y": 630
+          "x": 1030,
+          "y": 337
         }
       },
       {
@@ -216,8 +214,8 @@
         },
         "bypassed": false,
         "position": {
-          "x": 1230,
-          "y": 220
+          "x": 1360,
+          "y": 327
         }
       },
       {
@@ -226,8 +224,8 @@
         "params": {},
         "bypassed": false,
         "position": {
-          "x": 970,
-          "y": 670
+          "x": 1690,
+          "y": 481
         }
       },
       {
@@ -236,8 +234,8 @@
         "params": {},
         "bypassed": false,
         "position": {
-          "x": 1600,
-          "y": 70
+          "x": 1690,
+          "y": 717
         }
       },
       {
@@ -250,25 +248,18 @@
         },
         "bypassed": true,
         "position": {
-          "x": 1600,
-          "y": 870
+          "x": 1740,
+          "y": 261
         }
       }
     ],
     "edges": [
       {
-        "id": "look-stage",
-        "source": "stage",
-        "sourcePort": "stage",
-        "target": "script",
-        "targetPort": "stage"
-      },
-      {
-        "id": "look-blocks",
-        "source": "blocks",
-        "sourcePort": "blocks",
-        "target": "script",
-        "targetPort": "blocks"
+        "id": "scenes",
+        "source": "script",
+        "sourcePort": "scenes",
+        "target": "look",
+        "targetPort": "scenes"
       },
       {
         "id": "c1",
@@ -299,8 +290,8 @@
         "targetPort": "captions"
       },
       {
-        "id": "e1",
-        "source": "script",
+        "id": "plan",
+        "source": "look",
         "sourcePort": "plan",
         "target": "assembler",
         "targetPort": "plan"

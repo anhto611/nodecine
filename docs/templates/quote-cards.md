@@ -30,11 +30,11 @@ Không có node truy xuất, không có handler máy chủ, và **cổng Dữ ki
 
 ## 3. Đạo Diễn — cùng node lõi, tham số khác
 
-Không có node đạo diễn trích dẫn. Bản mẫu dùng `core/ai-director` với stage `ink`, một node Blocks mang `text-card` và `quote`, và hai beat: `title ×1` (trọng số 0,5, block `text-card`) và `quote ×4`. Chủ đề đi vào cổng `Nguồn` từ Nhập Liệu; đề bài trong JSON cấm gán trích dẫn cho người nổi tiếng không nói câu đó và yêu cầu giữ một tone chung. Muốn 6 trích dẫn thì đổi `count`, không sửa code.
+Không có node đạo diễn trích dẫn. Bản mẫu dùng `core/ai-director` với một node Look (stage `ink`, block `text-card` và `quote`), và hai beat: `title ×1` (trọng số 0,5, block `text-card`) và `quote ×4`. Chủ đề đi vào cổng `Nguồn` từ Nhập Liệu; đề bài trong JSON cấm gán trích dẫn cho người nổi tiếng không nói câu đó và yêu cầu giữ một tone chung. Muốn 6 trích dẫn thì đổi `count`, không sửa code.
 
 ## 4. Block và Stage
 
-Hai block trong node Blocks của bản mẫu: `quote` (trích dẫn chiếm trọn khung, một vạch màu, tên nguồn bên dưới) và `text-card` cho thẻ mở đầu. Stage `ink`: nền giấy sáng, chữ serif display, mono cho phần phụ — ngược hẳn stage terminal tối của bản mẫu GitHub. Không có code nào riêng cho bản mẫu này; mọi thứ là dữ liệu trong `templates/quote-cards.json`.
+Hai block trong node Look của bản mẫu: `quote` (trích dẫn chiếm trọn khung, một vạch màu, tên nguồn bên dưới) và `text-card` cho thẻ mở đầu. Stage `ink`: nền giấy sáng, chữ serif display, mono cho phần phụ — ngược hẳn stage terminal tối của bản mẫu GitHub. Không có code nào riêng cho bản mẫu này; mọi thứ là dữ liệu trong `templates/quote-cards.json`.
 
 **Vấn đề cũ đã được giải quyết ở mức hợp đồng:** trước đây `theme` không renderer nào đọc nên thẻ mở đầu nền tối còn thẻ trích dẫn nền giấy. Nay cả hai block cùng vẽ trên stage `ink` bằng biến CSS của stage, nên thẻ mở đầu `text-card` tự mang nền giấy và chữ serif. Engine Hyperframes vẽ cả hai trên cùng stage.
 

@@ -1,6 +1,6 @@
 import type { BlockDef, StageDef } from '../types/payloads';
 import { DEFAULT_BLOCK } from '@/nodes/look/blocks';
-import { DEFAULT_STAGE } from '@/nodes/look/stage';
+import { DEFAULT_STAGE } from '@/nodes/look/node';
 
 /** The shipped dark stage and text card, plus a hook block with a fact-bound number, for tests. */
 export const STAGE: StageDef = DEFAULT_STAGE;
@@ -10,8 +10,8 @@ export const HOOK: BlockDef = {
   name: 'Hook',
   doc: { example: '{"headline":"MEET WIDGET"}', when: 'An opening line; stars come from data.' },
   props: {
-    headline: { type: 'string', hint: 'six words at most', required: true, max: 60 },
-    stars: { type: 'number', required: false, min: 0 },
+    headline: { type: 'string', content: 'title', hint: 'six words at most', required: true, max: 60 },
+    stars: { type: 'number', content: 'number', required: false, min: 0 },
   },
   code: { format: 'html-gsap', source: '<h1 data-prop="headline"></h1>' },
 };
@@ -20,22 +20,20 @@ export const CARD: BlockDef = {
   name: 'Card',
   doc: { example: '{"headline":"HI","features":["a","b","c"],"mood":"calm","accentColor":"#112233"}', when: 'A card with three features.' },
   props: {
-    headline: { type: 'string', required: true, max: 60 },
-    features: { type: 'string[]', hint: 'three short lines', required: true, min: 3, max: 3 },
-    mood: { type: 'string', hint: 'calm or bold', required: true, max: 10 },
-    stars: { type: 'number', required: false, min: 0 },
-    accentColor: { type: 'color', required: true },
+    headline: { type: 'string', content: 'title', required: true, max: 60 },
+    features: { type: 'string[]', content: 'points', hint: 'three short lines', required: true, min: 3, max: 3 },
+    mood: { type: 'string', content: 'kicker', hint: 'calm or bold', required: true, max: 10 },
+    stars: { type: 'number', content: 'number', required: false, min: 0 },
+    accentColor: { type: 'color', required: false },
   },
   code: { format: 'html-gsap', source: '<div></div>' },
 };
 
-export const lookNodes = (consumer: string, blocks: BlockDef[] = [TEXT_CARD], stage: StageDef = STAGE) => ({
-  nodes: [
-    { id: 'stage', type: 'core/stage', params: stage, bypassed: false, position: { x: 0, y: 0 } },
-    { id: 'blocks', type: 'core/blocks', params: { blocks }, bypassed: false, position: { x: 0, y: 0 } },
-  ],
-  edges: [
-    { id: 'look-stage', source: 'stage', sourcePort: 'stage', target: consumer, targetPort: 'stage' },
-    { id: 'look-blocks', source: 'blocks', sourcePort: 'blocks', target: consumer, targetPort: 'blocks' },
-  ],
+/** A Look node for a test graph: the stage, the blocks, and who plays which role. */
+export const lookNode = (id = 'look', blocks: BlockDef[] = [TEXT_CARD], casting: { role: string; block?: string; tone?: string }[] = [], stage: StageDef = STAGE) => ({
+  id,
+  type: 'core/look',
+  params: { ...stage, blocks, casting },
+  bypassed: false,
+  position: { x: 0, y: 0 },
 });

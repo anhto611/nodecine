@@ -1,6 +1,6 @@
 # Tài liệu NodeCine
 
-Docs chia theo mã nguồn: **lõi** (mọi node, hai engine, các nhà cung cấp) và **bản mẫu** (đồ thị JSON dựng lại được từ canvas trống, mang theo giao diện của chính nó trong node Stage và Block). Đọc lõi trước; phần kia chỉ có nghĩa khi đã hiểu lõi.
+Docs chia theo mã nguồn: **lõi** (mọi node, hai engine, các nhà cung cấp) và **bản mẫu** (đồ thị JSON dựng lại được từ canvas trống, mang theo giao diện của chính nó trong node Look). Đọc lõi trước; phần kia chỉ có nghĩa khi đã hiểu lõi.
 
 Một quy ước xuyên suốt: **`STATUS.md` nói cái gì đã dựng xong, mọi tài liệu khác nói luật.** Thêm một provider hay một engine chỉ sửa `STATUS.md`; sửa tài liệu luật nghĩa là hợp đồng đổi.
 
@@ -28,8 +28,10 @@ Thuật ngữ chuyên ngành giữ nguyên tiếng Anh trong cả code lẫn tà
 | Khái niệm | Trong code | Trong tài liệu và giao diện |
 |---|---|---|
 | node của đồ thị | `node` | node — không dịch |
-| vỏ giao diện cố định mà mọi cảnh của một workflow diễn ra trên đó: nền, vùng an toàn, chỗ phụ đề, bộ xương cảnh, bảng màu, font, hệ tone | node `core/stage`, cổng `StageDef`, `plan.stage` | stage *(sân khấu)* |
-| archetype cảnh cắm vào stage: lược đồ props, `doc`, code HTML/GSAP; một node Blocks mang cả danh mục | node `core/blocks`, cổng `BlockSet`, kiểu `BlockDef` | block *(khối)* |
+| vỏ giao diện cố định mà mọi cảnh của một workflow diễn ra trên đó: nền, vùng an toàn, chỗ phụ đề, bộ xương cảnh, bảng màu, font, hệ tone | phần stage của `LookDef`, `plan.stage` | stage *(sân khấu)* |
+| archetype cảnh cắm vào stage: lược đồ props, `doc`, code HTML/GSAP | `blocks[]` của `LookDef`, kiểu `BlockDef` | block *(khối)* |
+| giao diện của một workflow: stage cộng danh mục block cộng bảng dàn cảnh; chặng đứng sau kịch bản, nhận phân cảnh và phát kế hoạch dựng | node `core/look`, cổng vào `SceneScript`, cổng ra `DirectorPlan` | look |
+| video đã chia cảnh với nội dung theo từ vựng cố định, chưa có giao diện | cổng `SceneScript`, `CONTENT_KEYS` | phân cảnh |
 | một mục trong danh sách của Đạo Diễn AI: vai trò, brief, số cảnh, các block được phép | `beat` | beat *(nhịp)* |
 | một ô thời gian trong timeline = một block + props + tone | `scene` | cảnh |
 | biến thể màu theo cảnh, đổi nền lẫn màu nhấn cùng lúc | `tone` | tone |

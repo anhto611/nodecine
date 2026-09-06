@@ -18,9 +18,20 @@ export const FactSheetSchema = z.object({
 });
 export type FactSheet = z.infer<typeof FactSheetSchema>;
 
-/** One thing the model may write into a block (CORE_CONTRACTS §2.7). The hint is quoted to the model verbatim. */
+/**
+ * The content vocabulary (CORE_CONTRACTS §2.11): the fixed set of things a scene can say, written by
+ * the director without knowing any block, and consumed by the Look when it casts a block for the
+ * scene. A block prop names the key that fills it (`content`), or is filled by the key of its own name.
+ */
+export const CONTENT_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source'] as const;
+export type ContentKey = (typeof CONTENT_KEYS)[number];
+export const isContentKey = (k: string): k is ContentKey => (CONTENT_KEYS as readonly string[]).includes(k);
+
+/** One thing that goes into a block (CORE_CONTRACTS §2.7). The hint is shown in the Look node's props table. */
 export const BlockFieldSchema = z.object({
   type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]']),
+  /** Which scene content fills this prop; absent means the prop's own name, when that is a content key. */
+  content: z.enum(CONTENT_KEYS).optional(),
   hint: z.string().max(200).optional(),
   required: z.boolean().default(true),
   max: z.number().int().positive().optional(),
@@ -47,15 +58,6 @@ export const BlockDefSchema = z.object({
 });
 export type BlockDef = z.infer<typeof BlockDefSchema>;
 
-/** What travels on a `BlockSet` port: the blocks of one Blocks node, ids unique within the node. */
-export const BlockSetSchema = z.object({ blocks: z.array(BlockDefSchema).min(1) }).superRefine((v, ctx) => {
-  const seen = new Set<string>();
-  v.blocks.forEach((b, i) => {
-    if (seen.has(b.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['blocks', i, 'id'], message: `block id "${b.id}" is used twice` });
-    seen.add(b.id);
-  });
-});
-export type BlockSet = z.infer<typeof BlockSetSchema>;
 
 /** The persistent shell every scene plays on; one per workflow (CORE_CONTRACTS §2.6). */
 export const StageDefSchema = z.object({
@@ -70,6 +72,26 @@ export const StageDefSchema = z.object({
   code: SceneCodeSchema,
 });
 export type StageDef = z.infer<typeof StageDefSchema>;
+
+/** Block ids unique within one look; shared by the LookDef and the Look node's parameters. */
+export const uniqueBlockIds = (v: { blocks: { id: string }[] }, ctx: z.RefinementCtx): void => {
+  const seen = new Set<string>();
+  v.blocks.forEach((b, i) => {
+    if (seen.has(b.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['blocks', i, 'id'], message: `block id "${b.id}" is used twice` });
+    seen.add(b.id);
+  });
+};
+
+/**
+ * The whole look of a workflow (CORE_CONTRACTS §2.7): the stage every scene plays on and the
+ * catalogue of blocks that play on it, block ids unique. It is the Look node's data; it does not
+ * travel on a wire — the Look turns a scene script into a plan (§5.9) and sends that.
+ */
+export const LookDefBaseSchema = StageDefSchema.extend({ blocks: z.array(BlockDefSchema).min(1) });
+export const LookDefSchema = LookDefBaseSchema.superRefine(uniqueBlockIds);
+export type LookDef = z.infer<typeof LookDefSchema>;
+/** The two parts of a look, as the plan and the renderers take them. */
+export const splitLook = (look: LookDef): { stage: StageDef; blocks: BlockDef[] } => { const { blocks, ...stage } = look; return { stage, blocks }; };
 
 /** One scene of a plan: a block from the plan's catalogue, what goes into it, and how the stage dresses it. */
 export const SceneSpecSchema = z.object({
@@ -110,6 +132,46 @@ export const AudioScriptSchema = z.object({
   language: bcp47,
 });
 export type AudioScript = z.infer<typeof AudioScriptSchema>;
+
+/** What one scene says, in the content vocabulary; every key optional, a scene writes what it needs. */
+export const SceneContentSchema = z
+  .object({
+    kicker: z.string().max(40),
+    title: z.string().max(120),
+    body: z.string().max(400),
+    points: z.array(z.string().min(1).max(120)).max(6),
+    number: z.string().max(24),
+    label: z.string().max(60),
+    quote: z.string().max(300),
+    attribution: z.string().max(80),
+    code: z.string().max(200),
+    source: z.string().max(80),
+  })
+  .partial()
+  .strip();
+export type SceneContent = z.infer<typeof SceneContentSchema>;
+
+/**
+ * The scene script (CORE_CONTRACTS §2.11): the video broken into scenes with their content, before
+ * any look. Written by the AI Director or typed into the Static Script; the Look casts a block, a
+ * tone and the stage fields for each scene and emits the DirectorPlan.
+ */
+export const SceneScriptSchema = z.object({
+  language: bcp47,
+  scenes: z
+    .array(
+      z.object({
+        /** The beat this scene belongs to: hook, quote, cta. The Look casts by role. */
+        role: z.string().min(1).max(40),
+        weight: z.number().positive(),
+        content: SceneContentSchema,
+        /** content key → fact key: filled from verified data at assembly, never written by the model. */
+        factBindings: z.record(z.enum(CONTENT_KEYS), z.string()).optional(),
+      }),
+    )
+    .min(1),
+});
+export type SceneScript = z.infer<typeof SceneScriptSchema>;
 
 /** Media URLs are always app-relative (ARCHITECTURE §6). Never a filesystem path. */
 export const MediaUrlSchema = z.string().regex(/^\/api\/media\/[a-f0-9]{16,64}\.[a-z0-9]+$/);
@@ -196,6 +258,5 @@ export const PAYLOAD_SCHEMAS = {
   LLMRef: LLMRefSchema,
   TTSRef: TTSRefSchema,
   CaptionTrack: CaptionTrackSchema,
-  StageDef: StageDefSchema,
-  BlockSet: BlockSetSchema,
+  SceneScript: SceneScriptSchema,
 } as const;

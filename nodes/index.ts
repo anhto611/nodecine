@@ -3,8 +3,7 @@ import { inputTrigger } from './input/node';
 import { githubFetcher } from './github/node';
 import { staticScript } from './script/node';
 import { aiDirector } from './director/node';
-import { stage } from './look/stage';
-import { blocks } from './look/blocks';
+import { look } from './look/node';
 import { hyperframesEngine, llmProvider, remotionEngine, ttsProvider } from './resources/node';
 import { ttsEngine } from './tts/node';
 import { transcribe } from './transcribe/node';
@@ -22,8 +21,7 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   inputTrigger,
   githubFetcher,
   staticScript,
-  stage,
-  blocks,
+  look,
   aiDirector,
   llmProvider,
   ttsProvider,
@@ -41,10 +39,10 @@ export function registerNodes(): void {
   for (const def of ALL_NODES) registerNodeType(def);
 }
 
-export { inputTrigger, githubFetcher, staticScript, stage, blocks, aiDirector, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
+export { inputTrigger, githubFetcher, staticScript, look, aiDirector, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
 export { pickVoice } from './tts/node';
 export { DEFAULT_STATIC_SCRIPT } from './script/node';
 export { AI_DIRECTOR, DEFAULT_AI_DIRECTOR } from './director/node';
-export { STAGE, DEFAULT_STAGE } from './look/stage';
-export { BLOCKS, DEFAULT_BLOCK, DEFAULT_BLOCKS } from './look/blocks';
+export { LOOK, DEFAULT_STAGE, DEFAULT_LOOK } from './look/node';
+export { DEFAULT_BLOCK, DEFAULT_BLOCKS } from './look/blocks';
 export { GITHUB_FETCHER } from './github/node';

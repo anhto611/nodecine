@@ -70,16 +70,16 @@ export const PreviewPane: React.FC<{
   const FRAME = { w: frame.width, h: frame.height };
   return (
     <div ref={paneRef} style={{ width: paneWidth, flex: 'none', display: 'flex', flexDirection: 'column', background: 'var(--bg-sunk)', minHeight: 0 }}>
-      <div style={{ height: PANE_STRIP, flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderBottom: '1px solid var(--line)', fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>
-        <span>{t('code.preview')} · {frame.width}×{frame.height}</span>
-        <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer' }} title={t('code.guidesHint')}>
+      <div style={{ height: PANE_STRIP, flex: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', borderBottom: '1px solid var(--line)', fontSize: 'var(--fs-hint)', color: 'var(--tx-3)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+        <span style={{ flex: '0 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${t('code.preview')} · ${frame.width}×${frame.height}`}>{frame.width}×{frame.height}</span>
+        <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer', flex: 'none' }} title={t('code.guidesHint')}>
           <input type="checkbox" checked={guides} onChange={toggleGuides} /> {t('code.guides')}
         </label>
-        <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer', opacity: layout ? 0.5 : 1 }} title={t('code.motionHint')}>
+        <label style={{ display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer', flex: 'none', opacity: layout ? 0.5 : 1 }} title={t('code.motionHint')}>
           <input type="checkbox" checked={motion} disabled={layout} onChange={toggleMotion} /> {t('code.motion')}
         </label>
         {tones.length > 0 && (
-          <select className="nc-select" style={{ width: 'auto', marginLeft: 'auto' }} value={tone} onChange={(e) => setTone(e.target.value)}>
+          <select className="nc-select" style={{ width: 'auto', marginLeft: 'auto', flex: '0 1 auto', minWidth: 0 }} value={tone} onChange={(e) => setTone(e.target.value)}>
             <option value="">{t('code.toneDefault')}</option>
             {tones.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>

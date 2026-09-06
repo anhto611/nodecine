@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { drawFieldInCode, isFieldDrawn, isVarUsed } from '../forms';
-import { DEFAULT_STAGE } from '../stage';
+import { DEFAULT_STAGE } from '../node';
 import { buildLookPreview } from '@/core/look/markup';
 
 describe('scene field helpers', () => {

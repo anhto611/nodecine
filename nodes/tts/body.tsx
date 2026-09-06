@@ -4,6 +4,7 @@ import type { AudioScript, TTSRef, Voiceover } from '@/core/types/payloads';
 import { Kv, useT, stopFlow } from '@/components/ui';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import { useParams, type BodyProps } from '@/nodes/kit';
+import { FormBody } from '@/nodes/form-body';
 import { pickVoice, voiceSpeaks } from './node';
 
 /**
@@ -25,7 +26,7 @@ function useScriptLanguage(nodeId: string, script: AudioScript | undefined): { l
 
 export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const [p, set] = useParams<{ voice?: string; speed: number }>(nodeId);
+  const [p, set] = useParams<{ voice?: string }>(nodeId);
   const script = useInputPayload<AudioScript>(nodeId, 'script');
   const ref = useInputPayload<TTSRef>(nodeId, 'tts');
   const rt = useRuntime(nodeId);
@@ -46,7 +47,7 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
           <optgroup key={language} label={language}>{voices.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}</optgroup>
         ))}
       </select>} />
-      <Kv k={t('node.speed')} v={<span style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input className={stopFlow} type="range" min={0.5} max={2} step={0.05} value={p.speed} onChange={(e) => set({ speed: Number(e.target.value) })} style={{ width: 70 }} />{p.speed.toFixed(2)}x</span>} />
+      <FormBody nodeId={nodeId} fields={['speed']} widgets={{ speed: { widget: 'range', step: 0.05, format: (v) => `${v.toFixed(2)}x` } }} />
       <div className="nc-hint">{t(source === 'script' ? 'node.matchesLanguage' : 'node.guessedLanguage', { lang })}{auto?.fallback ? ` · ${t('node.voiceMismatch')}` : ''}</div>
       {vo && <div className="nc-hint" style={{ color: 'var(--tx-2)' }}>{vo.durationSeconds.toFixed(2)}s · {vo.voiceName}</div>}
     </>

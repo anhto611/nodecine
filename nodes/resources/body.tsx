@@ -6,6 +6,7 @@ import { Kv, Dot, useT, stopFlow } from '@/components/ui';
 import { useNode, useRuntime, useStudio } from '@/store/useStudio';
 import { findProvider, providersOfKind } from '@/providers/installed';
 import { useParams, type BodyProps } from '@/nodes/kit';
+import { FormBody } from '@/nodes/form-body';
 
 /**
  * One capability, as a row: a label and a word. The reason a capability is unavailable is a
@@ -113,18 +114,12 @@ export const EngineBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const rt = useRuntime(nodeId);
   const node = useNode(nodeId);
-  const [p, set] = useParams<{ concurrency?: number; glBackend?: string }>(nodeId);
   const ref = rt?.outputs.engine?.payload as EngineRef | undefined;
   return (
     <>
       <Kv k={t('node.adapter')} v={ref ? `${ref.engineId} ${ref.adapterVersion}` : '—'} />
       {ref ? ['preview', 'render'].map((k) => capRow(ref, k, t)) : null}
-      {node?.type === 'core/remotion-engine' && (
-        <>
-          <Kv k={t('node.concurrency')} v={<input className={`nc-input ${stopFlow}`} style={{ width: 50 }} type="number" min={1} placeholder="auto" value={p.concurrency ?? ''} onChange={(e) => set({ concurrency: e.target.value ? Number(e.target.value) : undefined })} />} />
-          <Kv k={t('node.backend')} v={<select className={`nc-select ${stopFlow}`} value={p.glBackend ?? 'angle'} onChange={(e) => set({ glBackend: e.target.value })}><option value="angle">angle</option><option value="swiftshader">swiftshader</option></select>} />
-        </>
-      )}
+      {node?.type === 'core/remotion-engine' && <FormBody nodeId={nodeId} widgets={{ concurrency: { placeholder: 'auto' } }} />}
     </>
   );
 };

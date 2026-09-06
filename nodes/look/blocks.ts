@@ -1,8 +1,7 @@
-import { BlockSetSchema, type BlockDef, type BlockSet } from '@/core/types/payloads';
-import type { NodeDefinition } from '@/core/nodes/definition';
+import type { BlockDef } from '@/core/types/payloads';
 
 /**
- * The Blocks node (CORE_CONTRACTS §5.10): one node carries a whole catalogue of blocks, each a scene
+ * The default block of the Look node (CORE_CONTRACTS §2.7, §5.9): a block is a scene
  * archetype (payload §2.7) — id, what the model may write, how to explain it, how to draw it. A
  * workflow usually has one; wire several into the AI Director's `blocks` port and the catalogue is
  * their union. The node's parameters *are* the definitions, so a template file is complete on its own.
@@ -13,7 +12,6 @@ import type { NodeDefinition } from '@/core/nodes/definition';
  * scene's start. No network, no `repeat: -1` — the renderer seeks the timeline by absolute time.
  */
 
-export const BLOCKS = 'core/blocks';
 
 export const DEFAULT_BLOCK: BlockDef = {
   id: 'text-card',
@@ -25,6 +23,7 @@ export const DEFAULT_BLOCK: BlockDef = {
   props: {
     headline: {
       type: 'string',
+      content: 'title',
       hint: 'up to six words, title case',
       required: true,
       max: 60,
@@ -60,16 +59,4 @@ export const DEFAULT_BLOCK: BlockDef = {
   },
 };
 
-export const DEFAULT_BLOCKS: BlockSet = { blocks: [DEFAULT_BLOCK] };
-
-export const blocks: NodeDefinition<typeof BlockSetSchema> = {
-  type: BLOCKS,
-  version: 1,
-  namespace: 'core',
-  kind: 'source',
-  inputs: [],
-  outputs: [{ name: 'blocks', type: 'BlockSet' }],
-  paramsSchema: BlockSetSchema,
-  defaultParams: DEFAULT_BLOCKS,
-  run: async ({ params }) => ({ blocks: params }),
-};
+export const DEFAULT_BLOCKS: BlockDef[] = [DEFAULT_BLOCK];

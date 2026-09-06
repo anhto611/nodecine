@@ -28,8 +28,8 @@ describe.skipIf(!enabled)('captions, for real', () => {
     const track = buildCaptionTrack(words, { maxChars: 26 });
     console.log('lines', track.cues.map((c) => c.words.map((w) => w.text).join(' ')));
     const nodes = staticScript.graph.nodes;
-    const stage = nodes.find((n) => n.type === 'core/stage')!.params as unknown as StageDef;
-    const blocks = (nodes.find((n) => n.type === 'core/blocks')!.params as unknown as { blocks: BlockDef[] }).blocks;
+    const stage = nodes.find((n) => n.type === 'core/look')!.params as unknown as StageDef;
+    const blocks = (nodes.find((n) => n.type === 'core/look')!.params as unknown as { blocks: BlockDef[] }).blocks;
     const ir = buildIR({
       plan: { language: 'vi', stage, blocks, scenes: [{ blockId: 'text-card', weight: 1, props: { headline: 'Phụ đề karaoke', body: 'Căn mốc từ bằng stable-ts' }, fields: { kicker: 'NodeCine' } }] },
       voiceover: { audioUrl, durationSeconds, voiceName: 'vbee', language: 'vi-VN', speed: 1, words },

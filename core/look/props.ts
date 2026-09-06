@@ -85,12 +85,4 @@ export function sceneFieldsSchema(stage: StageDef): z.ZodObject<Record<string, Z
 
 export const toneNames = (stage: StageDef): string[] => Object.keys(stage.tones);
 
-/** Unique block ids in a catalogue that appear more than once — two Block nodes with the same id. */
-export function duplicateBlockIds(blocks: BlockDef[]): string[] {
-  const seen = new Set<string>();
-  const dupes = new Set<string>();
-  for (const b of blocks) (seen.has(b.id) ? dupes : seen).add(b.id);
-  return [...dupes];
-}
-
 export const blockById = (blocks: BlockDef[], id: string): BlockDef | undefined => blocks.find((b) => b.id === id);

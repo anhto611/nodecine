@@ -1,10 +1,10 @@
 'use client';
 import React from 'react';
-import { StageDefSchema, BlockSetSchema, type BlockDef, type StageDef } from '@/core/types/payloads';
+import { StageDefSchema, LookDefSchema, type BlockDef, type StageDef } from '@/core/types/payloads';
 import { useStudio } from '@/store/useStudio';
 import { Btn, useT } from '@/components/ui';
 import { Icon } from '@/components/icons';
-import { DEFAULT_STAGE } from '@/nodes/look/stage';
+import { DEFAULT_STAGE } from '@/nodes/look/node';
 import { useFrame } from '@/nodes/look/body';
 import { applyBoxToCode, type MeasuredRect } from '@/core/look/layout-edit';
 import { draftStage, removeElementDraft, useDraft } from './draft';
@@ -26,20 +26,11 @@ export const CodeEditorDialog: React.FC = () => {
   const close = useStudio((s) => s.setCodeEditor);
   const node = useStudio((s) => s.graph.nodes.find((n) => n.id === target?.nodeId));
   const setParams = useStudio((s) => s.setParams);
-  // The stage the Blocks node feeds, for a truthful block preview. The selector returns the params
-  // object itself (a stable reference); a selector that built a new object would loop the store.
-  const wiredParams = useStudio((s) => {
-    if (!target || target.blockIndex === undefined) return null;
-    const out = s.graph.edges.find((e) => e.source === target.nodeId);
-    if (!out) return null;
-    const stageEdge = s.graph.edges.find((e) => e.target === out.target && e.targetPort === 'stage');
-    return stageEdge ? s.graph.nodes.find((n) => n.id === stageEdge.source)?.params ?? null : null;
-  });
-  const wired = React.useMemo(() => { const r = StageDefSchema.safeParse(wiredParams); return r.success ? r.data : null; }, [wiredParams]);
   const isBlock = target?.blockIndex !== undefined;
-  const stageParsed = React.useMemo(() => (!isBlock ? StageDefSchema.safeParse(node?.params) : null), [isBlock, node]);
-  const stage: StageDef | null = stageParsed?.success ? stageParsed.data : null;
-  const blocks = React.useMemo(() => (isBlock ? BlockSetSchema.safeParse(node?.params) : null), [isBlock, node]);
+  // The Look's parameters carry both parts; parsing them as a StageDef strips the blocks.
+  const stageParsed = React.useMemo(() => StageDefSchema.safeParse(node?.params), [node]);
+  const stage: StageDef | null = stageParsed.success ? stageParsed.data : null;
+  const blocks = React.useMemo(() => (isBlock ? LookDefSchema.safeParse(node?.params) : null), [isBlock, node]);
   const block: BlockDef | undefined = blocks?.success ? blocks.data.blocks[target!.blockIndex!] : undefined;
   const initial = isBlock ? block?.code.source ?? '' : stage?.code.source ?? '';
   const resetKey = `${target?.nodeId ?? ''}#${target?.blockIndex ?? ''}`;
@@ -78,7 +69,7 @@ export const CodeEditorDialog: React.FC = () => {
 
   if (!target || !node) return null;
 
-  const previewStage: StageDef = isBlock ? (wired ?? DEFAULT_STAGE) : draftStage(stage ?? DEFAULT_STAGE, draft.parts, draft.source);
+  const previewStage: StageDef = isBlock ? (stage ?? DEFAULT_STAGE) : draftStage(stage ?? DEFAULT_STAGE, draft.parts, draft.source);
   const previewBlock: BlockDef | undefined = isBlock && block ? { ...block, ...(draft.parts.props ? { props: draft.parts.props } : {}), code: { format: 'html-gsap', source: draft.source } } : undefined;
   const title = isBlock ? t('code.block', { id: block?.id ?? '' }) : t('code.stage', { id: stage?.name ?? '' });
 
@@ -131,7 +122,7 @@ export const CodeEditorDialog: React.FC = () => {
               changes={draft.changes}
               getRequest={() => {
                 const p = partsRef.current;
-                const base = isBlock ? (wired ?? DEFAULT_STAGE) : stage;
+                const base = stage;
                 const s = base ? draftStage(base, p) : null;
                 return {
                   source: sourceRef.current,

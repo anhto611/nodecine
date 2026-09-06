@@ -1,5 +1,6 @@
 import { ErrorCode } from '../errors';
 import { getNodeType, type AnyNodeDefinition, type NodeIssue } from '../nodes/definition';
+import { isResourcePort } from '../types/ports';
 
 /** Serializable graph document (EXECUTION_ENGINE §7.1). */
 export interface NodeInstance {
@@ -21,6 +22,17 @@ export interface Edge {
 export interface Graph {
   nodes: NodeInstance[];
   edges: Edge[];
+}
+
+/**
+ * The kind of a wire follows the port it leaves: content flowing step to step, or a resource (a
+ * look, a model, a voice, an engine) plugged into the node that uses it. Unknown node types count
+ * as flow so an unregistered graph still lays out.
+ */
+export function edgeKind(graph: Graph, e: Graph['edges'][number]): 'flow' | 'resource' {
+  const node = graph.nodes.find((n) => n.id === e.source);
+  const port = node ? getNodeType(node.type)?.outputs.find((o) => o.name === e.sourcePort) : undefined;
+  return port && isResourcePort(port.type) ? 'resource' : 'flow';
 }
 
 export interface GraphIssue extends NodeIssue {

@@ -2,35 +2,27 @@
 import React from 'react';
 import { OUTPUT_LANGUAGES, languageName } from '@/core/text/languages';
 import type { Beat } from '@/nodes/director/beats';
-import type { AudioScript, BlockDef, DirectorPlan } from '@/core/types/payloads';
+import { CONTENT_KEYS, type AudioScript, type ContentKey, type SceneScript } from '@/core/types/payloads';
 import { Btn, Kv, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useNode, useRuntime, useStudio } from '@/store/useStudio';
-import { useWiredLook } from '@/nodes/look/body';
 import type { BodyProps } from '@/nodes/kit';
 
 type Params = { prompt: string; outputLanguage: string; beats: Beat[] };
 
-/** The prop keys a beat's blocks offer, so the editor can offer a fact binding for each. */
-function propKeys(blocks: BlockDef[]): string[] {
-  return [...new Set(blocks.flatMap((b) => Object.keys(b.props)))];
-}
-
 /**
  * Body of the one director: the brief, the language, then the beats — each a role, a line on what
- * it does, a weight, a count, the blocks of the wired catalogue the model may pick from, and for
- * every prop the choice between letting the model write it or binding it to a fact. The look itself
- * is not here: it arrives on the stage and blocks wires.
+ * it does, a weight, a count, and which content keys come from a fact instead of the model. No
+ * block and no look are here: the Look casts them from the scenes this node writes.
  */
 export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const node = useNode(nodeId);
   const setParams = useStudio((s) => s.setParams);
   const rt = useRuntime(nodeId);
-  const { stage, blocks } = useWiredLook(nodeId);
   const p = (node?.params ?? {}) as Partial<Params>;
   const beats = p.beats ?? [];
-  const plan = rt?.outputs.plan?.payload as DirectorPlan | undefined;
+  const scenes = rt?.outputs.scenes?.payload as SceneScript | undefined;
   const script = rt?.outputs.script?.payload as AudioScript | undefined;
   const raw = (rt?.error?.details as { raw?: unknown } | undefined)?.raw;
 
@@ -38,15 +30,11 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
   const set = (patch: Partial<Params>) => setParams(nodeId, patch);
   const updateBeat = (i: number, patch: Partial<Beat>) => set({ beats: beats.map((b, j) => (j === i ? { ...b, ...patch } : b)) });
   const removeBeat = (i: number) => set({ beats: beats.filter((_, j) => j !== i) });
-  const addBeat = () => set({ beats: [...beats, { role: `beat ${beats.length + 1}`, brief: '', weight: 1, count: 1, blocks: [], factBindings: {} }] });
-  const toggleBlock = (i: number, id: string) => {
-    const cur = beats[i]!.blocks;
-    updateBeat(i, { blocks: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] });
-  };
-  const bind = (i: number, prop: string, factKey: string) => {
+  const addBeat = () => set({ beats: [...beats, { role: `beat ${beats.length + 1}`, brief: '', weight: 1, count: 1, factBindings: {} }] });
+  const bind = (i: number, key: ContentKey, factKey: string | null) => {
     const next = { ...beats[i]!.factBindings };
-    if (factKey.trim()) next[prop] = factKey.trim();
-    else delete next[prop];
+    if (factKey === null) delete next[key];
+    else next[key] = factKey;
     updateBeat(i, { factBindings: next });
   };
 
@@ -61,22 +49,18 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
       } />
 
       <div className="nc-k" style={{ marginTop: 4 }}>{t('director.beats')}</div>
-      {!stage || blocks.length === 0 ? <div className="nc-hint" style={{ color: 'var(--warn)' }}>{t('director.noLook')}</div> : null}
       {beats.map((b, i) => {
-        const allowed = b.blocks.length ? blocks.filter((x) => b.blocks.includes(x.id)) : blocks;
-        const missing = b.blocks.filter((id) => !blocks.some((x) => x.id === id));
-        const bound = Object.keys(b.factBindings).length;
+        const bound = Object.entries(b.factBindings) as [ContentKey, string][];
+        const unbound = CONTENT_KEYS.filter((k) => !(k in b.factBindings));
         const isOpen = open === i;
-        // One line per beat, the way the Blocks node lists its catalogue; only the beat being edited unfolds.
+        // One line per beat, the way the Look node lists its blocks; only the beat being edited unfolds.
         return (
           <div key={i} style={{ border: `1px solid ${isOpen ? 'var(--line-3)' : 'var(--line)'}`, borderRadius: 3, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div className="nc-scene-row" style={{ cursor: 'pointer' }} onClick={() => setOpen(isOpen ? null : i)}>
               <span className="nc-k" style={{ color: 'var(--accent-2)', flex: '0 0 auto' }}>{isOpen ? '▾' : '▸'} {i + 1}</span>
               <span className="nc-k" style={{ color: 'var(--tx)', flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.role || t('director.role')}</span>
               <span className="nc-k" style={{ flex: '0 0 auto' }} title={`${t('node.weight')} ${b.weight}`}>{b.count}× · {b.weight}w</span>
-              <span className="nc-k" style={{ flex: '0 0 auto', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }} title={b.blocks.join(', ') || t('director.anyBlock')}>{b.blocks.length ? b.blocks.join(',') : '*'}</span>
-              {bound > 0 && <span className="nc-k" style={{ flex: '0 0 auto' }} title={t('director.bind')}>{bound}⚲</span>}
-              {missing.length > 0 && <span style={{ color: 'var(--err)', flex: '0 0 auto' }} title="not wired">!</span>}
+              {bound.length > 0 && <span className="nc-k" style={{ flex: '0 0 auto' }} title={bound.map(([k, f]) => `${k} ← ${f}`).join(', ')}>{bound.length}⚲</span>}
             </div>
             {isOpen && (
               <>
@@ -88,23 +72,20 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
                   <button className={`nc-chip ${stopFlow}`} onClick={() => { removeBeat(i); setOpen(null); }} disabled={beats.length <= 1} title="remove"><Icon.x size={9} /></button>
                 </div>
                 <textarea className={`nc-textarea ${stopFlow}`} rows={2} placeholder={t('director.beatBrief')} value={b.brief} onChange={(e) => updateBeat(i, { brief: e.target.value })} />
-                <div className="nc-kv">
-                  <span className="nc-k">{t('director.blocks')}</span>
-                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'flex-end' }}>
-                    {blocks.map((x) => (
-                      <button key={x.id} className={`nc-chip ${b.blocks.includes(x.id) ? 'on' : ''} ${stopFlow}`} onClick={() => toggleBlock(i, x.id)}>{x.id}</button>
-                    ))}
-                    {missing.map((id) => (
-                      <button key={id} className={`nc-chip on ${stopFlow}`} style={{ borderColor: 'var(--err)', color: 'var(--err)' }} title="not wired" onClick={() => toggleBlock(i, id)}>{id}</button>
-                    ))}
-                    {b.blocks.length === 0 ? <span className="nc-dim">{t('director.anyBlock')}</span> : null}
-                  </span>
-                </div>
-                {propKeys(allowed).map((k) => (
-                  <Kv key={k} k={k} v={
-                    <input className={`nc-input ${stopFlow}`} placeholder={t('director.bindNone')} title={t('director.bind')} value={b.factBindings[k] ?? ''} onChange={(e) => bind(i, k, e.target.value)} />
+                {bound.map(([key, factKey]) => (
+                  <Kv key={key} k={t(`content.${key}`)} v={
+                    <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <input className={`nc-input ${stopFlow}`} title={t('director.bind')} value={factKey} onChange={(e) => bind(i, key, e.target.value)} />
+                      <button className={`nc-chip ${stopFlow}`} onClick={() => bind(i, key, null)} title={t('director.bindNone')}><Icon.x size={9} /></button>
+                    </span>
                   } />
                 ))}
+                {unbound.length > 0 && (
+                  <select className={`nc-select ${stopFlow}`} value="" title={t('director.bind')} onChange={(e) => { if (e.target.value) bind(i, e.target.value as ContentKey, e.target.value); }}>
+                    <option value="">{t('director.bindAdd')}</option>
+                    {unbound.map((k) => <option key={k} value={k}>{t(`content.${k}`)}</option>)}
+                  </select>
+                )}
               </>
             )}
           </div>
@@ -112,13 +93,13 @@ export const AiDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
       })}
       <Btn small className={stopFlow} onClick={() => { addBeat(); setOpen(beats.length); }} style={{ alignSelf: 'flex-start' }}><Icon.plus size={10} /> {t('node.addScene')}</Btn>
 
-      {script && plan && (
+      {script && scenes && (
         <>
           <div className="nc-k" style={{ marginTop: 4 }}>{t('director.narration', { n: script.text.split(/\s+/).length })}</div>
           <div style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)', lineHeight: 1.5, maxHeight: 54, overflow: 'hidden' }}>{script.text}</div>
           <div className="nc-k" style={{ marginTop: 4 }}>{t('director.written')}</div>
-          {plan.scenes.map((s, i) => (
-            <div key={i} className="nc-kv"><span className="nc-k">{i + 1} · {s.blockId}{s.tone ? ` · ${s.tone}` : ''}</span><span className="nc-v">{String(s.props.headline ?? s.props.text ?? '')}</span></div>
+          {scenes.scenes.map((s, i) => (
+            <div key={i} className="nc-kv"><span className="nc-k">{i + 1} · {s.role}</span><span className="nc-v">{s.content.title ?? s.content.quote ?? s.content.body ?? ''}</span></div>
           ))}
         </>
       )}

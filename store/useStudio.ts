@@ -61,7 +61,7 @@ export interface StudioState {
   /** Bumps whenever a workflow file changes, so lists re-read the directory. */
   workflowsTick: number;
   settingsOpen: boolean;
-  /** The stage node, or one block of a Blocks node, open in the code editor. */
+  /** The stage of a Look node, or one of its blocks, open in the code editor. */
   codeEditor: { nodeId: string; blockIndex?: number } | null;
   selectedNodeId: string | null;
   canUndo: boolean;

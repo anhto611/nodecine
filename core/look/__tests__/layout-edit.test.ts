@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyBoxToCode, snapBox } from '../layout-edit';
-import { DEFAULT_STAGE } from '@/nodes/look/stage';
+import { DEFAULT_STAGE } from '@/nodes/look/node';
 import { buildLookPreview } from '@/core/look/markup';
 
 const FRAME = { w: 1080, h: 1920 };
