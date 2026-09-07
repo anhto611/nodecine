@@ -15,7 +15,6 @@ let runs = 0;
 const learner: NodeDefinition<typeof Params> = {
   type: 'test/learner',
   version: 1,
-  namespace: 'test',
   kind: 'source',
   inputs: [],
   outputs: [{ name: 'out', type: 'SourceRef' }],

@@ -119,7 +119,7 @@ Mỗi lỗi mang một mã ổn định, một thông báo hiển thị lấy t�
 | `TTS_VOICE_LANGUAGE_MISMATCH` | Giọng Đọc | Nhà cung cấp không có giọng cho ngôn ngữ này, đã dùng giọng dự phòng | Cảnh báo, không dừng |
 | `IR_INVALID` | Đóng Gói Timeline | Bản đặc tả vi phạm bất biến, kèm bất biến nào; là lỗi lập trình | Không |
 | `IR_VERSION_UNSUPPORTED` | Xuất Bản Video, Xuất MP4 | Bản đặc tả thuộc phiên bản không được hỗ trợ | Không |
-| `ENGINE_SCENE_UNSUPPORTED` | Mã lý do trong scene registry | Engine nối vào không có renderer cho kiểu cảnh này, kèm danh sách; node tiêu thụ `blocked` viền vàng | Không |
+| `ENGINE_SCENE_UNSUPPORTED` | Mã lý do từ renderer theo định dạng code | Engine nối vào không có renderer cho kiểu cảnh này, kèm danh sách; node tiêu thụ `blocked` viền vàng | Không |
 | `ENGINE_NOT_READY` | Mã lý do trong `capabilities` | Engine nối vào chưa hỗ trợ thao tác này; node tiêu thụ `blocked` hoặc khóa node | Không |
 | `EXPORT_FAILED` | Xuất MP4 | Kết xuất video thất bại | Có |
 | `EXPORT_CANCELLED` | Xuất MP4 | Đã hủy kết xuất | Có |
@@ -136,7 +136,7 @@ Mã lỗi riêng của từng gói (ví dụ `REPO_*`, `LLM_SCHEMA_INVALID`) n�
 
 ### 7.1. Những gì được lưu
 
-*Cập nhật:* các workflow người dùng lưu không còn ở `localStorage` mà là tệp trên máy chủ (`CORE_CONTRACTS.md` §10.1); các workflow **đang mở** trên thanh tab (kể cả bản nháp chưa lưu) tự lưu vào `localStorage` dưới khóa `nodecine.tabs`, như ComfyUI giữ các workflow đang mở; tải lại trang là các tab trở lại nguyên trạng.
+Workflow người dùng lưu là tệp trên máy chủ (`CORE_CONTRACTS.md` §10.1); các workflow **đang mở** trên thanh tab (kể cả bản nháp chưa lưu) tự lưu vào `localStorage` dưới khóa `nodecine.tabs`, như ComfyUI giữ các workflow đang mở; tải lại trang là các tab trở lại nguyên trạng.
 
 Trạng thái bền vững phía trình duyệt nằm trong bộ nhớ cục bộ, chia thành các khóa tách biệt (trạng thái chạy của node thì ở executor trên máy chủ, đọc lại qua `/api/executors/<khóa>`):
 
@@ -146,7 +146,7 @@ Trạng thái bền vững phía trình duyệt nằm trong bộ nhớ cục b�
 
 ### 7.2. Việc và lịch sử chạy nằm trên đĩa của máy chủ
 
-Bộ máy chạy ở máy chủ (mục 8 và `ARCHITECTURE.md` §1.2), nên kết quả chạy không còn phụ thuộc vào trình duyệt. Mỗi việc trong hàng đợi (`run`, `node`, `probe`) là một tệp `.nodecine/jobs/<id>.json` (đổi thư mục bằng biến môi trường `NODECINE_JOBS_DIR`), ghi lại theo kiểu ghi tạm rồi đổi tên ở mỗi lần đổi trạng thái, giống `job.json` của cutdown. Một việc `run` đi tới được Bản Đặc Tả Video Trung Gian thì giữ luôn bản đặc tả đó, định danh engine và tổng thời gian chạy; việc Xuất MP4 hoàn tất sau đó được gắn vào lần chạy gần nhất của cùng khóa. Khi tiến trình khởi động, thư mục được đọc lại: việc đang `pending` hay `running` lúc tiến trình cũ chết được đánh dấu `cancelled` với mã `RUN_CANCELLED`, tệp không đọc được bị bỏ qua, và chỉ giữ 200 tệp mới nhất.
+Bộ máy chạy ở máy chủ (mục 8 và `ARCHITECTURE.md` §1.2), nên kết quả chạy không phụ thuộc vào trình duyệt. Mỗi việc trong hàng đợi (`run`, `node`, `probe`) là một tệp `.nodecine/jobs/<id>.json` (đổi thư mục bằng biến môi trường `NODECINE_JOBS_DIR`), ghi lại theo kiểu ghi tạm rồi đổi tên ở mỗi lần đổi trạng thái, giống `job.json` của cutdown. Một việc `run` đi tới được Bản Đặc Tả Video Trung Gian thì giữ luôn bản đặc tả đó, định danh engine và tổng thời gian chạy; việc Xuất MP4 hoàn tất sau đó được gắn vào lần chạy gần nhất của cùng khóa. Khi tiến trình khởi động, thư mục được đọc lại: việc đang `pending` hay `running` lúc tiến trình cũ chết được đánh dấu `cancelled` với mã `RUN_CANCELLED`, tệp không đọc được bị bỏ qua, và chỉ giữ 200 tệp mới nhất.
 
 Trạng thái node trong bộ nhớ (kết quả từng node, chữ ký bộ nhớ đệm) và nhật ký (2.000 dòng) vẫn là của executor theo từng khóa trong tiến trình máy chủ: tải lại trang là thấy lại qua `GET /api/executors/<khóa>`, nhưng khởi động lại máy chủ thì mọi node xử lý về `idle` và cần chạy lại; ba node tài nguyên tự `probe()` sau khi nạp theo mục 1.1. Tệp âm thanh và MP4 vẫn nằm trong thư mục tạm theo vòng đời riêng, nên một mục lịch sử cũ có thể trỏ tới tệp đã bị dọn (mục 8.1).
 

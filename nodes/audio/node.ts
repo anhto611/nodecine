@@ -24,7 +24,6 @@ export const AUDIO_MIX = 'core/audio-mix';
 export const audioMix: NodeDefinition<typeof Params> = {
   type: AUDIO_MIX,
   version: 1,
-  namespace: 'core',
   kind: 'process',
   inputs: [{ name: 'voiceover', type: 'Voiceover' }],
   outputs: [{ name: 'voiceover', type: 'Voiceover' }],

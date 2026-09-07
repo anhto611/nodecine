@@ -15,7 +15,6 @@ const Params = z.object({ bindFacts: z.boolean().default(true) });
 const fakeDirector: NodeDefinition<typeof Params> = {
   type: 'test/director',
   version: 1,
-  namespace: 'test',
   kind: 'source',
   inputs: [],
   outputs: [
@@ -87,7 +86,6 @@ describe('run warnings surface on the node', () => {
     registerNodeType({
       type: 'test/facts',
       version: 1,
-      namespace: 'test',
       kind: 'source',
       inputs: [],
       outputs: [{ name: 'facts', type: 'FactSheet' }],

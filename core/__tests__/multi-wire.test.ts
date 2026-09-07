@@ -14,7 +14,6 @@ const Params = z.object({ value: z.string() });
 const source: NodeDefinition<typeof Params> = {
   type: 'test/source',
   version: 1,
-  namespace: 'test',
   kind: 'source',
   inputs: [],
   outputs: [{ name: 'out', type: 'SourceRef' }],
@@ -26,7 +25,6 @@ const NoParams = z.object({});
 const collector: NodeDefinition<typeof NoParams> = {
   type: 'test/collector',
   version: 1,
-  namespace: 'test',
   kind: 'process',
   inputs: [
     { name: 'head', type: 'SourceRef' },

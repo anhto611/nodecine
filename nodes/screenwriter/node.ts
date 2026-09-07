@@ -42,7 +42,6 @@ export const DEFAULT_SCREENWRITER: z.infer<typeof Params> = {
 export const screenwriter: NodeDefinition<typeof Params> = {
   type: SCREENWRITER,
   version: 2,
-  namespace: 'core',
   kind: 'process',
   inputs: [
     // A line the user typed, for videos with no fact source: it becomes the subject of the brief.

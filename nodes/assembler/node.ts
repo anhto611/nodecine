@@ -14,7 +14,6 @@ const Params = z.object({
 export const timelineAssembler: NodeDefinition<typeof Params> = {
   type: 'core/timeline-assembler',
   version: 1,
-  namespace: 'core',
   kind: 'process',
   inputs: [
     { name: 'plan', type: 'ScenePlan' },

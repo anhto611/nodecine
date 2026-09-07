@@ -23,7 +23,7 @@ const facts = {
 };
 
 const factSource: AnyNodeDefinition = {
-  type: 'test/facts', version: 1, namespace: 'test', kind: 'source', inputs: [],
+  type: 'test/facts', version: 1, kind: 'source', inputs: [],
   outputs: [{ name: 'facts', type: 'FactSheet' }],
   paramsSchema: z.object({}), defaultParams: {},
   run: async () => ({ facts }),

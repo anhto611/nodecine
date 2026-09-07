@@ -60,7 +60,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
   const hasRetry = rt.state === 'error' || (def.kind === 'resource' && rt.state !== 'running' && rt.state !== 'queued');
 
   return (
-    <div className={`nc-node ${node.type === 'core/video-output' ? 'wide' : ''} ${stateClass} ${selected ? 'selected' : ''}`}>
+    <div className={`nc-node ${node.type === 'core/video-output' ? 'wide' : ''} ${def.kind === 'resource' ? 'res' : ''} ${stateClass} ${selected ? 'selected' : ''}`}>
       <div className="nc-hdr">
         <IconC size={12} />
         <span className="nc-title" title={t(`node.desc.${node.type}`)}>{t(`node.${node.type}`)}</span>

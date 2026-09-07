@@ -31,7 +31,6 @@ export const DEFAULT_STATIC_SCRIPT: z.infer<typeof Params> = {
 export const staticScript: NodeDefinition<typeof Params> = {
   type: 'core/static-script',
   version: 4,
-  namespace: 'core',
   kind: 'source',
   inputs: [],
   outputs: [

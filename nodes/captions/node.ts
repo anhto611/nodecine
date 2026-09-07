@@ -18,7 +18,6 @@ const Params = z.object({
 export const captions: NodeDefinition<typeof Params> = {
   type: 'core/captions',
   version: 1,
-  namespace: 'core',
   kind: 'process',
   inputs: [{ name: 'voiceover', type: 'Voiceover' }],
   outputs: [{ name: 'captions', type: 'CaptionTrack' }],

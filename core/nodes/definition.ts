@@ -79,8 +79,6 @@ export interface NodeDefinition<S extends ZodTypeAny = ZodTypeAny> {
   type: string;
   /** Bumped when run() semantics change, so cached results are invalidated (EXECUTION_ENGINE §3). */
   version: number;
-  /** The `<namespace>/` prefix of `type`: `core`, or the extra that ships the node. Groups the library. */
-  namespace: string;
   kind: NodeKind;
   inputs: PortDef[];
   outputs: PortDef[];

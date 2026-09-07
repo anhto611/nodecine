@@ -15,13 +15,13 @@ export const LibraryPanel: React.FC = () => {
   const addNode = useStudio((s) => s.addNode);
   const setPanel = useStudio((s) => s.setPanel);
   const defs = listNodeTypes();
-  const groups = new Map<LibraryGroup | string, AnyNodeDefinition[]>();
+  const groups = new Map<LibraryGroup, AnyNodeDefinition[]>();
   for (const d of defs) {
-    const g = NODE_META[d.type]?.group ?? d.namespace;
+    // A node with no meta still has to be reachable, so it lands in Other rather than vanishing.
+    const g = NODE_META[d.type]?.group ?? 'other';
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g)!.push(d);
   }
-  const order = [...GROUP_ORDER, ...[...groups.keys()].filter((g) => !(GROUP_ORDER as string[]).includes(g))];
   const match = (d: AnyNodeDefinition) => !q || t(`node.${d.type}`).toLowerCase().includes(q.toLowerCase()) || d.type.includes(q.toLowerCase());
 
   return (
@@ -31,7 +31,7 @@ export const LibraryPanel: React.FC = () => {
         <Icon.search /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('library.search')} style={{ background: 'none', border: 0, outline: 'none', color: 'var(--tx)', font: 'inherit', fontSize: 'var(--fs-body)', width: '100%' }} />
       </div>
       <div style={{ overflowY: 'auto', flex: 1 }}>
-        {order.map((g) => {
+        {GROUP_ORDER.map((g) => {
           const items = (groups.get(g) ?? []).filter(match);
           if (!items.length) return null;
           return (

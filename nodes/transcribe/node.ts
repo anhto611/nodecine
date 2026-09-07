@@ -19,7 +19,6 @@ const Params = z.object({
 export const transcribe: NodeDefinition<typeof Params> = {
   type: 'core/transcribe',
   version: 1,
-  namespace: 'core',
   kind: 'process',
   inputs: [
     { name: 'voiceover', type: 'Voiceover' },

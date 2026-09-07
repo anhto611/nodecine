@@ -18,7 +18,6 @@ export const github = { fetchRepo };
 export const githubFetcher: NodeDefinition<typeof Params> = {
   type: GITHUB_FETCHER,
   version: 1,
-  namespace: 'core',
   kind: 'process',
   inputs: [{ name: 'source', type: 'SourceRef' }],
   outputs: [{ name: 'facts', type: 'FactSheet' }],

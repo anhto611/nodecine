@@ -67,7 +67,7 @@ NodeCine phục vụ 4 nhóm người dùng trọng tâm tương ứng với cá
 NodeCine v0.1 gồm một tầng code và một tầng dữ liệu. **Cả ba đều ship cùng app và có sẵn ngay sau khi cài** — người dùng mới phải dựng được mọi bản mẫu từ canvas trống mà không cài thêm gì:
 
 - **Khung lõi** (Hợp đồng Lõi): hệ thống kiểu cổng, bộ máy thực thi, Bản Đặc Tả Video Trung Gian generic tự chứa, registry engine và nhà cung cấp, renderer theo định dạng code, giao diện Studio, và toàn bộ node — kể cả node lấy dữ liệu như Truy Xuất Repo, vì mỗi nguồn dữ liệu là một node riêng của lõi.
-- **Bản mẫu** (`templates/`): đồ thị JSON, cùng hình dạng tệp dự án, gọi tên node bằng chuỗi. Người dùng dựng được từ canvas trống, lưu lại thành bản mẫu, tải xuống để chia sẻ. Ba bản mẫu ship kèm là Kịch Bản Tĩnh, GitHub Repo Showcase và Thẻ Trích Dẫn.
+- **Bản mẫu** (`templates/`): đồ thị JSON, cùng hình dạng tệp dự án, gọi tên node bằng chuỗi. Người dùng dựng được từ canvas trống, lưu lại thành bản mẫu, tải xuống để chia sẻ. Bốn bản mẫu ship kèm là Kịch Bản Tĩnh, GitHub Repo Showcase, Thẻ Trích Dẫn Truyền Cảm Hứng và Bản Tin AI Đếm Ngược.
 
 Nguyên tắc phân chia node, theo mô hình ComfyUI: mỗi node một trách nhiệm; mọi node gọi ra ngoài tiến trình đứng riêng để thử lại độc lập; mọi tài nguyên hay hành động có tham số riêng là một node chứ không phải cài đặt toàn cục.
 
@@ -75,12 +75,14 @@ Nguyên tắc phân chia node, theo mô hình ComfyUI: mỗi node một trách n
 
 1. Nhập Liệu (Input Trigger): Ô văn bản, phát Dữ liệu Nguồn, không diễn giải, không gọi mạng.
 2. Kịch Bản Tĩnh (Static Script): Người dùng gõ tay lời thoại và danh sách cảnh (vai, trọng số, nội dung theo từ vựng cố định); Đạo Diễn Mỹ Thuật đứng sau dàn block và tone. Phát Kịch bản Phân cảnh và Lời thoại. Là cách dựng video không cần mô hình ngôn ngữ, và là node dùng để nghiệm thu khung.
-2b. Biên Kịch (Screenwriter): Node biên kịch duy nhất. Nhận `LLMRef` và tùy chọn `FactSheet` hoặc `SourceRef`; người dùng viết đề bài và các beat (vai trò, mô tả, số cảnh, block được phép, ràng buộc dữ kiện). Mô hình chọn block cho từng cảnh; lược đồ đầu ra sinh từ bảng props của block; dữ kiện đã ràng buộc không đi qua mô hình. Một video GitHub hay một video trích dẫn khác nhau chỉ ở tham số của node này và các node Stage/Block nối vào.
-2c. Stage và Blocks: hai node nguồn mang giao diện dưới dạng dữ liệu — sân khấu chung (token, tone, trường theo cảnh, markup) và danh mục kiểu cảnh (mỗi block: props, tài liệu cho mô hình, code HTML/GSAP). Một workflow mang theo giao diện của chính nó, nên bản mẫu chia sẻ là đủ.
+2b. Biên Kịch (Screenwriter): Node biên kịch duy nhất. Nhận `LLMRef` và tùy chọn `FactSheet` hoặc `SourceRef`; người dùng viết đề bài và các beat (vai trò, mô tả, số cảnh, ràng buộc dữ kiện). Mô hình chỉ viết nội dung cảnh theo từ vựng nội dung cố định, không biết block nào tồn tại; dữ kiện đã ràng buộc không đi qua mô hình. Một video GitHub hay một video trích dẫn khác nhau chỉ ở tham số của node này và của Đạo Diễn Mỹ Thuật.
+2c. Đạo Diễn Mỹ Thuật (Art Director): Chặng giao diện, đứng **sau** kịch bản. Mang giao diện dưới dạng dữ liệu: sân khấu chung (token, tone, trường theo cảnh, markup) và danh mục block (mỗi block: props, tài liệu cho mô hình, code HTML/GSAP). Nhận Kịch bản Phân cảnh và tùy chọn `LLMRef`, dàn block và tone cho từng cảnh, viết block mới khi không cái nào hợp, phát Kế hoạch Phân cảnh. Một workflow mang theo giao diện của chính nó, nên bản mẫu chia sẻ là đủ.
+2d. Node lấy dữ liệu: Truy Xuất Repo (GitHub) và Truy Xuất Trang (đọc trang web, tùy chọn chụp ảnh trang) — mỗi nguồn một node, cùng phát Dữ kiện.
 3. Nhà Cung Cấp Mô Hình Ngôn Ngữ: **một** node tài nguyên phát `LLMRef`, chọn nhà cung cấp ngay trong node theo mẫu Load Checkpoint của ComfyUI — thêm nhà cung cấp không thêm node. Thân node hiện `capabilities` từ `probe()` và các tham số riêng của nhà cung cấp đang chọn; đường dẫn tệp thực thi và địa chỉ máy chủ chỉ đến từ biến môi trường, không bao giờ từ đồ thị. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
 4. Nhà Cung Cấp Giọng Đọc: **một** node tài nguyên phát `TTSRef`, cùng cơ chế chọn nhà cung cấp như trên. Thân node liệt kê giọng mà `probe()` tìm được. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
 5. Giọng Đọc (TTS Engine): Nhận Lời thoại kèm ngôn ngữ và `TTSRef`, tự chọn giọng khớp ngôn ngữ, tạo MP3, đo thời lượng từ tệp.
-6. Đóng Gói Timeline (Timeline Assembler): Hàm thuần. Nhận Kịch bản Phân cảnh, Âm thanh, và tùy chọn Dữ kiện. Phân bổ khung hình theo trọng số, đè dữ kiện lên props theo `factBindings`, kiểm định bất biến IR, phát Bản Đặc Tả Video Trung Gian.
+5b. Căn Mốc Từ, Phụ Đề, Nhạc Nền: ba node xử lý âm thanh sau Giọng Đọc — căn chỉnh cưỡng bức để biết mỗi từ đọc lúc nào, gom từ thành dòng phụ đề, và đặt một bản nhạc dưới giọng có hạ nhạc khi nói.
+6. Đóng Gói Timeline (Timeline Assembler): Hàm thuần. Nhận Kế hoạch Phân cảnh, Âm thanh, và tùy chọn Dữ kiện và Phụ đề. Phân bổ khung hình theo trọng số, đè dữ kiện lên props theo `factBindings`, kiểm định bất biến IR, phát Bản Đặc Tả Video Trung Gian.
 7. Động Cơ (Hyperframes Engine xem trước và kết xuất block `html-gsap` bằng thư viện HyperFrames; Remotion Engine chờ định dạng block `react`): Node tài nguyên phát `EngineRef`, tương đương Load Checkpoint của ComfyUI. Đổi engine là thay node; engine không vẽ được định dạng của block thì node xuất tự chặn.
 8. Xuất Bản Video (Video Output): Nhận IR và `EngineRef`, tự thân là trình phát, theo mô hình PreviewImage. Không có khung xem trước nào khác.
 9. Xuất MP4 (MP4 Export): Nhận cùng hai đầu vào, mang tham số codec, chất lượng, tên tệp, theo mô hình SaveImage nhưng bỏ qua mặc định vì kết xuất tốn hàng chục giây; bấm Kết xuất trên node để chạy riêng.
@@ -173,7 +175,7 @@ Tiêu chí riêng của bản mẫu nằm tại `templates/github-showcase.md` m
 
 Các hạng mục dưới đây đã được cân nhắc và cố ý loại khỏi v0.1. Chúng được ghi lại ở đây để tránh việc vô tình thiết kế chặn đường chúng:
 
-- Định dạng block `react` cho Remotion Engine: code block là mã một component React dạng chuỗi, dịch lúc chạy trong trình duyệt và trong bundle kết xuất; node Stage/Block có ô chọn định dạng.
+- Định dạng block `react` cho Remotion Engine: code block là mã một component React dạng chuỗi, dịch lúc chạy trong trình duyệt và trong bundle kết xuất; Đạo Diễn Mỹ Thuật có ô chọn định dạng cho từng block.
 - Node biên kịch generic dùng chung cho mọi gói, nhận "công thức" gồm lời nhắc và lược đồ cảnh từ gói thay vì mỗi gói tự viết node.
 - Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng JSON, mỗi bản mang stage và block của nó; node lấy dữ liệu mới (RSS, YouTube) là node lõi riêng.
 - Họ node truy xuất dữ liệu mở rộng: Reddit Fetcher, CSV và Google Sheet Loader, Market API Fetcher. Chúng dùng chung vị trí và vai trò với Node Truy Xuất Repo trong đồ thị.

@@ -25,7 +25,6 @@ export const WEB_FETCHER = 'core/web-fetcher';
 export const webFetcher: NodeDefinition<typeof Params> = {
   type: WEB_FETCHER,
   version: 1,
-  namespace: 'core',
   kind: 'process',
   inputs: [{ name: 'source', type: 'SourceRef' }],
   outputs: [{ name: 'facts', type: 'FactSheet' }],

@@ -1,6 +1,6 @@
 # Hợp đồng Lõi (Core Contracts)
 
-Tài liệu này định nghĩa phần **khung** của NodeCine: những hợp đồng mà mọi node, mọi block và mọi engine đều phải tuân theo, và không chứa bất kỳ chi tiết nào của một bản mẫu cụ thể. Chi tiết của bản mẫu đầu tiên nằm ở `extras/github-showcase.md`.
+Tài liệu này định nghĩa phần **khung** của NodeCine: những hợp đồng mà mọi node, mọi block và mọi engine đều phải tuân theo, và không chứa bất kỳ chi tiết nào của một bản mẫu cụ thể. Chi tiết của từng bản mẫu nằm ở `docs/templates/`.
 
 Nguyên tắc phân tầng: **lõi định nghĩa hình dạng, gói định nghĩa nội dung.** Lõi biết có "cảnh" nhưng không biết cảnh Hook là gì; biết có "dữ kiện" nhưng không biết số sao GitHub là gì. Mọi thứ lõi không biết đều được tra qua registry, cùng một pattern cho engine, nhà cung cấp và kiểu cảnh.
 
@@ -30,7 +30,7 @@ Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ đư�
 
 Mười một kiểu cổng chia làm hai **loại dây** (`PORT_KIND` trong `core/types/ports.ts`). Dây **luồng** (`SourceRef`, `FactSheet`, `SceneScript`, `ScenePlan`, `AudioScript`, `Voiceover`, `CaptionTrack`, `VideoIR`) là đường đi của nội dung: xong bước này mới sang bước sau. Dây **thành phần** (`LLMRef`, `TTSRef`, `EngineRef`) là một bộ phận cắm vào node dùng nó: mô hình, giọng, động cơ. Bộ máy thực thi không phân biệt hai loại (cả hai đều là phụ thuộc, mục 2 của Bộ Máy Thực Thi); chỉ canvas vẽ khác: dây luồng liền nét, vào từ trái ra bên phải; dây thành phần mảnh, đứt nét, vào cổng ở **cạnh trên** của node dùng và ra từ **cạnh dưới** của node phát, để thành phần "treo" phía trên đường đi chính. Auto-layout xếp node thành phần thành một dải ngay trên node đầu tiên dùng nó.
 
-Một cổng xuất được phép nối ra nhiều cổng nhận. Một cổng nhận mặc định chỉ được phép có đúng một dây nối tới; cổng khai báo `multiple: true` nhận **bao nhiêu dây cũng được**, bắt buộc nghĩa là ít nhất một. Gói của cổng nhiều dây tới node dưới dạng danh sách `lists[tên cổng]` theo thứ tự dây, không phải `inputs[tên cổng]`; chữ ký chạy lại băm cả danh sách nên thêm hoặc bớt dây là node chạy lại. Hiện không node lõi nào khai cổng nhiều dây (cổng `blocks` cũ đã gộp vào `look`); bộ máy giữ tính năng cho node gom nhiều thứ cùng loại. Đồ thị bắt buộc không có chu trình. Node thành phần (ba loại phát `EngineRef`, `LLMRef`, `TTSRef`) không có cổng nhận nào.
+Một cổng xuất được phép nối ra nhiều cổng nhận. Một cổng nhận mặc định chỉ được phép có đúng một dây nối tới; cổng khai báo `multiple: true` nhận **bao nhiêu dây cũng được**, bắt buộc nghĩa là ít nhất một. Gói của cổng nhiều dây tới node dưới dạng danh sách `lists[tên cổng]` theo thứ tự dây, không phải `inputs[tên cổng]`; chữ ký chạy lại băm cả danh sách nên thêm hoặc bớt dây là node chạy lại. Hiện không node lõi nào khai cổng nhiều dây; bộ máy giữ tính năng cho node gom nhiều thứ cùng loại. Đồ thị bắt buộc không có chu trình. Node thành phần (ba loại phát `EngineRef`, `LLMRef`, `TTSRef`) không có cổng nhận nào.
 
 ### 1.2. Gói dữ liệu qua dây nối
 
@@ -196,7 +196,7 @@ Lõi có một hàm kiểm định IR chạy ở Node Đóng Gói Timeline trư�
 Lõi không có danh sách kiểu cảnh. Một cảnh là một block, block là dữ liệu trong IR (mục 2.7), và cách vẽ nằm trong `code` của block và stage theo định dạng `html-gsap` (mục 2.8). Thứ duy nhất engine phải đăng ký là **một renderer cho mỗi định dạng code** nó hiểu — `registerCodeRenderer(format, engineId, renderer)` trong `core/look/renderers.ts`, cùng pattern với registry của Adapter và Provider: bảng rỗng ở lõi, engine tự điền lúc khởi động.
 
 - Node Xuất Bản Video và Node Xuất MP4, trước khi nạp, lấy tập `code.format` của stage và các block trong IR và tra với `engineId` đang nối vào. Thiếu renderer cho định dạng nào thì node chuyển `blocked` với viền vàng và mã `ENGINE_SCENE_UNSUPPORTED` kèm tên định dạng. Một engine chỉ hiểu `html-gsap` vẫn sống chung với engine khác mà không vỡ.
-- Thêm block hay stage mới không đụng tới lược đồ IR, Adapter hay node lõi, và cũng không đụng tới code: người dùng thêm node Block/Stage trên canvas, hoặc mở một bản mẫu mang sẵn chúng.
+- Thêm block hay stage mới không đụng tới lược đồ IR, Adapter hay node lõi, và cũng không đụng tới code: người dùng thêm block ngay trong node Đạo Diễn Mỹ Thuật, hoặc mở một bản mẫu mang sẵn chúng.
 
 ---
 
@@ -240,7 +240,7 @@ Ví dụ đối chiếu với trọng số 1, 2, 1 và âm thanh 11.2 giây ở 
 
 ### 5.5. Xuất Bản Video (Video Output)
 
-Nhận `VideoIR` và `EngineRef`. Tra scene registry (mục 4), tra adapter registry theo `engineId`, gọi `mountPlayer()`. Chính là trình phát; không có cổng phát, không có node xuất. Giao diện chi tiết tại Đặc tả Luồng Trải nghiệm mục 1.4.
+Nhận `VideoIR` và `EngineRef`. Tra renderer theo định dạng code (mục 4), tra adapter registry theo `engineId`, gọi `mountPlayer()`. Chính là trình phát; không có cổng phát, không có node xuất. Giao diện chi tiết tại Đặc tả Luồng Trải nghiệm mục 1.4.
 
 ### 5.6. Xuất MP4 (MP4 Export)
 
@@ -308,7 +308,7 @@ Node lõi `core/transcribe`: nhận `Voiceover` và `AudioScript`, phát `Voiceo
 
 ### 5.13. Phụ Đề (Captions)
 
-Node lõi `core/captions`: nhận `Voiceover` có `words`, phát `CaptionTrack` (mục 2.10). Hàm thuần. Tham số duy nhất: `maxChars` (26), vì số ký tự một dòng chứa được là số đo bề rộng chỗ phụ đề mà stage dành ra. Voice-over không có `words` là lỗi `CAPTIONS_NO_WORDS` kèm hướng dẫn nối qua Căn Mốc Từ. Ba bản mẫu đều mang sẵn cặp Căn Mốc Từ → Phụ Đề **đang bật**, nối vào cổng `captions` tùy chọn của Đóng Gói Timeline; tắt hai node là video không phụ đề và các mục danh sách rải đều thay vì theo lời (quy tắc cổng tùy chọn sau node bị bỏ qua ở Bộ Máy Thực Thi mục 2). Engine HyperFrames đổ các dòng vào chỗ `data-slot="captions"` của stage trong từng cảnh (dòng cắt ngang hai cảnh được vẽ ở cả hai), bật tắt dòng và tô từ trên timeline gốc; stage không khai chỗ thì engine thêm dải mặc định trong vùng an toàn dưới.
+Node lõi `core/captions`: nhận `Voiceover` có `words`, phát `CaptionTrack` (mục 2.10). Hàm thuần. Tham số duy nhất: `maxChars` (26), vì số ký tự một dòng chứa được là số đo bề rộng chỗ phụ đề mà stage dành ra. Voice-over không có `words` là lỗi `CAPTIONS_NO_WORDS` kèm hướng dẫn nối qua Căn Mốc Từ. Bốn bản mẫu đều mang sẵn cặp Căn Mốc Từ → Phụ Đề **đang bật**, nối vào cổng `captions` tùy chọn của Đóng Gói Timeline; tắt hai node là video không phụ đề và các mục danh sách rải đều thay vì theo lời (quy tắc cổng tùy chọn sau node bị bỏ qua ở Bộ Máy Thực Thi mục 2). Engine HyperFrames đổ các dòng vào chỗ `data-slot="captions"` của stage trong từng cảnh (dòng cắt ngang hai cảnh được vẽ ở cả hai), bật tắt dòng và tô từ trên timeline gốc; stage không khai chỗ thì engine thêm dải mặc định trong vùng an toàn dưới.
 
 ---
 

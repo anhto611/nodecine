@@ -84,6 +84,10 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 /* node card */
 .nc-node { width: 220px; background: var(--bg-node); border: 1px solid var(--line-2); border-radius: 5px; box-shadow: 0 4px 14px rgba(0,0,0,.45); font-size: var(--fs-body); position: relative; }
 .nc-node.wide { width: 320px; }
+/* A resource node is not a stage: it plugs into one. No header band, and the header rule is dashed
+   like its wires and handles, so a row of pipeline cards reads as the pipeline and these read as the
+   parts hanging off it. Full width is kept — a narrower card only truncated the titles. */
+.nc-node.res .nc-hdr { background: none; border-bottom-style: dashed; border-bottom-color: var(--line-2); }
 .nc-node.selected { box-shadow: 0 0 0 1px var(--accent), 0 4px 14px rgba(0,0,0,.45); }
 .nc-node.s-running { border-color: var(--run); box-shadow: 0 0 0 1px rgba(88,166,255,.22), 0 4px 16px rgba(0,0,0,.5); }
 .nc-node.s-success { border-color: #215c2c; }

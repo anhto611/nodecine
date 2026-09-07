@@ -23,7 +23,6 @@ const missingProvider = (kind: string) => [{ code: ErrorCode.INPUT_EMPTY, messag
 export const llmProvider: NodeDefinition<typeof ProviderParams> = {
   type: 'core/llm-provider',
   version: 1,
-  namespace: 'core',
   kind: 'resource',
   inputs: [],
   outputs: [{ name: 'llm', type: 'LLMRef' }],
@@ -36,7 +35,6 @@ export const llmProvider: NodeDefinition<typeof ProviderParams> = {
 export const ttsProvider: NodeDefinition<typeof ProviderParams> = {
   type: 'core/tts-provider',
   version: 1,
-  namespace: 'core',
   kind: 'resource',
   inputs: [],
   outputs: [{ name: 'tts', type: 'TTSRef' }],
@@ -53,7 +51,6 @@ const RemotionParams = z.object({
 export const remotionEngine: NodeDefinition<typeof RemotionParams> = {
   type: 'core/remotion-engine',
   version: 1,
-  namespace: 'core',
   kind: 'resource',
   inputs: [],
   outputs: [{ name: 'engine', type: 'EngineRef' }],
@@ -66,7 +63,6 @@ const HyperframesParams = z.object({});
 export const hyperframesEngine: NodeDefinition<typeof HyperframesParams> = {
   type: 'core/hyperframes-engine',
   version: 1,
-  namespace: 'core',
   kind: 'resource',
   inputs: [],
   outputs: [{ name: 'engine', type: 'EngineRef' }],

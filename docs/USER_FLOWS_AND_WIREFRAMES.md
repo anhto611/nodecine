@@ -84,9 +84,9 @@ Theo mô hình dải icon dọc của ComfyUI, nằm ở mép trái ngay dưới
 Thư viện node (Node Library):
 
 - Ô tìm kiếm theo tên ở đầu panel.
-- Node xếp theo nhóm vai trò, node lõi trước rồi tới các node kèm app, mỗi nguồn một nhóm. Lõi: Nguồn (Nhập Liệu, Kịch Bản Tĩnh), Nhà cung cấp (Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn — mỗi loại cổng một node, chọn hãng bên trong node), Xử lý (Biên Kịch, Giọng Đọc, Đóng Gói Timeline), Động cơ (Remotion Engine, Hyperframes Engine), Xuất (Xuất Bản Video, Xuất MP4). Mọi node trong danh sách đều có sẵn ngay sau khi cài app. Mỗi mục gồm biểu tượng, tên node, một dòng mô tả và dòng nhãn cổng vào và ra dùng đúng tên trong bảng kiểu cổng.
+- Node xếp theo **nhóm**, đó là trục phân loại duy nhất người dùng thấy, và thứ tự nhóm chính là thứ tự dựng một video: **Nguồn** (Nhập Liệu, Truy Xuất Repo, Truy Xuất Trang) → **Kịch bản** (Kịch Bản Tĩnh, Biên Kịch — hai cách làm cùng một chặng, nên đứng cạnh nhau) → **Giao diện** (Đạo Diễn Mỹ Thuật) → **Âm thanh** (Giọng Đọc, Căn Mốc Từ, Nhạc Nền, Phụ Đề) → **Đóng gói & Xuất** (Đóng Gói Timeline, Xuất Bản Video, Xuất MP4). Nhóm cuối là **Tài nguyên** (Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn — mỗi loại cổng một node, chọn hãng bên trong; Remotion Engine, Hyperframes Engine): chúng không nằm dọc luồng mà nối vào từ bên cạnh, và người dùng thường đặt một lần rồi thôi. Không có tiền tố "Lõi" vì mọi node đều là node của app: app không có cơ chế nạp node từ ngoài, `nodes/index.ts` là danh sách duy nhất và node chỉ vào đó bằng cách biên dịch cùng app. Node thiếu khai báo nhóm rơi vào "Khác" chứ không biến mất. Mọi node trong danh sách đều có sẵn ngay sau khi cài app. Mỗi mục gồm biểu tượng, tên node, một dòng mô tả và dòng nhãn cổng vào và ra dùng đúng tên trong bảng kiểu cổng.
 - Kéo một mục thả lên canvas để tạo node tại vị trí thả; nhấp đúp để thả vào giữa vùng đang nhìn. Trong lúc kéo, một bản mờ của node bám theo con trỏ.
-- Nút "Thêm node" ở thanh công cụ đáy trái không còn tự mở danh mục riêng, mà chỉ mở panel này.
+- Nút "Thêm node" ở thanh công cụ đáy trái mở đúng panel này.
 - Mọi node đều được phép thêm nhiều lần trên cùng đồ thị. Bộ máy thực thi nạp dữ liệu vào mọi node có dây nối hợp lệ.
 
 Lịch sử chạy (Run History):
@@ -145,7 +145,7 @@ Node Xuất MP4 (MP4 Export):
 Node duy nhất của lõi cho phép dựng video hoàn toàn bằng tay, và là đồ thị nghiệm thu của Pha A.
 
 - Hai cổng phát: "Kịch bản Phân cảnh" và "Lời thoại". Không cổng nhận.
-- Thân node: ô văn bản nhiều dòng cho lời thoại (ngôn ngữ tự nhận diện từ văn bản, không có hộp chọn), và danh sách cảnh. Mỗi cảnh là một hàng gồm hộp chọn block (lấy từ các node Block đã nối vào cổng `blocks`), ô trọng số, hộp chọn tone và các trường của stage đã nối, và các ô nội dung sinh ra từ bảng props của block đã chọn. Chưa nối Stage/Block thì thân node báo vàng. Node thêm và xóa cảnh; kéo để đổi thứ tự.
+- Thân node: ô văn bản nhiều dòng cho lời thoại (ngôn ngữ tự nhận diện từ văn bản, không có hộp chọn), và danh sách cảnh. Mỗi cảnh là một hàng gồm ô vai trò, ô trọng số và các ô nội dung theo từ vựng nội dung; block, tone và trường do Đạo Diễn Mỹ Thuật quyết định ở chặng sau. Node thêm và xóa cảnh; kéo để đổi thứ tự.
 - Mặc định ba cảnh `text-card` trọng số 1, 2, 1 với nội dung mẫu, để người dùng bấm Chạy Luồng là có video ngay.
 
 ## 2. Quy chuẩn Cấu trúc Node Chức Năng (Node Anatomy)
@@ -190,8 +190,10 @@ Thân node Truy Xuất Repo được mô tả trong tài liệu của bản mẫ
 
 ### 2.3. Cổng Kết Nối (Connection Ports)
 
-- Cổng nhận dữ liệu nằm ở mép viền bên trái node; cổng phát dữ liệu nằm ở mép viền bên phải.
-- Mỗi cổng tròn đều có nhãn chữ mờ cạnh bên chỉ dẫn loại dữ liệu tương ứng, dùng đúng nhãn hiển thị đã quy định trong bảng kiểu cổng: "Dữ liệu Nguồn", "Dữ kiện", "Kịch bản Phân cảnh", "Lời thoại", "Âm thanh & Thời lượng", "Bản đặc tả IR", "Động cơ", "Mô hình ngôn ngữ", "Giọng đọc".
+- **Cổng luồng** (nội dung chảy từ chặng này sang chặng kia) nhận ở mép trái, phát ở mép phải, đầu nối tròn, dây nét liền: đồ thị đọc từ trái sang phải đúng thứ tự làm video.
+- **Cổng tài nguyên** (`EngineRef`, `LLMRef`, `TTSRef` — một thành phần cắm vào một chặng) nhận ở mép **trên**, phát ở mép **dưới**, đầu nối vuông nét đứt, dây mảnh nét đứt có gạch chạy. Hướng khác và nét khác, vì đây không phải một bước của luồng mà là thứ nhiều bước cùng dùng: một node Mô Hình Ngôn Ngữ nuôi cả Biên Kịch lẫn Đạo Diễn Mỹ Thuật.
+- Thẻ của **node tài nguyên** bỏ dải màu ở đầu thẻ và kẻ gạch chân nét đứt, cùng ngôn ngữ với dây của nó, để một hàng thẻ nằm ngang đọc ra là luồng còn những thẻ này đọc ra là bộ phận móc vào luồng. Bề rộng giữ nguyên: thu hẹp chỉ làm cụt tên node.
+- Mỗi cổng đều có nhãn chữ mờ cạnh bên chỉ dẫn loại dữ liệu tương ứng, dùng đúng nhãn hiển thị đã quy định trong bảng kiểu cổng: "Dữ liệu Nguồn", "Dữ kiện", "Phân cảnh", "Kế hoạch dựng", "Lời thoại", "Âm thanh & Thời lượng", "Phụ đề", "Bản đặc tả IR", "Động cơ", "Mô hình ngôn ngữ", "Giọng đọc".
 - Khi người dùng bắt đầu kéo một dây nối, toàn bộ cổng có kiểu tương thích trên canvas sáng lên, các cổng không tương thích mờ đi. Thả dây vào cổng không tương thích sẽ khiến dây bật ngược trở lại kèm chú giải ngắn nêu rõ kiểu đang kéo và kiểu mà cổng đó yêu cầu.
 
 ## 3. Các Luồng Trải Nghiệm Người Dùng Chi Tiết (User Interaction Flows)

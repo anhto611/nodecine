@@ -48,7 +48,7 @@ Có đúng ba việc trình duyệt không làm được, và đó là toàn b�
 | Trình phát trong Node Xuất Bản Video | Máy khách | Nhận IR từ trạng thái node đã mirror; không tiêu tốn tài nguyên kết xuất |
 | Trạng thái node, nhật ký, tiến độ | Máy chủ → máy khách qua SSE `/api/jobs/events` | Trình duyệt chỉ mirror; đóng tab không dừng việc |
 
-Bộ máy thực thi nằm ở máy chủ, theo mô hình hàng đợi `/prompt` của ComfyUI. Phiên bản đầu đặt nó ở trình duyệt để khỏi cần kênh đồng bộ ngược; cái giá là mỗi node cần mạng hay tiến trình con phải tách đôi (ruột thuần ở lõi, phần gọi ra ngoài ở `server/`), và đóng tab là mất việc. Với executor ở máy chủ: `POST /api/jobs` nộp việc (`run`, `node`, `probe`) kèm đồ thị và khóa của tab; đồ thị không chạy được bị từ chối ngay với danh sách lỗi; một executor cho mỗi khóa giữ kết quả và bộ đệm chữ ký nên lần chạy sau vẫn dùng lại được; `GET /api/jobs/events?key=` là luồng SSE phát trạng thái node, bước chạy, nhật ký và trạng thái việc; `GET/POST /api/executors/<khóa>` đọc lại trạng thái kèm lịch sử chạy (tải lại trang là thấy kết quả cũ) và đưa các sửa đổi cần tới executor ngay (đồ thị, vô hiệu, bỏ qua, hủy). Việc và lịch sử chạy là tệp trên đĩa (`.nodecine/jobs/`, ghi tạm rồi đổi tên như `job.json` của cutdown), đọc lại khi máy chủ khởi động, nên lịch sử sống lâu hơn tiến trình. Trình duyệt giữ một `RemoteExecutor` (`lib/remote-executor.ts`) mirror đúng bề mặt executor cũ cho store và các thân node, nên giao diện không đổi. `server/services.server.ts` là NodeServices duy nhất; các route `/api/director`, `/api/tts`, `/api/render`, `/api/ops`, `/api/providers/probe` không còn.
+Bộ máy thực thi nằm ở máy chủ, theo mô hình hàng đợi `/prompt` của ComfyUI, nên đóng tab không mất việc. Mỗi node cần mạng hay tiến trình con vẫn tách đôi: ruột thuần ở lõi để test được, phần gọi ra ngoài ở `server/`. `POST /api/jobs` nộp việc (`run`, `node`, `probe`) kèm đồ thị và khóa của tab; đồ thị không chạy được bị từ chối ngay với danh sách lỗi; một executor cho mỗi khóa giữ kết quả và bộ đệm chữ ký nên lần chạy sau vẫn dùng lại được; `GET /api/jobs/events?key=` là luồng SSE phát trạng thái node, bước chạy, nhật ký và trạng thái việc; `GET/POST /api/executors/<khóa>` đọc lại trạng thái kèm lịch sử chạy (tải lại trang là thấy kết quả cũ) và đưa các sửa đổi cần tới executor ngay (đồ thị, vô hiệu, bỏ qua, hủy). Việc và lịch sử chạy là tệp trên đĩa (`.nodecine/jobs/`, ghi tạm rồi đổi tên như `job.json` của cutdown), đọc lại khi máy chủ khởi động, nên lịch sử sống lâu hơn tiến trình. Trình duyệt giữ một `RemoteExecutor` (`lib/remote-executor.ts`) mang đúng bề mặt executor cho store và các thân node, nên giao diện không phải biết việc chạy ở đâu. `server/services.server.ts` là NodeServices duy nhất: không có route riêng cho từng dịch vụ.
 
 ---
 
@@ -72,7 +72,7 @@ nodecine/
 │  ├─ nodes/definition.ts         Hợp đồng node (NodeDefinition, PortDef, RunContext) và registry node rỗng; các node ở nodes/
 │  ├─ engine/                     Bộ máy thực thi đồ thị, chữ ký node, bộ nhớ đệm
 │  ├─ look/                       Bảng props của block → lược đồ Zod; registry renderer theo định dạng code
-│  │  ├─ editor/                 Modal của Stage/Block: tab Thành phần (danh mục vai trò, kéo thả, thuộc tính), tab Code (CodeMirror), sửa bằng lời, xem trước; edit.server.ts là phần máy chủ
+│  │  ├─ editor/                 Modal sửa stage và block: tab Thành phần (danh mục vai trò, kéo thả, thuộc tính), tab Code (CodeMirror), sửa bằng lời, xem trước; edit.server.ts là phần máy chủ
 │  ├─ templates/registry.ts       Registry bản mẫu: kiểm định JSON, trả bản sao đồ thị; rỗng ở lõi
 │  ├─ text/                       Nhận diện ngôn ngữ theo hệ chữ; chính sách ngôn ngữ đầu ra
 │  ├─ adapters/                   CHỈ giao diện Adapter và registry rỗng; không có lớp cài đặt nào ở đây
@@ -108,7 +108,7 @@ nodecine/
 ├─ templates/                     Bản mẫu = đồ thị JSON, cùng hình dạng tệp dự án; index.ts đăng ký cả ba
 ├─ nodes/                         Mọi node của app, một họ một thư mục: định nghĩa, ruột, thân node, test ở cạnh nhau (như comfy_extras/nodes_*.py)
 │  ├─ index.ts                    Danh sách mọi node, đẳng hình; registerNodes() — nơi duy nhất nêu tên một họ
-│  ├─ index.client.ts             Thân node và icon/nhóm Thư viện của từng loại node (React)
+│  ├─ index.client.ts             Thân node và icon/nhóm Thư viện của từng loại node (React); nhóm là trục phân loại duy nhất
 │  ├─ kit.tsx                     BodyProps và useParams dùng chung cho thân node
 │  ├─ form.ts                     Đọc paramsSchema (Zod) thành danh sách trường: enum, chuỗi, số có biên, boolean; thuần, có test
 │  ├─ form-body.tsx               FormBody: form tham số sinh từ schema (nhãn `node.<tên trường>`, nhãn giá trị `node.<trường>.<giá trị>` nếu có); body chỉ viết tay phần đặc thù

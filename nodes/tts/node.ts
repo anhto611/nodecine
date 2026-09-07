@@ -36,7 +36,6 @@ export const SCENE_GAP_SECONDS = 0.35;
 export const ttsEngine: NodeDefinition<typeof Params> = {
   type: 'core/tts-engine',
   version: 1,
-  namespace: 'core',
   kind: 'process',
   inputs: [
     { name: 'script', type: 'AudioScript' },

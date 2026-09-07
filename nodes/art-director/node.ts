@@ -104,7 +104,6 @@ export type ArtDirectorParams = z.infer<typeof ArtDirectorParamsSchema>;
 export const artDirector: NodeDefinition<typeof ArtDirectorParamsSchema> = {
   type: ART_DIRECTOR,
   version: 5,
-  namespace: 'core',
   kind: 'process',
   inputs: [
     { name: 'scenes', type: 'SceneScript' },
