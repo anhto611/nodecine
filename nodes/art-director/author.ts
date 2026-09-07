@@ -20,7 +20,7 @@ const AuthoredSchema = z
     props: z.record(
       z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/),
       z.object({
-        type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image']),
+        type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image', 'video']),
         content: z.enum(CONTENT_KEYS),
         required: z.boolean().optional(),
         max: z.number().int().positive().optional(),

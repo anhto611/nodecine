@@ -192,7 +192,7 @@ export const TonesEditor: React.FC<{ tones: StageDef['tones']; palette: Record<s
 
 /* ---------- Block: props ---------- */
 
-const PROP_TYPES: BlockField['type'][] = ['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image'];
+const PROP_TYPES: BlockField['type'][] = ['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image', 'video'];
 
 export const PropsEditor: React.FC<{ props: BlockDef['props']; onChange: (p: BlockDef['props']) => void }> = ({ props, onChange }) => {
   const t = useT();

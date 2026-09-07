@@ -35,33 +35,45 @@ export function fileNameFromMediaUrl(url: string): string {
 }
 
 /**
- * Sound the user brings themselves: music beds under `.nodecine/music`, their own recordings under
- * `.nodecine/voice`. Neither is uploaded through the app — somebody's licensed track or their own
- * voice stays where they put it, and only the file name travels in a graph they may share.
+ * Big files the user brings themselves: music beds under `.nodecine/music`, their own recordings
+ * under `.nodecine/voice`, video clips under `.nodecine/clips`. None of them is uploaded through the
+ * app — somebody's licensed track, their own voice or a 200 MB clip stays where they put it, and
+ * only the file name travels in a graph they may share.
  */
-export const AUDIO_LIBRARIES = { music: 'NODECINE_MUSIC_DIR', voice: 'NODECINE_VOICE_DIR' } as const;
-export type AudioLibrary = keyof typeof AUDIO_LIBRARIES;
-export const isAudioLibrary = (v: string): v is AudioLibrary => v in AUDIO_LIBRARIES;
+export const LIBRARIES = {
+  music: { env: 'NODECINE_MUSIC_DIR', extensions: ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'] },
+  voice: { env: 'NODECINE_VOICE_DIR', extensions: ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'] },
+  clips: { env: 'NODECINE_CLIPS_DIR', extensions: ['mp4', 'webm', 'mov', 'm4v'] },
+} as const;
+export type Library = keyof typeof LIBRARIES;
+export const isLibrary = (v: string): v is Library => v in LIBRARIES;
 
-const AUDIO_NAME = /^[A-Za-z0-9][A-Za-z0-9 ._'()-]{0,80}\.(mp3|m4a|aac|wav|ogg|flac)$/i;
+/** Letters, digits and the punctuation a person actually types in a file name — nothing that could be a path. */
+const STEM = /^[A-Za-z0-9][A-Za-z0-9 ._'()-]{0,80}$/;
 
-export function audioDir(library: AudioLibrary): string {
-  return path.resolve(process.cwd(), process.env[AUDIO_LIBRARIES[library]] ?? `.nodecine/${library}`);
+export function libraryDir(library: Library): string {
+  return path.resolve(process.cwd(), process.env[LIBRARIES[library].env] ?? `.nodecine/${library}`);
 }
 
+const namedForLibrary = (library: Library, fileName: string): boolean => {
+  const dot = fileName.lastIndexOf('.');
+  if (dot <= 0) return false;
+  return STEM.test(fileName.slice(0, dot)) && (LIBRARIES[library].extensions as readonly string[]).includes(fileName.slice(dot + 1).toLowerCase());
+};
+
 /** Resolve a file name to a path inside one of those folders; anything that could leave it is refused. */
-export function audioPath(library: AudioLibrary, fileName: string): string {
-  if (!AUDIO_NAME.test(fileName)) throw new Error(`Invalid audio file name: ${fileName}`);
-  const dir = audioDir(library);
+export function libraryPath(library: Library, fileName: string): string {
+  if (!namedForLibrary(library, fileName)) throw new Error(`Invalid ${library} file name: ${fileName}`);
+  const dir = libraryDir(library);
   const p = path.join(dir, fileName);
   if (path.dirname(p) !== dir) throw new Error(`Path escapes the ${library} folder`);
   return p;
 }
 
 /** What that folder holds on this machine, by name, sorted; an absent folder simply has nothing. */
-export async function listAudio(library: AudioLibrary): Promise<string[]> {
-  return readdir(audioDir(library))
-    .then((names) => names.filter((n) => AUDIO_NAME.test(n)).sort((a, b) => a.localeCompare(b)))
+export async function listLibrary(library: Library): Promise<string[]> {
+  return readdir(libraryDir(library))
+    .then((names) => names.filter((n) => namedForLibrary(library, n)).sort((a, b) => a.localeCompare(b)))
     .catch(() => []);
 }
 
@@ -73,7 +85,7 @@ export function assetsDir(): string {
   return path.resolve(process.cwd(), process.env.NODECINE_ASSETS_DIR ?? '.nodecine/assets');
 }
 
-export const ASSET_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' };
+export const ASSET_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/x-m4v' };
 
 export async function ensureAssetsDir(): Promise<string> {
   const dir = assetsDir();

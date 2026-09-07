@@ -1,19 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { audioDir, audioPath } from '../paths';
+import { libraryDir, libraryPath } from '../paths';
 
-describe('audioPath', () => {
+describe('libraryPath', () => {
   it('resolves a plain file name inside the folder it belongs to', () => {
-    expect(audioPath('music', "Slow Piano (loop)_1.mp3")).toBe(`${audioDir('music')}/Slow Piano (loop)_1.mp3`);
-    expect(audioPath('voice', 'take 3.wav')).toBe(`${audioDir('voice')}/take 3.wav`);
+    expect(libraryPath('music', "Slow Piano (loop)_1.mp3")).toBe(`${libraryDir('music')}/Slow Piano (loop)_1.mp3`);
+    expect(libraryPath('voice', 'take 3.wav')).toBe(`${libraryDir('voice')}/take 3.wav`);
+    expect(libraryPath('clips', 'b-roll 01.mp4')).toBe(`${libraryDir('clips')}/b-roll 01.mp4`);
   });
 
-  it('keeps the two folders apart', () => {
-    expect(audioDir('music')).not.toBe(audioDir('voice'));
+  it('keeps the folders apart, and each to its own kinds of file', () => {
+    expect(libraryDir('music')).not.toBe(libraryDir('clips'));
+    expect(() => libraryPath('music', 'clip.mp4')).toThrow(/Invalid music/);
+    expect(() => libraryPath('clips', 'bed.mp3')).toThrow(/Invalid clips/);
   });
 
-  it('refuses anything that could leave the folder or is not audio', () => {
-    for (const bad of ['../secrets.mp3', 'sub/bed.mp3', '/etc/passwd', '.hidden.mp3', 'bed.mp3\n', 'bed.exe', 'bed.mp3.sh', '']) {
-      expect(() => audioPath('music', bad), bad).toThrow();
+  it('refuses anything that could leave the folder or is not that kind of file', () => {
+    for (const bad of ['../secrets.mp3', 'sub/bed.mp3', '/etc/passwd', '.hidden.mp3', 'bed.mp3\n', 'bed.exe', 'bed.mp3.sh', '', 'no-extension']) {
+      expect(() => libraryPath('music', bad), bad).toThrow();
     }
   });
 });

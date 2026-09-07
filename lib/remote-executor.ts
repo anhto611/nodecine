@@ -127,8 +127,9 @@ export class RemoteExecutor {
     void this.send({ action: 'cancel' }, false);
   }
 
-  async run(opts: { force?: boolean } = {}): Promise<{ ok: boolean }> {
-    const job = await this.submit('run', { force: opts.force });
+  /** `graph` queues that graph instead of the one held here: one run of a batch, without editing the canvas. */
+  async run(opts: { force?: boolean; graph?: Graph } = {}): Promise<{ ok: boolean }> {
+    const job = await this.submit('run', { force: opts.force }, opts.graph);
     return { ok: job.ok === true };
   }
 
@@ -148,9 +149,9 @@ export class RemoteExecutor {
 
   // ---------- wire ----------
 
-  private async submit(kind: 'run' | 'node' | 'probe', extra: { nodeId?: string; force?: boolean }): Promise<Job> {
+  private async submit(kind: 'run' | 'node' | 'probe', extra: { nodeId?: string; force?: boolean }, graph?: Graph): Promise<Job> {
     if (this.pushGraph) { clearTimeout(this.pushGraph); this.pushGraph = null; }
-    const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', { key: this.key, kind, graph: this.graph, name: this.name, ...extra }));
+    const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', { key: this.key, kind, graph: graph ?? this.graph, name: this.name, ...extra }));
     const early = this.finished.get(job.id);
     if (early) { this.finished.delete(job.id); return early; }
     if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return job;

@@ -1,6 +1,6 @@
 import type { VideoIR } from '@/core/types/ir';
 import type { BlockDef } from '@/core/types/payloads';
-import { BIND_SCRIPT, baseStyles, esc, fillNamedSlot, findSlot, sceneMarkup, scopedCss, splitCode, tokenVars } from '@/core/look/markup';
+import { BIND_SCRIPT, baseStyles, esc, fillNamedSlot, findSlot, sceneMarkup, scopedCss, splitCode, timeVideos, tokenVars } from '@/core/look/markup';
 import { CAPTION_STYLES, type CaptionStyle } from '@/core/types/payloads';
 import { REVEAL_HELPERS, revealMap } from '@/core/look/reveal';
 import { captionStyleOf, captionStyles } from '@/core/look/markup';
@@ -187,7 +187,8 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     // The words the voice says while this scene is up, on the scene's own clock, for the reveal times.
     const spokenWords = (ir.captions?.cues ?? []).flatMap((c) => c.words).filter((w) => w.startFrame >= sceneStart && w.startFrame < sceneEnd).map((w) => ({ text: w.text, start: (w.startFrame - sceneStart) / fps }));
     const cuesHtml = cues.map((cue) => `<div id="${cue.id}" class="nc-cap-line">${cue.words.map((w) => `<span id="${w.id}" class="nc-cap-w"${captionStyle === 'reveal' ? ' style="opacity:0"' : ''}>${esc(w.text)}</span>`).join(' ')}</div>`).join('');
-    const markup = fillNamedSlot(sceneMarkup(stageMarkup, bc.markup, s.blockId), 'captions', cuesHtml);
+    // A clip in this scene runs while this scene is on screen, not from the top of the film.
+    const markup = timeVideos(fillNamedSlot(sceneMarkup(stageMarkup, bc.markup, s.blockId), 'captions', cuesHtml), s.startFrame / fps, s.durationInFrames / fps);
     return {
       id: s.id,
       start: s.startFrame / fps,

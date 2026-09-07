@@ -4,7 +4,8 @@ import { CONTENT_KEYS, type ContentKey, type SceneContent } from '@/core/types/p
 import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useParams, type BodyProps } from '@/nodes/kit';
-import { uploadImage } from '@/nodes/art-director/editor/assets.client';
+import { uploadImage, useLibraryFile } from '@/nodes/art-director/editor/assets.client';
+import { LibraryPicker, useLibrary } from '@/nodes/library-picker';
 
 type SceneRow = { role: string; weight: number; narration: string; content: SceneContent };
 
@@ -57,6 +58,33 @@ const ImagePick: React.FC<{ url?: string; onPick: (url: string | undefined) => v
   );
 };
 
+/**
+ * The scene's clip: chosen by name from this machine's clips folder, then taken into the asset store
+ * so the scene carries a hash the server can validate — never a path from the user's disk.
+ */
+const ClipPick: React.FC<{ url?: string; onPick: (url: string | undefined) => void }> = ({ url, onPick }) => {
+  const t = useT();
+  const { files, folder, loading } = useLibrary('clips');
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const [name, setName] = React.useState('');
+  const take = async (file: string) => {
+    setName(file);
+    if (!file) { onPick(undefined); return; }
+    setBusy(true);
+    setErr(null);
+    try { onPick(await useLibraryFile('clips', file)); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  };
+  return (
+    <span style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
+      {url ? <video src={url} muted playsInline style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 3, border: '1px solid var(--line-2)', flex: 'none' }} /> : null}
+      <LibraryPicker files={files} value={name} empty={busy ? '…' : t('script.clipPick')} onChange={(f) => void take(f)} />
+      {!loading && !files.length && folder ? <span className="nc-hint one-line" title={folder}>{t('script.clipsEmpty')}</span> : null}
+      {err ? <span className="nc-hint" style={{ color: 'var(--err)' }} title={err}>!</span> : null}
+    </span>
+  );
+};
+
 /** One input per content key the scene uses, and a picker to add another; points are one per line. */
 const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneContent) => void }> = ({ content, onChange }) => {
   const t = useT();
@@ -75,6 +103,8 @@ const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneConten
           <span style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
             {k === 'image' ? (
               <ImagePick url={content.image} onPick={(url) => setKey('image', url)} />
+            ) : k === 'clip' ? (
+              <ClipPick url={content.clip} onPick={(url) => setKey('clip', url)} />
             ) : k === 'points' ? (
               <textarea className={`nc-textarea ${stopFlow}`} rows={3} placeholder={t('script.pointsHint')} value={(content.points ?? []).join('\n')} onChange={(e) => setKey('points', e.target.value.split('\n').map((x) => x.trimEnd()))} />
             ) : k === 'body' || k === 'quote' ? (
@@ -87,7 +117,7 @@ const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneConten
         } />
       ))}
       {unused.length > 0 && (
-        <select className={`nc-select ${stopFlow}`} value="" onChange={(e) => { const k = e.target.value as ContentKey; if (k) setKey(k, k === 'points' ? [] : k === 'image' ? undefined : ''); }}>
+        <select className={`nc-select ${stopFlow}`} value="" onChange={(e) => { const k = e.target.value as ContentKey; if (k) setKey(k, k === 'points' ? [] : k === 'image' || k === 'clip' ? undefined : ''); }}>
           <option value="">{t('script.addKey')}</option>
           {unused.map((k) => <option key={k} value={k}>{t(`content.${k}`)}</option>)}
         </select>

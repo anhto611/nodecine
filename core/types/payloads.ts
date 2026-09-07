@@ -55,17 +55,22 @@ export type FactSheet = z.infer<typeof FactSheetSchema>;
  */
 /** The keys a model writes. An image is not among them: a model cannot know an uploaded asset's name. */
 export const WRITTEN_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source'] as const;
-export const CONTENT_KEYS = [...WRITTEN_KEYS, 'image'] as const;
+/** The two a model can never fill: only a person or a fact points at a file this machine holds. */
+export const CONTENT_KEYS = [...WRITTEN_KEYS, 'image', 'clip'] as const;
 export type WrittenKey = (typeof WRITTEN_KEYS)[number];
 export type ContentKey = (typeof CONTENT_KEYS)[number];
 export const isContentKey = (k: string): k is ContentKey => (CONTENT_KEYS as readonly string[]).includes(k);
 
 /** One thing that goes into a block (CORE_CONTRACTS §2.7). The hint is shown in the Art Director node's props table. */
-/** An image a look carries: uploaded through `POST /api/assets`, addressed by its hash (ARCHITECTURE §6). */
-export const AssetUrlSchema = z.string().regex(/^\/api\/assets\/[a-f0-9]{16,64}\.[a-z0-9]+$/, 'an image must be an uploaded asset');
+/**
+ * A file a look carries: an image uploaded through `POST /api/assets`, or a clip taken in from the
+ * user's own folder through `POST /api/assets/from-library`. Either way it is addressed by its hash
+ * (ARCHITECTURE §6) — a scene may only show a file this machine is already holding.
+ */
+export const AssetUrlSchema = z.string().regex(/^\/api\/assets\/[a-f0-9]{16,64}\.[a-z0-9]+$/, 'must be an uploaded asset');
 
 export const BlockFieldSchema = z.object({
-  type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image']),
+  type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image', 'video']),
   /** Which scene content fills this prop; absent means the prop's own name, when that is a content key. */
   content: z.enum(CONTENT_KEYS).optional(),
   hint: z.string().max(200).optional(),
@@ -194,6 +199,7 @@ export const SceneContentSchema = z
     code: z.string().max(200),
     source: z.string().max(80),
     image: AssetUrlSchema,
+    clip: AssetUrlSchema,
   })
   .partial()
   .strip();

@@ -80,6 +80,28 @@ export function sceneMarkup(stageMarkup: string, blockMarkup: string, blockId: s
 }
 
 /**
+ * Give every `<video>` in a scene the scene's own place on the timeline (CORE_CONTRACTS §2.9).
+ *
+ * The producer reads `data-start` and `data-duration` straight off the video element to know which
+ * seconds of the clip to pull frames for; a video without them is taken to start at zero and run for
+ * its natural length, which would put a B-roll shot at the top of the film instead of in its scene.
+ * A block that stamps its own timing is left alone — an author who wrote it meant it.
+ *
+ * `muted` goes on as well: the film's sound is the voice-over, and a clip's own audio would talk over it.
+ */
+export function timeVideos(html: string, start: number, duration: number): string {
+  return html.replace(/<(video)\b([^>]*)>/gi, (_tag, name: string, attrs: string) => {
+    const add = [
+      /\bdata-start\s*=/i.test(attrs) ? '' : ` data-start="${start}"`,
+      /\bdata-duration\s*=|\bdata-end\s*=/i.test(attrs) ? '' : ` data-duration="${duration}"`,
+      /\bmuted\b/i.test(attrs) ? '' : ' muted',
+      /\bplaysinline\b/i.test(attrs) ? '' : ' playsinline',
+    ].join('');
+    return `<${name}${attrs}${add}>`;
+  });
+}
+
+/**
  * Binds props and fields into a scene root, in the page: `data-prop` takes the value (numbers in
  * en-US, arrays cloned from the first child), `data-if` removes the element when the prop is empty,
  * `data-field` takes a stage field and `data-var` a value of the whole video, or the element goes.
@@ -96,7 +118,7 @@ window.__nodecineBind = {
     root.querySelectorAll('[data-prop]').forEach(function (el) {
       var v = props[el.getAttribute('data-prop')];
       // An image element takes the value as its source; everything else takes it as text.
-      if (el.tagName === 'IMG') { if (v) el.setAttribute('src', String(v)); else el.removeAttribute('src'); return; }
+      if (el.tagName === 'IMG' || el.tagName === 'VIDEO') { if (v) el.setAttribute('src', String(v)); else el.removeAttribute('src'); return; }
       if (v === undefined || v === null) { el.textContent = ''; return; }
       if (Array.isArray(v)) {
         var template = el.firstElementChild;

@@ -6,3 +6,15 @@ export async function uploadImage(file: File): Promise<string> {
   if (!r.ok || !d.url) throw new Error(d.message ?? d.error ?? String(r.status));
   return d.url;
 }
+
+/**
+ * Takes a file the user dropped in one of their own folders into the asset store and returns its
+ * `/api/assets/<hash>.<ext>` URL. A clip is far too big to travel as a base64 data URL the way a
+ * logo does, so only its name crosses the wire and the server reads the file where it lies.
+ */
+export async function useLibraryFile(library: string, file: string): Promise<string> {
+  const r = await fetch('/api/assets/from-library', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ library, file }) });
+  const d = (await r.json()) as { url?: string; message?: string; error?: string };
+  if (!r.ok || !d.url) throw new Error(d.message ?? d.error ?? String(r.status));
+  return d.url;
+}

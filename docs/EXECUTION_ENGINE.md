@@ -181,3 +181,22 @@ Tài liệu này đặt ra ba nhóm kiểm thử bắt buộc của lõi; gói c
 1. Kiểm thử phân bổ khung hình và kiểm định IR. Với một tập thời lượng âm thanh trải từ dưới ngưỡng tối thiểu tới trên ngưỡng, và với các bộ trọng số khác nhau kể cả một cảnh duy nhất, khẳng định tổng các cảnh luôn bằng đúng tổng số khung hình, cảnh liền nhau không khe hở, không cảnh nào có thời lượng bằng 0, cùng đầu vào luôn cho cùng kết quả; và hàm kiểm định IR từ chối mọi bản đặc tả dựng tay vi phạm một trong năm bất biến.
 2. Kiểm thử chữ ký node. Khẳng định việc đổi tham số của một node chỉ làm thay đổi chữ ký của chính node đó và các node phía sau, không ảnh hưởng node phía trước; và node tài nguyên probe lại nhưng mã băm không đổi thì phía sau vẫn dùng lại.
 3. Kiểm thử đè dữ kiện. Với một `FactSheet` và một `ScenePlan` có `factBindings`, khẳng định giá trị trong IR luôn bằng giá trị trong `facts`, kể cả khi `props` gốc có cùng tên với giá trị khác; và không có `factBindings` thì `props` giữ nguyên.
+
+---
+
+## 10. Chạy Hàng Loạt (Batch)
+
+Một mẻ là **cùng một luồng được nộp vào hàng đợi nhiều lần, mỗi lần một giá trị khác**. Đây là mô hình của ComfyUI: ô *batch count* trong Extra options nộp prompt N lần khi bấm Queue một cái, và `control_after_generate` trên một widget đẩy giá trị đi giữa các lần. Nó hợp ở đây vì hàng đợi (`server/jobs.ts`) vốn đã chạy từng đồ thị một và giữ lịch sử từng lần chạy.
+
+**Mô hình của n8n không dùng được**, và vì một lý do cụ thể chứ không phải vì khó: ở n8n mọi gói là một danh sách và mọi node chạy một lần cho mỗi mục. NodeCine đã dùng danh sách theo nghĩa khác — `facts.items` nghĩa là **một mục một cảnh**, đó là bản mẫu Tin AI. Hai nghĩa của danh sách không sống chung trong một bộ máy.
+
+Cái đi qua từng lần chạy là node Nhập Liệu bật `perRun`: **mỗi dòng là một lần chạy**. `core/engine/batch.ts` là hàm thuần — `batchPlan` nói bấm Chạy sẽ nộp bao nhiêu lần (nút hiện luôn con số đó), `expandBatch` trả về đúng chừng ấy đồ thị, mỗi cái mang một dòng. Tham số `perRun` do **bộ chạy** đọc chứ không phải node, đúng chỗ ComfyUI đọc `control_after_generate`: một widget mà hàng đợi diễn giải, còn node vẫn phát đúng một giá trị.
+
+Luật:
+
+- Đồ thị trên canvas **không bị sửa**: mỗi lần chạy nộp một bản sao mang một dòng, và sau mẻ máy chủ được đưa lại đúng đồ thị người dùng đang nhìn.
+- **Tuần tự**, không song song. Kết xuất đã ăn hết máy rồi; tài liệu Remotion cũng khuyên không kết xuất nhiều video cùng lúc.
+- Một lần chạy hỏng **không bỏ dở mẻ** — ghi cảnh báo rồi chạy tiếp, như prompt lỗi không làm rỗng hàng đợi ComfyUI. Chỉ đồ thị không hợp lệ hay mất máy chủ mới dừng cả mẻ.
+- Bấm Dừng dừng cả mẻ, không chỉ lần chạy đang chạy.
+- Nhiều node cùng bật `perRun` thì số lần chạy bằng số dòng **nhiều nhất**; node ít dòng hơn giữ dòng cuối của nó cho các lần còn lại. `batchPlan` trả về `counts` để giao diện nói ra khi hai bên lệch nhau.
+- Một dòng (hay rỗng) thì đó là một lần chạy thường; phần còn lại của bộ máy không cần biết có khái niệm mẻ.

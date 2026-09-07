@@ -208,6 +208,8 @@ Lõi ship đúng những node cần để dựng được video từ một kịc
 
 Ô văn bản, phát `SourceRef`. Không diễn giải, không gọi mạng. Ô trống là lỗi kiểm tra liên tục `INPUT_EMPTY`.
 
+Tham số thứ hai, `perRun`, không phải của node mà của **hàng đợi**: bật lên thì mỗi dòng trong ô là một lần chạy cả luồng (Bộ Máy Thực Thi mục 10). Node vẫn phát đúng một giá trị mỗi lần chạy như thường; chỗ đọc `perRun` là bộ chạy, đúng chỗ ComfyUI đọc `control_after_generate` của một widget.
+
 ### 5.2. Kịch Bản Tĩnh (Static Script)
 
 Node phát `SceneScript` (2.11) và `AudioScript` từ nội dung gõ tay, dành cho việc dựng video không cần mô hình ngôn ngữ và để kiểm thử khung. Không cổng nhận: chặng kịch bản không cần biết giao diện, Đạo Diễn Mỹ Thuật đứng sau sẽ dàn cảnh. Tham số:
@@ -334,7 +336,7 @@ Mã lỗi: `PAGE_URL_INVALID`, `PAGE_NOT_FOUND`, `PAGE_NETWORK` (thử lại đ�
 
 Node lõi `core/audio-mix`: nhận `Voiceover`, phát `Voiceover` **dài đúng bằng bản gốc**, chỉ khác ở tệp âm thanh. Nhờ vậy `words` và `segments` đi qua nguyên vẹn và mọi mốc thời gian phía sau (cảnh dài bao nhiêu, phụ đề rơi vào đâu) không phải tính lại.
 
-Nhạc là tệp có bản quyền của người dùng nên **không đi qua đồ thị**: người dùng bỏ tệp vào `.nodecine/music` (`NODECINE_MUSIC_DIR` ghi đè), node chỉ giữ **tên tệp**. `GET /api/audio/music` liệt kê tên các bản nhạc trên máy này cho ô chọn trong thân node. Tên nhạc được kiểm theo mẫu chặt (chữ, số, khoảng trắng, `. _ ' ( ) -`, đuôi mp3/m4a/aac/wav/ogg/flac) rồi ghép vào thư mục nhạc; bất cứ tên nào có thể đi ra khỏi thư mục đều bị từ chối (mục 9.2). Đồ thị chia sẻ cho người khác mở trên máy trống thì tên nhạc vẫn còn trong ô chọn nhưng lần chạy báo lỗi rõ tên bản nhạc thiếu.
+Nhạc là tệp có bản quyền của người dùng nên **không đi qua đồ thị**: người dùng bỏ tệp vào `.nodecine/music` (`NODECINE_MUSIC_DIR` ghi đè), node chỉ giữ **tên tệp**. `GET /api/library/music` liệt kê tên các bản nhạc trên máy này cho ô chọn trong thân node. Tên nhạc được kiểm theo mẫu chặt (chữ, số, khoảng trắng, `. _ ' ( ) -`, đuôi mp3/m4a/aac/wav/ogg/flac) rồi ghép vào thư mục nhạc; bất cứ tên nào có thể đi ra khỏi thư mục đều bị từ chối (mục 9.2). Đồ thị chia sẻ cho người khác mở trên máy trống thì tên nhạc vẫn còn trong ô chọn nhưng lần chạy báo lỗi rõ tên bản nhạc thiếu.
 
 Không chọn bản nhạc nào **không phải lỗi**: giọng đọc đi qua nguyên vẹn, không gọi ffmpeg. Đó là trạng thái các bản mẫu xuất xưởng.
 
@@ -356,6 +358,18 @@ Hai định dạng là một ý tưởng viết hai lần: một cue là một k
 
 Tệp ghi qua `services.saveText`, đặt tên theo băm của chính nội dung nên xuất hai lần là một tệp, và tên tệp người dùng gõ chỉ đi trong thuộc tính `download` của thẻ neo. Vì vậy tên **giữ nguyên tiếng Việt**: `core/file-name.ts` chỉ bỏ những ký tự hệ tệp hay HTTP header thực sự từ chối (`< > : " / \ | ? *` và ký tự điều khiển), không ép về ASCII. Xuất MP4 dùng chung luật này.
 
+### 2.12. Clip Trong Cảnh (B-roll)
+
+Một cảnh chiếu được **video**, không chỉ ảnh tĩnh. `BlockField.type` có `video` và từ vựng nội dung có khóa `clip`; như `image`, đây là khóa **mô hình không bao giờ được hỏi** — chỉ người hoặc dữ kiện trỏ vào một tệp máy này đang giữ.
+
+Phần nặng nhất **thư viện lo sẵn**: `executeRenderJob` của `@hyperframes/producer` có hẳn một chặng "extract videos" và tự nối `createVideoFrameInjector` — nó trích khung của clip bằng ffmpeg rồi thay thẻ `<video>` bằng ảnh khung lúc chụp, vì Chrome không chụp được video đang phát một cách xác định. Việc của NodeCine chỉ là **đặt đúng thẻ `<video>` vào trang**.
+
+Đúng ở đây nghĩa là mang mốc thời gian của **chính cảnh đó**. Producer đọc `data-start` và `data-duration` ngay trên thẻ video; thiếu thì nó coi clip bắt đầu ở giây 0 và chạy hết độ dài tự nhiên, tức một cảnh b-roll ở phút thứ hai sẽ nhảy lên đầu phim. `timeVideos` (`core/look/markup.ts`, hàm thuần) đóng dấu mốc đó lên mọi `<video>` trong cảnh, bỏ qua thẻ nào tác giả block đã tự ghi mốc. Nó cũng thêm `muted`: tiếng của phim là giọng đọc, tiếng của clip sẽ nói đè lên.
+
+**Clip vào máy thế nào.** Một clip quá lớn để đi qua data URL base64 như một cái logo, nên nó theo lối của nhạc và giọng: người dùng bỏ tệp vào `.nodecine/clips`, ô chọn liệt kê theo tên, và `POST /api/assets/from-library` bảo máy chủ **đọc tệp ngay tại chỗ**, băm rồi chép vào kho tài nguyên. Chỉ cái tên đi qua dây. Cảnh giữ `/api/assets/<băm>.mp4` như mọi tài nguyên khác, nên bản kết xuất chép clip đi kèm y như chép ảnh.
+
+Chưa làm: clip **không hiện trong Ảnh Bìa** (mục 5.18). Phiên chụp một khung không chạy chặng trích khung của producer, nên chỗ clip sẽ là khung poster của thẻ video hoặc nền đen. Muốn ảnh bìa có b-roll thì phải nối injector vào đường chụp.
+
 ### 5.17. Nhập Âm Thanh (Audio Input)
 
 Node lõi `core/audio-input`: không có cổng vào, phát `Voiceover` từ **một bản thu người dùng đã có**. Đây là lối vào thứ hai của luồng: trước đó chỉ node Giọng Đọc tạo ra được `Voiceover`, nên ai đã thu sẵn giọng của chính mình thì không có đường nào vào cả.
@@ -364,7 +378,7 @@ Node lõi `core/audio-input`: không có cổng vào, phát `Voiceover` từ **m
 
 Tham số: `file` (tên tệp trong thư mục giọng) và `language` (mọi ngôn ngữ đầu ra trừ `auto` — không có gì ở đây nghe tệp để đoán).
 
-**Thư viện âm thanh của máy** dùng chung cho cả nhạc nền và bản thu: `.nodecine/music` và `.nodecine/voice` (`NODECINE_MUSIC_DIR`, `NODECINE_VOICE_DIR` ghi đè), `GET /api/audio/<music|voice>` liệt kê tên tệp và đường dẫn thư mục. Cùng một luật tên tệp và cùng một cách chặn đường dẫn thoát ra khỏi thư mục (mục 9.2). Lý do giống nhau: bản nhạc có bản quyền hay giọng của chính mình thì ở nguyên chỗ người ta để, chỉ **tên tệp** đi trong đồ thị mà họ có thể chia sẻ.
+**Thư viện âm thanh của máy** dùng chung cho cả nhạc nền và bản thu: `.nodecine/music` và `.nodecine/voice` (`NODECINE_MUSIC_DIR`, `NODECINE_VOICE_DIR` ghi đè), `GET /api/library/<music|voice|clips>` liệt kê tên tệp và đường dẫn thư mục; `clips` giữ video của người dùng (mục 2.12). Cùng một luật tên tệp và cùng một cách chặn đường dẫn thoát ra khỏi thư mục (mục 9.2). Lý do giống nhau: bản nhạc có bản quyền hay giọng của chính mình thì ở nguyên chỗ người ta để, chỉ **tên tệp** đi trong đồ thị mà họ có thể chia sẻ.
 
 Lúc chạy, tệp được ffmpeg chuyển sang MP3 vào thư mục media dưới tên **băm từ chính byte của tệp**, nên trình phát, bộ kết xuất và bộ căn đều gặp đúng một định dạng chúng chắc chắn đọc được, và nhập lại cùng một bản thu thì không tốn gì. Băm đọc theo luồng để một bản thu hai tiếng không phải nằm trọn trong bộ nhớ. Chuyển xong mới đổi tên vào chỗ, để lần chạy bị ngắt không bỏ lại một tệp dở mà cái tên nói là đã xong.
 

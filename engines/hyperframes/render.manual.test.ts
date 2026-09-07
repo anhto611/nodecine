@@ -62,6 +62,28 @@ function sampleIR(): VideoIR {
     return ir;
 }
 
+/** A block that plays a clip behind a headline, for the b-roll case below. */
+const BROLL_BLOCK: BlockDef = {
+  id: 'broll',
+  name: 'B-roll',
+  doc: { example: 'A wide shot of the workshop, with the line over it.', when: 'when the words are better felt than illustrated' },
+  props: { clip: { type: 'video', content: 'clip', required: true }, headline: { type: 'string', content: 'title', required: true } },
+  code: {
+    format: 'html-gsap',
+    source: [
+      '<div class="wrap">',
+      '  <video class="shot" data-prop="clip"></video>',
+      '  <h1 class="hl" data-prop="headline"></h1>',
+      '</div>',
+      '<style>',
+      '.wrap { position: absolute; inset: 0; }',
+      '.shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }',
+      '.hl { position: absolute; left: 6%; right: 6%; bottom: 14%; margin: 0; font: 700 84px var(--font-display); color: var(--fg); text-shadow: 0 2px 24px rgba(0,0,0,.8); }',
+      '</style>',
+    ].join('\n'),
+  },
+};
+
 describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
   it('renders a shipped look to an MP4', async () => {
     const ir = sampleIR();
@@ -71,6 +93,30 @@ describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
     expect(out.outputUrl).toMatch(/^\/api\/media\/[a-f0-9]+\.mp4$/);
     const s = await stat(`${process.env.NODECINE_TMP_DIR}/${out.outputUrl.split('/').pop()}`);
     expect(s.size).toBeGreaterThan(50_000);
+  }, 600_000);
+
+  /**
+   * B-roll: the producer's own video stage extracts the clip's frames and injects them at capture,
+   * so all this side has to do is put a `<video>` in the page with the scene's timing on it.
+   * Needs a clip asset in NODECINE_ASSETS_DIR named by NODECINE_MANUAL_CLIP (a `/api/assets/...` url).
+   */
+  it.skipIf(!process.env.NODECINE_MANUAL_CLIP)('plays a clip inside a scene', async () => {
+    const ir = sampleIR();
+    const fps = ir.meta.fps;
+    const out = await renderWithProducer(
+      {
+        ...ir,
+        blocks: [BROLL_BLOCK],
+        meta: { ...ir.meta, totalDurationInFrames: 2 * fps },
+        audioTrack: { ...ir.audioTrack, durationSeconds: 2 },
+        timeline: [{ id: 'scene-1-broll', blockId: 'broll', startFrame: 0, durationInFrames: 2 * fps, props: { clip: process.env.NODECINE_MANUAL_CLIP!, headline: 'B-roll behind the words' } }],
+      },
+      { codec: 'h264', quality: 'medium', fileName: 'broll.mp4' },
+      () => {},
+      new AbortController().signal,
+    );
+    console.log('rendered b-roll', out);
+    expect((await stat(`${process.env.NODECINE_TMP_DIR}/${out.outputUrl.split('/').pop()}`)).size).toBeGreaterThan(20_000);
   }, 600_000);
 
   it('takes one frame of the same composition as a PNG cover', async () => {

@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { RemoteExecutor } from '@/lib/remote-executor';
 import { validateGraph, type Graph, type GraphIssue, type NodeInstance, GraphInvalidError } from '@/core/engine/graph';
+import { expandBatch } from '@/core/engine/batch';
 import type { NodeRuntime } from '@/core/engine/state';
 import type { RunRecord } from '@/core/engine/history';
 import { UndoStack } from '@/lib/undo-stack';
@@ -45,6 +46,8 @@ export interface StudioState {
   runtimes: Record<string, NodeRuntime>;
   issues: GraphIssue[];
   running: boolean;
+  /** Which run of a batch is going, when the workflow is queued once per line (EXECUTION_ENGINE §9). */
+  batch: { index: number; total: number } | null;
   step: { nodeId: string; step: number; total: number } | null;
   history: RunRecord[];
   viewingRun: number | null;
@@ -151,6 +154,8 @@ export const useStudio = create<StudioState>((set, get) => {
   };
   // One undo history per open tab, in memory only: a reload starts with a clean slate, like ComfyUI.
   const undoStacks = new Map<string, UndoStack<Graph>>();
+  // Set by cancel: a batch must stop between runs, not only inside the one that is going.
+  let stopBatch = false;
   const stackFor = (key: string) => { let s = undoStacks.get(key); if (!s) { s = new UndoStack<Graph>(); undoStacks.set(key, s); } return s; };
   const syncUndoFlags = () => { const s = stackFor(get().activeTab); set({ canUndo: s.canUndo, canRedo: s.canRedo }); };
   /** Puts a graph on the active tab and the executor without touching the undo history. */
@@ -176,6 +181,7 @@ export const useStudio = create<StudioState>((set, get) => {
     runtimes: {},
     issues: [],
     running: false,
+    batch: null,
     step: null,
     history: [],
     viewingRun: null,
@@ -213,7 +219,7 @@ export const useStudio = create<StudioState>((set, get) => {
         onStateChange: (nodeId, runtime) => set((s) => ({ runtimes: { ...s.runtimes, [nodeId]: runtime } })),
         onRunStart: ({ stepTotal }) => set({ running: true, step: { nodeId: '', step: 0, total: stepTotal }, viewingRun: null }),
         onStep: ({ nodeId, step, stepTotal }) => set({ step: { nodeId, step, total: stepTotal } }),
-        onRunEnd: () => set({ running: false, step: null }),
+        onRunEnd: () => set((s) => (s.batch ? { step: null } : { running: false, step: null })),
         onHistory: (history) => set({ history }),
         onParamsPatch: (nodeId, patch) => get().applyParamsPatch(nodeId, patch),
       });
@@ -401,10 +407,30 @@ export const useStudio = create<StudioState>((set, get) => {
         return;
       }
       try {
-        set({ running: true });
-        await ex.run();
+        stopBatch = false;
+        set({ running: true, batch: null });
+        // A batch is the same workflow queued once per line, one after another (EXECUTION_ENGINE §9).
+        // Sequential on purpose: the render already takes the whole machine, so two at once only
+        // makes both slower — the same reason Remotion tells you to render one video at a time.
+        const graphs = expandBatch(get().graph);
+        if (graphs.length === 1) {
+          await ex.run();
+        } else {
+          for (const [i, g] of graphs.entries()) {
+            if (stopBatch) break;
+            set({ batch: { index: i + 1, total: graphs.length } });
+            ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'info', message: `batch ${i + 1}/${graphs.length}` });
+            // One bad line does not abandon the rest, the way a failed prompt does not empty
+            // ComfyUI's queue. Only an unusable graph or a lost server throws, and that ends it.
+            const { ok } = await ex.run({ graph: g });
+            if (!ok) ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'warn', message: `batch ${i + 1}/${graphs.length} did not finish; carrying on` });
+          }
+          // Leave the server holding the graph the canvas shows, not the last variant of the batch.
+          ex.setGraph(get().graph);
+          set({ running: false, batch: null, step: null });
+        }
       } catch (e) {
-        set({ running: false, step: null });
+        set({ running: false, batch: null, step: null });
         if (e instanceof GraphInvalidError) {
           set({ issues: e.issues });
           ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: e.issues[0]?.code, message: e.issues.map((i) => `${i.nodeId ?? 'graph'}: ${i.code} ${i.message}`).join('; ') });
@@ -416,6 +442,7 @@ export const useStudio = create<StudioState>((set, get) => {
     },
 
     cancel() {
+      stopBatch = true;
       get().executor?.cancel();
     },
 

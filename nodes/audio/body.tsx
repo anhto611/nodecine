@@ -4,15 +4,15 @@ import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
 import { useParams } from '@/nodes/kit';
 import type { BodyProps } from '@/nodes/kit';
-import { AudioPicker, useAudioLibrary } from './picker';
+import { LibraryPicker, useLibrary } from '@/nodes/library-picker';
 
 export const AudioMixBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const [p, set] = useParams<{ track: string }>(nodeId);
-  const { files, folder, loading } = useAudioLibrary('music');
+  const { files, folder, loading } = useLibrary('music');
   return (
     <>
-      <Kv k={t('node.track')} v={<AudioPicker files={files} value={p.track ?? ''} empty={t('node.noMusic')} onChange={(track) => set({ track })} />} />
+      <Kv k={t('node.track')} v={<LibraryPicker files={files} value={p.track ?? ''} empty={t('node.noMusic')} onChange={(track) => set({ track })} />} />
       {p.track ? (
         <FormBody
           nodeId={nodeId}

@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { convertToMp3, measureDurationSeconds } from '@/server/audio';
-import { audioPath, ensureTmpDir, mediaPath, mediaUrl } from '@/server/paths';
+import { libraryPath, ensureTmpDir, mediaPath, mediaUrl } from '@/server/paths';
 
 /**
  * Somebody's own recording, brought into a run (CORE_CONTRACTS §5.17).
@@ -13,7 +13,7 @@ import { audioPath, ensureTmpDir, mediaPath, mediaUrl } from '@/server/paths';
  * meet the one format they are known to read — and re-importing the same take costs nothing.
  */
 export async function importAudioOnServer(fileName: string, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number }> {
-  const source = audioPath('voice', fileName);
+  const source = libraryPath('voice', fileName);
   if (!(await stat(source).then((s) => s.isFile(), () => false))) {
     throw new Error(`no recording named "${fileName}" in the voice folder`);
   }

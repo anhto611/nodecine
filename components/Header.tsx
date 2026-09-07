@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
+import { batchPlan } from '@/core/engine/batch';
 import { Btn, useT } from './ui';
 import { Icon } from './icons';
 
@@ -11,6 +12,10 @@ export const Header: React.FC = () => {
   const allIssues = useStudio((s) => s.issues);
   const issues = React.useMemo(() => allIssues.filter((i) => i.severity === 'error'), [allIssues]);
   const run = useStudio((s) => s.run);
+  const graph = useStudio((s) => s.graph);
+  const batch = useStudio((s) => s.batch);
+  // How many runs the button will queue, so the count is on the button before it is pressed.
+  const plan = React.useMemo(() => batchPlan(graph), [graph]);
   const cancel = useStudio((s) => s.cancel);
   const projectName = useStudio((s) => s.projectName);
   const setProjectName = useStudio((s) => s.setProjectName);
@@ -32,10 +37,10 @@ export const Header: React.FC = () => {
       )}
       <div style={{ flex: 1 }} />
       {running ? (
-        <Btn danger onClick={cancel}><Icon.stop /> {t('header.stop')}</Btn>
+        <Btn danger onClick={cancel}><Icon.stop /> {t('header.stop')}{batch ? ` ${batch.index}/${batch.total}` : ''}</Btn>
       ) : (
-        <Btn primary disabled={disabled} onClick={() => void run()} title={disabled ? t('header.runDisabled', { n: issues.length }) : 'Ctrl+Enter'}>
-          <Icon.play /> {t('header.run')}
+        <Btn primary disabled={disabled} onClick={() => void run()} title={disabled ? t('header.runDisabled', { n: issues.length }) : plan.runs > 1 ? t('header.runBatch', { n: plan.runs }) : 'Ctrl+Enter'}>
+          <Icon.play /> {t('header.run')}{plan.runs > 1 ? ` · ${plan.runs}` : ''}
         </Btn>
       )}
     </header>

@@ -34,6 +34,7 @@ export function fieldSchema(f: BlockField): ZodTypeAny {
       s = z.string().regex(HEX, 'a colour is #rrggbb');
       break;
     case 'image':
+    case 'video':
       s = AssetUrlSchema;
       break;
     case 'string[]': {
@@ -74,6 +75,9 @@ export function describeBlockField(f: BlockField): string {
       break;
     case 'image':
       shape = 'an uploaded image';
+      break;
+    case 'video':
+      shape = 'a video clip this machine holds';
       break;
     case 'string[]':
       shape = `[${f.min !== undefined && f.min === f.max ? `exactly ${f.min}` : f.max !== undefined ? `up to ${f.max}` : 'any number of'} × text]`;
