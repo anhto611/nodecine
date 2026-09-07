@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildIR, applyFactBindings } from '../build-ir';
+import { videoVars } from '@/core/look/vars';
 import { validateIR, IRInvalidError } from '@/core/types/validate-ir';
 import type { ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
 import { HOOK, STAGE, TEXT_CARD } from '@/core/__tests__/look-fixtures';
@@ -114,5 +115,19 @@ describe('validateIR rejects hand-built IRs that break each invariant', () => {
     const ir = base();
     ir.timeline[1]!.id = ir.timeline[0]!.id;
     expect(validateIR(ir).ok).toBe(false);
+  });
+});
+
+describe('videoVars', () => {
+  const at = Date.UTC(2026, 7, 22, 6, 30);
+  it('gives the stage the day and time of the run, in the video\'s language', () => {
+    expect(videoVars({ ...STAGE, vars: {} }, 'vi', at)).toMatchObject({ date: expect.stringContaining('2026') });
+    expect(videoVars({ ...STAGE, vars: {} }, 'en-GB', at).date).toBe('22/08/2026');
+  });
+  it('lets the stage set its own, which then never change', () => {
+    const v = videoVars({ ...STAGE, vars: { date: 'SỐ 12', channel: 'AIDev' } }, 'vi', at);
+    expect(v.date).toBe('SỐ 12');
+    expect(v.channel).toBe('AIDev');
+    expect(v.time).toBeTruthy();
   });
 });

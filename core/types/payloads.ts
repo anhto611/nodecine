@@ -105,6 +105,12 @@ export const StageDefSchema = z.object({
   tones: z.record(z.record(z.string())).default({}),
   /** How one scene gives way to the next (CORE_CONTRACTS §2.6): one kind for the whole film, the film's own rhythm. */
   transition: z.object({ type: z.enum(['cut', 'fade', 'slide', 'zoom']), seconds: z.number().min(0.1).max(2) }).default({ type: 'fade', seconds: 0.4 }),
+  /**
+   * Values the stage draws once for the whole video (CORE_CONTRACTS §2.6): the date, the episode,
+   * the channel. Written by the person, never by the model, and the same in every scene — that is
+   * what makes them different from `sceneFields`. The stage draws one with `data-var="name"`.
+   */
+  vars: z.record(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), z.string().max(200)).default({}),
   /** Extra per-scene fields the stage draws itself; the rule teaches the model how to write each. */
   sceneFields: z.array(z.object({ name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), rule: z.string().max(300), options: z.array(z.string()).optional() })).default([]),
   code: SceneCodeSchema,

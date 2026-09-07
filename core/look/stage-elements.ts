@@ -94,7 +94,7 @@ export function setElementText(code: string, cls: string, text: string): string 
   return code.slice(0, openEnd) + esc(text) + code.slice(el.end - `</${el.tag}>`.length);
 }
 
-export type ElementKind = 'slot' | 'captions' | 'field' | 'image' | 'text' | 'shape' | 'other';
+export type ElementKind = 'slot' | 'captions' | 'field' | 'var' | 'image' | 'text' | 'shape' | 'other';
 
 /** What an element is, from its markup: slots and fields are the engine's, the rest is decoration. */
 export function elementKindOf(code: string, cls: string): ElementKind {
@@ -103,6 +103,7 @@ export function elementKindOf(code: string, cls: string): ElementKind {
   if (/data-slot=["']content["']/.test(el.open)) return 'slot';
   if (/data-slot=["']captions["']/.test(el.open)) return 'captions';
   if (/data-field=/.test(el.open)) return 'field';
+  if (/data-var=/.test(el.open)) return 'var';
   if (/^img$/i.test(el.tag)) return 'image';
   if (el.inner.trim() && !/<[a-zA-Z]/.test(el.inner)) return 'text';
   if (!el.inner.trim()) return 'shape';
@@ -155,6 +156,8 @@ export const STAGE_ROLES: StageRole[] = [
   { id: 'captions', kind: 'captions', markup: (a) => `<div ${a} data-slot="captions" data-caption-style="karaoke"></div>`, css: 'position: absolute; left: 72px; right: 168px; bottom: 720px; text-align: center; font: 700 44px/1.3 var(--font-body); color: color-mix(in srgb, var(--fg) 85%, transparent); text-shadow: 0 2px 10px color-mix(in srgb, var(--bg) 70%, transparent); --caption-on: var(--accent);' },
   { id: 'kicker', kind: 'field', fieldRule: 'two or three words naming what the scene is about, uppercase, shown small above the content', markup: (a) => `<div ${a} data-field="kicker"></div>`, css: 'position: absolute; left: 72px; top: 200px; font: 600 28px/1 var(--font-body); letter-spacing: .16em; text-transform: uppercase; color: var(--accent);' },
   { id: 'source', kind: 'field', fieldRule: 'where the fact or quote on screen comes from, short, or empty when there is none', markup: (a) => `<div ${a} data-field="source"></div>`, css: 'position: absolute; left: 72px; right: 168px; bottom: 700px; font: 400 24px/1.3 var(--font-body); color: var(--muted);' },
+  // Draws `date` on its own: the assembler fills it with the day of the run unless the stage sets its own.
+  { id: 'stamp', kind: 'var', markup: (a) => `<div ${a} data-var="date"></div>`, css: 'position: absolute; right: 168px; top: 200px; font: 400 24px/1 var(--font-body); letter-spacing: .08em; color: var(--muted2);' },
   { id: 'signature', kind: 'text', defaultText: '@yourchannel', markup: (a) => `<div ${a}></div>`, css: 'position: absolute; right: 168px; top: 200px; font: 600 26px/1 var(--font-body); letter-spacing: .06em; color: var(--muted);' },
   { id: 'logo', kind: 'image', markup: (a) => `<img ${a} alt="">`, css: 'position: absolute; left: 72px; top: 120px; width: 140px; height: auto; object-fit: contain;' },
   { id: 'rule', kind: 'shape', markup: (a) => `<div ${a}></div>`, css: 'position: absolute; left: 72px; right: 168px; bottom: 640px; height: 2px; background: var(--line);' },

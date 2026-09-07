@@ -111,6 +111,7 @@ Stage cũng là nơi quyết định **chỗ phụ đề**: một phần tử `d
 - `name`. Stage không có id: không gì tham chiếu tới nó (mỗi workflow một stage, plan và IR chép nguyên cả stage), nên một định danh chỉ là thứ để hỏi "nó để làm gì".
 - `tokens.palette`, `tokens.fonts`: bản đồ tên → giá trị. Renderer phơi ra thành biến CSS `--<tên>` cho code của stage và block dùng chung (`--bg`, `--fg`, `--accent`, `--font-display`, …).
 - `tones`: bản đồ tên tone → phần ghi đè bảng màu. Tên tone là giá trị mô hình được viết vào trường `tone` của cảnh.
+- `vars` (bản đồ tên → chữ, mặc định rỗng): **giá trị của cả video** — ngày, số tập, tên kênh. Stage vẽ bằng `data-var="tên"`, và mọi cảnh nhận cùng một giá trị; đó là chỗ khác `sceneFields` (mỗi cảnh một giá trị, do mô hình viết). Người dùng gõ, mô hình không bao giờ chạm tới. Đóng Gói Timeline thêm sẵn `date` và `time` theo đồng hồ lúc chạy nếu stage không tự đặt hai khóa đó, nên một bản tin hằng ngày không phải sửa ngày bằng tay; đặt `date` trong `vars` là đè lên. Bản đồ đã giải nằm trong IR ở `vars` (trường thêm, số hiệu IR không đổi), và khung xem trước dùng đúng hàm đó nên góc màn hình trong modal giống hệt bản kết xuất. Vai `stamp` trong danh mục vẽ sẵn một phần tử `data-var="date"`.
 - `sceneFields[]`: `{ name, rule, options? }` — trường theo cảnh mà stage tự vẽ (ví dụ `kicker`), kèm quy tắc dạy mô hình cách viết; `options` giới hạn giá trị.
 - `code`: xem 2.8.
 
@@ -328,6 +329,20 @@ An toàn (mục 9.2), vì đồ thị là tệp người ta chia sẻ còn lần
 - Đọc thẻ meta bằng biểu thức trên phần `<head>`, không dựng DOM, không chạy script của trang.
 
 Mã lỗi: `PAGE_URL_INVALID`, `PAGE_NOT_FOUND`, `PAGE_NETWORK` (thử lại được), `PAGE_TOO_BIG`, `SHOT_FAILED` (thử lại được). Ảnh trang lấy hụt không làm hỏng lần chạy, chỉ ghi cảnh báo.
+
+### 5.15. Nhạc Nền (Music Bed)
+
+Node lõi `core/audio-mix`: nhận `Voiceover`, phát `Voiceover` **dài đúng bằng bản gốc**, chỉ khác ở tệp âm thanh. Nhờ vậy `words` và `segments` đi qua nguyên vẹn và mọi mốc thời gian phía sau (cảnh dài bao nhiêu, phụ đề rơi vào đâu) không phải tính lại.
+
+Nhạc là tệp có bản quyền của người dùng nên **không đi qua đồ thị**: người dùng bỏ tệp vào `.nodecine/music` (`NODECINE_MUSIC_DIR` ghi đè), node chỉ giữ **tên tệp**. `GET /api/music` liệt kê tên các bản nhạc trên máy này cho ô chọn trong thân node. Tên nhạc được kiểm theo mẫu chặt (chữ, số, khoảng trắng, `. _ ' ( ) -`, đuôi mp3/m4a/aac/wav/ogg/flac) rồi ghép vào thư mục nhạc; bất cứ tên nào có thể đi ra khỏi thư mục đều bị từ chối (mục 9.2). Đồ thị chia sẻ cho người khác mở trên máy trống thì tên nhạc vẫn còn trong ô chọn nhưng lần chạy báo lỗi rõ tên bản nhạc thiếu.
+
+Không chọn bản nhạc nào **không phải lỗi**: giọng đọc đi qua nguyên vẹn, không gọi ffmpeg. Đó là trạng thái các bản mẫu xuất xưởng.
+
+Tham số: `track` (rỗng = không nhạc), `volume` (0..1, mặc định 0.16), `duck` (0..1, mặc định 0.7), `fadeInSeconds` (1), `fadeOutSeconds` (2).
+
+Trộn qua `services.mixAudio` → `nodes/audio/mix.server.ts`: bản nhạc được lặp (`aloop`) rồi cắt đúng độ dài giọng, hạ về `volume`, mờ vào và mờ ra; `sidechaincompress` lấy chính giọng làm tín hiệu điều khiển nên nhạc tự nhỏ lại mỗi khi có người nói và tự đầy lại ở khoảng lặng — đúng cách một bàn trộn phát thanh làm. `amix=duration=first:normalize=0` giữ mix kết thúc cùng giọng và không tự hạ đôi bên. `duck: 0` bỏ hẳn nhánh sidechain, nhạc chạy đều. Công thức nằm ở hàm thuần `mixFilter` để test đọc được mà không cần ffmpeg trên máy. Tệp ra đặt tên băm theo giọng và tham số nên đổi mức nhạc rồi đổi lại là dùng lại tệp cũ.
+
+Trong bản mẫu **Tin AI**, node nằm giữa Giọng Đọc và Đóng Gói Timeline, còn Căn Mốc Từ vẫn lấy giọng **sạch** thẳng từ Giọng Đọc: bộ căn nghe nhạc sẽ căn kém hơn.
 
 ## 6. Adapter và Node Động Cơ
 

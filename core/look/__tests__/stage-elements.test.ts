@@ -72,7 +72,11 @@ describe('stage elements', () => {
     const withSrc = addRoleToCode(withSig, 'source');
     expect(withSrc).toContain('<div class="source" data-field="source"></div>');
     expect(elementKindOf(withSrc, 'source')).toBe('field');
-    const withLogo = addRoleToCode(withSrc, 'logo', { src: '/api/assets/0123456789abcdef0123456789abcdef.png' });
+    const withStamp = addRoleToCode(withSrc, 'stamp');
+    // A stamp draws one of the video's own values; `date` is filled from the run unless the stage sets it.
+    expect(withStamp).toContain('<div class="stamp" data-var="date"></div>');
+    expect(elementKindOf(withStamp, 'stamp')).toBe('var');
+    const withLogo = addRoleToCode(withStamp, 'logo', { src: '/api/assets/0123456789abcdef0123456789abcdef.png' });
     expect(withLogo).toContain('<img class="logo" src="/api/assets/0123456789abcdef0123456789abcdef.png" alt="">');
     expect(() => addRoleToCode(src, 'logo')).toThrow();
     expect(() => addRoleToCode(src, 'banner')).toThrow();

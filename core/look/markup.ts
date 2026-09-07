@@ -1,5 +1,6 @@
 import { CAPTION_STYLES, type BlockDef, type CaptionStyle, type StageDef } from '../types/payloads';
 import { REVEAL_HELPERS, revealMap } from './reveal';
+import { videoVars } from './vars';
 
 /**
  * The markup side of the look (CORE_CONTRACTS §2.8), shared by every engine and by the Studio's
@@ -81,7 +82,8 @@ export function sceneMarkup(stageMarkup: string, blockMarkup: string, blockId: s
 /**
  * Binds props and fields into a scene root, in the page: `data-prop` takes the value (numbers in
  * en-US, arrays cloned from the first child), `data-if` removes the element when the prop is empty,
- * `data-field` takes a stage field or removes the element. Defined once as functions on `window.__nodecineBind`.
+ * `data-field` takes a stage field and `data-var` a value of the whole video, or the element goes.
+ * Defined once as functions on `window.__nodecineBind`.
  */
 export const BIND_SCRIPT = String.raw`
 window.__nodecineBind = {
@@ -123,6 +125,14 @@ window.__nodecineBind = {
   fields: function (root, fields) {
     root.querySelectorAll('[data-field]').forEach(function (el) {
       var v = fields[el.getAttribute('data-field')];
+      if (v === undefined || v === null || v === '') el.remove();
+      else el.textContent = String(v);
+    });
+  },
+  // The video's own values: the same text in every scene, so the same rule as a field.
+  vars: function (root, vars) {
+    root.querySelectorAll('[data-var]').forEach(function (el) {
+      var v = vars[el.getAttribute('data-var')];
       if (v === undefined || v === null || v === '') el.remove();
       else el.textContent = String(v);
     });
@@ -171,6 +181,8 @@ export interface PreviewOptions {
   measure?: boolean;
   /** Run the stage's and block's scripts on a looping timeline; needs gsap's source inlined. */
   animate?: { gsapSource: string; loopSeconds?: number };
+  /** The clock a preview reads for `date` and `time`; a test passes a fixed one. */
+  now?: number;
   /** A sample caption line, shown in the stage's caption slot and read word by word over the loop, so the slot's place and style can be judged. */
   captions?: string;
 }
@@ -306,7 +318,7 @@ export function buildLookPreview(o: PreviewOptions): string {
   ].filter(Boolean);
   const loop = o.animate?.loopSeconds ?? 4;
   // No voice in a preview: list items are spread over the loop, the way a render without word timings spreads them over the scene.
-  const data = JSON.stringify({ props, fields, scripts: o.animate ? [...stage.scripts, ...(block?.scripts ?? [])] : [], loop, reveal: revealMap(props, [], loop), ...(o.captions ? { captions: { style: captionStyle } } : {}) }).replace(/</g, '\\u003c');
+  const data = JSON.stringify({ props, fields, vars: videoVars(o.stage, 'en-GB', o.now ?? Date.now()), scripts: o.animate ? [...stage.scripts, ...(block?.scripts ?? [])] : [], loop, reveal: revealMap(props, [], loop), ...(o.captions ? { captions: { style: captionStyle } } : {}) }).replace(/</g, '\\u003c');
   return [
     `<!doctype html>`,
     `<html data-resolution="${height > width ? 'portrait' : 'landscape'}">`,
@@ -320,7 +332,7 @@ export function buildLookPreview(o: PreviewOptions): string {
     `</div>`,
     `<script type="application/json" id="nodecine-data">${data}</script>`,
     `<script>${BIND_SCRIPT}</script>`,
-    `<script>(function(){var d=JSON.parse(document.getElementById('nodecine-data').textContent);var root=document.querySelector('.nc-scene');window.__nodecineBind.fields(root,d.fields);var b=root.querySelector('[data-block]');if(b)window.__nodecineBind.props(b,d.props);})();</script>`,
+    `<script>(function(){var d=JSON.parse(document.getElementById('nodecine-data').textContent);var root=document.querySelector('.nc-scene');window.__nodecineBind.fields(root,d.fields);window.__nodecineBind.vars(root,d.vars||{});var b=root.querySelector('[data-block]');if(b)window.__nodecineBind.props(b,d.props);})();</script>`,
     ...(o.animate ? [`<script>${o.animate.gsapSource}</script>`, `<script>${ANIMATE_SCRIPT}</script>`] : []),
     ...(o.measure ? [`<script>${MEASURE_SCRIPT}</script>`] : []),
     `</body></html>`,

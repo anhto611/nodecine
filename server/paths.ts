@@ -35,6 +35,31 @@ export function fileNameFromMediaUrl(url: string): string {
 }
 
 /**
+ * Music the user drops in: `.nodecine/music`, listed by name and never uploaded through the app.
+ * A track is somebody's licensed file, so it stays where they put it and only its name travels.
+ */
+export function musicDir(): string {
+  return path.resolve(process.cwd(), process.env.NODECINE_MUSIC_DIR ?? '.nodecine/music');
+}
+
+const TRACK = /^[A-Za-z0-9][A-Za-z0-9 ._'()-]{0,80}\.(mp3|m4a|aac|wav|ogg|flac)$/i;
+
+/** Resolve a track name to a path inside the music folder; anything that could leave it is refused. */
+export function musicPath(fileName: string): string {
+  if (!TRACK.test(fileName)) throw new Error(`Invalid track name: ${fileName}`);
+  const p = path.join(musicDir(), fileName);
+  if (path.dirname(p) !== musicDir()) throw new Error('Path escapes the music folder');
+  return p;
+}
+
+/** The tracks on this machine, by name, sorted; an absent folder simply has none. */
+export async function listMusic(): Promise<string[]> {
+  return readdir(musicDir())
+    .then((names) => names.filter((n) => TRACK.test(n)).sort((a, b) => a.localeCompare(b)))
+    .catch(() => []);
+}
+
+/**
  * Assets a look refers to (logos, images): content-addressed files under `.nodecine/assets`, served
  * as `/api/assets/<hash>.<ext>`, never cleaned up (a workflow may point at them for years).
  */

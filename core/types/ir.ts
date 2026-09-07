@@ -44,6 +44,8 @@ export const VideoIRSchema = z.object({
     padTailFrames: z.number().int().nonnegative(),
   }),
   timeline: z.array(TimelineEntrySchema).min(1),
+  /** What the stage draws for the whole video (CORE_CONTRACTS §2.6): its own `vars`, plus `date` and `time` of the run unless it declares them. */
+  vars: z.record(z.string(), z.string()).optional(),
   captions: IRCaptionsSchema.optional(),
 });
 export type VideoIR = z.infer<typeof VideoIRSchema>;

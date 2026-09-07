@@ -84,6 +84,7 @@ export const BOOTSTRAP = String.raw`
     var root = document.getElementById(scene.id);
     if (!root) return;
     bindFields(root, scene.fields || {});
+    window.__nodecineBind.vars(root, data.vars || {});
     var block = root.querySelector('[data-block]');
     if (block) bindProps(block, scene.props || {});
     var g = scopedGsap(root);
@@ -208,7 +209,8 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     ...[...blockCode].map(([id, bc]) => scopedCss(`[data-block="${id}"]`, bc.styles.join('\n'))),
   ].filter(Boolean);
 
-  const data = { compositionId: COMPOSITION_ID, duration, transition, scenes: scenes.map((s) => s.data) };
+  // One map for the whole video, bound into every scene: the date and the like do not change per scene.
+  const data = { compositionId: COMPOSITION_ID, duration, transition, vars: ir.vars ?? {}, scenes: scenes.map((s) => s.data) };
 
   // The page may load media and fonts, run its own inline scripts, and nothing else: no fetch, no
   // external scripts, no images from the network. The runtime is inlined for the same reason.

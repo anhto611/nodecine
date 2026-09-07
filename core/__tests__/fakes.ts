@@ -83,6 +83,10 @@ export function makeFakeServices(overrides: Partial<{
       calls.push({ name: 'complete', args: [prompt] });
       return schema.parse(await o.complete(prompt));
     },
+    async mixAudio(voiceoverUrl, opts) {
+      calls.push({ name: 'mixAudio', args: [voiceoverUrl, opts] });
+      return { audioUrl: `/api/media/${contentHash({ voiceoverUrl, opts })}.mp3`, durationSeconds: 63.18 };
+    },
     async readPage(url, opts) {
       calls.push({ name: 'readPage', args: [url, opts] });
       const domain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]!;

@@ -1,5 +1,6 @@
 import type { CaptionTrack, ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
 import { readFactPath } from '@/core/types/payloads';
+import { videoVars } from '@/core/look/vars';
 import { IR_VERSION, type IRCaptions, type VideoIR, type TimelineEntry } from '@/core/types/ir';
 import { allocateFrames, computeTotalFrames, framesFromSegments } from './allocate';
 import { assertValidIR } from '@/core/types/validate-ir';
@@ -23,6 +24,8 @@ export interface BuildIRInput {
   facts?: FactSheet;
   captions?: CaptionTrack;
   params?: Partial<AssemblerParams>;
+  /** The clock this run reads for `date` and `time`; a test passes a fixed one. */
+  now?: number;
 }
 
 /** Overlay facts onto props via factBindings; facts always win; missing keys leave props untouched. */
@@ -95,6 +98,7 @@ export function buildIR(input: BuildIRInput): VideoIR {
     },
     stage: plan.stage,
     blocks: plan.blocks,
+    vars: videoVars(plan.stage, plan.language, input.now ?? Date.now()),
     audioTrack: {
       voiceoverUrl: voiceover.audioUrl,
       durationSeconds: voiceover.durationSeconds,

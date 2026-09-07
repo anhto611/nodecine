@@ -25,12 +25,12 @@ export const timelineAssembler: NodeDefinition<typeof Params> = {
   outputs: [{ name: 'ir', type: 'VideoIR' }],
   paramsSchema: Params,
   defaultParams: DEFAULT_ASSEMBLER_PARAMS,
-  run: async ({ params, inputs, log }) => {
+  run: async ({ params, inputs, services, log }) => {
     const plan = inputs.plan!.payload as ScenePlan;
     const voiceover = inputs.voiceover!.payload as Voiceover;
     const facts = inputs.facts?.payload as FactSheet | undefined;
     const captions = inputs.captions?.payload as CaptionTrack | undefined;
-    const ir = buildIR({ plan, voiceover, facts, captions, params });
+    const ir = buildIR({ plan, voiceover, facts, captions, params, now: services.now() });
     const bound = plan.scenes.reduce((n, s) => n + Object.keys(s.factBindings ?? {}).length, 0);
     // The facts port is optional because a hand-written plan needs no facts. But a plan that *does*
     // bind facts with nothing wired in renders a video quietly missing those values, so say it out loud.

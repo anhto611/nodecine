@@ -48,6 +48,7 @@ export const DEFAULT_STAGE: StageDef = {
     },
   },
   transition: { type: 'fade', seconds: 0.4 },
+  vars: {},
   tones: {
     cool: {
       accent: '#58a6ff',

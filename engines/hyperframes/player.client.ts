@@ -34,7 +34,28 @@ function vendorSources() {
 export const gsapSource = (): Promise<string> => vendorSources().then((v) => v.gsapSource);
 
 let elementDefined: Promise<void> | null = null;
-const defineElement = () => (elementDefined ??= import('@hyperframes/player').then(() => undefined));
+
+/**
+ * Define the player element, once per page.
+ *
+ * Two things bite here, both only in development. Next compiles a route's chunks the first time
+ * something asks for them, so the very first mount after a restart can ask for this one while it is
+ * still being written and get a 404; a moment later it is there. And a remembered promise that
+ * rejected is remembered *rejected*, so one unlucky mount used to poison every mount after it until
+ * the page was reloaded by hand. So: forget a failure, and give a chunk load one second chance.
+ */
+const defineElement = (): Promise<void> =>
+  (elementDefined ??= import('@hyperframes/player')
+    .catch(async (e: unknown) => {
+      if (!/Loading chunk|dynamically imported module|Failed to fetch/i.test(String(e))) throw e;
+      await new Promise((r) => setTimeout(r, 800));
+      return import('@hyperframes/player');
+    })
+    .then(() => undefined)
+    .catch((e: unknown) => {
+      elementDefined = null;
+      throw e;
+    }));
 
 export const mountHyperframesPlayer: MountPlayer = (element: HTMLElement, ir: VideoIR): PlayerHandle => {
   const { fps, totalDurationInFrames } = ir.meta;

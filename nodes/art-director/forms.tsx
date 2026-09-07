@@ -121,6 +121,29 @@ export const FontsEditor: React.FC<{ fonts: Record<string, string>; onChange: (f
   );
 };
 
+/* ---------- Stage: the video's own values ---------- */
+
+/**
+ * What the stage draws the same way in every scene: a date, an episode, a channel. `date` and
+ * `time` are filled from the run unless they are set here, so a daily bulletin needs no edit.
+ */
+export const VarsEditor: React.FC<{ vars: Record<string, string>; onChange: (v: Record<string, string>) => void }> = ({ vars, onChange }) => {
+  const t = useT();
+  const keys = Object.keys(vars);
+  return (
+    <>
+      {keys.map((k) => (
+        <div key={k} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <KeyInput value={k} taken={keys} style={{ width: 76, flex: 'none' }} onCommit={(next) => onChange(renameKey(vars, k, next))} />
+          <input className={`nc-input ${stopFlow}`} style={{ flex: 1, minWidth: 0 }} value={vars[k]} onChange={(e) => onChange({ ...vars, [k]: e.target.value })} />
+          <RemoveBtn title={t('look.remove')} onClick={() => onChange(without(vars, k))} />
+        </div>
+      ))}
+      <button className={`nc-chip ${stopFlow}`} style={{ alignSelf: 'flex-start' }} onClick={() => onChange({ ...vars, [freshKey('var', keys)]: '' })}>+ {t('look.addVar')}</button>
+    </>
+  );
+};
+
 /* ---------- Stage: tones ---------- */
 
 export const TonesEditor: React.FC<{ tones: StageDef['tones']; palette: Record<string, string>; onChange: (t: StageDef['tones']) => void }> = ({ tones, palette, onChange }) => {

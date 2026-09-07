@@ -19,6 +19,7 @@ describe('a fresh install', () => {
   it('offers these node types in the Library, and no fewer', () => {
     expect(listNodeTypes().map((d) => d.type).sort()).toEqual([
       'core/art-director',
+      'core/audio-mix',
       'core/captions',
       'core/github-fetcher',
       'core/hyperframes-engine',

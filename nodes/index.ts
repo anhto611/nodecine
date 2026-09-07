@@ -8,6 +8,7 @@ import { artDirector } from './art-director/node';
 import { hyperframesEngine, llmProvider, remotionEngine, ttsProvider } from './resources/node';
 import { ttsEngine } from './tts/node';
 import { transcribe } from './transcribe/node';
+import { audioMix } from './audio/node';
 import { captions } from './captions/node';
 import { timelineAssembler } from './assembler/node';
 import { mp4Export, videoOutput } from './output/node';
@@ -29,6 +30,7 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   ttsProvider,
   ttsEngine,
   transcribe,
+  audioMix,
   captions,
   timelineAssembler,
   remotionEngine,
@@ -41,6 +43,7 @@ export function registerNodes(): void {
   for (const def of ALL_NODES) registerNodeType(def);
 }
 
+export { audioMix, AUDIO_MIX } from './audio/node';
 export { inputTrigger, githubFetcher, webFetcher, staticScript, artDirector, screenwriter, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
 export { pickVoice } from './tts/node';
 export { DEFAULT_STATIC_SCRIPT } from './script/node';

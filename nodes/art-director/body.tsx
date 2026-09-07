@@ -10,7 +10,7 @@ import { DEFAULT_BLOCK as DEFAULT_TEXT_CARD } from '@/nodes/art-director/blocks'
 import { DEFAULT_STAGE } from '@/nodes/art-director/node';
 import { LookPreview } from '@/nodes/art-director/preview';
 import { FRAME_PRESETS, frameOf } from '@/core/look/frame';
-import { FontsEditor, PaletteEditor, PropsEditor, Section, TonesEditor } from '@/nodes/art-director/forms';
+import { FontsEditor, PaletteEditor, PropsEditor, Section, TonesEditor, VarsEditor } from '@/nodes/art-director/forms';
 
 /**
  * The roles the script upstream will send, read from that node's parameters (the screenwriter's beats or
@@ -78,7 +78,7 @@ export const ArtDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
   const roles = useUpstreamRoles(nodeId);
   const tokens = p.tokens ?? { palette: {}, fonts: {} };
   const frame = p.frame ?? { width: 1080, height: 1920 };
-  const [open, setOpen] = React.useState<'palette' | 'fonts' | 'tones' | 'blocks' | 'casting' | null>(null);
+  const [open, setOpen] = React.useState<'palette' | 'fonts' | 'tones' | 'vars' | 'blocks' | 'casting' | null>(null);
   const openCode = useStudio((s) => s.setCodeEditor);
   const valid = StageDefSchema.safeParse(p);
   return (
@@ -109,6 +109,10 @@ export const ArtDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
       <Section title={t('node.tones')} count={Object.keys(p.tones ?? {}).length} open={open === 'tones'} onToggle={() => setOpen(open === 'tones' ? null : 'tones')}>
         <div className="nc-hint">{t('look.tonesHint')}</div>
         <TonesEditor tones={p.tones ?? {}} palette={tokens.palette} onChange={(tones) => set({ tones })} />
+      </Section>
+      <Section title={t('look.vars')} count={Object.keys(p.vars ?? {}).length} open={open === 'vars'} onToggle={() => setOpen(open === 'vars' ? null : 'vars')}>
+        <div className="nc-hint">{t('look.varsHint')}</div>
+        <VarsEditor vars={p.vars ?? {}} onChange={(vars) => set({ vars })} />
       </Section>
       <Section title={t('node.blocksSection')} count={(p.blocks ?? []).length} open={open === 'blocks'} onToggle={() => setOpen(open === 'blocks' ? null : 'blocks')}>
         <div className="nc-hint">{t('look.blocksHint')}</div>

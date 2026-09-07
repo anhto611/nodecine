@@ -32,6 +32,22 @@ export interface PageRead {
   shotProblem?: string;
 }
 
+/** How a music bed sits under a voice (CORE_CONTRACTS §5.15). */
+export interface MixAudioOptions {
+  /** A file name in this machine's music folder. */
+  track: string;
+  /** The bed's level against the voice, 0 to 1. */
+  volume: number;
+  /** How far the voice pushes the bed down, 0 (not at all) to 1 (flat). */
+  duck: number;
+  fadeInSeconds: number;
+  fadeOutSeconds: number;
+}
+export interface MixResult {
+  audioUrl: string;
+  durationSeconds: number;
+}
+
 export interface NodeServices {
   probeLLM(providerId: string, settings: Record<string, unknown>): Promise<LLMRef>;
   probeTTS(providerId: string, settings: Record<string, unknown>): Promise<TTSRef>;
@@ -57,6 +73,8 @@ export interface NodeServices {
   alignWords(audioUrl: string, text: string, language: string, options: { model: string }, signal: AbortSignal): Promise<Word[]>;
   /** What the Web Fetcher asks for: the page, and optionally a photograph of it. */
   readPage(url: string, opts: ReadPageOptions, signal: AbortSignal): Promise<PageRead>;
+  /** A voice-over with music under it, the same length as the voice. */
+  mixAudio(voiceoverUrl: string, opts: MixAudioOptions, signal: AbortSignal): Promise<MixResult>;
   /**
    * One file from several, in order, with a pause after each part. Returns the file, its measured
    * length and where each part starts and how long it lasts, pause included (CORE_CONTRACTS §5.3).

@@ -122,6 +122,7 @@ nodecine/
 │  ├─ tts/                        Giọng Đọc
 │  ├─ transcribe/                 Căn Mốc Từ: node, align.server.ts + align/stable_ts_align.py (căn chỉnh cưỡng bức)
 │  ├─ captions/                   Phụ Đề: node, cues.ts (gom từ thành dòng)
+│  ├─ audio/                      Nhạc Nền: node, mix.server.ts (lặp nhạc, hạ nhạc khi có tiếng nói)
 │  ├─ assembler/                  Đóng Gói Timeline: phân bổ khung hình theo trọng số, đè dữ kiện, dựng IR (kiểm định IR ở core/types/validate-ir.ts)
 │  └─ output/                     Xuất Bản Video, Xuất MP4
 ├─ components/                    Thành phần giao diện Studio (canvas, dải, panel, thẻ node); thân node nằm ở nodes/
@@ -205,6 +206,10 @@ Tầng máy chủ nhận đường dẫn từ máy khách rồi đi gọi ra ngo
 ## 8. Ghi chú Cài đặt: Cạm bẫy Đã biết
 
 Những điểm dưới đây không đổi thiết kế nhưng sẽ chặn tiến độ nếu không dự trù.
+
+0. **Font trong khung xem trước.** Khung xem trước là iframe `sandbox="allow-scripts"`, tức origin rỗng, nên mọi tệp font nó nạp là request khác origin và trình duyệt chặn nếu không có `Access-Control-Allow-Origin`. Header đó khai trong `next.config.mjs` cho `/fonts/:file*`. Thiếu nó thì xem trước rơi về font hệ thống và không còn khớp bản kết xuất — nhìn ra như lỗi thiết kế chứ không ai đoán là chính sách.
+
+0b. **Chunk của trình phát ở chế độ dev.** Next dựng chunk theo yêu cầu, nên lần mount đầu tiên ngay sau khi khởi động lại máy chủ có thể xin chunk của `@hyperframes/player` khi nó chưa được ghi xong và nhận 404. Trước đây lời hứa `import()` được nhớ lại **ở trạng thái thất bại**, nên một lần lỡ làm hỏng mọi lần mount sau đó cho tới khi tải lại trang bằng tay. Nay lỗi tải chunk được thử lại một lần sau 0,8 giây và thất bại thì quên đi, không nhớ.
 
 1. **Trình phát Remotion bên trong node React Flow.** React Flow áp `transform: translate() scale()` lên toàn bộ viewport, nên mọi thao tác kéo trong thân node (thanh trượt, node phát) phải nằm trong phần tử mang các lớp `nodrag`, `nopan` và `nowheel` của React Flow; nếu không, kéo thanh trượt sẽ kéo cả canvas và cuộn để tua sẽ thu phóng. Khung phát giữ tỷ lệ 9:16 bằng CSS `aspect-ratio`, kích thước bố cục cố định, để trình phát tự co theo mức thu phóng của canvas mà không phải tính lại. Trình phát được mount vào một React root lồng riêng (adapter không phụ thuộc cây React của Studio); root lồng phải được gỡ **bất đồng bộ** (`setTimeout`) vì cleanup của effect chạy khi React đang render, và phần tử chứa phải đổi `key` theo IR để root mới không dùng chung phần tử với root cũ chưa kịp gỡ.
 2. **`@remotion/bundler` và `@remotion/renderer` trong route handler của Next.js.** Hai gói này mang webpack riêng và tệp nhị phân gốc; nếu để Next.js đóng gói chúng sẽ gặp lỗi không tìm thấy module hoặc xung đột nhị phân. Bắt buộc khai báo `serverExternalPackages: ['@remotion/bundler', '@remotion/renderer']` trong `next.config`. Turbopack ở chế độ dev có thể không tương thích; nếu gặp, chạy `next dev --webpack`. Kết quả đóng gói giữ trong bộ nhớ đệm theo mã băm mã nguồn như mục 7.

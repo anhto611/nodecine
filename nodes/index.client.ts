@@ -11,6 +11,7 @@ import { ScreenwriterBody } from './screenwriter/body';
 import { EngineBody, LlmProviderBody, TtsProviderBody } from './resources/body';
 import { TtsBody } from './tts/body';
 import { TranscribeBody } from './transcribe/body';
+import { AudioMixBody } from './audio/body';
 import { CaptionsBody } from './captions/body';
 import { AssemblerBody } from './assembler/body';
 import { ExportBody } from './output/export-body';
@@ -30,6 +31,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/hyperframes-engine': EngineBody,
   'core/tts-engine': TtsBody,
   'core/transcribe': TranscribeBody,
+  'core/audio-mix': AudioMixBody,
   'core/captions': CaptionsBody,
   'core/timeline-assembler': AssemblerBody,
   'core/video-output': VideoOutputBody,
@@ -47,6 +49,7 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/tts-provider': { icon: 'mic', group: 'provider' },
   'core/tts-engine': { icon: 'wave', group: 'process' },
   'core/transcribe': { icon: 'wave', group: 'process' },
+  'core/audio-mix': { icon: 'wave', group: 'process' },
   'core/captions': { icon: 'doc', group: 'process' },
   'core/timeline-assembler': { icon: 'layers', group: 'process' },
   'core/remotion-engine': { icon: 'chip', group: 'engine' },
