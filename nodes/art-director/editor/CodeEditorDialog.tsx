@@ -126,7 +126,7 @@ export const CodeEditorDialog: React.FC = () => {
                 const s = base ? draftStage(base, p) : null;
                 return {
                   source: sourceRef.current,
-                  stage: s ? { name: s.name, frame: s.frame, tokens: s.tokens, tones: s.tones, sceneFields: s.sceneFields } : undefined,
+                  stage: s ? { name: s.name, frame: s.frame, tokens: s.tokens, tones: s.tones, transition: s.transition, sceneFields: s.sceneFields } : undefined,
                   block: isBlock && block ? { id: block.id, name: block.name, doc: p.doc ?? block.doc, props: p.props ?? block.props } : undefined,
                   frame,
                 };

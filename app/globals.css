@@ -177,6 +177,9 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-hi { display: flex; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line); align-items: flex-start; cursor: pointer; }
 .nc-hi:hover { background: var(--bg-raise); }
 .nc-hi.on { background: var(--accent-sunk); box-shadow: inset 2px 0 0 var(--accent); }
+@keyframes nc-enter-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nc-enter-slide { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes nc-enter-zoom { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
 .nc-tools { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; z-index: 5; }
 .nc-tbar { display: flex; background: rgba(10,10,11,.86); border: 1px solid var(--line-2); border-radius: 4px; overflow: hidden; }
 .nc-tbtn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx-2); border: 0; border-right: 1px solid var(--line); background: none; cursor: pointer; }

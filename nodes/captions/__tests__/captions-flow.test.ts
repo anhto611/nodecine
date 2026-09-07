@@ -17,6 +17,7 @@ import type { Voiceover } from '@/core/types/payloads';
  */
 const graph = () => structuredClone(staticScript.graph) as Graph;
 const on = (g: Graph, ...ids: string[]) => { for (const n of g.nodes) if (ids.includes(n.id)) n.bypassed = false; return g; };
+const off = (g: Graph, ...ids: string[]) => { for (const n of g.nodes) if (ids.includes(n.id)) n.bypassed = true; return g; };
 
 beforeEach(() => {
   _resetNodeRegistry();
@@ -26,9 +27,10 @@ beforeEach(() => {
 });
 
 describe('captions on the Static Script template', () => {
-  it('ships bypassed: the Assembler renders without subtitles and nothing is blocked', async () => {
+  it('ships on, and switched off the Assembler still renders without subtitles and nothing is blocked', async () => {
+    expect(graph().nodes.filter((n) => n.id === 'transcribe' || n.id === 'captions').every((n) => !n.bypassed)).toBe(true);
     const services = makeFakeServices();
-    const ex = new Executor(graph(), services);
+    const ex = new Executor(off(graph(), 'transcribe', 'captions'), services);
     const { ok } = await ex.run();
     expect(ok).toBe(true);
     expect(ex.runtime('transcribe').state).toBe('bypassed');
@@ -60,7 +62,7 @@ describe('captions on the Static Script template', () => {
 
   it('Captions without word timings fails with a fix, and a provider that already timed the words skips alignment', async () => {
     const services = makeFakeServices();
-    const g = on(graph(), 'captions');
+    const g = off(on(graph(), 'captions'), 'transcribe');
     // Wire Captions straight to the TTS engine, skipping Transcribe.
     g.edges = g.edges.filter((e) => e.id !== 'c3');
     g.edges.push({ id: 'x', source: 'tts', sourcePort: 'voiceover', target: 'captions', targetPort: 'voiceover' });

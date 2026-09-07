@@ -30,7 +30,7 @@ export function factsForPrompt(sheet: FactSheet | undefined, exclude: Set<string
 /** The content vocabulary as the model sees it: one line per key, what it is and how long. */
 export const CONTENT_GUIDE: Record<ContentKey, string> = {
   kicker: 'one to three words above the content: a section name, a category',
-  title: 'the headline, at most 60 characters; every scene has one',
+  title: 'the headline, at most 60 characters; every scene has one; wrap the one phrase that matters most in *asterisks* (at most one per title, never the whole title)',
   body: 'one or two plain sentences, at most 200 characters',
   points: 'two to four short lines, as a JSON array of strings',
   number: 'one figure exactly as it should be shown ("4,321", "3×", "98%")',
@@ -90,7 +90,7 @@ export function buildScreenwriterPrompt(p: PromptInput): string {
     ...(n > 1 ? [`    … one object per scene, ${n} in total`] : []),
     `  ]`,
     `}`,
-    `Rules: exactly ${n} scenes in that order; the narrations read in sequence as one voice-over, so no greeting twice and no URLs; do not invent facts, numbers, names or links that are not in the brief or the facts` +
+    `Rules: exactly ${n} scenes in that order; the narrations read in sequence as one voice-over, so no greeting twice and no URLs; when a scene has points, its narration goes through them in the same order, naming each; do not invent facts, numbers, names or links that are not in the brief or the facts` +
       (boundKeys.length ? `; the keys ${boundKeys.map((f) => `"${f}"`).join(', ')} are filled in later from verified data, so do not write them` : '') +
       `.`,
   ].join('\n');

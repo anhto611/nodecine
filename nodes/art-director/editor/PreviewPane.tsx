@@ -89,7 +89,7 @@ export const PreviewPane: React.FC<{
         <LookPreview
           fit
           guides={guides}
-          options={{ stage, block, tone: tone || undefined, measure: layout, width: frame.width, height: frame.height, animate }}
+          options={{ stage, block, tone: tone || undefined, measure: layout, width: frame.width, height: frame.height, animate, ...(animate ? { captions: t('preview.captionSample') } : {}) }}
           delayMs={250}
           style={{ flex: 1 }}
           onRects={onRects}

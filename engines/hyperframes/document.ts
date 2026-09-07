@@ -2,6 +2,8 @@ import type { VideoIR } from '@/core/types/ir';
 import type { BlockDef } from '@/core/types/payloads';
 import { BIND_SCRIPT, baseStyles, esc, fillNamedSlot, findSlot, sceneMarkup, scopedCss, splitCode, tokenVars } from '@/core/look/markup';
 import { CAPTION_STYLES, type CaptionStyle } from '@/core/types/payloads';
+import { REVEAL_HELPERS, revealMap } from '@/core/look/reveal';
+import { captionStyleOf, captionStyles } from '@/core/look/markup';
 
 export { splitCode, fillSlot, tokenVars } from '@/core/look/markup';
 
@@ -86,7 +88,8 @@ export const BOOTSTRAP = String.raw`
     if (block) bindProps(block, scene.props || {});
     var g = scopedGsap(root);
     var collected = [];
-    var nodecine = { timeline: function (tl) { collected.push(unwrap.get(tl) || tl); }, props: scene.props || {}, fields: scene.fields || {}, root: root };
+    var nodecine = { timeline: function (tl) { collected.push(unwrap.get(tl) || tl); }, props: scene.props || {}, fields: scene.fields || {}, root: root, duration: scene.duration || 0, reveal: scene.reveal || {} };
+    __REVEAL_HELPERS__
     (scene.scripts || []).forEach(function (src) {
       try { new Function('gsap', 'nodecine', 'root', src)(g, nodecine, root); }
       catch (e) { console.error('[nodecine] scene ' + scene.id + ' script failed:', e); }
@@ -114,38 +117,35 @@ export const BOOTSTRAP = String.raw`
       });
     });
   });
+  // Transitions (CORE_CONTRACTS §2.6): the incoming scene starts at the cut and is drawn over the
+  // outgoing one, which the runtime keeps mounted for the length of the transition. Opacity and
+  // transform on the clip itself; the runtime only owns visibility.
+  var tr = data.transition || { type: 'cut', seconds: 0 };
+  if (tr.type !== 'cut' && tr.seconds > 0) {
+    data.scenes.forEach(function (scene, i) {
+      if (i === 0) return;
+      var el = document.getElementById(scene.id);
+      var prev = document.getElementById(data.scenes[i - 1].id);
+      if (!el) return;
+      var t = scene.start, d = tr.seconds;
+      if (tr.type === 'fade') {
+        master.fromTo(el, { opacity: 0 }, { opacity: 1, duration: d, ease: 'power1.inOut' }, t);
+      } else if (tr.type === 'slide') {
+        master.fromTo(el, { yPercent: 100 }, { yPercent: 0, duration: d, ease: 'power3.out' }, t);
+        if (prev) master.fromTo(prev, { yPercent: 0, opacity: 1 }, { yPercent: -18, opacity: 0.4, duration: d, ease: 'power3.out' }, t);
+      } else if (tr.type === 'zoom') {
+        master.fromTo(el, { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: d, ease: 'power2.out' }, t);
+        if (prev) master.fromTo(prev, { scale: 1 }, { scale: 0.96, duration: d, ease: 'power2.out' }, t);
+      }
+    });
+  }
   master.set({}, {}, data.duration);
   window.__timelines = window.__timelines || {};
   window.__timelines[data.compositionId] = master;
 })();
-`;
+`.replace('__REVEAL_HELPERS__', REVEAL_HELPERS);
 
-/** `data-caption-style` on the stage's caption slot; karaoke unless it says reveal. */
-export function captionStyleOf(slotTag: string): CaptionStyle {
-  const m = /\bdata-caption-style=["']([a-z]+)["']/.exec(slotTag);
-  const v = m?.[1] as CaptionStyle | undefined;
-  return v && CAPTION_STYLES.includes(v) ? v : 'karaoke';
-}
-
-/**
- * What every caption needs regardless of stage (a line starts hidden, words sit inline), plus the
- * default band for a stage that declares no slot: inside the portrait safe zone, in the stage's body
- * font and foreground, the spoken word in the accent colour. A stage that has its own slot styles
- * it in its own CSS and may set `--caption-on` for the highlight.
- */
-export function captionStyles(width: number, height: number, withDefaultSlot: boolean): string {
-  const portrait = height > width;
-  const size = Math.round((portrait ? width : height) * 0.042);
-  return [
-    // Hidden lines must not take up room: every line is anchored to the slot's bottom edge, so the
-    // one that is showing sits where the stage put the slot, whatever came before it.
-    `.nc-cap-line { position: absolute; left: 0; right: 0; bottom: 0; visibility: hidden; opacity: 0; text-wrap: balance; }`,
-    `.nc-cap-w { display: inline-block; }`,
-    ...(withDefaultSlot
-      ? [`.nc-captions-default { position: absolute; left: ${portrait ? 72 : 96}px; right: ${portrait ? 168 : 96}px; bottom: ${portrait ? 720 : 96}px; text-align: center; font: 700 ${size}px/1.3 var(--font-body, sans-serif); color: color-mix(in srgb, var(--fg, #fff) 82%, transparent); text-shadow: 0 2px 12px rgba(0,0,0,.55); pointer-events: none; }`]
-      : []),
-  ].join('\n');
-}
+export { captionStyleOf, captionStyles } from '@/core/look/markup';
 
 export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): string {
   const { width, height, fps, totalDurationInFrames } = ir.meta;
@@ -164,10 +164,14 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
   const captionSlot = findSlot(stageCode.markup, 'captions');
   const stageMarkup = ir.captions && !captionSlot ? `${stageCode.markup}<div class="nc-captions-default" data-slot="captions"></div>` : stageCode.markup;
   const captionStyle = captionStyleOf(captionSlot?.tag ?? '');
+  const transition = stage.transition ?? { type: 'cut' as const, seconds: 0 };
+  const overlap = transition.type === 'cut' ? 0 : transition.seconds;
   const scenes = ir.timeline.map((s, si) => {
     const bc = blockCode.get(s.blockId)!;
     const sceneStart = s.startFrame;
     const sceneEnd = s.startFrame + s.durationInFrames;
+    // Every scene but the last stays up through the next one's transition; the incoming scene is drawn on top.
+    const clipSeconds = si < ir.timeline.length - 1 ? Math.min(duration - sceneStart / fps, s.durationInFrames / fps + overlap) : s.durationInFrames / fps;
     // Every line spoken while this scene is on screen; a line across a cut is drawn in both scenes.
     const cues = (ir.captions?.cues ?? [])
       .map((c, ci) => ({ c, ci }))
@@ -179,14 +183,16 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
         style: captionStyle,
         words: c.words.map((w, wi) => ({ id: `nc-cap-${si}-${ci}-w${wi}`, text: w.text, at: w.startFrame / fps })),
       }));
+    // The words the voice says while this scene is up, on the scene's own clock, for the reveal times.
+    const spokenWords = (ir.captions?.cues ?? []).flatMap((c) => c.words).filter((w) => w.startFrame >= sceneStart && w.startFrame < sceneEnd).map((w) => ({ text: w.text, start: (w.startFrame - sceneStart) / fps }));
     const cuesHtml = cues.map((cue) => `<div id="${cue.id}" class="nc-cap-line">${cue.words.map((w) => `<span id="${w.id}" class="nc-cap-w"${captionStyle === 'reveal' ? ' style="opacity:0"' : ''}>${esc(w.text)}</span>`).join(' ')}</div>`).join('');
     const markup = fillNamedSlot(sceneMarkup(stageMarkup, bc.markup, s.blockId), 'captions', cuesHtml);
     return {
       id: s.id,
       start: s.startFrame / fps,
       duration: s.durationInFrames / fps,
-      html: `<div id="${esc(s.id)}" class="clip nc-scene" data-start="${s.startFrame / fps}" data-duration="${s.durationInFrames / fps}" data-track-index="0" data-stage${s.tone ? ` data-tone="${esc(s.tone)}"` : ''} style="${esc(tokenVars(stage, s.tone))}">${markup}</div>`,
-      data: { id: s.id, start: s.startFrame / fps, props: s.props, fields: s.fields ?? {}, scripts: [...stageCode.scripts, ...bc.scripts], captions: cues.map((cue) => ({ id: cue.id, show: cue.show, hide: cue.hide, style: cue.style, words: cue.words.map((w) => ({ id: w.id, at: w.at })) })) },
+      html: `<div id="${esc(s.id)}" class="clip nc-scene" data-start="${s.startFrame / fps}" data-duration="${clipSeconds}" data-track-index="0" data-stage${s.tone ? ` data-tone="${esc(s.tone)}"` : ''} style="${esc(tokenVars(stage, s.tone))}">${markup}</div>`,
+      data: { id: s.id, start: s.startFrame / fps, duration: s.durationInFrames / fps, reveal: revealMap(s.props, spokenWords, s.durationInFrames / fps), props: s.props, fields: s.fields ?? {}, scripts: [...stageCode.scripts, ...bc.scripts], captions: cues.map((cue) => ({ id: cue.id, show: cue.show, hide: cue.hide, style: cue.style, words: cue.words.map((w) => ({ id: w.id, at: w.at })) })) },
     };
   });
 
@@ -202,7 +208,7 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     ...[...blockCode].map(([id, bc]) => scopedCss(`[data-block="${id}"]`, bc.styles.join('\n'))),
   ].filter(Boolean);
 
-  const data = { compositionId: COMPOSITION_ID, duration, scenes: scenes.map((s) => s.data) };
+  const data = { compositionId: COMPOSITION_ID, duration, transition, scenes: scenes.map((s) => s.data) };
 
   // The page may load media and fonts, run its own inline scripts, and nothing else: no fetch, no
   // external scripts, no images from the network. The runtime is inlined for the same reason.

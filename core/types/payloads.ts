@@ -67,6 +67,8 @@ export const StageDefSchema = z.object({
   tokens: z.object({ palette: z.record(z.string()), fonts: z.record(z.string()) }),
   /** Named palette overrides a scene may switch to; keys are what the model writes into `tone`. */
   tones: z.record(z.record(z.string())).default({}),
+  /** How one scene gives way to the next (CORE_CONTRACTS §2.6): one kind for the whole film, the film's own rhythm. */
+  transition: z.object({ type: z.enum(['cut', 'fade', 'slide', 'zoom']), seconds: z.number().min(0.1).max(2) }).default({ type: 'fade', seconds: 0.4 }),
   /** Extra per-scene fields the stage draws itself; the rule teaches the model how to write each. */
   sceneFields: z.array(z.object({ name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), rule: z.string().max(300), options: z.array(z.string()).optional() })).default([]),
   code: SceneCodeSchema,

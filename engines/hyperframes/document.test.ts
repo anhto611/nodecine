@@ -41,7 +41,8 @@ describe('buildHyperframesDocument', () => {
   it('is one self-contained composition with one timed clip per scene and the voice-over', () => {
     expect(html).toContain(`data-composition-id="${COMPOSITION_ID}" data-start="0" data-duration="10" data-width="1080" data-height="1920" data-fps="30"`);
     expect(html).toContain('<html lang="en" data-resolution="portrait">');
-    expect(html).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3" data-track-index="0" data-stage');
+    // The default stage fades scenes over 0.4 s: every scene but the last stays mounted that much longer, the next one is drawn on top at the cut.
+    expect(html).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3.4" data-track-index="0" data-stage');
     expect(html).toContain('<div id="scene-2-text-card" class="clip nc-scene" data-start="3" data-duration="7" data-track-index="0" data-stage data-tone="warm"');
     expect(html).toContain('<audio id="voiceover" data-start="0" data-duration="9.5" data-track-index="1" src="/api/media/0123456789abcdef.mp3">');
     expect(count(markup, 'data-slot="content"')).toBe(2);
@@ -62,6 +63,17 @@ describe('buildHyperframesDocument', () => {
     expect(html).toContain('@scope ([data-block="text-card"])');
     expect(html).toContain('[data-composition-id] { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--bg, #000); --bg: #0b0c10');
     expect(html).toMatch(/id="scene-2-text-card"[^>]*style="[^"]*--accent: #e3b341/);
+  });
+
+  it('cuts clean when the stage says cut, and carries the transition and the reveal helpers for the others', () => {
+    const cut = buildHyperframesDocument({ ...ir, stage: { ...ir.stage, transition: { type: 'cut', seconds: 0.4 } } }, opts);
+    expect(cut).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3" data-track-index="0"');
+    const data = JSON.parse(/<script type="application\/json" id="nodecine-data">([\s\S]*?)<\/script>/.exec(html)![1]!);
+    expect(data.transition).toEqual({ type: 'fade', seconds: 0.4 });
+    expect(data.scenes[0].duration).toBe(3);
+    expect(html).toContain('nodecine.stagger = function');
+    expect(html).toContain('nodecine.count = function');
+    expect(html).toContain("tr.type === 'fade'");
   });
 
   it('carries props, fields and the scene scripts as data, with no script from the block left in the markup', () => {

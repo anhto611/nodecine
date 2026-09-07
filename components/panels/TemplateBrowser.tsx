@@ -4,14 +4,16 @@ import { listTemplates, localized } from '@/core/templates/registry';
 import { useStudio, type TemplateId } from '@/store/useStudio';
 import { Icon } from '../icons';
 import { Btn, useT } from '../ui';
+import { TemplatePlayer, lookOfTemplate } from './TemplatePlayer';
+import type { LookDef } from '@/core/types/payloads';
 
-type Card = { id: string; name: string; description: string; nodes: number; category: string };
+type Card = { id: string; name: string; description: string; nodes: number; category: string; look: LookDef | null };
 
 /**
  * Cards share the row and always use all of it: a readable floor, then they grow to fill. Capping
  * their width instead would leave whatever the cap refused as dead space on the right.
  */
-const CARD = { flex: '1 1 240px' } as const;
+const CARD = { flex: '1 1 240px', display: 'flex', flexDirection: 'column' } as const;
 
 /**
  * The height budget belongs to the picture, not the card. A square picture is as tall as the card
@@ -40,12 +42,15 @@ export const TemplateBrowser: React.FC = () => {
   const [sideOpen, setSideOpen] = React.useState(false);
   const pick = (id: string) => { setCat(id); setSideOpen(false); };
   const [sel, setSel] = React.useState<string>('static-script');
+  // One card plays at a time: the one selected, or the one under the pointer. Three full-frame documents animating at once was the lag.
+  const [hover, setHover] = React.useState<string | null>(null);
   const all = React.useMemo<Card[]>(() => listTemplates().map((tpl) => ({
     id: tpl.id,
     name: localized(tpl.name, locale, tpl.id),
     description: localized(tpl.description, locale),
     nodes: tpl.graph.nodes.length,
     category: tpl.category,
+    look: lookOfTemplate(tpl.graph),
   })), [locale]);
   // A category nobody has a template for would open onto an empty grid, so it is not offered.
   const cats = React.useMemo(() => CATS.filter(([id]) => all.some((c) => c.category === id)), [all]);
@@ -77,26 +82,33 @@ export const TemplateBrowser: React.FC = () => {
               from its items' content and does not count a height that `aspect-ratio` derived — a
               square picture ended up taller than its row and the card, stretched to that row,
               clipped it. A flex line has no such height to agree on. */}
-          <div style={{ flex: 1, padding: 12, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', gap: 14 }} onClick={() => sideOpen && setSideOpen(false)}>
+          {/* Cards in one row share its height: the square stays square, the text box below takes the
+              difference, and the node-count line sits on the same baseline across the row. */}
+          <div style={{ flex: 1, padding: 12, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', alignContent: 'flex-start', gap: 14 }} onClick={() => sideOpen && setSideOpen(false)}>
             {CARDS.map((c) => {
               const name = c.name;
               return (
-                <div key={c.id} className={`nc-card ${sel === c.id ? 'on' : ''}`} style={CARD} onClick={() => setSel(c.id)} onDoubleClick={() => load(c.id as TemplateId)}>
+                <div key={c.id} className={`nc-card ${sel === c.id ? 'on' : ''}`} style={CARD} onClick={() => setSel(c.id)} onDoubleClick={() => load(c.id as TemplateId)} onMouseEnter={() => setHover(c.id)} onMouseLeave={() => setHover((h) => (h === c.id ? null : h))}>
                   {/* `overflow: hidden` keeps this square: without it a long template name wraps to
                       an extra line and pushes the box past the height aspect-ratio gave it. */}
                   <div style={{ aspectRatio: '1 / 1', width: '100%', maxHeight: PICTURE_MAX_HEIGHT, alignSelf: 'center', flexShrink: 0, overflow: 'hidden', background: '#08090c', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* The 9:16 frame the template renders, edge to edge in the square. Sized
                         relative to it rather than in pixels, so it keeps filling it whatever the
                         column width becomes. */}
-                    <div style={{ height: '100%', aspectRatio: '9 / 16', overflow: 'hidden', background: '#0b0c10', borderLeft: '1px solid #23262c', borderRight: '1px solid #23262c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 8px' }}>
-                      <div style={{ width: 24, height: 2, background: '#a78bfa' }} />
-                      <div style={{ fontSize: 'var(--fs-body)', color: '#fff', fontWeight: 700, textAlign: 'center', lineHeight: 1.35 }}>{name.split(' ').slice(0, 3).join('\n')}</div>
-                    </div>
+                    {c.look ? (
+                      <TemplatePlayer look={c.look} playing={(hover ?? sel) === c.id} />
+                    ) : (
+                      <div style={{ height: '100%', aspectRatio: '9 / 16', overflow: 'hidden', background: '#0b0c10', borderLeft: '1px solid #23262c', borderRight: '1px solid #23262c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 8px' }}>
+                        <div style={{ width: 24, height: 2, background: '#a78bfa' }} />
+                        <div style={{ fontSize: 'var(--fs-body)', color: '#fff', fontWeight: 700, textAlign: 'center', lineHeight: 1.35 }}>{name.split(' ').slice(0, 3).join('\n')}</div>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 'var(--fs-label)' }}>{name}</div>
-                    {c.description && <div style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)', lineHeight: 1.5 }}>{c.description}</div>}
-                    {c.nodes > 0 && <div style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('templates.meta', { n: c.nodes })}</div>}
+                  <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                    <div title={name} style={{ fontSize: 'var(--fs-label)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+                    {/* Two lines at most; the rest is in the tooltip, so every card's text box is the same height. */}
+                    {c.description && <div title={c.description} style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.description}</div>}
+                    {c.nodes > 0 && <div style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)', marginTop: 'auto', paddingTop: 4 }}>{t('templates.meta', { n: c.nodes })}</div>}
                   </div>
                 </div>
               );

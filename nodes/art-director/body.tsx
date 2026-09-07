@@ -92,6 +92,14 @@ export const ArtDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
           {!FRAME_PRESETS.some((f) => f.width === frame.width && f.height === frame.height) && <option value="custom" disabled>{frame.width}×{frame.height}</option>}
         </select>
       } />
+      <Kv k={t('node.transition')} v={
+        <span style={{ display: 'flex', gap: 4 }}>
+          <select className={`nc-select ${stopFlow}`} value={p.transition?.type ?? 'fade'} onChange={(e) => set({ transition: { type: e.target.value as 'cut' | 'fade' | 'slide' | 'zoom', seconds: p.transition?.seconds ?? 0.4 } })}>
+            {(['cut', 'fade', 'slide', 'zoom'] as const).map((k) => <option key={k} value={k}>{t(`node.transition.${k}`)}</option>)}
+          </select>
+          {(p.transition?.type ?? 'fade') !== 'cut' && <input className={`nc-input ${stopFlow}`} style={{ width: 52 }} type="number" min={0.1} max={2} step={0.1} value={p.transition?.seconds ?? 0.4} title="s" onChange={(e) => set({ transition: { type: p.transition?.type ?? 'fade', seconds: Math.min(2, Math.max(0.1, Number(e.target.value) || 0.4)) } })} />}
+        </span>
+      } />
       <Section title={t('look.palette')} count={Object.keys(tokens.palette).length} open={open === 'palette'} onToggle={() => setOpen(open === 'palette' ? null : 'palette')}>
         <PaletteEditor palette={tokens.palette} code={p.code?.source ?? ''} onChange={(palette) => set({ tokens: { ...tokens, palette } })} />
       </Section>

@@ -47,6 +47,7 @@ export const DEFAULT_STAGE: StageDef = {
       body: "'JetBrains Mono', ui-monospace, Menlo, monospace",
     },
   },
+  transition: { type: 'fade', seconds: 0.4 },
   tones: {
     cool: {
       accent: '#58a6ff',
@@ -71,7 +72,9 @@ export const DEFAULT_STAGE: StageDef = {
     format: 'html-gsap',
     source: [
       '<style>',
-      '  .stage { position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 65%); color: var(--fg); font-family: var(--font-body); }',
+      '  .stage { position: absolute; inset: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); }',
+      '  /* The glow is its own layer, moved by transform (a compositor job, no repaint): the stage script drives --drift from 1 to 1.18 over the scene. */',
+      "  .stage::before { content: ''; position: absolute; inset: -12%; background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 65%); transform: scale(var(--drift, 1)); transform-origin: 50% 0%; will-change: transform; pointer-events: none; }",
       '  .stage .kicker { position: absolute; left: 72px; top: 200px; font: 600 28px/1 var(--font-body); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }',
       '  .stage .content { position: absolute; left: 72px; right: 168px; top: 260px; bottom: 680px; display: flex; flex-direction: column; justify-content: center; }',
       '  .stage .rule { position: absolute; left: 72px; right: 168px; bottom: 640px; height: 2px; background: var(--line); }',
@@ -86,7 +89,8 @@ export const DEFAULT_STAGE: StageDef = {
       '<script>',
       '  nodecine.timeline(gsap.timeline()',
       '    .fromTo(".kicker", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }, 0)',
-      '    .fromTo(".rule", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.6, ease: "power2.out" }, 0.1));',
+      '    .fromTo(".rule", { scaleX: 0, transformOrigin: "left center" }, { scaleX: 1, duration: 0.6, ease: "power2.out" }, 0.1)',
+      '    .fromTo(".stage", { "--drift": 1 }, { "--drift": 1.18, duration: Math.max(4, nodecine.duration || 6), ease: "none" }, 0));',
       '</script>'
     ].join('\n'),
   },

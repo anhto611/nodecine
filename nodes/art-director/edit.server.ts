@@ -52,11 +52,15 @@ export const codeRules = (frame: { width: number; height: number }) => [
   'Colours and fonts come from CSS variables the stage tokens provide: var(--bg), var(--fg), var(--accent), var(--line), var(--muted), var(--font-display), var(--font-body) and any other palette key listed below. Prefer them over literal colours so tones keep working.',
   `The frame is ${describeFrame(frame)}. Safe zones: keep content inside ${describeSafeZones(safeZonesFor(frame.width, frame.height))} (the platform UI covers the rest).`,
   'Animation uses the gsap that the script receives, scoped to this scene: register with nodecine.timeline(gsap.timeline().fromTo(...)). Use fromTo only, never from (from desyncs on seek).',
+  'A scene lasts as long as its narration (nodecine.duration seconds), often five to ten seconds: keep something moving for the whole length — a slow drift or zoom of a background glow — so no frame is dead; move it with transform or a CSS variable read by a transform (as the stage does with --drift), never by animating background-size or filters, which repaint every frame. Never a loop that jumps.',
+  'A number that should count up: tl.add(nodecine.count("<selector of the number element>", { duration: 1.2 }), <time>) counts it from zero to the value shown, keeping its grouping.',
+  'A *phrase in asterisks* inside a text prop is the emphasised phrase: the engine wraps it in <em class="nc-emph"> in the accent colour; style .nc-emph in the block if the default is not right.',
 ];
 
 export const BLOCK_RULES = [
   'A block is one scene archetype. Every prop listed below is filled by the engine into an element with data-prop="<name>" (text content; string[] props render one child per item into the first child element as a template). Use data-if="<name>" on an element that should disappear when the prop is empty.',
   'The block markup is dropped into the stage\'s content slot, so it should not paint its own full-frame background.',
+  'Items of a string[] prop appear when the voice reaches them: animate them with a tween positioned at 0 whose stagger is nodecine.stagger("<prop>") (a function of the item index), never a fixed stagger. nodecine.at(i, "<prop>") is the i-th item\'s time in seconds and nodecine.duration the scene length, for anything else that should follow the voice.',
 ];
 
 const RULES_COMMON = (frame: { width: number; height: number }) => [
