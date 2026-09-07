@@ -76,6 +76,18 @@ describe('buildHyperframesDocument', () => {
     expect(html).toContain("tr.type === 'fade'");
   });
 
+  it('sends the pictures a scene names to the project, not only the ones in the code', () => {
+    const shot = '/api/assets/0123456789abcdef0123456789abcdef01234567.png';
+    const withShot = buildHyperframesDocument(
+      { ...ir, blocks: [{ ...DEFAULT_BLOCK, props: { ...DEFAULT_BLOCK.props, shot: { type: 'image', content: 'image', required: false } } }],
+        timeline: [{ ...ir.timeline[0]!, props: { headline: 'One', shot } }, ir.timeline[1]!] },
+      { ...opts, assetBase: 'assets' },
+    );
+    // Rewritten to the copy the producer puts beside the page; the app path would not resolve there.
+    expect(withShot).toContain('assets/0123456789abcdef0123456789abcdef01234567.png');
+    expect(withShot).not.toContain('/api/assets/');
+  });
+
   it('carries props, fields and the scene scripts as data, with no script from the block left in the markup', () => {
     const data = JSON.parse(/<script type="application\/json" id="nodecine-data">([\s\S]*?)<\/script>/.exec(html)![1]!);
     expect(data.compositionId).toBe(COMPOSITION_ID);

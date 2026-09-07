@@ -28,8 +28,8 @@ function lookAfter(t: ReturnType<typeof listTemplates>[number], nodeId: string) 
 }
 
 describe('shipped templates', () => {
-  it('there are three, and they register from JSON', () => {
-    expect(listTemplates().map((t) => t.id).sort()).toEqual(['github-showcase', 'quote-cards', 'static-script']);
+  it('there are four, and they register from JSON', () => {
+    expect(listTemplates().map((t) => t.id).sort()).toEqual(['ai-news', 'github-showcase', 'quote-cards', 'static-script']);
   });
 
   it('use only node types the Library offers', () => {

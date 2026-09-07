@@ -10,6 +10,7 @@ import { ensureServerRegistrations } from '@/server/register';
 import { embedWorkflow } from '@/server/video-meta';
 import { fileNameFromMediaUrl, mediaPath } from '@/server/paths';
 import { alignWordsOnServer } from '@/nodes/transcribe/align.server';
+import { readPageOnServer } from '@/nodes/web/page.server';
 import { concatMp3, measureDurationSeconds } from '@/server/audio';
 import { contentHash } from '@/core/hash';
 import fs from 'node:fs/promises';
@@ -69,6 +70,7 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       return out;
     },
     alignWords: alignWordsOnServer,
+    readPage: readPageOnServer,
     async concatAudio(parts, gapSeconds, signal) {
       const files = parts.map((p) => mediaPath(fileNameFromMediaUrl(p.audioUrl)));
       // Named by what went in, so the same parts joined twice are one file.

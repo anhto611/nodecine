@@ -47,6 +47,11 @@ describe('buildAuthoringPrompt / rejectBlock', () => {
 });
 
 describe('authorBlock', () => {
+  it('may give the block a picture prop', () => {
+    const withImage = { ...goodBlock, props: { ...goodBlock.props, shot: { type: 'image', content: 'image', required: false } } };
+    expect(rejectBlock({ id: 'q', name: 'Q', doc: { when: 'w', example: '' }, props: withImage.props as never, code: { format: 'html-gsap', source: '<blockquote data-prop="quote"></blockquote><cite data-prop="attribution"></cite><img data-prop="shot">' } }, quoteScene)).toBeNull();
+  });
+
   it('accepts a good answer first time, and feeds the rejection back on a second try', async () => {
     const prompts: string[] = [];
     let n = 0;
@@ -56,6 +61,33 @@ describe('authorBlock', () => {
     expect(prompts[1]).toMatch(/Your previous attempt was rejected: prop "quote" has no data-prop element/);
     expect(block.id).toBe('quote-card');
     expect(block.props.attribution!.required).toBe(false);
+  });
+});
+
+describe('what the Art Director will not write a block for', () => {
+  beforeEach(() => { _resetNodeRegistry(); registerNodes(); });
+
+  it('leaves a role alone when the casting table already cast it, however much content the scene has spare', async () => {
+    const script: Graph['nodes'][number] = {
+      id: 'writer', type: 'core/static-script', bypassed: false, position: { x: 0, y: 0 },
+      // `quote` is content text-card has nowhere to put; without a pin this would be written for.
+      params: { scenes: [{ role: 'open', weight: 1, narration: 'Hello.', content: { title: 'Hello', quote: 'and a quote' } }] },
+    };
+    const g: Graph = {
+      nodes: [script, { id: 'llm', type: 'core/llm-provider', params: { providerId: 'claude-code', settings: {} }, bypassed: false, position: { x: 0, y: 0 } }, lookNode('art', [TEXT_CARD], [{ role: 'open', block: 'text-card' }])],
+      edges: [
+        { id: 'e1', source: 'writer', sourcePort: 'scenes', target: 'art', targetPort: 'scenes' },
+        { id: 'e2', source: 'llm', sourcePort: 'llm', target: 'art', targetPort: 'llm' },
+      ],
+    };
+    const services = makeFakeServices({ complete: async (prompt: string) => (prompt.includes('write a new block') ? goodBlock : { scenes: [{ block: 'text-card' }] }) });
+    const ex = new Executor(g, services);
+    const { ok } = await ex.run();
+    expect(ok).toBe(true);
+    expect(services.calls.filter((c) => c.name === 'complete').some((c) => String(c.args[0]).includes('write a new block'))).toBe(false);
+    const plan = ex.runtime('art').outputs.plan!.payload as ScenePlan;
+    expect(plan.blocks.map((b) => b.id)).toEqual(['text-card']);
+    expect(ex.logs.all().some((l) => l.message.includes('no place for quote'))).toBe(true);
   });
 });
 

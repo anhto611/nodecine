@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ErrorCode, NodeError } from '@/core/errors';
 import { runScreenwriter } from '@/nodes/screenwriter/loop';
 import { buildScreenwriterPrompt } from '@/nodes/screenwriter/prompt';
-import { BeatSchema, boundFactKeys, expandBeats, outputSchemaFor, toPackets } from '@/nodes/screenwriter/beats';
+import { BeatSchema, boundFactKeys, expandBeats, listBeats, outputSchemaFor, toPackets } from '@/nodes/screenwriter/beats';
 import { resolveOutputLanguage } from '@/core/text/languages';
 import type { FactSheet, LLMRef, SourceRef } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
@@ -61,7 +61,12 @@ export const screenwriter: NodeDefinition<typeof Params> = {
     const facts = inputs.facts?.payload as FactSheet | undefined;
     const subject = (inputs.source?.payload as SourceRef | undefined)?.value.trim() || undefined;
     const ref = inputs.llm!.payload as LLMRef;
-    const scenes = expandBeats(params.beats);
+    const scenes = expandBeats(params.beats, facts?.facts);
+    for (const l of listBeats(params.beats, facts?.facts)) {
+      if (l.found === null) log('warn', `beat "${l.role}" runs over "${l.key}", which the facts do not have as a list; it gets no scenes`, ErrorCode.NODE_PARAMS_INVALID);
+      else log('info', `beat "${l.role}" runs over ${l.found} item${l.found === 1 ? '' : 's'} of "${l.key}"`);
+    }
+    if (scenes.length === 0) throw new NodeError(ErrorCode.NODE_PARAMS_INVALID, 'no scenes: every beat runs over a list the facts do not have', false);
     const excludeFacts = boundFactKeys(params.beats);
 
     // The source for "auto" is whatever the model will read: the brief, and the facts it may see.

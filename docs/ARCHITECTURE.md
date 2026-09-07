@@ -113,6 +113,7 @@ nodecine/
 │  ├─ form.ts                     Đọc paramsSchema (Zod) thành danh sách trường: enum, chuỗi, số có biên, boolean; thuần, có test
 │  ├─ form-body.tsx               FormBody: form tham số sinh từ schema (nhãn `node.<tên trường>`, nhãn giá trị `node.<trường>.<giá trị>` nếu có); body chỉ viết tay phần đặc thù
 │  ├─ input/                      Nhập Liệu
+│  ├─ web/                        Truy Xuất Trang: dựng lại địa chỉ (parse-url), đọc thẻ meta (parse-meta), tải ảnh và chụp trang (page.server.ts)
 │  ├─ github/                     Truy Xuất Repo: node, đọc link, gọi GitHub API, dựng dữ kiện, mã lỗi, thân node, test
 │  ├─ script/                     Kịch Bản Tĩnh
 │  ├─ screenwriter/               Biên Kịch: node, beat → lược đồ đầu ra, prompt, vòng gọi mô hình, thân node, test

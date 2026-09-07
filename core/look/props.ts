@@ -1,5 +1,5 @@
 import { z, type ZodTypeAny } from 'zod';
-import type { BlockDef, BlockField, StageDef } from '../types/payloads';
+import { AssetUrlSchema, type BlockDef, type BlockField, type StageDef } from '../types/payloads';
 
 /**
  * A block's `props` table is the only description of what goes into it (CORE_CONTRACTS §2.7).
@@ -32,6 +32,9 @@ export function fieldSchema(f: BlockField): ZodTypeAny {
       break;
     case 'color':
       s = z.string().regex(HEX, 'a colour is #rrggbb');
+      break;
+    case 'image':
+      s = AssetUrlSchema;
       break;
     case 'string[]': {
       let a = z.array(z.string().min(1));
@@ -68,6 +71,9 @@ export function describeBlockField(f: BlockField): string {
       break;
     case 'color':
       shape = '#rrggbb';
+      break;
+    case 'image':
+      shape = 'an uploaded image';
       break;
     case 'string[]':
       shape = `[${f.min !== undefined && f.min === f.max ? `exactly ${f.min}` : f.max !== undefined ? `up to ${f.max}` : 'any number of'} × text]`;

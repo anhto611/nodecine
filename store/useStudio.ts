@@ -82,6 +82,8 @@ export interface StudioState {
   removeNodes(ids: string[]): void;
   removeEdges(ids: string[]): void;
   connect(edge: { source: string; sourcePort: string; target: string; targetPort: string }): boolean;
+  /** Move the end of an existing wire: one graph change, so one undo step. */
+  reconnect(edgeId: string, edge: { source: string; sourcePort: string; target: string; targetPort: string }): boolean;
   toggleBypass(nodeId: string): void;
   run(): Promise<void>;
   cancel(): void;
@@ -357,6 +359,17 @@ export const useStudio = create<StudioState>((set, get) => {
       const targets = g.edges.filter((e) => drop.has(e.id)).map((e) => e.target);
       refresh({ ...g, edges: g.edges.filter((e) => !drop.has(e.id)) });
       for (const t of targets) get().executor?.invalidate(t);
+    },
+
+    reconnect(edgeId, edge) {
+      const g = get().graph;
+      const old = g.edges.find((e) => e.id === edgeId);
+      if (!old) return false;
+      // The wire comes off first so the check below sees the port it is leaving as free.
+      set({ graph: { ...g, edges: g.edges.filter((e) => e.id !== edgeId) } });
+      if (get().connect(edge)) { get().executor?.invalidate(old.target); return true; }
+      set({ graph: g });
+      return false;
     },
 
     connect({ source, sourcePort, target, targetPort }) {

@@ -4,6 +4,7 @@ import { CONTENT_KEYS, type ContentKey, type SceneContent } from '@/core/types/p
 import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useParams, type BodyProps } from '@/nodes/kit';
+import { uploadImage } from '@/nodes/art-director/editor/assets.client';
 
 type SceneRow = { role: string; weight: number; narration: string; content: SceneContent };
 
@@ -35,6 +36,27 @@ export const StaticScriptBody: React.FC<BodyProps> = ({ nodeId }) => {
   );
 };
 
+/** The scene's picture: upload one and the scene carries the asset it becomes. */
+const ImagePick: React.FC<{ url?: string; onPick: (url: string | undefined) => void }> = ({ url, onPick }) => {
+  const t = useT();
+  const ref = React.useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const pick = async (f: File) => {
+    setBusy(true);
+    setErr(null);
+    try { onPick(await uploadImage(f)); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  };
+  return (
+    <span style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
+      <input ref={ref} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pick(f); }} />
+      {url ? <img src={url} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 3, border: '1px solid var(--line-2)', flex: 'none' }} /> : null}
+      <button className={`nc-chip ${stopFlow}`} onClick={() => ref.current?.click()} disabled={busy}>{busy ? '…' : t(url ? 'script.imageSwap' : 'script.imagePick')}</button>
+      {err ? <span className="nc-hint" style={{ color: 'var(--err)' }} title={err}>!</span> : null}
+    </span>
+  );
+};
+
 /** One input per content key the scene uses, and a picker to add another; points are one per line. */
 const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneContent) => void }> = ({ content, onChange }) => {
   const t = useT();
@@ -51,7 +73,9 @@ const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneConten
       {used.map((k) => (
         <Kv key={k} k={t(`content.${k}`)} v={
           <span style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-            {k === 'points' ? (
+            {k === 'image' ? (
+              <ImagePick url={content.image} onPick={(url) => setKey('image', url)} />
+            ) : k === 'points' ? (
               <textarea className={`nc-textarea ${stopFlow}`} rows={3} placeholder={t('script.pointsHint')} value={(content.points ?? []).join('\n')} onChange={(e) => setKey('points', e.target.value.split('\n').map((x) => x.trimEnd()))} />
             ) : k === 'body' || k === 'quote' ? (
               <textarea className={`nc-textarea ${stopFlow}`} rows={2} value={content[k] ?? ''} onChange={(e) => setKey(k, e.target.value)} />
@@ -63,7 +87,7 @@ const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneConten
         } />
       ))}
       {unused.length > 0 && (
-        <select className={`nc-select ${stopFlow}`} value="" onChange={(e) => { const k = e.target.value as ContentKey; if (k) setKey(k, k === 'points' ? [] : ''); }}>
+        <select className={`nc-select ${stopFlow}`} value="" onChange={(e) => { const k = e.target.value as ContentKey; if (k) setKey(k, k === 'points' ? [] : k === 'image' ? undefined : ''); }}>
           <option value="">{t('script.addKey')}</option>
           {unused.map((k) => <option key={k} value={k}>{t(`content.${k}`)}</option>)}
         </select>

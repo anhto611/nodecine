@@ -134,8 +134,9 @@ export const artDirector: NodeDefinition<typeof ArtDirectorParamsSchema> = {
     const script = inputs.scenes!.payload as SceneScript;
     const ref = inputs.llm?.payload as LLMRef | undefined;
     if (ref) {
-      // A scene no block shows whole (all of its content) gets a block written for it, used now and kept in the node.
-      const orphans = sceneCandidates(script, lookDef, casting).map((c, i) => (c.candidates.length === 0 ? i : -1)).filter((i) => i >= 0);
+      // A scene no block shows whole (all of its content) gets a block written for it, used now and kept
+      // in the node — unless the casting table already named a block for that role, which is the user deciding.
+      const orphans = sceneCandidates(script, lookDef, casting).map((c, i) => (!c.pinned && c.candidates.length === 0 ? i : -1)).filter((i) => i >= 0);
       for (const i of orphans) {
         const scene = script.scenes[i]!;
         progress(0.1, `writing a block for scene ${i + 1}`);

@@ -41,6 +41,24 @@ describe('clipText and list limits', () => {
   });
 });
 
+describe('an image prop', () => {
+  const shot = '/api/assets/0123456789abcdef0123456789abcdef01234567.png';
+  const withShot = { ...TEXT_CARD, id: 'shot-card', props: { ...TEXT_CARD.props, shot: { type: 'image' as const, content: 'image' as const, required: false } } };
+  it('takes only an uploaded asset, and carries it into the props', () => {
+    expect(propValue({ type: 'image', required: false }, shot)).toBe(shot);
+    expect(propValue({ type: 'image', required: false }, 'https://example.com/a.png')).toBeUndefined();
+    expect(propValue({ type: 'image', required: false }, '')).toBeUndefined();
+    expect(fillProps(withShot, { title: 'T', image: shot }, new Set())).toEqual({ headline: 'T', shot });
+  });
+
+  it('is not content a block must have: a scene without a picture still fits', () => {
+    expect(fitOf(withShot, { title: 'T' }, new Set()).missing).toEqual([]);
+    expect(fitOf(withShot, { title: 'T' }, new Set()).dropped).toEqual([]);
+    // A scene that has a picture and a block with nowhere to put it: that block loses it.
+    expect(fitOf(TEXT_CARD, { title: 'T', image: shot }, new Set()).dropped).toEqual(['image']);
+  });
+});
+
 describe('fitOf / fillProps / bindingsFor', () => {
   it('counts the props the content fills and names the required ones it cannot', () => {
     const fit = fitOf(CARD, { title: 'T', points: ['a', 'b', 'c'] }, new Set());

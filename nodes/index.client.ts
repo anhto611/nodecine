@@ -4,6 +4,7 @@ import type { BodyProps } from './kit';
 import type { NodeMeta } from '@/lib/node-meta';
 import { InputTriggerBody } from './input/body';
 import { GithubFetcherBody } from './github/body';
+import { WebFetcherBody } from './web/body';
 import { StaticScriptBody } from './script/body';
 import { ArtDirectorBody } from './art-director/body';
 import { ScreenwriterBody } from './screenwriter/body';
@@ -19,6 +20,7 @@ import { VideoOutputBody } from './output/video-output-body';
 export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/input-trigger': InputTriggerBody,
   'core/github-fetcher': GithubFetcherBody,
+  'core/web-fetcher': WebFetcherBody,
   'core/static-script': StaticScriptBody,
   'core/art-director': ArtDirectorBody,
   'core/screenwriter': ScreenwriterBody,
@@ -37,6 +39,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
 export const NODE_META: Record<string, NodeMeta> = {
   'core/input-trigger': { icon: 'bolt', group: 'source' },
   'core/github-fetcher': { icon: 'branch', group: 'source' },
+  'core/web-fetcher': { icon: 'doc', group: 'source' },
   'core/static-script': { icon: 'doc', group: 'source' },
   'core/art-director': { icon: 'screen', group: 'look' },
   'core/screenwriter': { icon: 'bot', group: 'process' },

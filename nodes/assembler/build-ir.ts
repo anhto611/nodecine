@@ -1,4 +1,5 @@
 import type { CaptionTrack, ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
+import { readFactPath } from '@/core/types/payloads';
 import { IR_VERSION, type IRCaptions, type VideoIR, type TimelineEntry } from '@/core/types/ir';
 import { allocateFrames, computeTotalFrames, framesFromSegments } from './allocate';
 import { assertValidIR } from '@/core/types/validate-ir';
@@ -33,7 +34,10 @@ export function applyFactBindings(
   if (!bindings || !facts) return { ...props };
   const out: Record<string, unknown> = { ...props };
   for (const [propName, factKey] of Object.entries(bindings)) {
-    if (Object.prototype.hasOwnProperty.call(facts, factKey)) out[propName] = facts[factKey];
+    // A plain key, or `items.2.title` when the beat ran over a list (CORE_CONTRACTS §2.2).
+    const value = readFactPath(facts, factKey);
+    // An empty string is a fact that says nothing (a page with no description); it must not blank the prop.
+    if (value !== undefined && value !== '') out[propName] = value;
   }
   return out;
 }

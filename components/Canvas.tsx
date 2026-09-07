@@ -13,9 +13,13 @@ import {
   type NodeChange,
   type EdgeChange,
   type IsValidConnection,
+  type FinalConnectionState,
+  type Edge as RfEdge,
   applyNodeChanges,
 } from '@xyflow/react';
-import { getNodeType } from '@/core/nodes/definition';
+import { getNodeType, listNodeTypes } from '@/core/nodes/definition';
+import { PORT_LABEL_KEYS, type PortType } from '@/core/types/ports';
+import { NODE_META } from '@/lib/node-meta';
 import { layoutGraph } from '@/lib/layout';
 import { useStudio } from '@/store/useStudio';
 import { NodeCard, type NcNode } from './nodes/NodeCard';
@@ -29,6 +33,33 @@ const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 2;
 
 type GraphNode = { id: string; position: { x: number; y: number } };
+
+/**
+ * What a wire dropped on empty canvas can lead to: every node type with a free port of that type,
+ * on the other side of the wire. Picking one drops it where the wire ended and connects it.
+ */
+const PortPicker: React.FC<{ pick: { x: number; y: number; type: PortType; from: 'source' | 'target' }; onAdd: (type: string) => void; onClose: () => void }> = ({ pick, onAdd, onClose }) => {
+  const t = useT();
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const away = (e: MouseEvent) => { if (!ref.current?.contains(e.target as globalThis.Node)) onClose(); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+  }, [onClose]);
+  const options = listNodeTypes().filter((d) => (pick.from === 'source' ? d.inputs : d.outputs).some((p) => p.type === pick.type));
+  return (
+    <div ref={ref} className="nc-menu" style={{ position: 'fixed', left: pick.x, top: pick.y, bottom: 'auto', minWidth: 200, maxHeight: 280, overflowY: 'auto' }} role="menu">
+      <div className="nc-menu-title">{t('canvas.connectTo', { port: t(PORT_LABEL_KEYS[pick.type]) })}</div>
+      {options.length === 0 && <div className="nc-menu-item nc-dim">{t('canvas.connectNone')}</div>}
+      {options.map((d) => {
+        const IconC = Icon[NODE_META[d.type]?.icon ?? 'chip'];
+        return <button key={d.type} className="nc-menu-item" onClick={() => onAdd(d.type)}><span className="nc-menu-check"><IconC size={11} /></span>{t(`node.${d.type}`)}</button>;
+      })}
+    </div>
+  );
+};
 
 function syncNodes(prev: NcNode[], graphNodes: GraphNode[]): NcNode[] {
   const byId = new Map(prev.map((n) => [n.id, n]));
@@ -54,6 +85,7 @@ function CanvasInner() {
   const removeNodes = useStudio((s) => s.removeNodes);
   const removeEdges = useStudio((s) => s.removeEdges);
   const connect = useStudio((s) => s.connect);
+  const reconnectWire = useStudio((s) => s.reconnect);
   const addNode = useStudio((s) => s.addNode);
   const importWorkflow = useStudio((s) => s.importWorkflow);
   const importVideo = useStudio((s) => s.importWorkflowVideo);
@@ -103,6 +135,41 @@ function CanvasInner() {
   const onConnect = (c: Connection) => {
     if (c.source && c.target && c.sourceHandle && c.targetHandle) connect({ source: c.source, sourcePort: c.sourceHandle, target: c.target, targetPort: c.targetHandle });
   };
+
+  // Dragging the end of a wire: onto another port it moves there, into empty space it comes off.
+  // React Flow reports the move first and the release second, so a flag tells the two apart.
+  const reconnected = React.useRef(false);
+  const onReconnectStart = () => { reconnected.current = false; };
+  const onReconnect = (oldEdge: RfEdge, c: Connection) => {
+    if (!c.source || !c.target || !c.sourceHandle || !c.targetHandle) return;
+    reconnected.current = true;
+    reconnectWire(oldEdge.id, { source: c.source, sourcePort: c.sourceHandle, target: c.target, targetPort: c.targetHandle });
+  };
+  const onReconnectEnd = (_e: MouseEvent | TouchEvent, edge: RfEdge) => { if (!reconnected.current) removeEdges([edge.id]); };
+
+  // A wire dropped on empty canvas asks what should go there: only nodes with a port of that type.
+  const [pick, setPick] = React.useState<{ x: number; y: number; flow: { x: number; y: number }; nodeId: string; port: string; type: PortType; from: 'source' | 'target' } | null>(null);
+  const onConnectEnd = (e: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+    // Only a drop on bare canvas asks the question; a drop on a node either connected or was refused.
+    if (state.isValid || state.toNode || !state.fromNode || !state.fromHandle?.id) return setPick(null);
+    const def = getNodeType(graph.nodes.find((n) => n.id === state.fromNode!.id)?.type ?? '');
+    const from = state.fromHandle.type === 'source' ? 'source' : 'target';
+    const port = (from === 'source' ? def?.outputs : def?.inputs)?.find((p) => p.name === state.fromHandle!.id);
+    if (!port) return setPick(null);
+    const point = 'changedTouches' in e ? { x: e.changedTouches[0]!.clientX, y: e.changedTouches[0]!.clientY } : { x: e.clientX, y: e.clientY };
+    setPick({ ...point, flow: rf.screenToFlowPosition(point), nodeId: state.fromNode.id, port: port.name, type: port.type, from });
+  };
+  const addFromPick = (type: string) => {
+    if (!pick) return;
+    // Dropped left of the card it came from, the new node reads as the one before it, so it goes there.
+    const id = addNode(type, { x: pick.flow.x - (pick.from === 'source' ? 0 : 220), y: pick.flow.y - 40 });
+    const def = getNodeType(type)!;
+    const port = (pick.from === 'source' ? def.inputs : def.outputs).find((p) => p.type === pick.type)!;
+    connect(pick.from === 'source'
+      ? { source: pick.nodeId, sourcePort: pick.port, target: id, targetPort: port.name }
+      : { source: id, sourcePort: port.name, target: pick.nodeId, targetPort: pick.port });
+    setPick(null);
+  };
   const isValidConnection: IsValidConnection = (c) => {
     const src = getNodeType(graph.nodes.find((n) => n.id === c.source)?.type ?? '');
     const dst = getNodeType(graph.nodes.find((n) => n.id === c.target)?.type ?? '');
@@ -137,7 +204,16 @@ function CanvasInner() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
+        onReconnect={onReconnect}
+        onReconnectStart={onReconnectStart}
+        onReconnectEnd={onReconnectEnd}
+        reconnectRadius={14}
         isValidConnection={isValidConnection}
+        // Shift and drag draws a selection box; the nodes it catches move and delete as one.
+        selectionKeyCode="Shift"
+        selectionOnDrag={false}
+        onPaneClick={() => setPick(null)}
         onMove={(_, vp) => setZoom(vp.zoom)}
         fitView
         fitViewOptions={{ padding: 0.08 }}
@@ -168,6 +244,7 @@ function CanvasInner() {
           style={{ width: 172, height: 97, marginRight: 12, marginBottom: 12 }}
         />
       </ReactFlow>
+      {pick && <PortPicker pick={pick} onAdd={addFromPick} onClose={() => setPick(null)} />}
       <div className="nc-tools" style={{ bottom: 12 }}>
         <div className="nc-tbar">
           <span className="nc-zoom">{Math.round(zoom * 100)}%</span>

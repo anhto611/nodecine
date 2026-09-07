@@ -180,6 +180,12 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 @keyframes nc-enter-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes nc-enter-slide { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes nc-enter-zoom { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+/* A small floating list: the node picker a dropped wire opens. */
+.nc-menu { position: absolute; min-width: 168px; background: var(--bg-raise); border: 1px solid var(--line-2); border-radius: 4px; padding: 6px 0; display: flex; flex-direction: column; box-shadow: 0 8px 24px rgba(0,0,0,.45); z-index: 6; }
+.nc-menu-title { font-size: var(--fs-hint); color: var(--tx-3); padding: 2px 12px 4px; }
+.nc-menu-item { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left; padding: 5px 12px; border: 0; background: none; color: var(--tx-2); font: inherit; font-size: var(--fs-body); cursor: pointer; }
+.nc-menu-item:hover { background: var(--bg-sunk); color: var(--tx); }
+.nc-menu-check { width: 12px; display: inline-flex; justify-content: center; color: var(--accent-2); }
 .nc-tools { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; z-index: 5; }
 .nc-tbar { display: flex; background: rgba(10,10,11,.86); border: 1px solid var(--line-2); border-radius: 4px; overflow: hidden; }
 .nc-tbtn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx-2); border: 0; border-right: 1px solid var(--line); background: none; cursor: pointer; }

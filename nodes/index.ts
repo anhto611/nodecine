@@ -1,6 +1,7 @@
 import { registerNodeType, type AnyNodeDefinition } from '@/core/nodes/definition';
 import { inputTrigger } from './input/node';
 import { githubFetcher } from './github/node';
+import { webFetcher } from './web/node';
 import { staticScript } from './script/node';
 import { screenwriter } from './screenwriter/node';
 import { artDirector } from './art-director/node';
@@ -20,6 +21,7 @@ import { mp4Export, videoOutput } from './output/node';
 export const ALL_NODES: AnyNodeDefinition[] = [
   inputTrigger,
   githubFetcher,
+  webFetcher,
   staticScript,
   artDirector,
   screenwriter,
@@ -39,7 +41,7 @@ export function registerNodes(): void {
   for (const def of ALL_NODES) registerNodeType(def);
 }
 
-export { inputTrigger, githubFetcher, staticScript, artDirector, screenwriter, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
+export { inputTrigger, githubFetcher, webFetcher, staticScript, artDirector, screenwriter, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
 export { pickVoice } from './tts/node';
 export { DEFAULT_STATIC_SCRIPT } from './script/node';
 export { SCREENWRITER, DEFAULT_SCREENWRITER } from './screenwriter/node';

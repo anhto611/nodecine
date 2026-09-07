@@ -9,7 +9,37 @@ export const SourceRefSchema = z.object({
 });
 export type SourceRef = z.infer<typeof SourceRefSchema>;
 
-export const FactValueSchema = z.union([z.string(), z.number(), z.null(), z.array(z.string())]);
+const FactScalarSchema = z.union([z.string(), z.number(), z.null()]);
+/** One thing in a list of facts: a news item, a release, a review — its own fields (CORE_CONTRACTS §2.2). */
+export const FactItemSchema = z.record(z.string(), FactScalarSchema);
+export const FactValueSchema = z.union([FactScalarSchema, z.array(z.string()), z.array(FactItemSchema)]);
+export type FactItem = z.infer<typeof FactItemSchema>;
+
+/**
+ * Read `items.2.title` out of a fact sheet: a plain key, or a list name, an index and a field
+ * (CORE_CONTRACTS §2.2). A beat over a list binds one scene to one item this way.
+ */
+export function readFactPath(facts: Record<string, unknown>, path: string): unknown {
+  let cur: unknown = facts;
+  for (const step of path.split('.')) {
+    if (cur === null || cur === undefined) return undefined;
+    if (Array.isArray(cur)) {
+      const i = Number(step);
+      if (!Number.isInteger(i) || i < 0 || i >= cur.length) return undefined;
+      cur = cur[i];
+      continue;
+    }
+    if (typeof cur !== 'object') return undefined;
+    cur = (cur as Record<string, unknown>)[step];
+  }
+  return cur;
+}
+
+/** The list a fact key holds, or null when that key is not a list of things. */
+export function factListAt(facts: Record<string, unknown>, key: string): FactItem[] | null {
+  const v = facts[key];
+  return Array.isArray(v) && v.every((x) => x && typeof x === 'object' && !Array.isArray(x)) ? (v as FactItem[]) : null;
+}
 export const FactSheetSchema = z.object({
   facts: z.record(z.string(), FactValueSchema),
   sourceLabel: z.string(),
@@ -23,13 +53,19 @@ export type FactSheet = z.infer<typeof FactSheetSchema>;
  * the screenwriter without knowing any block, and consumed by the Art Director when it casts a block for the
  * scene. A block prop names the key that fills it (`content`), or is filled by the key of its own name.
  */
-export const CONTENT_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source'] as const;
+/** The keys a model writes. An image is not among them: a model cannot know an uploaded asset's name. */
+export const WRITTEN_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source'] as const;
+export const CONTENT_KEYS = [...WRITTEN_KEYS, 'image'] as const;
+export type WrittenKey = (typeof WRITTEN_KEYS)[number];
 export type ContentKey = (typeof CONTENT_KEYS)[number];
 export const isContentKey = (k: string): k is ContentKey => (CONTENT_KEYS as readonly string[]).includes(k);
 
 /** One thing that goes into a block (CORE_CONTRACTS §2.7). The hint is shown in the Art Director node's props table. */
+/** An image a look carries: uploaded through `POST /api/assets`, addressed by its hash (ARCHITECTURE §6). */
+export const AssetUrlSchema = z.string().regex(/^\/api\/assets\/[a-f0-9]{16,64}\.[a-z0-9]+$/, 'an image must be an uploaded asset');
+
 export const BlockFieldSchema = z.object({
-  type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]']),
+  type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image']),
   /** Which scene content fills this prop; absent means the prop's own name, when that is a content key. */
   content: z.enum(CONTENT_KEYS).optional(),
   hint: z.string().max(200).optional(),
@@ -151,6 +187,7 @@ export const SceneContentSchema = z
     attribution: z.string().max(80),
     code: z.string().max(200),
     source: z.string().max(80),
+    image: AssetUrlSchema,
   })
   .partial()
   .strip();

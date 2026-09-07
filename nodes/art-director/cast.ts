@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isContentKey, type BlockDef, type BlockField, type ContentKey, type ScenePlan, type LookDef, type SceneContent, type SceneScript } from '@/core/types/payloads';
+import { AssetUrlSchema, isContentKey, type BlockDef, type BlockField, type ContentKey, type ScenePlan, type LookDef, type SceneContent, type SceneScript } from '@/core/types/payloads';
 
 /**
  * Casting (CORE_CONTRACTS §5.9): the Art Director's one job at run time. A scene arrives as content in the
@@ -45,6 +45,8 @@ export function propValue(field: BlockField, value: unknown): unknown {
     case 'string':
     case 'text':
       return clipText(Array.isArray(value) ? value.join(', ') : String(value), field.max);
+    case 'image':
+      return AssetUrlSchema.safeParse(String(value)).success ? String(value) : undefined;
     case 'string[]': {
       // A list with too few items for the block cannot be shown; too many are cut to the limit.
       const items = (Array.isArray(value) ? value : [String(value)]).map((x) => String(x).trim()).filter(Boolean);

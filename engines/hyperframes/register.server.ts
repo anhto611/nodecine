@@ -33,7 +33,8 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
   await copyFile(mediaPath(fileNameFromMediaUrl(ir.audioTrack.voiceoverUrl)), path.join(projectDir, 'voiceover.mp3'));
   for (const f of FONTS) await copyFile(path.resolve(process.cwd(), 'public/fonts', f), path.join(projectDir, 'fonts', f));
   // Images the stage or blocks refer to come along, by their hashed names.
-  const assets = assetNamesIn(JSON.stringify([ir.stage.code.source, ...ir.blocks.map((b) => b.code.source)]));
+  // Scene props carry images too, not only the code: an asset named in a prop and left behind is a hole in the MP4.
+  const assets = assetNamesIn(JSON.stringify([ir.stage.code.source, ...ir.blocks.map((b) => b.code.source), ir.timeline]));
   if (assets.length) await mkdir(path.join(projectDir, 'assets'), { recursive: true });
   for (const a of assets) await copyFile(assetPath(a), path.join(projectDir, 'assets', a)).catch(() => undefined);
 

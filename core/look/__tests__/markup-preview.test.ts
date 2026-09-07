@@ -16,6 +16,14 @@ describe('buildLookPreview with a sample caption', () => {
     expect(still).not.toContain("'unsafe-eval'");
   });
 
+  it('hands an image prop to the page and binds it as a source, not as text', () => {
+    const shot = '/api/assets/0123456789abcdef0123456789abcdef01234567.png';
+    const block = { ...DEFAULT_BLOCK, props: { ...DEFAULT_BLOCK.props, shot: { type: 'image' as const, content: 'image' as const, required: false } }, code: { ...DEFAULT_BLOCK.code, source: `${DEFAULT_BLOCK.code.source}<img data-prop="shot" data-if="shot" alt="">` } };
+    const html = buildLookPreview({ stage: DEFAULT_STAGE, block, props: { headline: 'H', shot } });
+    expect(html).toContain(shot);
+    expect(html).toContain("el.tagName === 'IMG'");
+  });
+
   it('adds the default band when the stage has no caption slot, and reads the slot style', () => {
     const bare = { ...DEFAULT_STAGE, code: { ...DEFAULT_STAGE.code, source: DEFAULT_STAGE.code.source.replace(/<div class="captions"[^>]*><\/div>/, '') } };
     const html = buildLookPreview({ stage: bare, captions: 'a b' });

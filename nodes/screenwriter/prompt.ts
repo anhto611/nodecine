@@ -1,5 +1,5 @@
 import { languageName } from '@/core/text/languages';
-import type { ContentKey, FactSheet } from '@/core/types/payloads';
+import type { FactSheet, WrittenKey } from '@/core/types/payloads';
 import { wordBudget, type ExpandedBeat } from '@/nodes/screenwriter/beats';
 
 /**
@@ -28,7 +28,7 @@ export function factsForPrompt(sheet: FactSheet | undefined, exclude: Set<string
 }
 
 /** The content vocabulary as the model sees it: one line per key, what it is and how long. */
-export const CONTENT_GUIDE: Record<ContentKey, string> = {
+export const CONTENT_GUIDE: Record<WrittenKey, string> = {
   kicker: 'one to three words above the content: a section name, a category',
   title: 'the headline, at most 60 characters; every scene has one; wrap the one phrase that matters most in *asterisks* (at most one per title, never the whole title)',
   body: 'one or two plain sentences, at most 200 characters',
@@ -58,10 +58,17 @@ export function buildScreenwriterPrompt(p: PromptInput): string {
   const facts = factsForPrompt(p.facts, p.excludeFacts);
   const boundKeys = [...new Set(p.scenes.flatMap((s) => Object.keys(s.factBindings)))];
 
-  const sceneLines = p.scenes.map((s, i) => {
+  const sceneLines = p.scenes.flatMap((s, i) => {
     const bound = Object.keys(s.factBindings);
     const words = wordBudget(s.weight);
-    return `  ${i + 1}. ${s.role}${s.brief.trim() ? ` — ${s.brief.trim()}` : ''} (say ${words.min}–${words.max} words${bound.length ? `; do not write: ${bound.join(', ')}` : ''})`;
+    const head = `  ${i + 1}. ${s.role}${s.brief.trim() ? ` — ${s.brief.trim()}` : ''} (say ${words.min}–${words.max} words${bound.length ? `; do not write: ${bound.join(', ')}` : ''})`;
+    // A scene taken from a list is about one thing: the model needs that thing to narrate it, even
+    // though the words on screen come from the same data without passing through the model.
+    if (!s.item) return [head];
+    const fields = Object.entries(s.item)
+      .filter(([k, v]) => v !== null && v !== '' && !/^\/api\/assets\//.test(String(v)))
+      .map(([k, v]) => `${k}: ${String(v).slice(0, 400)}`);
+    return [head, ...fields.map((f) => `     ${f}`)];
   });
 
   return [
@@ -90,7 +97,7 @@ export function buildScreenwriterPrompt(p: PromptInput): string {
     ...(n > 1 ? [`    … one object per scene, ${n} in total`] : []),
     `  ]`,
     `}`,
-    `Rules: exactly ${n} scenes in that order; the narrations read in sequence as one voice-over, so no greeting twice and no URLs; when a scene has points, its narration goes through them in the same order, naming each; do not invent facts, numbers, names or links that are not in the brief or the facts` +
+    `Rules: exactly ${n} scenes in that order; a scene given facts is about those facts and nothing else, and its narration must not contradict them; the narrations read in sequence as one voice-over, so no greeting twice and no URLs; when a scene has points, its narration goes through them in the same order, naming each; do not invent facts, numbers, names or links that are not in the brief or the facts` +
       (boundKeys.length ? `; the keys ${boundKeys.map((f) => `"${f}"`).join(', ')} are filled in later from verified data, so do not write them` : '') +
       `.`,
   ].join('\n');

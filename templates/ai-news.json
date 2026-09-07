@@ -1,0 +1,533 @@
+{
+  "id": "ai-news",
+  "name": {
+    "en": "AI News Countdown",
+    "vi": "Bản Tin AI Đếm Ngược"
+  },
+  "description": {
+    "en": "Paste the day's five stories; get a 9:16 countdown bulletin with karaoke captions.",
+    "vi": "Dán năm tin trong ngày, ra bản tin dọc 9:16 đếm ngược kèm phụ đề karaoke."
+  },
+  "category": "tech",
+  "graph": {
+    "nodes": [
+      {
+        "id": "input",
+        "type": "core/input-trigger",
+        "params": {
+          "value": "https://news.ycombinator.com/\nhttps://techcrunch.com/category/artificial-intelligence/\nhttps://the-decoder.com/\nhttps://nari-labs.com/\nhttps://www.anthropic.com/news"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 40,
+          "y": 300
+        }
+      },
+      {
+        "id": "fetcher",
+        "type": "core/web-fetcher",
+        "params": {
+          "screenshot": true,
+          "width": 1280,
+          "height": 800,
+          "maxPages": 10
+        },
+        "bypassed": false,
+        "position": {
+          "x": 370,
+          "y": 300
+        }
+      },
+      {
+        "id": "llm-provider",
+        "type": "core/llm-provider",
+        "params": {
+          "providerId": "claude-code",
+          "settings": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 370,
+          "y": 60
+        }
+      },
+      {
+        "id": "screenwriter",
+        "type": "core/screenwriter",
+        "params": {
+          "prompt": "Dựng bản tin đếm ngược 5 tin AI trong 24 giờ, giọng người dẫn tin công nghệ: nhanh, gọn, không hoa mỹ.\nMỗi cảnh item đã được gắn sẵn một trang nguồn: tiêu đề, mô tả, tên miền và ảnh của trang đó tự lên hình, bạn chỉ viết lời đọc cho nó. TUYỆT ĐỐI không bịa tin, không bịa số, không bịa tên; chỉ nói đúng những gì trang đó nói. Trang nào không có số thì đừng thêm số.\nThứ hạng đếm ngược theo đúng thứ tự các trang: cảnh item đầu tiên là #5, rồi #4, #3, #2, và cảnh cuối là #1. Viết thứ hạng vào number.",
+          "outputLanguage": "vi",
+          "beats": [
+            {
+              "role": "hook",
+              "brief": "Tin số một hôm nay, viết như tít báo: một câu ngắn khiến người ta dừng lướt. badge là lý do gấp gáp, footer nói đây là bản tin gì.",
+              "weight": 1.3,
+              "count": 1,
+              "factBindings": {}
+            },
+            {
+              "role": "item",
+              "brief": "Một trang nguồn mỗi cảnh, theo thứ tự đếm ngược #5 → #1. Viết number là thứ hạng và kicker là loại tin một hai chữ (CÔNG CỤ, MODEL, NGHIÊN CỨU, TRENDING). Tít, mô tả, tên miền và ảnh của trang tự lên hình, đừng viết lại chúng.",
+              "weight": 1,
+              "count": 5,
+              "factList": "items",
+              "factBindings": {
+                "title": "title",
+                "body": "body",
+                "source": "source",
+                "image": "image"
+              }
+            },
+            {
+              "role": "outro",
+              "brief": "Mời theo dõi kênh và nói nguồn của cả năm tin nằm ở bình luận.",
+              "weight": 0.7,
+              "count": 1,
+              "factBindings": {}
+            }
+          ]
+        },
+        "bypassed": false,
+        "position": {
+          "x": 700,
+          "y": 300
+        }
+      },
+      {
+        "id": "art-director",
+        "type": "core/art-director",
+        "params": {
+          "name": "AI news",
+          "frame": {
+            "width": 1080,
+            "height": 1920
+          },
+          "transition": {
+            "type": "fade",
+            "seconds": 0.35
+          },
+          "tokens": {
+            "palette": {
+              "bg": "#070b14",
+              "bg2": "#121d33",
+              "panel": "#131b2a",
+              "line": "#25324a",
+              "fg": "#f4f7fb",
+              "muted": "#a4b4cb",
+              "muted2": "#5f6f89",
+              "accent": "#ff4d6d",
+              "accent-2": "#7b5cff",
+              "chip": "#ff4d6d",
+              "mark": "#ffc94d"
+            },
+            "fonts": {
+              "display": "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",
+              "body": "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",
+              "mono": "'JetBrains Mono', ui-monospace, Menlo, monospace"
+            }
+          },
+          "tones": {
+            "trend": {
+              "chip": "#ff4d6d",
+              "accent-2": "#ff7a8a"
+            },
+            "research": {
+              "chip": "#8b7bff",
+              "accent-2": "#5c4bd8"
+            },
+            "tool": {
+              "chip": "#39d4c8",
+              "accent-2": "#1e9b93"
+            },
+            "model": {
+              "chip": "#4d9cff",
+              "accent-2": "#2f6fd0"
+            }
+          },
+          "sceneFields": [],
+          "code": {
+            "format": "html-gsap",
+            "source": "<style>\n  .stage { position: absolute; inset: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); overflow: hidden; }\n  /* The glow is its own layer so the whole scene keeps moving without repainting: --drift is tweened. */\n  .stage::before { content: ''; position: absolute; inset: -14%; background: radial-gradient(70% 45% at 22% 8%, color-mix(in srgb, var(--chip) 30%, transparent) 0%, transparent 62%), radial-gradient(90% 60% at 80% 96%, color-mix(in srgb, var(--accent-2) 22%, transparent) 0%, transparent 70%), linear-gradient(180deg, var(--bg2) 0%, var(--bg) 62%); transform: scale(var(--drift, 1)); transform-origin: 30% 10%; will-change: transform; }\n  .stage .grid { position: absolute; inset: 0; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 120px 120px; opacity: .16; mask-image: radial-gradient(120% 80% at 50% 20%, #000 20%, transparent 80%); }\n  .stage .mark { position: absolute; right: 56px; top: 330px; font: 800 190px/1 var(--font-mono); color: var(--chip); opacity: .12; letter-spacing: -0.08em; user-select: none; }\n  .signature { position: absolute; left: 72px; top: 150px; display: flex; align-items: center; gap: 12px; font: 800 30px/1 var(--font-mono); letter-spacing: .12em; }\n  .signature i { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--accent); }\n  .signature b { color: var(--fg); font-weight: 800; }\n  .signature em { color: var(--accent); font-style: normal; }\n  .stage .content { position: absolute; left: 72px; right: 96px; top: 250px; bottom: 700px; display: flex; flex-direction: column; justify-content: center; }\n  .stage .captions { position: absolute; left: 96px; right: 96px; bottom: 430px; text-align: center; font: 700 46px/1.35 var(--font-body); color: #fff; text-shadow: 0 4px 18px rgba(0,0,0,.75); --caption-on: var(--mark); }\n</style>\n<div class=\"stage\">\n  <div class=\"grid\"></div>\n  <div class=\"mark\">&gt;_</div>\n  <div class=\"signature\"><i></i><b>AIDEV</b><em>NEWS</em></div>\n  <div class=\"content\" data-slot=\"content\"></div>\n  <div class=\"captions\" data-slot=\"captions\" data-caption-style=\"karaoke\"></div>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".signature\", { opacity: 0, x: -18 }, { opacity: 1, x: 0, duration: 0.45, ease: \"power2.out\" }, 0)\n    .fromTo(\".mark\", { opacity: 0, x: 40 }, { opacity: .1, x: 0, duration: 0.8, ease: \"power2.out\" }, 0.1)\n    .fromTo(\".stage\", { \"--drift\": 1 }, { \"--drift\": 1.16, duration: Math.max(4, nodecine.duration || 7), ease: \"none\" }, 0));\n</script>"
+          },
+          "blocks": [
+            {
+              "id": "news-hook",
+              "name": "News hook",
+              "doc": {
+                "when": "The opening of a news round-up: the one story that makes someone stop scrolling, under a hot badge. Use it once, first.",
+                "example": "{\"badge\": \"TIN NÓNG NHẤT HÔM NAY\", \"headline\": \"DEEPSEEK MỞ MẮT, *BÁM SÁT OPUS 4.8*\", \"footer\": \"Bản tin AIDev · Top 5 tin AI 24h\"}"
+              },
+              "props": {
+                "badge": {
+                  "type": "string",
+                  "content": "label",
+                  "required": false,
+                  "hint": "two to five words, uppercase, the reason this is urgent",
+                  "max": 40
+                },
+                "headline": {
+                  "type": "string",
+                  "content": "title",
+                  "required": true,
+                  "hint": "the top story as a headline; wrap the striking half in *asterisks*",
+                  "max": 80
+                },
+                "footer": {
+                  "type": "string",
+                  "content": "body",
+                  "required": false,
+                  "hint": "what this video is, in a few words",
+                  "max": 60
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<style>\n  .hook { display: flex; flex-direction: column; align-items: flex-start; gap: 34px; }\n  .hook .badge { display: inline-flex; align-items: center; gap: 12px; background: color-mix(in srgb, var(--accent) 22%, transparent); border: 2px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 14px 28px; font: 700 26px/1 var(--font-body); letter-spacing: .14em; text-transform: uppercase; }\n  .hook .badge::before { content: '🔥'; font-size: 26px; }\n  .hook h1 { font: 800 104px/1.14 var(--font-display); color: var(--fg); letter-spacing: -0.02em; text-transform: uppercase; margin: 0; text-wrap: balance; }\n  .hook h1 .nc-emph { color: var(--accent); }\n  .hook .foot { display: flex; align-items: center; gap: 18px; font: 700 30px/1 var(--font-body); color: var(--muted); letter-spacing: .04em; }\n  .hook .foot::before { content: ''; width: 56px; height: 5px; border-radius: 3px; background: var(--mark); }\n</style>\n<div class=\"hook\">\n  <div class=\"badge\" data-prop=\"badge\" data-if=\"badge\"></div>\n  <h1 data-prop=\"headline\"></h1>\n  <div class=\"foot\" data-prop=\"footer\" data-if=\"footer\"></div>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".hook .badge\", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: \"back.out(1.8)\" }, 0)\n    .fromTo(\".hook h1\", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: \"power4.out\" }, 0.2)\n    .fromTo(\".hook .foot\", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.7));\n</script>"
+              }
+            },
+            {
+              "id": "news-item",
+              "name": "News item",
+              "doc": {
+                "when": "One entry of a countdown: its rank, where it came from, the headline, one paragraph, and the source page. Use it for every item.",
+                "example": "{\"rank\": 3, \"category\": \"CÔNG CỤ\", \"source\": \"the-decoder.com\", \"headline\": \"CLAUDE MYTHOS 5 *ĐI SĂN LỖ HỔNG*\", \"summary\": \"Claude Security quét mã nguồn, chấm độ nguy hiểm chuẩn *CWE* rồi gợi ý bản vá.\"}"
+              },
+              "props": {
+                "rank": {
+                  "type": "number",
+                  "content": "number",
+                  "required": false,
+                  "hint": "the position in the countdown"
+                },
+                "category": {
+                  "type": "string",
+                  "content": "kicker",
+                  "required": false,
+                  "hint": "one or two words: the kind of news",
+                  "max": 20
+                },
+                "source": {
+                  "type": "string",
+                  "content": "source",
+                  "required": false,
+                  "hint": "the site the story is from, as a domain",
+                  "max": 40
+                },
+                "headline": {
+                  "type": "string",
+                  "content": "title",
+                  "required": false,
+                  "hint": "the story as a headline; wrap the striking half in *asterisks*",
+                  "max": 70
+                },
+                "summary": {
+                  "type": "text",
+                  "content": "body",
+                  "required": false,
+                  "hint": "one or two sentences with the number that matters; wrap the key term in *asterisks*",
+                  "max": 180
+                },
+                "shot": {
+                  "type": "image",
+                  "content": "image",
+                  "required": false,
+                  "hint": "a picture of the source page; without one the panel shows the domain"
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<style>\n  .item { display: flex; flex-direction: column; gap: 22px; }\n  .item .head { display: flex; align-items: center; gap: 20px; }\n  .item .rank { display: flex; align-items: baseline; color: var(--mark); font-family: var(--font-display); font-feature-settings: 'tnum'; }\n  .item .rank b { font: 800 76px/1 var(--font-display); letter-spacing: -0.03em; }\n  .item .rank b::before { content: '#'; opacity: .7; }\n  .item .rank span { font: 700 28px/1 var(--font-body); opacity: .65; }\n  .item .chip { background: var(--chip); color: #0a0f1a; border-radius: 8px; padding: 9px 16px; font: 800 24px/1 var(--font-body); letter-spacing: .1em; text-transform: uppercase; }\n  .item .src { display: flex; align-items: center; gap: 10px; font: 400 26px/1 var(--font-mono); color: var(--muted); letter-spacing: .04em; }\n  .item .src i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted2); }\n  .item h1 { font: 800 80px/1.14 var(--font-display); color: var(--fg); letter-spacing: -0.02em; text-transform: uppercase; margin: 0; text-wrap: balance; }\n  .item h1 .nc-emph { color: var(--accent); }\n  .item .rule { width: 190px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--mark), color-mix(in srgb, var(--mark) 10%, transparent)); transform-origin: left center; }\n  .item p { font: 400 34px/1.5 var(--font-body); color: var(--muted); margin: 0; max-width: 850px; }\n  .item p .nc-emph { color: var(--mark); font-weight: 700; }\n  .item .win { margin-top: 12px; border-radius: 16px; overflow: hidden; border: 2px solid var(--line); background: #0d1422; box-shadow: 0 34px 90px rgba(0,0,0,.6); }\n  .item .win .bar { height: 62px; display: flex; align-items: center; gap: 11px; padding: 0 22px; background: rgba(255,255,255,.05); border-bottom: 2px solid var(--line); }\n  .item .win .bar i { width: 15px; height: 15px; border-radius: 50%; display: inline-block; }\n  .item .win .bar span { margin-left: 16px; font: 400 24px/1 var(--font-mono); color: var(--muted); }\n  .item .shot { position: relative; height: 520px; display: grid; place-items: center; overflow: hidden; background: radial-gradient(70% 90% at 30% 20%, color-mix(in srgb, var(--chip) 16%, transparent), transparent 70%), #0a1020; }\n  .item .shot .dom { font: 700 54px/1 var(--font-mono); color: color-mix(in srgb, var(--fg) 55%, transparent); letter-spacing: -0.02em; }\n  /* A picture of the page covers the panel; without one the domain underneath is what shows. */\n  .item .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0%; }\n  .item .live { position: absolute; z-index: 2; left: 22px; top: 20px; background: var(--accent); color: #fff; border-radius: 6px; padding: 7px 14px; font: 800 20px/1 var(--font-body); letter-spacing: .12em; }\n</style>\n<div class=\"item\">\n  <div class=\"head\">\n    <div class=\"rank\"><b data-prop=\"rank\" data-if=\"rank\"></b><span data-if=\"rank\">/5</span></div>\n    <div class=\"chip\" data-prop=\"category\" data-if=\"category\"></div>\n    <div class=\"src\" data-if=\"source\"><i></i><span data-prop=\"source\"></span></div>\n  </div>\n  <h1 data-prop=\"headline\" data-if=\"headline\"></h1>\n  <div class=\"rule\"></div>\n  <p data-prop=\"summary\" data-if=\"summary\"></p>\n  <div class=\"win\">\n    <div class=\"bar\"><i style=\"background:#ff5f57\"></i><i style=\"background:#febc2e\"></i><i style=\"background:#28c840\"></i><span data-prop=\"source\" data-if=\"source\"></span></div>\n    <div class=\"shot\"><span class=\"live\">LIVE</span><span class=\"dom\" data-prop=\"source\" data-if=\"source\"></span><img data-prop=\"shot\" data-if=\"shot\" alt=\"\"></div>\n  </div>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".item .head > *\", { y: -18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, stagger: 0.12, ease: \"power2.out\" }, 0)\n    .add(nodecine.count(\".item .rank b\", { duration: 0.6 }), 0.1)\n    .fromTo(\".item h1\", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.65, ease: \"power3.out\" }, 0.25)\n    .fromTo(\".item .rule\", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: \"power2.out\" }, 0.5)\n    .fromTo(\".item p\", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: \"power3.out\" }, 0.6)\n    .fromTo(\".item .win\", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: \"power3.out\" }, 0.85)\n    .fromTo(\".item .shot\", { scale: 1.06 }, { scale: 1, duration: Math.max(3, nodecine.duration || 7), ease: \"none\" }, 0.85));\n</script>"
+              }
+            },
+            {
+              "id": "news-cta",
+              "name": "Follow card",
+              "doc": {
+                "when": "The closing card of a round-up: what the channel is and one thing to do. Use it once, last.",
+                "example": "{\"headline\": \"THEO DÕI *AIDEV NEWS*\", \"sub\": \"Bản tin AI mỗi ngày\", \"note\": \"Chi tiết & nguồn 5 tin ở *bình luận*\"}"
+              },
+              "props": {
+                "headline": {
+                  "type": "string",
+                  "content": "title",
+                  "required": true,
+                  "hint": "the invitation; wrap the channel name in *asterisks*",
+                  "max": 60
+                },
+                "sub": {
+                  "type": "string",
+                  "content": "body",
+                  "required": false,
+                  "hint": "one line on what the channel gives",
+                  "max": 60
+                },
+                "note": {
+                  "type": "string",
+                  "content": "label",
+                  "required": false,
+                  "hint": "where to find the sources, one line",
+                  "max": 60
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<style>\n  .cta { display: flex; flex-direction: column; align-items: flex-start; gap: 26px; }\n  .cta h1 { font: 800 86px/1.14 var(--font-display); color: var(--fg); letter-spacing: -0.02em; text-transform: uppercase; margin: 0; }\n  .cta h1 .nc-emph { color: var(--accent); }\n  .cta .sub { font: 700 38px/1.3 var(--font-body); color: var(--mark); }\n  .cta .note { display: inline-flex; align-items: center; gap: 14px; border: 2px solid var(--line); border-radius: 999px; padding: 16px 26px; font: 400 30px/1 var(--font-body); color: var(--muted); }\n  .cta .note::before { content: '💬'; }\n  .cta .note .nc-emph { color: var(--mark); font-weight: 700; }\n  .cta .btn { display: inline-flex; align-items: center; gap: 16px; background: var(--accent); color: #fff; border-radius: 16px; padding: 24px 38px; font: 800 38px/1 var(--font-body); box-shadow: 0 22px 60px color-mix(in srgb, var(--accent) 38%, transparent); }\n  .cta .btn::before { content: '🔖'; }\n</style>\n<div class=\"cta\">\n  <h1 data-prop=\"headline\"></h1>\n  <div class=\"sub\" data-prop=\"sub\" data-if=\"sub\"></div>\n  <div class=\"note\" data-prop=\"note\" data-if=\"note\"></div>\n  <div class=\"btn\">Lưu lại + Theo dõi</div>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".cta h1\", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: \"power4.out\" }, 0)\n    .fromTo(\".cta .sub\", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0.4)\n    .fromTo(\".cta .note\", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: \"power2.out\" }, 0.6)\n    .fromTo(\".cta .btn\", { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: \"back.out(2)\" }, 0.85)\n    .to(\".cta .btn\", { scale: 1.04, duration: 0.6, yoyo: true, repeat: 5, ease: \"sine.inOut\" }, 1.5));\n</script>"
+              }
+            }
+          ],
+          "casting": [
+            {
+              "role": "hook",
+              "block": "news-hook",
+              "tone": "trend"
+            },
+            {
+              "role": "item",
+              "block": "news-item"
+            },
+            {
+              "role": "outro",
+              "block": "news-cta",
+              "tone": "trend"
+            }
+          ]
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1030,
+          "y": 300
+        }
+      },
+      {
+        "id": "tts-provider",
+        "type": "core/tts-provider",
+        "params": {
+          "providerId": "system-tts",
+          "settings": {
+            "rate": 1
+          }
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1030,
+          "y": 60
+        }
+      },
+      {
+        "id": "tts",
+        "type": "core/tts-engine",
+        "params": {
+          "speed": 1
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1030,
+          "y": 300
+        }
+      },
+      {
+        "id": "transcribe",
+        "type": "core/transcribe",
+        "params": {
+          "model": "small"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1360,
+          "y": 300
+        }
+      },
+      {
+        "id": "captions",
+        "type": "core/captions",
+        "params": {
+          "style": "karaoke",
+          "position": "bottom",
+          "maxChars": 26
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1690,
+          "y": 300
+        }
+      },
+      {
+        "id": "assembler",
+        "type": "core/timeline-assembler",
+        "params": {
+          "fps": 30,
+          "minTotalFrames": 300,
+          "title": "AI news"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 2020,
+          "y": 300
+        }
+      },
+      {
+        "id": "engine",
+        "type": "core/hyperframes-engine",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 2350,
+          "y": 60
+        }
+      },
+      {
+        "id": "output",
+        "type": "core/video-output",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 2350,
+          "y": 300
+        }
+      },
+      {
+        "id": "export",
+        "type": "core/mp4-export",
+        "params": {
+          "codec": "h264",
+          "quality": "high",
+          "fileName": "ai-news.mp4",
+          "resolution": "1080p"
+        },
+        "bypassed": true,
+        "position": {
+          "x": 2350,
+          "y": 700
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e0",
+        "source": "input",
+        "sourcePort": "source",
+        "target": "fetcher",
+        "targetPort": "source"
+      },
+      {
+        "id": "e1",
+        "source": "fetcher",
+        "sourcePort": "facts",
+        "target": "screenwriter",
+        "targetPort": "facts"
+      },
+      {
+        "id": "e2",
+        "source": "fetcher",
+        "sourcePort": "facts",
+        "target": "assembler",
+        "targetPort": "facts"
+      },
+      {
+        "id": "e3",
+        "source": "llm-provider",
+        "sourcePort": "llm",
+        "target": "screenwriter",
+        "targetPort": "llm"
+      },
+      {
+        "id": "e4",
+        "source": "llm-provider",
+        "sourcePort": "llm",
+        "target": "art-director",
+        "targetPort": "llm"
+      },
+      {
+        "id": "e5",
+        "source": "screenwriter",
+        "sourcePort": "scenes",
+        "target": "art-director",
+        "targetPort": "scenes"
+      },
+      {
+        "id": "e6",
+        "source": "screenwriter",
+        "sourcePort": "script",
+        "target": "tts",
+        "targetPort": "script"
+      },
+      {
+        "id": "e7",
+        "source": "tts-provider",
+        "sourcePort": "tts",
+        "target": "tts",
+        "targetPort": "tts"
+      },
+      {
+        "id": "e8",
+        "source": "tts",
+        "sourcePort": "voiceover",
+        "target": "transcribe",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e9",
+        "source": "screenwriter",
+        "sourcePort": "script",
+        "target": "transcribe",
+        "targetPort": "script"
+      },
+      {
+        "id": "e10",
+        "source": "transcribe",
+        "sourcePort": "voiceover",
+        "target": "captions",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e11",
+        "source": "captions",
+        "sourcePort": "captions",
+        "target": "assembler",
+        "targetPort": "captions"
+      },
+      {
+        "id": "e12",
+        "source": "art-director",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
+      },
+      {
+        "id": "e13",
+        "source": "tts",
+        "sourcePort": "voiceover",
+        "target": "assembler",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e14",
+        "source": "assembler",
+        "sourcePort": "ir",
+        "target": "output",
+        "targetPort": "ir"
+      },
+      {
+        "id": "e15",
+        "source": "assembler",
+        "sourcePort": "ir",
+        "target": "export",
+        "targetPort": "ir"
+      },
+      {
+        "id": "e16",
+        "source": "engine",
+        "sourcePort": "engine",
+        "target": "output",
+        "targetPort": "engine"
+      },
+      {
+        "id": "e17",
+        "source": "engine",
+        "sourcePort": "engine",
+        "target": "export",
+        "targetPort": "engine"
+      }
+    ]
+  }
+}

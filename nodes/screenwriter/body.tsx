@@ -60,6 +60,7 @@ export const ScreenwriterBody: React.FC<BodyProps> = ({ nodeId }) => {
               <span className="nc-k" style={{ color: 'var(--accent-2)', flex: '0 0 auto' }}>{isOpen ? '▾' : '▸'} {i + 1}</span>
               <span className="nc-k" style={{ color: 'var(--tx)', flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.role || t('screenwriter.role')}</span>
               <span className="nc-k" style={{ flex: '0 0 auto' }} title={`${t('node.weight')} ${b.weight}`}>{b.count}× · {b.weight}w</span>
+              {b.factList ? <span className="nc-k" style={{ flex: '0 0 auto', color: 'var(--mark, var(--tx-3))' }} title={t('screenwriter.overList', { key: b.factList })}>[]</span> : null}
               {bound.length > 0 && <span className="nc-k" style={{ flex: '0 0 auto' }} title={bound.map(([k, f]) => `${k} ← ${f}`).join(', ')}>{bound.length}⚲</span>}
             </div>
             {isOpen && (
@@ -72,10 +73,14 @@ export const ScreenwriterBody: React.FC<BodyProps> = ({ nodeId }) => {
                   <button className={`nc-chip ${stopFlow}`} onClick={() => { removeBeat(i); setOpen(null); }} disabled={beats.length <= 1} title="remove"><Icon.x size={9} /></button>
                 </div>
                 <textarea className={`nc-textarea ${stopFlow}`} rows={2} placeholder={t('screenwriter.beatBrief')} value={b.brief} onChange={(e) => updateBeat(i, { brief: e.target.value })} />
+                {/* Naming a list turns the beat into one scene per item, and its bindings into fields of that item. */}
+                <Kv k={t('screenwriter.overListLabel')} v={
+                  <input className={`nc-input ${stopFlow}`} placeholder={t('screenwriter.overListNone')} title={t('screenwriter.overListHint')} value={b.factList ?? ''} onChange={(e) => updateBeat(i, { factList: e.target.value.trim() || undefined })} />
+                } />
                 {bound.map(([key, factKey]) => (
                   <Kv key={key} k={t(`content.${key}`)} v={
                     <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      <input className={`nc-input ${stopFlow}`} title={t('screenwriter.bind')} value={factKey} onChange={(e) => bind(i, key, e.target.value)} />
+                      <input className={`nc-input ${stopFlow}`} title={b.factList ? t('screenwriter.bindField', { key: b.factList }) : t('screenwriter.bind')} value={factKey} onChange={(e) => bind(i, key, e.target.value)} />
                       <button className={`nc-chip ${stopFlow}`} onClick={() => bind(i, key, null)} title={t('screenwriter.bindNone')}><Icon.x size={9} /></button>
                     </span>
                   } />

@@ -93,6 +93,8 @@ window.__nodecineBind = {
     });
     root.querySelectorAll('[data-prop]').forEach(function (el) {
       var v = props[el.getAttribute('data-prop')];
+      // An image element takes the value as its source; everything else takes it as text.
+      if (el.tagName === 'IMG') { if (v) el.setAttribute('src', String(v)); else el.removeAttribute('src'); return; }
       if (v === undefined || v === null) { el.textContent = ''; return; }
       if (Array.isArray(v)) {
         var template = el.firstElementChild;
@@ -185,6 +187,7 @@ export function sampleProps(block: BlockDef): Record<string, unknown> {
   }
   const out: Record<string, unknown> = {};
   for (const [k, f] of Object.entries(block.props)) {
+    if (f.type === 'image') continue; // no stand-in for a picture: the element simply has no source
     out[k] = f.type === 'number' ? 12345 : f.type === 'boolean' ? true : f.type === 'color' ? '#7c5cff' : f.type === 'string[]' ? ['One', 'Two', 'Three'] : k;
   }
   return out;

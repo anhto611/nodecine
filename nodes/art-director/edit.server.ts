@@ -60,6 +60,7 @@ export const codeRules = (frame: { width: number; height: number }) => [
 export const BLOCK_RULES = [
   'A block is one scene archetype. Every prop listed below is filled by the engine into an element with data-prop="<name>" (text content; string[] props render one child per item into the first child element as a template). Use data-if="<name>" on an element that should disappear when the prop is empty.',
   'The block markup is dropped into the stage\'s content slot, so it should not paint its own full-frame background.',
+  'A prop of type "image" is filled into an <img data-prop="<name>"> as its src, so give that element a size and object-fit in CSS; put data-if="<name>" on whatever should disappear when no picture was chosen.',
   'Items of a string[] prop appear when the voice reaches them: animate them with a tween positioned at 0 whose stagger is nodecine.stagger("<prop>") (a function of the item index), never a fixed stagger. nodecine.at(i, "<prop>") is the i-th item\'s time in seconds and nodecine.duration the scene length, for anything else that should follow the voice.',
 ];
 

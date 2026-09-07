@@ -33,6 +33,7 @@ describe('a fresh install', () => {
       'core/tts-engine',
       'core/tts-provider',
       'core/video-output',
+      'core/web-fetcher',
     ]);
   });
 });
