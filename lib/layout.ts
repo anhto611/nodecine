@@ -3,10 +3,11 @@ import { edgeKind, type Graph } from '@/core/engine/graph';
 
 /**
  * Tidy positions for a graph. The flow — content moving step by step along flow wires — runs left
- * to right, layered by dagre (the layout React Flow's own docs point to). Resource nodes (a look, a
- * model, a voice, an engine: nodes that only hand parts to others) are not part of that pipeline;
- * each hangs in a band directly above the first node that uses it, so a reader sees the path along
- * the middle and the parts plugged in from above. Pure: positions in, positions out.
+ * to right, layered by dagre (the layout React Flow's own docs point to). Resource nodes (a model, a
+ * voice, an engine: nodes that only hand parts to others) are not part of that pipeline; each hangs
+ * in a band directly *below* the first node that uses it, the way an n8n sub-node hangs under the
+ * node it serves, so a reader sees the path along the middle and the parts hanging off it. Pure:
+ * positions in, positions out.
  */
 export interface NodeSize { width: number; height: number }
 
@@ -20,7 +21,7 @@ export function layoutGraph(graph: Graph, sizes: Record<string, NodeSize>, opts:
   const flowEdges = graph.edges.filter((e) => edgeKind(graph, e) === 'flow');
   const touchesFlow = new Set(flowEdges.flatMap((e) => [e.source, e.target]));
 
-  // A resource node hands out parts and takes no part in the flow. It hangs above its first consumer.
+  // A resource node hands out parts and takes no part in the flow. It hangs below its first consumer.
   const bands = new Map<string, string[]>();
   const hung = new Set<string>();
   for (const n of graph.nodes) {
@@ -47,7 +48,7 @@ export function layoutGraph(graph: Graph, sizes: Record<string, NodeSize>, opts:
     if (hung.has(n.id)) continue;
     const size = sizeOf(n.id);
     const band = bandOf(n.id);
-    // The slot dagre reserves is the node plus the band of parts above it.
+    // The slot dagre reserves is the node plus the band of parts below it.
     g.setNode(n.id, { width: Math.max(size.width, band.width), height: size.height + band.height });
   }
   for (const e of flowEdges) if (g.hasNode(e.source) && g.hasNode(e.target)) g.setEdge(e.source, e.target);
@@ -59,14 +60,14 @@ export function layoutGraph(graph: Graph, sizes: Record<string, NodeSize>, opts:
     const p = g.node(n.id);
     const size = sizeOf(n.id);
     const band = bandOf(n.id);
-    // dagre reports the centre of the slot; the node sits at the bottom of it, left-aligned.
+    // dagre reports the centre of the slot; the node sits at the top of it, left-aligned.
     const slotLeft = p.x - Math.max(size.width, band.width) / 2;
     const slotTop = p.y - (size.height + band.height) / 2;
-    out[n.id] = { x: Math.round(slotLeft), y: Math.round(slotTop + band.height) };
+    out[n.id] = { x: Math.round(slotLeft), y: Math.round(slotTop) };
     let x = slotLeft;
     for (const r of band.ids) {
-      // Parts sit on a common baseline just above the node, so each wire drops straight down.
-      out[r] = { x: Math.round(x), y: Math.round(slotTop + band.height - BAND_GAP - sizeOf(r).height) };
+      // Parts share a common top edge just below the node, so each wire rises straight up into it.
+      out[r] = { x: Math.round(x), y: Math.round(slotTop + size.height + BAND_GAP) };
       x += sizeOf(r).width + BAND_SPACING;
     }
   }

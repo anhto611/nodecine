@@ -254,8 +254,13 @@ function CanvasInner() {
           <button className="nc-tbtn" title={t('canvas.undo')} disabled={!canUndo} onClick={undo}><Icon.undo /></button>
           <button className="nc-tbtn" title={t('canvas.redo')} disabled={!canRedo} onClick={redo}><Icon.redo /></button>
           <button className="nc-tbtn" title={t('canvas.layout')} onClick={() => {
-            // Measured sizes come from React Flow; a node not yet measured gets the default.
-            const sizes = Object.fromEntries(rf.getNodes().map((n) => [n.id, { width: n.measured?.width ?? 220, height: n.measured?.height ?? 180 }]));
+            // Sizes come from what is actually on screen. React Flow's own `measured` can lag a card
+            // that grew after it was first measured — the Video Output player is the usual one — and a
+            // resource node hangs *below* its consumer, so a height reported short puts it on top of it.
+            const sizes = Object.fromEntries(rf.getNodes().map((n) => {
+              const el = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(n.id)}"]`);
+              return [n.id, { width: el?.offsetWidth || n.measured?.width || 220, height: el?.offsetHeight || n.measured?.height || 180 }];
+            }));
             setNodePositions(layoutGraph(graph, sizes));
             requestAnimationFrame(() => void rf.fitView({ padding: 0.08, duration: 300 }));
           }}><Icon.branch /></button>

@@ -113,7 +113,7 @@
         "bypassed": false,
         "position": {
           "x": 1030,
-          "y": 557
+          "y": 671
         }
       },
       {
@@ -154,7 +154,7 @@
         "bypassed": false,
         "position": {
           "x": 40,
-          "y": 390
+          "y": 412
         }
       },
       {
@@ -169,7 +169,7 @@
         "bypassed": false,
         "position": {
           "x": 370,
-          "y": 40
+          "y": 303
         }
       },
       {
@@ -181,7 +181,7 @@
         "bypassed": false,
         "position": {
           "x": 370,
-          "y": 276
+          "y": 40
         }
       },
       {
@@ -193,7 +193,7 @@
         "bypassed": false,
         "position": {
           "x": 700,
-          "y": 337
+          "y": 438
         }
       },
       {
@@ -207,7 +207,7 @@
         "bypassed": false,
         "position": {
           "x": 1030,
-          "y": 337
+          "y": 447
         }
       },
       {
@@ -221,7 +221,7 @@
         "bypassed": false,
         "position": {
           "x": 1360,
-          "y": 327
+          "y": 405
         }
       },
       {
@@ -231,7 +231,7 @@
         "bypassed": false,
         "position": {
           "x": 1690,
-          "y": 481
+          "y": 1288
         }
       },
       {
@@ -241,7 +241,7 @@
         "bypassed": false,
         "position": {
           "x": 1690,
-          "y": 717
+          "y": 609
         }
       },
       {
@@ -255,7 +255,7 @@
         "bypassed": true,
         "position": {
           "x": 1740,
-          "y": 261
+          "y": 303
         }
       }
     ],

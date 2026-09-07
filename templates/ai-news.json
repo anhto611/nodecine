@@ -20,7 +20,7 @@
         "bypassed": false,
         "position": {
           "x": 40,
-          "y": 300
+          "y": 148
         }
       },
       {
@@ -35,7 +35,7 @@
         "bypassed": false,
         "position": {
           "x": 370,
-          "y": 300
+          "y": 124
         }
       },
       {
@@ -47,8 +47,8 @@
         },
         "bypassed": false,
         "position": {
-          "x": 370,
-          "y": 60
+          "x": 700,
+          "y": 506
         }
       },
       {
@@ -90,7 +90,7 @@
         "bypassed": false,
         "position": {
           "x": 700,
-          "y": 300
+          "y": 46
         }
       },
       {
@@ -295,8 +295,8 @@
         },
         "bypassed": false,
         "position": {
-          "x": 1030,
-          "y": 300
+          "x": 1690,
+          "y": 573
         }
       },
       {
@@ -311,7 +311,7 @@
         "bypassed": false,
         "position": {
           "x": 1030,
-          "y": 60
+          "y": 415
         }
       },
       {
@@ -323,7 +323,7 @@
         "bypassed": false,
         "position": {
           "x": 1030,
-          "y": 300
+          "y": 152
         }
       },
       {
@@ -335,7 +335,7 @@
         "bypassed": false,
         "position": {
           "x": 1360,
-          "y": 300
+          "y": 64
         }
       },
       {
@@ -349,7 +349,7 @@
         "bypassed": false,
         "position": {
           "x": 1690,
-          "y": 300
+          "y": 73
         }
       },
       {
@@ -365,7 +365,7 @@
         "bypassed": false,
         "position": {
           "x": 1690,
-          "y": 640
+          "y": 350
         }
       },
       {
@@ -379,7 +379,7 @@
         "bypassed": false,
         "position": {
           "x": 2020,
-          "y": 300
+          "y": 284
         }
       },
       {
@@ -389,7 +389,7 @@
         "bypassed": false,
         "position": {
           "x": 2350,
-          "y": 60
+          "y": 1025
         }
       },
       {
@@ -399,7 +399,7 @@
         "bypassed": false,
         "position": {
           "x": 2350,
-          "y": 300
+          "y": 346
         }
       },
       {
@@ -413,8 +413,8 @@
         },
         "bypassed": true,
         "position": {
-          "x": 2350,
-          "y": 700
+          "x": 2400,
+          "y": 40
         }
       }
     ],

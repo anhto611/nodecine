@@ -15,7 +15,23 @@ export type NcNode = Node<{ nodeId: string }, 'nc'>;
 const HDR_H = 24;
 const PORT_PAD = 4;
 const PORT_ROW = 18;
-const handleTop = (i: number) => HDR_H + PORT_PAD + i * PORT_ROW + PORT_ROW / 2;
+/** The resource band's own rule, padding and margin, on top of one port row. */
+const RES_BAND_H = PORT_ROW + 9;
+const handleTop = (i: number, bandH: number) => HDR_H + PORT_PAD + bandH + i * PORT_ROW + PORT_ROW / 2;
+/** Where handle `i` of `n` sits along an edge: evenly spaced, both ends clear of the corners. */
+const handleLeft = (i: number, n: number) => `${((i + 1) * 100) / (n + 1)}%`;
+/**
+ * A resource label is placed under its own handle, not laid out in a row: the two must line up
+ * whatever the count, and a label that wrapped would push every flow handle below it out of true.
+ * One label may use the whole card; several share the spacing between handles and clip with an
+ * ellipsis, the full text staying on the tooltip.
+ */
+const resLabel = (i: number, n: number): React.CSSProperties => ({
+  position: 'absolute',
+  left: handleLeft(i, n),
+  transform: 'translateX(-50%)',
+  maxWidth: n === 1 ? '100%' : `calc(${100 / (n + 1)}% - 6px)`,
+});
 
 /** Every node on the canvas: header with state badge, type-specific body, left/right ports (USER_FLOWS §2). */
 export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
@@ -55,8 +71,10 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
   const resourceIns = def.inputs.filter((p) => isResourcePort(p.type));
   const flowOuts = def.outputs.filter((p) => !isResourcePort(p.type));
   const resourceOuts = def.outputs.filter((p) => isResourcePort(p.type));
-  // The resource row, when there is one, sits above the flow rows and shifts their handles down.
-  const rowOffset = resourceIns.length > 0 ? 1 : 0;
+  // A resource hangs *below* the node it plugs into (n8n's sub-node shape): the part leaves by its
+  // own top edge and arrives at the consumer's bottom edge. So the band that shares the top of the
+  // card with the flow rows is the resource *output* one, and it shifts those rows' handles down.
+  const bandH = resourceOuts.length > 0 ? RES_BAND_H : 0;
   const hasRetry = rt.state === 'error' || (def.kind === 'resource' && rt.state !== 'running' && rt.state !== 'queued');
 
   return (
@@ -74,14 +92,13 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
           <Icon.stop size={9} />
         </button>
       </div>
-      {(def.inputs.length > 0 || def.outputs.length > 0) && (
+      {(resourceOuts.length > 0 || flowIns.length > 0 || flowOuts.length > 0) && (
         <div className="nc-ports">
-          {resourceIns.length > 0 && (
-            <div className="nc-port-row nc-port-row-res" title={t('port.resources')}>
-              {resourceIns.map((p) => {
-                const name = connectedName(p.name);
-                return <span key={p.name} className="nc-port-res">▾ {t(PORT_LABEL_KEYS[p.type])}{name ? <span style={{ color: 'var(--accent-2)' }}> {name}</span> : null}{p.required === false ? <span className="nc-dim"> · {t('port.optional')}</span> : null}</span>;
-              })}
+          {resourceOuts.length > 0 && (
+            <div className="nc-port-row nc-port-row-res top">
+              {resourceOuts.map((p, i) => (
+                <span key={p.name} className="nc-port-res" style={resLabel(i, resourceOuts.length)} title={t(PORT_LABEL_KEYS[p.type])}>{t(PORT_LABEL_KEYS[p.type])}</span>
+              ))}
             </div>
           )}
           {flowIns.map((p) => (
@@ -92,9 +109,6 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
           {flowOuts.map((p) => (
             <div key={`out-${p.name}`} className="nc-port-row" style={{ justifyContent: 'flex-end' }}>{t(PORT_LABEL_KEYS[p.type])}</div>
           ))}
-          {resourceOuts.length > 0 && (
-            <div className="nc-port-row nc-port-row-res" style={{ justifyContent: 'flex-end' }}>{resourceOuts.map((p) => <span key={p.name} className="nc-port-res">{t(PORT_LABEL_KEYS[p.type])} ▾</span>)}</div>
-          )}
         </div>
       )}
       <div className="nc-body">
@@ -121,17 +135,32 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
           </Btn>
         )}
       </div>
+      {resourceIns.length > 0 && (
+        <div className="nc-ports foot" title={t('port.resources')}>
+          <div className="nc-port-row nc-port-row-res bot">
+            {resourceIns.map((p, i) => {
+              const name = connectedName(p.name);
+              const label = t(PORT_LABEL_KEYS[p.type]);
+              return (
+                <span key={p.name} className="nc-port-res" style={resLabel(i, resourceIns.length)} title={`${label}${name ? ` · ${name}` : ''}`}>
+                  {label}{name ? <span style={{ color: 'var(--accent-2)' }}> {name}</span> : null}{p.required === false ? <span className="nc-dim"> · {t('port.optional')}</span> : null}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {flowIns.map((p, i) => (
-        <Handle key={p.name} type="target" position={Position.Left} id={p.name} className={rt.state === 'success' || rt.state === 'running' ? 'on' : ''} style={{ top: handleTop(rowOffset + i) }} />
+        <Handle key={p.name} type="target" position={Position.Left} id={p.name} className={rt.state === 'success' || rt.state === 'running' ? 'on' : ''} style={{ top: handleTop(i, bandH) }} />
       ))}
       {flowOuts.map((p, i) => (
-        <Handle key={p.name} type="source" position={Position.Right} id={p.name} className={rt.state === 'success' ? 'on' : ''} style={{ top: handleTop(rowOffset + flowIns.length + i) }} />
+        <Handle key={p.name} type="source" position={Position.Right} id={p.name} className={rt.state === 'success' ? 'on' : ''} style={{ top: handleTop(flowIns.length + i, bandH) }} />
       ))}
       {resourceIns.map((p, i) => (
-        <Handle key={p.name} type="target" position={Position.Top} id={p.name} className={`res ${rt.state === 'success' || rt.state === 'running' ? 'on' : ''}`} style={{ left: `${((i + 1) * 100) / (resourceIns.length + 1)}%` }} title={t(PORT_LABEL_KEYS[p.type])} />
+        <Handle key={p.name} type="target" position={Position.Bottom} id={p.name} className={`res ${rt.state === 'success' || rt.state === 'running' ? 'on' : ''}`} style={{ left: handleLeft(i, resourceIns.length) }} title={t(PORT_LABEL_KEYS[p.type])} />
       ))}
       {resourceOuts.map((p, i) => (
-        <Handle key={p.name} type="source" position={Position.Bottom} id={p.name} className={`res ${rt.state === 'success' ? 'on' : ''}`} style={{ left: `${((i + 1) * 100) / (resourceOuts.length + 1)}%` }} title={t(PORT_LABEL_KEYS[p.type])} />
+        <Handle key={p.name} type="source" position={Position.Top} id={p.name} className={`res ${rt.state === 'success' ? 'on' : ''}`} style={{ left: handleLeft(i, resourceOuts.length) }} title={t(PORT_LABEL_KEYS[p.type])} />
       ))}
     </div>
   );
