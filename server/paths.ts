@@ -35,27 +35,33 @@ export function fileNameFromMediaUrl(url: string): string {
 }
 
 /**
- * Music the user drops in: `.nodecine/music`, listed by name and never uploaded through the app.
- * A track is somebody's licensed file, so it stays where they put it and only its name travels.
+ * Sound the user brings themselves: music beds under `.nodecine/music`, their own recordings under
+ * `.nodecine/voice`. Neither is uploaded through the app — somebody's licensed track or their own
+ * voice stays where they put it, and only the file name travels in a graph they may share.
  */
-export function musicDir(): string {
-  return path.resolve(process.cwd(), process.env.NODECINE_MUSIC_DIR ?? '.nodecine/music');
+export const AUDIO_LIBRARIES = { music: 'NODECINE_MUSIC_DIR', voice: 'NODECINE_VOICE_DIR' } as const;
+export type AudioLibrary = keyof typeof AUDIO_LIBRARIES;
+export const isAudioLibrary = (v: string): v is AudioLibrary => v in AUDIO_LIBRARIES;
+
+const AUDIO_NAME = /^[A-Za-z0-9][A-Za-z0-9 ._'()-]{0,80}\.(mp3|m4a|aac|wav|ogg|flac)$/i;
+
+export function audioDir(library: AudioLibrary): string {
+  return path.resolve(process.cwd(), process.env[AUDIO_LIBRARIES[library]] ?? `.nodecine/${library}`);
 }
 
-const TRACK = /^[A-Za-z0-9][A-Za-z0-9 ._'()-]{0,80}\.(mp3|m4a|aac|wav|ogg|flac)$/i;
-
-/** Resolve a track name to a path inside the music folder; anything that could leave it is refused. */
-export function musicPath(fileName: string): string {
-  if (!TRACK.test(fileName)) throw new Error(`Invalid track name: ${fileName}`);
-  const p = path.join(musicDir(), fileName);
-  if (path.dirname(p) !== musicDir()) throw new Error('Path escapes the music folder');
+/** Resolve a file name to a path inside one of those folders; anything that could leave it is refused. */
+export function audioPath(library: AudioLibrary, fileName: string): string {
+  if (!AUDIO_NAME.test(fileName)) throw new Error(`Invalid audio file name: ${fileName}`);
+  const dir = audioDir(library);
+  const p = path.join(dir, fileName);
+  if (path.dirname(p) !== dir) throw new Error(`Path escapes the ${library} folder`);
   return p;
 }
 
-/** The tracks on this machine, by name, sorted; an absent folder simply has none. */
-export async function listMusic(): Promise<string[]> {
-  return readdir(musicDir())
-    .then((names) => names.filter((n) => TRACK.test(n)).sort((a, b) => a.localeCompare(b)))
+/** What that folder holds on this machine, by name, sorted; an absent folder simply has nothing. */
+export async function listAudio(library: AudioLibrary): Promise<string[]> {
+  return readdir(audioDir(library))
+    .then((names) => names.filter((n) => AUDIO_NAME.test(n)).sort((a, b) => a.localeCompare(b)))
     .catch(() => []);
 }
 

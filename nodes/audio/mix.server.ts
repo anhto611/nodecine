@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import { exec, ExecError } from '@/server/exec';
 import { ffmpegBin, measureDurationSeconds } from '@/server/audio';
 import { contentHash } from '@/core/hash';
-import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl, musicPath } from '@/server/paths';
+import { audioPath, ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
 import type { MixAudioOptions, MixResult } from '@/core/engine/services';
 
 /**
@@ -18,7 +18,7 @@ export async function mixAudioOnServer(voiceoverUrl: string, opts: MixAudioOptio
   const bin = await ffmpegBin();
   if (!bin) throw new Error('ffmpeg not found');
   const voice = mediaPath(fileNameFromMediaUrl(voiceoverUrl));
-  const track = musicPath(opts.track);
+  const track = audioPath('music', opts.track);
   if (!(await exists(track))) throw new Error(`no track named "${opts.track}" in the music folder`);
 
   const seconds = await measureDurationSeconds(voice, signal);

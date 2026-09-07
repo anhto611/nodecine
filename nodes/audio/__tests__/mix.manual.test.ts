@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { copyFile, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { createServerServices } from '@/server/services.server';
-import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl, musicDir } from '@/server/paths';
+import { audioDir, ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
 import { measureDurationSeconds } from '@/server/audio';
 
 /**
@@ -18,16 +18,16 @@ describe.skipIf(!enabled)('the music bed, for real', () => {
     const trackSrc = process.env.NODECINE_MANUAL_TRACK!;
     const voiceName = 'aaaaaaaaaaaaaaaa.mp3';
     await copyFile(voiceSrc, path.join(await ensureTmpDir(), voiceName));
-    await mkdir(musicDir(), { recursive: true });
+    await mkdir(audioDir('music'), { recursive: true });
     const trackName = 'Manual Test Track.mp3';
-    await copyFile(trackSrc, path.join(musicDir(), trackName));
+    await copyFile(trackSrc, path.join(audioDir('music'), trackName));
     try {
       const voiceSeconds = await measureDurationSeconds(mediaPath(voiceName));
       const out = await createServerServices().mixAudio(mediaUrl(voiceName), { track: trackName, volume: 0.16, duck: 0.7, fadeInSeconds: 1, fadeOutSeconds: 2 }, new AbortController().signal);
       console.log('mixed →', mediaPath(fileNameFromMediaUrl(out.audioUrl)));
       expect(Math.abs(out.durationSeconds - voiceSeconds)).toBeLessThan(0.15);
     } finally {
-      await rm(path.join(musicDir(), trackName), { force: true });
+      await rm(path.join(audioDir('music'), trackName), { force: true });
     }
   }, 120_000);
 });

@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { musicDir, musicPath } from '../paths';
+import { audioDir, audioPath } from '../paths';
 
-describe('musicPath', () => {
-  it('resolves a plain track name inside the music folder', () => {
-    expect(musicPath("Slow Piano (loop)_1.mp3")).toBe(`${musicDir()}/Slow Piano (loop)_1.mp3`);
+describe('audioPath', () => {
+  it('resolves a plain file name inside the folder it belongs to', () => {
+    expect(audioPath('music', "Slow Piano (loop)_1.mp3")).toBe(`${audioDir('music')}/Slow Piano (loop)_1.mp3`);
+    expect(audioPath('voice', 'take 3.wav')).toBe(`${audioDir('voice')}/take 3.wav`);
   });
 
-  it('refuses anything that could leave the folder or is not a track', () => {
+  it('keeps the two folders apart', () => {
+    expect(audioDir('music')).not.toBe(audioDir('voice'));
+  });
+
+  it('refuses anything that could leave the folder or is not audio', () => {
     for (const bad of ['../secrets.mp3', 'sub/bed.mp3', '/etc/passwd', '.hidden.mp3', 'bed.mp3\n', 'bed.exe', 'bed.mp3.sh', '']) {
-      expect(() => musicPath(bad), bad).toThrow();
+      expect(() => audioPath('music', bad), bad).toThrow();
     }
   });
 });

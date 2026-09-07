@@ -121,10 +121,10 @@ nodecine/
 │  ├─ resources/                  Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn, hai node Động Cơ
 │  ├─ tts/                        Giọng Đọc
 │  ├─ transcribe/                 Căn Mốc Từ: node, align.server.ts + align/stable_ts_align.py (căn chỉnh cưỡng bức)
-│  ├─ captions/                   Phụ Đề: node, cues.ts (gom từ thành dòng)
-│  ├─ audio/                      Nhạc Nền: node, mix.server.ts (lặp nhạc, hạ nhạc khi có tiếng nói)
+│  ├─ captions/                   Phụ Đề và Xuất Phụ Đề: node, cues.ts (gom từ thành dòng), subtitles.ts (srt/vtt)
+│  ├─ audio/                      Nhạc Nền và Nhập Âm Thanh: node, mix.server.ts (lặp nhạc, hạ nhạc khi có tiếng nói), import.server.ts, picker.tsx
 │  ├─ assembler/                  Đóng Gói Timeline: phân bổ khung hình theo trọng số, đè dữ kiện, dựng IR (kiểm định IR ở core/types/validate-ir.ts)
-│  └─ output/                     Xuất Bản Video, Xuất MP4
+│  └─ output/                     Xuất Bản Video, Xuất MP4, Ảnh Bìa
 ├─ components/                    Thành phần giao diện Studio (canvas, dải, panel, thẻ node); thân node nằm ở nodes/
 ├─ locales/                       Từ điển chuỗi hiển thị
 └─ docs/

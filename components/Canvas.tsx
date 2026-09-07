@@ -75,7 +75,6 @@ function CanvasInner() {
   const t = useT();
   const graph = useStudio((s) => s.graph);
   const runtimes = useStudio((s) => s.runtimes);
-  const setNodePosition = useStudio((s) => s.setNodePosition);
   const setNodePositions = useStudio((s) => s.setNodePositions);
   const modalOpen = useStudio((s) => !!s.codeEditor);
   const undo = useStudio((s) => s.undo);
@@ -121,11 +120,16 @@ function CanvasInner() {
   const onNodesChange = (changes: NodeChange<Node>[]) => {
     setNodes((ns) => applyNodeChanges(changes, ns as Node[]) as NcNode[]);
     const removed: string[] = [];
+    // One gesture, one undo step: React Flow reports a move per node, and dragging a selection of
+    // three moves three of them at once. Recorded one at a time, taking that back would cost three
+    // presses of Ctrl+Z, so every move in this batch lands as a single change to the graph.
+    const moved: Record<string, { x: number; y: number }> = {};
     for (const c of changes) {
-      if (c.type === 'position' && c.position && !c.dragging) setNodePosition(c.id, c.position);
+      if (c.type === 'position' && c.position && !c.dragging) moved[c.id] = c.position;
       if (c.type === 'remove') removed.push(c.id);
       if (c.type === 'select') select(c.selected ? c.id : null);
     }
+    if (Object.keys(moved).length) setNodePositions(moved);
     if (removed.length) removeNodes(removed);
   };
   const onEdgesChange = (changes: EdgeChange[]) => {

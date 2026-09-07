@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stat } from 'node:fs/promises';
-import { renderWithProducer } from './register.server';
+import { capturePosterWithProducer, renderWithProducer } from './register.server';
 import staticScript from '@/templates/static-script.json';
 import githubShowcase from '@/templates/github-showcase.json';
 import quoteCards from '@/templates/quote-cards.json';
@@ -34,12 +34,12 @@ const SAMPLE: Record<keyof typeof TEMPLATES, Scene[]> = {
   ],
 };
 
-describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
-  it('renders a shipped look to an MP4', async () => {
+/** The IR the two cases below both render: a shipped look with sample props. */
+function sampleIR(): VideoIR {
     const id = (process.env.NODECINE_MANUAL_TEMPLATE ?? 'static-script') as keyof typeof TEMPLATES;
     const nodes = TEMPLATES[id].graph.nodes;
-    const stage = nodes.find((n) => n.type === 'core/art-director')!.params as unknown as StageDef;
-    const blocks = nodes.filter((n) => n.type === 'core/blocks').flatMap((n) => (n.params as unknown as { blocks: BlockDef[] }).blocks);
+    const look = nodes.find((n) => n.type === 'core/art-director')!.params as unknown as StageDef & { blocks: BlockDef[] };
+    const { blocks, ...stage } = look;
     const duration = Number(process.env.NODECINE_MANUAL_DURATION ?? '9');
     const fps = 30;
     const total = Math.ceil(duration * fps);
@@ -59,11 +59,31 @@ describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
       audioTrack: { voiceoverUrl: '/api/media/0123456789abcdef0123456789abcdef.mp3', durationSeconds: duration, padTailFrames: 0 },
       timeline,
     };
+    return ir;
+}
+
+describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
+  it('renders a shipped look to an MP4', async () => {
+    const ir = sampleIR();
     const t0 = Date.now();
-    const out = await renderWithProducer(ir, { codec: 'h264', quality: 'medium', fileName: `${id}.mp4` }, () => {}, new AbortController().signal);
-    console.log('rendered', id, out, 'in', Date.now() - t0, 'ms');
+    const out = await renderWithProducer(ir, { codec: 'h264', quality: 'medium', fileName: 'sample.mp4' }, () => {}, new AbortController().signal);
+    console.log('rendered', out, 'in', Date.now() - t0, 'ms');
     expect(out.outputUrl).toMatch(/^\/api\/media\/[a-f0-9]+\.mp4$/);
     const s = await stat(`${process.env.NODECINE_TMP_DIR}/${out.outputUrl.split('/').pop()}`);
     expect(s.size).toBeGreaterThan(50_000);
+  }, 600_000);
+
+  it('takes one frame of the same composition as a PNG cover', async () => {
+    const ir = sampleIR();
+    const t0 = Date.now();
+    const out = await capturePosterWithProducer(ir, { atSeconds: 2, resolution: '1080p' }, new AbortController().signal);
+    console.log('captured', out, 'in', Date.now() - t0, 'ms');
+    expect(out.outputUrl).toMatch(/^\/api\/media\/[a-f0-9]+\.png$/);
+    const file = `${process.env.NODECINE_TMP_DIR}/${out.outputUrl.split('/').pop()}`;
+    const s = await stat(file);
+    expect(s.size).toBeGreaterThan(10_000);
+    // A PNG, not something that merely ends in .png.
+    const { readFile } = await import('node:fs/promises');
+    expect((await readFile(file)).subarray(1, 4).toString('latin1')).toBe('PNG');
   }, 600_000);
 });

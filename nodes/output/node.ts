@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { safeFileName } from '@/core/file-name';
 import { ErrorCode } from '@/core/errors';
 import { missingCodeRenderers } from '@/core/look/renderers';
 import type { EngineRef } from '@/core/types/payloads';
@@ -67,7 +68,7 @@ export const mp4Export: NodeDefinition<typeof ExportParams> = {
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const ir = inputs.ir!.payload as VideoIR;
     const engine = inputs.engine!.payload as EngineRef;
-    const fileName = params.fileName.replace(/[^\w.-]+/g, '-');
+    const fileName = safeFileName(params.fileName, 'nodecine.mp4');
     log('info', `start · ${params.codec} · ${params.quality} · ${params.resolution} · ${fileName}`);
     const result = await services.render(
       engine,
@@ -78,5 +79,46 @@ export const mp4Export: NodeDefinition<typeof ExportParams> = {
     );
     log('info', `done · ${result.bytes} bytes · ${result.outputUrl}`);
     return { ...result, fileName };
+  },
+};
+
+const PosterParams = z.object({
+  /** Where in the film the cover comes from. Clamped into the film at run time. */
+  atSeconds: z.number().min(0).max(3600).default(1),
+  fileName: z.string().min(1).max(80).default('nodecine'),
+  resolution: z.enum(['1080p', '1440p', '2160p']).default('1080p'),
+});
+
+export const POSTER_EXPORT = 'core/poster-export';
+
+/**
+ * CORE_CONTRACTS §5.18 — one frame of the same composition, as a PNG cover.
+ *
+ * The thumbnail is what decides whether anyone plays the video at all, and picking one afterwards
+ * means scrubbing an MP4 in another tool. Bypassed by default like the MP4: a still costs a headless
+ * browser, so it waits to be asked.
+ */
+export const posterExport: NodeDefinition<typeof PosterParams> = {
+  type: POSTER_EXPORT,
+  version: 1,
+  kind: 'ondemand',
+  inputs: [
+    { name: 'ir', type: 'VideoIR' },
+    { name: 'engine', type: 'EngineRef', requires: ['render'] },
+  ],
+  outputs: [],
+  paramsSchema: PosterParams,
+  defaultParams: { atSeconds: 1, fileName: 'nodecine', resolution: '1080p' },
+  defaultBypassed: true,
+  preflight: sceneSupportPreflight,
+  run: async ({ params, inputs, services, signal, log }) => {
+    const ir = inputs.ir!.payload as VideoIR;
+    const engine = inputs.engine!.payload as EngineRef;
+    const atSeconds = Math.min(params.atSeconds, ir.meta.totalDurationInFrames / ir.meta.fps);
+    const fileName = safeFileName(params.fileName, 'nodecine', 'png');
+    log('info', `start · ${atSeconds.toFixed(2)}s · ${params.resolution} · ${fileName}`);
+    const result = await services.capture(engine, ir, { atSeconds, resolution: params.resolution }, signal);
+    log('info', `done · ${result.bytes} bytes · ${result.outputUrl}`);
+    return { ...result, fileName, atSeconds };
   },
 };

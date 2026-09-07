@@ -12,9 +12,12 @@ import { EngineBody, LlmProviderBody, TtsProviderBody } from './resources/body';
 import { TtsBody } from './tts/body';
 import { TranscribeBody } from './transcribe/body';
 import { AudioMixBody } from './audio/body';
+import { AudioInputBody } from './audio/import-body';
 import { CaptionsBody } from './captions/body';
+import { CaptionExportBody } from './captions/export-body';
 import { AssemblerBody } from './assembler/body';
 import { ExportBody } from './output/export-body';
+import { PosterBody } from './output/poster-body';
 import { VideoOutputBody } from './output/video-output-body';
 
 /** The Studio side of every node family: the body each node type draws, and its icon and library group. */
@@ -31,11 +34,14 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/hyperframes-engine': EngineBody,
   'core/tts-engine': TtsBody,
   'core/transcribe': TranscribeBody,
+  'core/audio-input': AudioInputBody,
   'core/audio-mix': AudioMixBody,
   'core/captions': CaptionsBody,
+  'core/caption-export': CaptionExportBody,
   'core/timeline-assembler': AssemblerBody,
   'core/video-output': VideoOutputBody,
   'core/mp4-export': ExportBody,
+  'core/poster-export': PosterBody,
 };
 
 export const NODE_META: Record<string, NodeMeta> = {
@@ -45,13 +51,16 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/static-script': { icon: 'doc', group: 'script' },
   'core/screenwriter': { icon: 'bot', group: 'script' },
   'core/art-director': { icon: 'screen', group: 'look' },
+  'core/audio-input': { icon: 'mic', group: 'audio' },
   'core/tts-engine': { icon: 'wave', group: 'audio' },
   'core/transcribe': { icon: 'wave', group: 'audio' },
   'core/audio-mix': { icon: 'wave', group: 'audio' },
   'core/captions': { icon: 'doc', group: 'audio' },
+  'core/caption-export': { icon: 'down', group: 'output' },
   'core/timeline-assembler': { icon: 'layers', group: 'output' },
   'core/video-output': { icon: 'screen', group: 'output' },
   'core/mp4-export': { icon: 'down', group: 'output' },
+  'core/poster-export': { icon: 'screen', group: 'output' },
   'core/llm-provider': { icon: 'term', group: 'resource' },
   'core/tts-provider': { icon: 'mic', group: 'resource' },
   'core/remotion-engine': { icon: 'chip', group: 'resource' },

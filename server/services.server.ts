@@ -8,10 +8,11 @@ import { buildTTSRef } from '@/providers/system-tts';
 import { mediaUrl } from '@/server/paths';
 import { ensureServerRegistrations } from '@/server/register';
 import { embedWorkflow } from '@/server/video-meta';
-import { fileNameFromMediaUrl, mediaPath } from '@/server/paths';
+import { ensureTmpDir, fileNameFromMediaUrl, mediaPath } from '@/server/paths';
 import { alignWordsOnServer } from '@/nodes/transcribe/align.server';
 import { readPageOnServer } from '@/nodes/web/page.server';
 import { mixAudioOnServer } from '@/nodes/audio/mix.server';
+import { importAudioOnServer } from '@/nodes/audio/import.server';
 import { concatMp3, measureDurationSeconds } from '@/server/audio';
 import { contentHash } from '@/core/hash';
 import fs from 'node:fs/promises';
@@ -70,9 +71,21 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       await fs.mkdir(llmCacheDir(), { recursive: true }).then(() => fs.writeFile(`${file}.part`, JSON.stringify(out))).then(() => fs.rename(`${file}.part`, file)).catch(() => undefined);
       return out;
     },
+    async saveText(text, extension) {
+      if (!/^[a-z0-9]{1,8}$/.test(extension)) throw new Error(`Invalid file extension: ${extension}`);
+      // Named by the text itself: exporting the same captions twice is one file, and the name says nothing about the user.
+      const name = `${contentHash({ text, extension })}.${extension}`;
+      const bytes = Buffer.byteLength(text, 'utf8');
+      const file = mediaPath(name);
+      await fs.mkdir(await ensureTmpDir(), { recursive: true });
+      await fs.writeFile(`${file}.part`, text, 'utf8');
+      await fs.rename(`${file}.part`, file);
+      return { url: mediaUrl(name), bytes };
+    },
     alignWords: alignWordsOnServer,
     readPage: readPageOnServer,
     mixAudio: mixAudioOnServer,
+    importAudio: importAudioOnServer,
     async concatAudio(parts, gapSeconds, signal) {
       const files = parts.map((p) => mediaPath(fileNameFromMediaUrl(p.audioUrl)));
       // Named by what went in, so the same parts joined twice are one file.
@@ -84,6 +97,13 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       let start = 0;
       const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
       return { audioUrl: mediaUrl(name), durationSeconds, segments };
+    },
+    async capture(ref, ir, settings, signal) {
+      const f = getEngineFactory(ref.engineId);
+      if (!f) throw Object.assign(new Error(`unknown engine ${ref.engineId}`), { code: 'ENGINE_NOT_READY' });
+      const adapter = f(ref.settings);
+      if (!adapter.capture) throw Object.assign(new Error(`${adapter.displayName} cannot take a still`), { code: 'ENGINE_SCENE_UNSUPPORTED' });
+      return adapter.capture(ir, settings, signal);
     },
     async render(ref, ir, settings, onProgress, signal) {
       const f = getEngineFactory(ref.engineId);

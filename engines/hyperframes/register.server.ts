@@ -2,7 +2,7 @@ import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { registerEngine } from '@/core/adapters/registry';
 import { registerCodeRenderer } from '@/core/look/renderers';
-import type { ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
+import type { CaptureResult, CaptureSettings, ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
 import type { VideoIR } from '@/core/types/ir';
 import { contentHash } from '@/core/hash';
 import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
@@ -23,10 +23,13 @@ import { assetNamesIn, assetPath } from '@/server/paths';
 const QUALITY: Record<ExportSettings['quality'], 'high' | 'standard' | 'draft'> = { high: 'high', medium: 'standard', low: 'draft' };
 const FONTS = ['JetBrainsMono-Regular.woff2', 'JetBrainsMono-Bold.woff2', 'JetBrainsMono-ExtraBold.woff2'];
 
-export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal): Promise<RenderResult> {
-  const { createRenderJob, executeRenderJob } = await import('@hyperframes/producer');
+/**
+ * The project directory a headless Chrome is pointed at: index.html, the voice-over beside it, the
+ * fonts and any images the look refers to. The MP4 render and the poster capture both start here —
+ * a poster that came from a differently built page would not be a still of the video.
+ */
+async function buildProjectDir(ir: VideoIR, settings: Pick<ExportSettings, 'resolution'>, key: string): Promise<{ projectDir: string; scale: number }> {
   const tmp = await ensureTmpDir();
-  const key = contentHash({ ir, settings, engine: HYPERFRAMES_ENGINE_ID });
   const projectDir = path.join(tmp, `hf-${key}`);
   await mkdir(path.join(projectDir, 'fonts'), { recursive: true });
 
@@ -42,6 +45,14 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
   const scale = renderScaleFor({ width: ir.meta.width, height: ir.meta.height }, settings.resolution ?? '1080p');
   const html = buildHyperframesDocument(ir, { gsapSource, runtimeSource, voiceoverSrc: 'voiceover.mp3', fontBase: 'fonts', scale, assetBase: 'assets' });
   await writeFile(path.join(projectDir, 'index.html'), html, 'utf8');
+  return { projectDir, scale };
+}
+
+export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal): Promise<RenderResult> {
+  const { createRenderJob, executeRenderJob } = await import('@hyperframes/producer');
+  const tmp = await ensureTmpDir();
+  const key = contentHash({ ir, settings, engine: HYPERFRAMES_ENGINE_ID });
+  const { projectDir } = await buildProjectDir(ir, settings, key);
 
   const fileName = `${key}.mp4`;
   const outputPath = path.join(tmp, fileName);
@@ -55,7 +66,45 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
   return { outputUrl: mediaUrl(fileName), bytes: s.size };
 }
 
+/**
+ * One frame of the same composition, as a PNG (CORE_CONTRACTS §5.18). The producer's own capture
+ * session does the work — it serves the project directory, seeks the page's timeline to the second
+ * asked for and screenshots deterministically, which is exactly what the MP4 path does frame by
+ * frame. Rolling our own puppeteer here would be a second, subtly different renderer.
+ */
+export async function capturePosterWithProducer(ir: VideoIR, opts: CaptureSettings, signal: AbortSignal): Promise<CaptureResult> {
+  const { createFileServer, createCaptureSession, initializeSession, captureFrameToBuffer, closeCaptureSession } = await import('@hyperframes/producer');
+  const key = contentHash({ ir, opts, engine: HYPERFRAMES_ENGINE_ID, kind: 'poster' });
+  const fileName = `${key}.png`;
+  const outputPath = mediaPath(fileName);
+  if (await stat(outputPath).then(() => true, () => false)) {
+    return { outputUrl: mediaUrl(fileName), bytes: (await stat(outputPath)).size };
+  }
+
+  const { projectDir, scale } = await buildProjectDir(ir, opts, key);
+  // The second the user asked for, clamped inside the film and quantised to a real frame.
+  const frame = Math.min(Math.max(0, Math.round(opts.atSeconds * ir.meta.fps)), Math.max(0, ir.meta.totalDurationInFrames - 1));
+  const server = await createFileServer({ projectDir, fps: { num: ir.meta.fps, den: 1 } });
+  let session: Awaited<ReturnType<typeof createCaptureSession>> | null = null;
+  try {
+    session = await createCaptureSession(server.url, projectDir, {
+      width: Math.round(ir.meta.width * scale),
+      height: Math.round(ir.meta.height * scale),
+      fps: { num: ir.meta.fps, den: 1 },
+      format: 'png',
+    });
+    await initializeSession(session);
+    if (signal.aborted) throw Object.assign(new Error('cancelled'), { code: 'RUN_CANCELLED' });
+    const shot = await captureFrameToBuffer(session, frame, frame / ir.meta.fps);
+    await writeFile(outputPath, shot.buffer);
+    return { outputUrl: mediaUrl(fileName), bytes: shot.buffer.byteLength };
+  } finally {
+    if (session) await closeCaptureSession(session).catch(() => undefined);
+    server.close();
+  }
+}
+
 export function registerHyperframesServer(): void {
   registerCodeRenderer('html-gsap', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
-  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer }));
+  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer, capture: capturePosterWithProducer }));
 }

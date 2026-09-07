@@ -75,7 +75,6 @@ export interface StudioState {
   setParams(nodeId: string, patch: Record<string, unknown>): void;
   /** A node changed its own parameters while running: into the graph and the undo history, nothing invalidated. */
   applyParamsPatch(nodeId: string, patch: Record<string, unknown>): void;
-  setNodePosition(nodeId: string, position: { x: number; y: number }): void;
   /** Many at once, for auto-layout; one persist, one dirty mark. */
   setNodePositions(positions: Record<string, { x: number; y: number }>): void;
   addNode(type: string, position: { x: number; y: number }): string;
@@ -332,10 +331,6 @@ export const useStudio = create<StudioState>((set, get) => {
       const next = stackFor(get().activeTab).redo(get().graph);
       if (next) { apply(next); set({ selectedNodeId: null }); }
       syncUndoFlags();
-    },
-
-    setNodePosition(nodeId, position) {
-      get().setNodePositions({ [nodeId]: position });
     },
 
     addNode(type, position) {

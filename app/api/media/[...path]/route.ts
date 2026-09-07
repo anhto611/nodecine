@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { mediaPath } from '@/server/paths';
 
-const MIME: Record<string, string> = { mp3: 'audio/mpeg', mp4: 'video/mp4', aiff: 'audio/aiff', wav: 'audio/wav', png: 'image/png' };
+const MIME: Record<string, string> = { mp3: 'audio/mpeg', mp4: 'video/mp4', aiff: 'audio/aiff', wav: 'audio/wav', png: 'image/png', srt: 'application/x-subrip', vtt: 'text/vtt' };
 
 /** Read-only file serving from the temp dir; the name must be a bare hash (ARCHITECTURE §6). */
 export async function GET(_req: Request, ctx: { params: Promise<{ path: string[] }> }) {

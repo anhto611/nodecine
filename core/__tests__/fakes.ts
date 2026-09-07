@@ -87,6 +87,14 @@ export function makeFakeServices(overrides: Partial<{
       calls.push({ name: 'mixAudio', args: [voiceoverUrl, opts] });
       return { audioUrl: `/api/media/${contentHash({ voiceoverUrl, opts })}.mp3`, durationSeconds: 63.18 };
     },
+    async saveText(text, extension) {
+      calls.push({ name: 'saveText', args: [text, extension] });
+      return { url: `/api/media/${contentHash({ text, extension })}.${extension}`, bytes: text.length };
+    },
+    async importAudio(fileName) {
+      calls.push({ name: 'importAudio', args: [fileName] });
+      return { audioUrl: `/api/media/${contentHash({ fileName })}.mp3`, durationSeconds: 42.5 };
+    },
     async readPage(url, opts) {
       calls.push({ name: 'readPage', args: [url, opts] });
       const domain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]!;
@@ -104,6 +112,10 @@ export function makeFakeServices(overrides: Partial<{
       const words = text.trim().split(/\s+/).filter(Boolean);
       const step = 0.3;
       return words.map((w, i) => ({ text: w, start: Math.round(i * step * 1000) / 1000, end: Math.round((i * step + 0.25) * 1000) / 1000 }));
+    },
+    async capture(_ref, ir, settings) {
+      calls.push({ name: 'capture', args: [settings] });
+      return { outputUrl: `/api/media/${contentHash({ ir, settings })}.png`, bytes: 148_000 };
     },
     async render(_ref, ir, settings, onProgress, signal) {
       calls.push({ name: 'render', args: [settings] });

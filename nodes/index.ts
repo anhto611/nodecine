@@ -8,10 +8,10 @@ import { artDirector } from './art-director/node';
 import { hyperframesEngine, llmProvider, remotionEngine, ttsProvider } from './resources/node';
 import { ttsEngine } from './tts/node';
 import { transcribe } from './transcribe/node';
-import { audioMix } from './audio/node';
-import { captions } from './captions/node';
+import { audioInput, audioMix } from './audio/node';
+import { captions, captionExport } from './captions/node';
 import { timelineAssembler } from './assembler/node';
-import { mp4Export, videoOutput } from './output/node';
+import { mp4Export, posterExport, videoOutput } from './output/node';
 
 /**
  * Every node the app ships, one family per directory (ARCHITECTURE §2): the definition, its logic,
@@ -30,20 +30,25 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   ttsProvider,
   ttsEngine,
   transcribe,
+  audioInput,
   audioMix,
   captions,
+  captionExport,
   timelineAssembler,
   remotionEngine,
   hyperframesEngine,
   videoOutput,
   mp4Export,
+  posterExport,
 ] as unknown as AnyNodeDefinition[];
 
 export function registerNodes(): void {
   for (const def of ALL_NODES) registerNodeType(def);
 }
 
-export { audioMix, AUDIO_MIX } from './audio/node';
+export { audioInput, audioMix, AUDIO_INPUT, AUDIO_MIX } from './audio/node';
+export { captionExport } from './captions/node';
+export { posterExport, POSTER_EXPORT } from './output/node';
 export { inputTrigger, githubFetcher, webFetcher, staticScript, artDirector, screenwriter, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
 export { pickVoice } from './tts/node';
 export { DEFAULT_STATIC_SCRIPT } from './script/node';

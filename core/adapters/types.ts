@@ -21,6 +21,18 @@ export interface RenderResult {
   bytes: number;
 }
 
+/** One still of the composition, for a cover image (CORE_CONTRACTS §5.18). */
+export interface CaptureSettings {
+  /** Where in the film to take it. Clamped into the film and quantised to a real frame. */
+  atSeconds: number;
+  resolution?: ExportSettings['resolution'];
+}
+
+export interface CaptureResult {
+  outputUrl: string;
+  bytes: number;
+}
+
 /** What the Video Output node gets back from mountPlayer: enough to drive the scene inspector. */
 export interface PlayerHandle {
   unmount(): void;
@@ -45,6 +57,11 @@ export interface EngineAdapter {
     onProgress: (p: RenderProgress) => void,
     signal: AbortSignal,
   ): Promise<RenderResult>;
+  /**
+   * Server-side only, and optional: an engine that cannot take a still simply leaves it out, and the
+   * Poster node blocks with a reason instead of the contract growing a capability nobody reports.
+   */
+  capture?(ir: VideoIR, settings: CaptureSettings, signal: AbortSignal): Promise<CaptureResult>;
 }
 
 export type EngineAdapterFactory = (settings: Record<string, unknown>) => EngineAdapter;

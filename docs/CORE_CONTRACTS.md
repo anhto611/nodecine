@@ -334,7 +334,7 @@ Mã lỗi: `PAGE_URL_INVALID`, `PAGE_NOT_FOUND`, `PAGE_NETWORK` (thử lại đ�
 
 Node lõi `core/audio-mix`: nhận `Voiceover`, phát `Voiceover` **dài đúng bằng bản gốc**, chỉ khác ở tệp âm thanh. Nhờ vậy `words` và `segments` đi qua nguyên vẹn và mọi mốc thời gian phía sau (cảnh dài bao nhiêu, phụ đề rơi vào đâu) không phải tính lại.
 
-Nhạc là tệp có bản quyền của người dùng nên **không đi qua đồ thị**: người dùng bỏ tệp vào `.nodecine/music` (`NODECINE_MUSIC_DIR` ghi đè), node chỉ giữ **tên tệp**. `GET /api/music` liệt kê tên các bản nhạc trên máy này cho ô chọn trong thân node. Tên nhạc được kiểm theo mẫu chặt (chữ, số, khoảng trắng, `. _ ' ( ) -`, đuôi mp3/m4a/aac/wav/ogg/flac) rồi ghép vào thư mục nhạc; bất cứ tên nào có thể đi ra khỏi thư mục đều bị từ chối (mục 9.2). Đồ thị chia sẻ cho người khác mở trên máy trống thì tên nhạc vẫn còn trong ô chọn nhưng lần chạy báo lỗi rõ tên bản nhạc thiếu.
+Nhạc là tệp có bản quyền của người dùng nên **không đi qua đồ thị**: người dùng bỏ tệp vào `.nodecine/music` (`NODECINE_MUSIC_DIR` ghi đè), node chỉ giữ **tên tệp**. `GET /api/audio/music` liệt kê tên các bản nhạc trên máy này cho ô chọn trong thân node. Tên nhạc được kiểm theo mẫu chặt (chữ, số, khoảng trắng, `. _ ' ( ) -`, đuôi mp3/m4a/aac/wav/ogg/flac) rồi ghép vào thư mục nhạc; bất cứ tên nào có thể đi ra khỏi thư mục đều bị từ chối (mục 9.2). Đồ thị chia sẻ cho người khác mở trên máy trống thì tên nhạc vẫn còn trong ô chọn nhưng lần chạy báo lỗi rõ tên bản nhạc thiếu.
 
 Không chọn bản nhạc nào **không phải lỗi**: giọng đọc đi qua nguyên vẹn, không gọi ffmpeg. Đó là trạng thái các bản mẫu xuất xưởng.
 
@@ -343,6 +343,38 @@ Tham số: `track` (rỗng = không nhạc), `volume` (0..1, mặc định 0.16)
 Trộn qua `services.mixAudio` → `nodes/audio/mix.server.ts`: bản nhạc được lặp (`aloop`) rồi cắt đúng độ dài giọng, hạ về `volume`, mờ vào và mờ ra; `sidechaincompress` lấy chính giọng làm tín hiệu điều khiển nên nhạc tự nhỏ lại mỗi khi có người nói và tự đầy lại ở khoảng lặng — đúng cách một bàn trộn phát thanh làm. `amix=duration=first:normalize=0` giữ mix kết thúc cùng giọng và không tự hạ đôi bên. `duck: 0` bỏ hẳn nhánh sidechain, nhạc chạy đều. Công thức nằm ở hàm thuần `mixFilter` để test đọc được mà không cần ffmpeg trên máy. Tệp ra đặt tên băm theo giọng và tham số nên đổi mức nhạc rồi đổi lại là dùng lại tệp cũ.
 
 Trong bản mẫu **Tin AI**, node nằm giữa Giọng Đọc và Đóng Gói Timeline, còn Căn Mốc Từ vẫn lấy giọng **sạch** thẳng từ Giọng Đọc: bộ căn nghe nhạc sẽ căn kém hơn.
+
+### 5.16. Xuất Phụ Đề (Caption Export)
+
+Node lõi `core/caption-export`: nhận `CaptionTrack`, không phát gói nào (`kind: 'sink'`), ghi ra một tệp phụ đề rời để đăng kèm video. Cùng những dòng mà engine đốt vào hình, nhưng ở dạng tệp — YouTube, TikTok và mọi nơi khác đều nhận `.srt` hay `.vtt`.
+
+Chạy **theo luồng**, không phải theo yêu cầu như Xuất MP4: chữ và mốc thời gian đã có sẵn trong tay, việc còn lại chỉ là chép ra, không tốn gì.
+
+Tham số: `format` (`srt` mặc định, `vtt`) và `fileName` **không kèm đuôi** — đuôi do `format` quyết định, nên hai thứ không bao giờ chỏi nhau.
+
+Hai định dạng là một ý tưởng viết hai lần: một cue là một khoảng thời gian và những chữ nói trong đó. Khác nhau ở dấu thập phân (phẩy với chấm), ở việc đánh số (SubRip có, WebVTT không) và ở dòng đầu `WEBVTT`. Hàm `toSubtitles` thuần nên test đọc được đúng thứ trình phát sẽ đọc mà không cần đĩa. Cue dài bằng không được nới thành 40 mili giây: trình phát lặng lẽ bỏ qua cue không có độ dài. Track không có dòng nào là lỗi `CAPTIONS_NO_WORDS`, không ghi ra tệp rỗng.
+
+Tệp ghi qua `services.saveText`, đặt tên theo băm của chính nội dung nên xuất hai lần là một tệp, và tên tệp người dùng gõ chỉ đi trong thuộc tính `download` của thẻ neo. Vì vậy tên **giữ nguyên tiếng Việt**: `core/file-name.ts` chỉ bỏ những ký tự hệ tệp hay HTTP header thực sự từ chối (`< > : " / \ | ? *` và ký tự điều khiển), không ép về ASCII. Xuất MP4 dùng chung luật này.
+
+### 5.17. Nhập Âm Thanh (Audio Input)
+
+Node lõi `core/audio-input`: không có cổng vào, phát `Voiceover` từ **một bản thu người dùng đã có**. Đây là lối vào thứ hai của luồng: trước đó chỉ node Giọng Đọc tạo ra được `Voiceover`, nên ai đã thu sẵn giọng của chính mình thì không có đường nào vào cả.
+
+Đầu ra đúng bằng payload node Giọng Đọc phát, nên Căn Mốc Từ, Nhạc Nền, Phụ Đề và Đóng Gói nhận mà không cần biết khác biệt. Chỉ thiếu `segments`: một tệp là một lần thu liền mạch, không chia đoạn theo cảnh, nên Đóng Gói quay về chia khung theo **trọng số** (mục 5.4). Muốn có mốc từng từ thì nối qua Căn Mốc Từ với lời thoại từ Kịch Bản Tĩnh hay Biên Kịch — bộ căn không cần biết tiếng đó do máy đọc hay do người đọc.
+
+Tham số: `file` (tên tệp trong thư mục giọng) và `language` (mọi ngôn ngữ đầu ra trừ `auto` — không có gì ở đây nghe tệp để đoán).
+
+**Thư viện âm thanh của máy** dùng chung cho cả nhạc nền và bản thu: `.nodecine/music` và `.nodecine/voice` (`NODECINE_MUSIC_DIR`, `NODECINE_VOICE_DIR` ghi đè), `GET /api/audio/<music|voice>` liệt kê tên tệp và đường dẫn thư mục. Cùng một luật tên tệp và cùng một cách chặn đường dẫn thoát ra khỏi thư mục (mục 9.2). Lý do giống nhau: bản nhạc có bản quyền hay giọng của chính mình thì ở nguyên chỗ người ta để, chỉ **tên tệp** đi trong đồ thị mà họ có thể chia sẻ.
+
+Lúc chạy, tệp được ffmpeg chuyển sang MP3 vào thư mục media dưới tên **băm từ chính byte của tệp**, nên trình phát, bộ kết xuất và bộ căn đều gặp đúng một định dạng chúng chắc chắn đọc được, và nhập lại cùng một bản thu thì không tốn gì. Băm đọc theo luồng để một bản thu hai tiếng không phải nằm trọn trong bộ nhớ. Chuyển xong mới đổi tên vào chỗ, để lần chạy bị ngắt không bỏ lại một tệp dở mà cái tên nói là đã xong.
+
+### 5.18. Ảnh Bìa (Cover Image)
+
+Node lõi `core/poster-export`: nhận `VideoIR` và `EngineRef` (cần `render`), không phát gói nào, chụp **một khung hình của chính bản dựng đó** thành PNG. Ảnh bìa là thứ quyết định người ta có bấm xem hay không, mà chọn nó sau khi có MP4 nghĩa là phải mở video bằng công cụ khác để tua.
+
+Bỏ qua mặc định như Xuất MP4: một khung hình vẫn tốn một lần mở trình duyệt không giao diện, nên nó chờ được bấm. Tham số: `atSeconds` (kẹp vào trong phim và làm tròn về một khung có thật), `fileName`, `resolution`.
+
+Chụp đi qua **chính bộ chụp của thư viện** (`createFileServer` → `createCaptureSession` → `captureFrameToBuffer` của `@hyperframes/producer`), là đúng thứ đường kết xuất MP4 dùng cho từng khung. Trang được dựng bằng cùng một hàm `buildProjectDir` với bản MP4: ảnh bìa đến từ một trang dựng khác đi thì không còn là một khung của video nữa. Tên tệp băm theo IR và tham số nên chụp lại cùng một khung là dùng lại tệp cũ.
 
 ## 6. Adapter và Node Động Cơ
 
@@ -354,6 +386,7 @@ Bốn năng lực, là toàn bộ bề mặt phần còn lại của ứng dụn
 - `probe()`: trả về `capabilities` gồm `preview` và `render`, mỗi trường `ready` hoặc `unavailable` kèm `reason`.
 - `mountPlayer(element, ir)`: Gắn trình phát vào một phần tử hiển thị.
 - `render(ir, exportSettings, onProgress, signal)`: Kết xuất MP4, có tiến độ và hủy.
+- `capture(ir, {atSeconds, resolution}, signal)` — **tùy chọn**: một khung hình thành PNG (mục 5.18). Engine không làm được thì đơn giản là không khai, và node Ảnh Bìa báo `ENGINE_SCENE_UNSUPPORTED`, thay vì hợp đồng mọc thêm một năng lực không ai báo cáo.
 
 Adapter nhận IR generic và tự chứa: stage, block và code của chúng nằm trong IR. Adapter đăng ký renderer cho định dạng code nó chạy được (mục 4) và không biết tên block nào.
 
