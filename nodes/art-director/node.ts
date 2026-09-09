@@ -25,6 +25,9 @@ import type { NodeDefinition } from '@/core/nodes/definition';
 
 export const ART_DIRECTOR = 'core/art-director';
 
+/** New blocks one run may draw, however many the model asks for. */
+const MAX_DRAWN = 3;
+
 export const DEFAULT_STAGE: StageDef = {
   name: 'Dark',
   frame: {
@@ -149,7 +152,24 @@ export const artDirector: NodeDefinition<typeof ArtDirectorParamsSchema> = {
     let picks: Awaited<ReturnType<typeof pickWithModel>> = [];
     if (ref) {
       progress(0.2, 'casting with the model');
-      picks = await pickWithModel(services, ref, script, lookDef, casting, signal, log);
+      picks = await pickWithModel(services, ref, script, lookDef, casting, signal, log, true);
+      // Scenes the model looked at and turned down: it read the catalogue and said none of it is
+      // right for that beat. Each gets a block drawn for it, which is then that scene's block —
+      // there is nothing to choose between, since it was written for this scene and no other.
+      const turned = picks.map((p, i) => (p?.none ? i : -1)).filter((i) => i >= 0);
+      for (const i of turned.slice(0, MAX_DRAWN)) {
+        const scene = script.scenes[i]!;
+        progress(0.3, `drawing a block for scene ${i + 1}`);
+        const { block } = await authorBlock(services, ref, scene, lookDef, signal);
+        lookDef = { ...lookDef, blocks: [...lookDef.blocks, block] };
+        picks[i] = { block: block.id, ...(picks[i]?.tone ? { tone: picks[i]!.tone } : {}) };
+        log('info', `drew block "${block.id}" for scene ${i + 1} (${scene.role}): the model asked for one · kept in this node`);
+      }
+      // A catalogue that grows every run stops being a look. Past the cap the rest are cast by the
+      // rule, and the log says so rather than the run quietly costing ten more model calls.
+      if (turned.length > MAX_DRAWN) log('warn', `the model asked for ${turned.length} new blocks; drew ${MAX_DRAWN} and cast the rest from the catalogue`);
+      for (const i of turned.slice(MAX_DRAWN)) picks[i] = { ...(picks[i]?.tone ? { tone: picks[i]!.tone } : {}) };
+      if (turned.length) patchParams({ blocks: lookDef.blocks });
     }
     const { plan, notes } = castScenes(script, lookDef, casting, picks);
     for (const n of notes) log('warn', n);

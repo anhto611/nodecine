@@ -1,14 +1,8 @@
 {
-  "id": "static-script",
   "name": {
     "en": "Static Script",
     "vi": "Kịch Bản Tĩnh"
   },
-  "description": {
-    "en": "Hand-written script and scenes on a dark stage with one text block. Nine core nodes, no network.",
-    "vi": "Gõ tay lời thoại và cảnh trên stage tối với một block chữ. Chín node lõi, không mạng."
-  },
-  "category": "core",
   "graph": {
     "nodes": [
       {

@@ -95,6 +95,12 @@ export function makeFakeServices(overrides: Partial<{
       calls.push({ name: 'importAudio', args: [fileName] });
       return { audioUrl: `/api/media/${contentHash({ fileName })}.mp3`, durationSeconds: 42.5 };
     },
+    async fetchStockMedia(req) {
+      calls.push({ name: 'fetchStockMedia', args: [req.provider, req.query, req.orientation] });
+      const h = contentHash({ query: req.query }).slice(0, 40);
+      if (req.want === 'still') return { kind: 'photo', assetUrl: `/api/assets/${h}.jpg`, author: 'A Photographer', page: `https://example.com/${h}`, width: 1920, height: 1280 };
+      return { kind: 'clip', assetUrl: `/api/assets/${h}.mp4`, author: 'A Film-maker', page: `https://example.com/${h}`, width: 1920, height: 1080, durationSec: 12 };
+    },
     async readPage(url, opts) {
       calls.push({ name: 'readPage', args: [url, opts] });
       const domain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]!;
@@ -105,6 +111,10 @@ export function makeFakeServices(overrides: Partial<{
       let start = 0;
       const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
       return { audioUrl: `/api/media/${contentHash({ parts: parts.map((p) => p.audioUrl), gapSeconds })}.mp3`, durationSeconds: Math.round(start * 100) / 100, segments };
+    },
+    async stillFromVideo(clipUrl, atSeconds) {
+      calls.push({ name: 'stillFromVideo', args: [clipUrl, atSeconds] });
+      return `/api/assets/${contentHash({ clipUrl, atSeconds })}.jpg`;
     },
     async alignWords(audioUrl, text, language, options) {
       calls.push({ name: 'alignWords', args: [audioUrl, text, language, options] });

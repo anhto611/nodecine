@@ -16,21 +16,51 @@ import type { Job } from '@/server/jobs';
 type Snapshot = { runtimes: Record<string, NodeRuntime>; logs: LogEntry[]; running: boolean; pending: Job[]; history?: RunRecord[] };
 export type RemoteHooks = ExecutorHooks & { onHistory?: (history: RunRecord[]) => void };
 
-async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url} failed (${res.status})`);
-  return (await res.json()) as T;
-}
+/**
+ * A server that answers 5xx with **nothing in the body** did not reach the route: in development
+ * that is Next rebuilding the route's modules after a file changed, and it lasts a moment. The route
+ * answering an error of its own always says which one, so a body with an `error` is a real refusal
+ * and is never retried.
+ */
+const isNotReady = (status: number, data: { error?: string }): boolean => status >= 500 && !data.error;
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string; issues?: GraphIssue[] };
-  if (!res.ok) {
+/**
+ * How long to keep trying, and the gaps between tries.
+ *
+ * Measured, not guessed: rebuilding the `/api/jobs` module graph — the whole node registry and both
+ * engines hang off it — took a good ten seconds after a file everything imports had changed. One
+ * retry at 0.7 s was inside that window and the person got the error anyway. Mutable so a test can
+ * shrink it; nothing else writes to it.
+ */
+export const RETRY = { delaysMs: [700, 2000, 5000, 5000] };
+
+/** One request, retried while the server is still coming up. `body` absent is a GET. */
+async function request<T>(url: string, body?: unknown, requestId?: string): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    const res = body === undefined
+      ? await fetch(url)
+      : await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestId ? { ...(body as object), requestId } : body) });
+    const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string; issues?: GraphIssue[] };
+    if (res.ok) return data;
     if (data.error === 'GRAPH_INVALID' && data.issues) throw new GraphInvalidError(data.issues);
+    const wait = RETRY.delaysMs[attempt];
+    if (isNotReady(res.status, data) && wait !== undefined) {
+      // Safe to send again: a submission carries the same `requestId`, so if the first one did reach
+      // the queue after all, the server hands back that job instead of queueing a second.
+      await new Promise((r) => setTimeout(r, wait));
+      continue;
+    }
+    if (isNotReady(res.status, data)) throw Object.assign(new Error(`the server is not answering yet (${res.status} from ${url})`), { code: 'SERVER_NOT_READY' });
     throw Object.assign(new Error(data.message ?? data.error ?? `${url} failed (${res.status})`), { code: data.error ?? 'JOB_FAILED' });
   }
-  return data;
 }
+
+const getJson = <T,>(url: string): Promise<T> => request<T>(url);
+const postJson = <T,>(url: string, body: unknown, requestId?: string): Promise<T> => request<T>(url, body, requestId);
+
+/** An id for one submission, so a retry of it is recognised as the same one. */
+let submissionSeq = 0;
+const newRequestId = (): string => `req-${Date.now().toString(36)}-${(submissionSeq++).toString(36)}`;
 
 export class RemoteExecutor {
   readonly logs = new LogBuffer();
@@ -151,7 +181,8 @@ export class RemoteExecutor {
 
   private async submit(kind: 'run' | 'node' | 'probe', extra: { nodeId?: string; force?: boolean }, graph?: Graph): Promise<Job> {
     if (this.pushGraph) { clearTimeout(this.pushGraph); this.pushGraph = null; }
-    const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', { key: this.key, kind, graph: graph ?? this.graph, name: this.name, ...extra }));
+    const requestId = newRequestId();
+    const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', { key: this.key, kind, graph: graph ?? this.graph, name: this.name, ...extra }, requestId));
     const early = this.finished.get(job.id);
     if (early) { this.finished.delete(job.id); return early; }
     if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return job;

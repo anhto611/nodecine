@@ -11,6 +11,7 @@ import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { buildHyperframesDocument } from './document';
 import { vendorSource } from './vendor.server';
 import { renderScaleFor } from '@/core/look/frame';
+import { FONT_FILES } from '@/core/look/markup';
 import { assetNamesIn, assetPath } from '@/server/paths';
 
 /**
@@ -21,12 +22,12 @@ import { assetNamesIn, assetPath } from '@/server/paths';
  */
 
 const QUALITY: Record<ExportSettings['quality'], 'high' | 'standard' | 'draft'> = { high: 'high', medium: 'standard', low: 'draft' };
-const FONTS = ['JetBrainsMono-Regular.woff2', 'JetBrainsMono-Bold.woff2', 'JetBrainsMono-ExtraBold.woff2'];
+
 
 /**
  * The project directory a headless Chrome is pointed at: index.html, the voice-over beside it, the
- * fonts and any images the look refers to. The MP4 render and the poster capture both start here —
- * a poster that came from a differently built page would not be a still of the video.
+ * fonts and any images the look refers to. The MP4 render and the cover capture both start here —
+ * a cover drawn on a differently built page would not carry the film's own type and colour.
  */
 async function buildProjectDir(ir: VideoIR, settings: Pick<ExportSettings, 'resolution'>, key: string): Promise<{ projectDir: string; scale: number }> {
   const tmp = await ensureTmpDir();
@@ -34,7 +35,7 @@ async function buildProjectDir(ir: VideoIR, settings: Pick<ExportSettings, 'reso
   await mkdir(path.join(projectDir, 'fonts'), { recursive: true });
 
   await copyFile(mediaPath(fileNameFromMediaUrl(ir.audioTrack.voiceoverUrl)), path.join(projectDir, 'voiceover.mp3'));
-  for (const f of FONTS) await copyFile(path.resolve(process.cwd(), 'public/fonts', f), path.join(projectDir, 'fonts', f));
+  for (const f of FONT_FILES) await copyFile(path.resolve(process.cwd(), 'public/fonts', f), path.join(projectDir, 'fonts', f));
   // Images the stage or blocks refer to come along, by their hashed names.
   // Scene props carry images too, not only the code: an asset named in a prop and left behind is a hole in the MP4.
   const assets = assetNamesIn(JSON.stringify([ir.stage.code.source, ...ir.blocks.map((b) => b.code.source), ir.timeline]));
@@ -67,14 +68,14 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
 }
 
 /**
- * One frame of the same composition, as a PNG (CORE_CONTRACTS §5.18). The producer's own capture
- * session does the work — it serves the project directory, seeks the page's timeline to the second
- * asked for and screenshots deterministically, which is exactly what the MP4 path does frame by
- * frame. Rolling our own puppeteer here would be a second, subtly different renderer.
+ * One frame of a composition, as a PNG (CORE_CONTRACTS §5.18) — the cover, drawn as a one-frame
+ * film. The producer's own capture session does the work: it serves the project directory, seeks
+ * the page's timeline and screenshots deterministically, which is exactly what the MP4 path does
+ * frame by frame. Rolling our own puppeteer here would be a second, subtly different renderer.
  */
-export async function capturePosterWithProducer(ir: VideoIR, opts: CaptureSettings, signal: AbortSignal): Promise<CaptureResult> {
+export async function captureCoverWithProducer(ir: VideoIR, opts: CaptureSettings, signal: AbortSignal): Promise<CaptureResult> {
   const { createFileServer, createCaptureSession, initializeSession, captureFrameToBuffer, closeCaptureSession } = await import('@hyperframes/producer');
-  const key = contentHash({ ir, opts, engine: HYPERFRAMES_ENGINE_ID, kind: 'poster' });
+  const key = contentHash({ ir, opts, engine: HYPERFRAMES_ENGINE_ID, kind: 'cover' });
   const fileName = `${key}.png`;
   const outputPath = mediaPath(fileName);
   if (await stat(outputPath).then(() => true, () => false)) {
@@ -106,5 +107,5 @@ export async function capturePosterWithProducer(ir: VideoIR, opts: CaptureSettin
 
 export function registerHyperframesServer(): void {
   registerCodeRenderer('html-gsap', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
-  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer, capture: capturePosterWithProducer }));
+  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer, capture: captureCoverWithProducer }));
 }

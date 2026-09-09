@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stat } from 'node:fs/promises';
-import { capturePosterWithProducer, renderWithProducer } from './register.server';
-import staticScript from '@/templates/static-script.json';
+import { captureCoverWithProducer, renderWithProducer } from './register.server';
+import staticScript from '@/lib/first-run.json';
 import githubShowcase from '@/templates/github-showcase.json';
 import quoteCards from '@/templates/quote-cards.json';
 import type { VideoIR } from '@/core/types/ir';
@@ -122,7 +122,7 @@ describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
   it('takes one frame of the same composition as a PNG cover', async () => {
     const ir = sampleIR();
     const t0 = Date.now();
-    const out = await capturePosterWithProducer(ir, { atSeconds: 2, resolution: '1080p' }, new AbortController().signal);
+    const out = await captureCoverWithProducer(ir, { atSeconds: 2, resolution: '1080p' }, new AbortController().signal);
     console.log('captured', out, 'in', Date.now() - t0, 'ms');
     expect(out.outputUrl).toMatch(/^\/api\/media\/[a-f0-9]+\.png$/);
     const file = `${process.env.NODECINE_TMP_DIR}/${out.outputUrl.split('/').pop()}`;

@@ -9,17 +9,26 @@ import { sceneCandidates, type Casting, type Pick } from './cast';
  * own "when to use me" — and may set a tone. It never chooses a block that cannot show the scene,
  * and the user's casting table still wins. One call for the whole video; one retry on a bad shape;
  * any other failure falls back to the rule with a warning, never a blocked run.
+ *
+ * It may also answer `none`: not "nothing can show this" — the rule already catches that — but "none
+ * of these is right for this beat". A card can hold a number and still be the wrong frame for the
+ * one line the whole video turns on. Answering `none` sends the scene to be drawn a block of its
+ * own, which is what an art director does when the folder has nothing that fits.
  */
 
 const AnswerSchema = z.object({
   scenes: z.array(z.object({ block: z.string(), tone: z.string().optional() })),
 }).strip();
 
-export function buildCastingPrompt(script: SceneScript, look: LookDef, casting: Casting): { prompt: string; candidates: ReturnType<typeof sceneCandidates> } | null {
+/** What the model writes when it wants a block drawn for a scene instead of picking one. */
+export const NONE = 'none';
+
+export function buildCastingPrompt(script: SceneScript, look: LookDef, casting: Casting, opts: { mayDraw?: boolean } = {}): { prompt: string; candidates: ReturnType<typeof sceneCandidates> } | null {
   const candidates = sceneCandidates(script, look, casting);
   const offered = candidates.map((c) => (c.candidates.length ? c.candidates : c.partial.map((p) => p.id)));
-  // Nothing to decide when every scene is pinned or has a single choice.
-  if (candidates.every((c, i) => c.pinned || offered[i]!.length <= 1)) return null;
+  // Nothing to decide when every scene is pinned or has a single choice — unless a block can be
+  // drawn, in which case "the only block that fits is the wrong one" is itself a decision.
+  if (!opts.mayDraw && candidates.every((c, i) => c.pinned || offered[i]!.length <= 1)) return null;
   const used = new Set(candidates.flatMap((c, i) => (c.pinned ? [c.pinned] : offered[i]!)));
   const blocks = look.blocks.filter((b) => used.has(b.id));
   const tones = Object.keys(look.tones);
@@ -41,7 +50,10 @@ export function buildCastingPrompt(script: SceneScript, look: LookDef, casting: 
     ...lines,
     ``,
     `Rules: vary the blocks across neighbouring scenes when the content allows; the opening and the closing may repeat a block only if nothing else fits; never pick a block outside a scene's list.`,
-    `Return ONLY a JSON object, no prose, no markdown fence: { "scenes": [ { "block": "<id>"${tones.length ? ', "tone": "<tone or omit>"' : ''} }, … ] } with exactly ${script.scenes.length} entries in order.`,
+    ...(opts.mayDraw
+      ? [`If a scene's beat deserves a frame none of its blocks gives it — the block would show the words but read wrong for this moment — answer "${NONE}" for that scene and a block will be drawn for it. Use it sparingly: an ordinary scene an existing block shows well is not worth a new block, and a catalogue that grows every video stops being a look.`]
+      : []),
+    `Return ONLY a JSON object, no prose, no markdown fence: { "scenes": [ { "block": "<id>${opts.mayDraw ? ` or ${NONE}` : ''}"${tones.length ? ', "tone": "<tone or omit>"' : ''} }, … ] } with exactly ${script.scenes.length} entries in order.`,
   ].join('\n');
   return { prompt, candidates };
 }
@@ -52,6 +64,8 @@ export function picksFromAnswer(answer: z.infer<typeof AnswerSchema>, candidates
     const a = answer.scenes[i];
     if (!a) return undefined;
     const allowed = c.candidates.length ? c.candidates : c.partial.map((p) => p.id);
+    // A pinned scene is the user's decision and outranks the model, `none` included.
+    if (!c.pinned && a.block.trim().toLowerCase() === NONE) return { none: true, ...(a.tone ? { tone: a.tone } : {}) };
     const block = c.pinned ?? (allowed.includes(a.block) ? a.block : undefined);
     return { ...(block ? { block } : {}), ...(a.tone ? { tone: a.tone } : {}) };
   });
@@ -65,15 +79,16 @@ export async function pickWithModel(
   casting: Casting,
   signal: AbortSignal,
   log: (level: 'info' | 'warn', message: string, code?: string) => void,
+  mayDraw = false,
 ): Promise<(Pick | undefined)[]> {
-  const built = buildCastingPrompt(script, look, casting);
+  const built = buildCastingPrompt(script, look, casting, { mayDraw });
   if (!built) return [];
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const answer = await services.complete(ref, built.prompt, AnswerSchema, signal);
       if (answer.scenes.length !== script.scenes.length) throw new Error(`${answer.scenes.length} choices for ${script.scenes.length} scenes`);
       const picks = picksFromAnswer(answer, built.candidates);
-      log('info', `model cast ${picks.filter((p) => p?.block).length}/${script.scenes.length} scenes · ${picks.map((p) => p?.block ?? '·').join(', ')}`);
+      log('info', `model cast ${picks.filter((p) => p?.block).length}/${script.scenes.length} scenes · ${picks.map((p) => (p?.none ? NONE : p?.block) ?? '·').join(', ')}`);
       return picks;
     } catch (e) {
       if (signal.aborted) throw e;

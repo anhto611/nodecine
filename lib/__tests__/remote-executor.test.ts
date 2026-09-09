@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RemoteExecutor } from '../remote-executor';
-import staticScript from '@/templates/static-script.json';
+import { RETRY, RemoteExecutor } from '../remote-executor';
+import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
 
 /**
@@ -75,5 +75,67 @@ describe('RemoteExecutor job completion', () => {
     });
     const state = await Promise.race([ex.runNode('llm-provider'), new Promise<string>((r) => setTimeout(() => r('TIMEOUT'), 500))]);
     expect(state).not.toBe('TIMEOUT');
+  });
+});
+
+/**
+ * A 5xx with an empty body did not reach the route — in development, Next rebuilding it after a file
+ * changed. It clears on its own in a moment, so the browser tries once more instead of handing the
+ * person `/api/jobs failed (500)`, which says nothing about what to do. A refusal the route wrote
+ * itself always names an error, and is final.
+ */
+describe('RemoteExecutor when the server is not ready', () => {
+  const emptyServerError = () => new Response('', { status: 500 });
+  // The real gaps add up to thirteen seconds, which is the point of them; here they are instant.
+  const realDelays = RETRY.delaysMs;
+  beforeEach(() => { RETRY.delaysMs = [1, 1, 1, 1]; });
+  afterEach(() => { RETRY.delaysMs = realDelays; });
+
+  it('retries an empty 500, and carries the same requestId so the job cannot be queued twice', async () => {
+    const graph = structuredClone(staticScript.graph) as Graph;
+    const ex = new RemoteExecutor('k', graph, 'Static');
+    await flush();
+    release.shift()?.();
+    calls.length = 0;
+    vi.mocked(fetch).mockImplementationOnce(async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body)) as Record<string, unknown> });
+      return emptyServerError();
+    });
+    vi.mocked(fetch).mockImplementationOnce(async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body)) as Record<string, unknown> });
+      return new Response(JSON.stringify({ job: { id: 'j', key: 'k', kind: 'node', status: 'done', ok: true, createdAt: 0 } }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    const state = await Promise.race([ex.runNode('llm-provider'), new Promise<string>((r) => setTimeout(() => r('TIMEOUT'), 3000))]);
+    expect(state).not.toBe('TIMEOUT');
+    const jobs = calls.filter((c) => c.url === '/api/jobs');
+    expect(jobs).toHaveLength(2);
+    expect(jobs[0]!.body.requestId).toBeTruthy();
+    expect(jobs[1]!.body.requestId).toBe(jobs[0]!.body.requestId);
+  });
+
+  it('keeps trying through a rebuild, then gives up with a code that says what happened', async () => {
+    const graph = structuredClone(staticScript.graph) as Graph;
+    const ex = new RemoteExecutor('k', graph, 'Static');
+    await flush();
+    release.shift()?.();
+    let tries = 0;
+    vi.mocked(fetch).mockImplementation(async () => { tries++; return emptyServerError(); });
+    await expect(ex.runNode('llm-provider')).rejects.toMatchObject({ code: 'SERVER_NOT_READY' });
+    // One try per gap, plus the first: a wedged server is not hammered for ever.
+    expect(tries).toBe(RETRY.delaysMs.length + 1);
+  });
+
+  it('does not retry a refusal the route wrote itself', async () => {
+    const graph = structuredClone(staticScript.graph) as Graph;
+    const ex = new RemoteExecutor('k', graph, 'Static');
+    await flush();
+    release.shift()?.();
+    calls.length = 0;
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown> });
+      return new Response(JSON.stringify({ error: 'JOB_INVALID', message: 'nodeId is required' }), { status: 400, headers: { 'content-type': 'application/json' } });
+    });
+    await expect(ex.runNode('llm-provider')).rejects.toMatchObject({ code: 'JOB_INVALID' });
+    expect(calls.filter((c) => c.url === '/api/jobs')).toHaveLength(1);
   });
 });

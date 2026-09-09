@@ -4,6 +4,7 @@ import { getNodeType, _resetNodeRegistry } from '@/core/nodes/definition';
 import { _resetTemplates, listTemplates, templateGraph } from '@/core/templates/registry';
 import { topoSort, validateGraph } from '@/core/engine/graph';
 import { registerTemplates } from '..';
+import { shapeOfTemplate } from '@/components/panels/TemplatePlayer';
 import { SCREENWRITER } from '@/nodes/screenwriter/node';
 import type { Beat } from '@/nodes/screenwriter/beats';
 import type { BlockDef } from '@/core/types/payloads';
@@ -21,15 +22,27 @@ beforeEach(() => {
   registerTemplates();
 });
 
-/** The Art Director downstream of a script node: the node its `scenes` port feeds. */
+/**
+ * The Art Director downstream of a script node, following `scenes` however many hops it takes: a
+ * node that passes the script along on its way — Stock Images putting a picture on every scene —
+ * sits between them without changing who casts.
+ */
 function lookAfter(t: ReturnType<typeof listTemplates>[number], nodeId: string) {
-  const edge = t.graph.edges.find((e) => e.source === nodeId && e.sourcePort === 'scenes');
-  return t.graph.nodes.find((n) => n.id === edge?.target && n.type === 'core/art-director');
+  const seen = new Set<string>();
+  for (let at = nodeId; !seen.has(at); ) {
+    seen.add(at);
+    const edge = t.graph.edges.find((e) => e.source === at && e.sourcePort === 'scenes');
+    const next = t.graph.nodes.find((n) => n.id === edge?.target);
+    if (!next) return undefined;
+    if (next.type === 'core/art-director') return next;
+    at = next.id;
+  }
+  return undefined;
 }
 
 describe('shipped templates', () => {
-  it('there are four, and they register from JSON', () => {
-    expect(listTemplates().map((t) => t.id).sort()).toEqual(['ai-news', 'github-showcase', 'quote-cards', 'static-script']);
+  it('there are five, and they register from JSON', () => {
+    expect(listTemplates().map((t) => t.id).sort()).toEqual(['ai-news', 'compare-explainer', 'github-showcase', 'quote-cards', 'still-wide']);
   });
 
   it('use only node types the Library offers', () => {
@@ -82,6 +95,21 @@ describe('shipped templates', () => {
       // github-showcase ships with an empty Input Trigger: the repo link is the one thing only the user has.
       expect(errors, t.id).toEqual(t.id === 'github-showcase' ? ['INPUT_EMPTY'] : []);
     }
+  });
+
+  // The card is what a person picks a template by, so what it says about the frame must come from
+  // the template. A hardcoded "9:16" was right for four templates and a lie about the fifth.
+  it('say on the card the shape their own stage renders', () => {
+    for (const t of listTemplates()) {
+      const shape = shapeOfTemplate(t.graph);
+      const stage = t.graph.nodes.find((n) => n.type === 'core/art-director')?.params as { frame?: { width: number; height: number } } | undefined;
+      if (!stage?.frame) { expect(shape).toBeNull(); continue; }
+      const { width, height } = stage.frame;
+      const [w, h] = shape!.ratio.split(':').map(Number) as [number, number];
+      expect(w / h).toBeCloseTo(width / height, 5);
+      expect(shape!.fps).toBe(t.graph.nodes.find((n) => n.type === 'core/timeline-assembler')?.params.fps ?? 30);
+    }
+    expect(shapeOfTemplate(listTemplates().find((t) => t.id === 'still-wide')!.graph)).toEqual({ ratio: '16:9', fps: 30 });
   });
 
   it('hand out a copy, never the stored graph', () => {

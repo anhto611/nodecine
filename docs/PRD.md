@@ -67,7 +67,7 @@ NodeCine phục vụ 4 nhóm người dùng trọng tâm tương ứng với cá
 NodeCine v0.1 gồm một tầng code và một tầng dữ liệu. **Cả ba đều ship cùng app và có sẵn ngay sau khi cài** — người dùng mới phải dựng được mọi bản mẫu từ canvas trống mà không cài thêm gì:
 
 - **Khung lõi** (Hợp đồng Lõi): hệ thống kiểu cổng, bộ máy thực thi, Bản Đặc Tả Video Trung Gian generic tự chứa, registry engine và nhà cung cấp, renderer theo định dạng code, giao diện Studio, và toàn bộ node — kể cả node lấy dữ liệu như Truy Xuất Repo, vì mỗi nguồn dữ liệu là một node riêng của lõi.
-- **Bản mẫu** (`templates/`): đồ thị JSON, cùng hình dạng tệp dự án, gọi tên node bằng chuỗi. Người dùng dựng được từ canvas trống, lưu lại thành bản mẫu, tải xuống để chia sẻ. Bốn bản mẫu ship kèm là Kịch Bản Tĩnh, GitHub Repo Showcase, Thẻ Trích Dẫn Truyền Cảm Hứng và Bản Tin AI Đếm Ngược.
+- **Bản mẫu** (`templates/`): đồ thị JSON, cùng hình dạng tệp dự án, gọi tên node bằng chuỗi. Người dùng dựng được từ canvas trống, lưu lại thành bản mẫu, tải xuống để chia sẻ. Năm bản mẫu ship kèm là GitHub Repo Showcase, Thẻ Trích Dẫn Truyền Cảm Hứng, Bản Tin AI Đếm Ngược, Ảnh Tĩnh Ngang và So Sánh Hai Bên. Đồ thị Kịch Bản Tĩnh không còn là bản mẫu: nó là **đồ thị mở máy** (`lib/first-run.json`), thứ hiện ra khi chưa có gì được lưu — người ta mở app để vào việc của mình, không phải để xoá một bản demo trước đã.
 
 Nguyên tắc phân chia node, theo mô hình ComfyUI: mỗi node một trách nhiệm; mọi node gọi ra ngoài tiến trình đứng riêng để thử lại độc lập; mọi tài nguyên hay hành động có tham số riêng là một node chứ không phải cài đặt toàn cục.
 

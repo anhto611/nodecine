@@ -1,0 +1,464 @@
+{
+  "id": "still-wide",
+  "name": {
+    "en": "Still Wide",
+    "vi": "Ảnh Tĩnh Ngang"
+  },
+  "description": {
+    "en": "Landscape 16:9: footage filling the frame per scene, one line of subtitles at the bottom. Clips from Pexels, a photograph where no clip fits, plus a cover image. Delete the Stock Media node to choose the footage yourself.",
+    "vi": "Ngang 16:9: mỗi cảnh một đoạn tư liệu kín khung, phụ đề một dòng ở đáy. Clip từ Pexels, không có clip hợp thì lấy ảnh, kèm ảnh bìa. Xoá node Tư Liệu Kho đi thì tự chọn tư liệu."
+  },
+  "category": "faceless",
+  "graph": {
+    "nodes": [
+      {
+        "id": "script",
+        "type": "core/static-script",
+        "params": {
+          "scenes": [
+            {
+              "role": "shot",
+              "weight": 1,
+              "narration": "Mỗi cảnh là một đoạn phim và một câu nói.",
+              "content": {}
+            },
+            {
+              "role": "shot",
+              "weight": 1,
+              "narration": "Gõ lời thoại, còn tư liệu thì lấy từ kho.",
+              "content": {}
+            },
+            {
+              "role": "shot",
+              "weight": 1,
+              "narration": "Phụ đề chạy theo giọng đọc, một dòng ở đáy khung.",
+              "content": {}
+            }
+          ]
+        },
+        "bypassed": false,
+        "position": {
+          "x": 40,
+          "y": 40
+        }
+      },
+      {
+        "id": "stock",
+        "type": "core/stock-media",
+        "params": {
+          "provider": "pexels",
+          "style": "auto",
+          "orientation": "landscape",
+          "longEdge": 1920,
+          "replaceExisting": false,
+          "media": "clip"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 370,
+          "y": 40
+        }
+      },
+      {
+        "id": "llm-provider",
+        "type": "core/llm-provider",
+        "params": {
+          "providerId": "claude-code",
+          "settings": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 370,
+          "y": 560
+        }
+      },
+      {
+        "id": "art-director",
+        "type": "core/art-director",
+        "params": {
+          "name": "Still Wide",
+          "frame": {
+            "width": 1920,
+            "height": 1080
+          },
+          "tokens": {
+            "palette": {
+              "bg": "#05060a",
+              "bg2": "#0d1016",
+              "panel": "#12151c",
+              "line": "#242832",
+              "fg": "#ffffff",
+              "muted": "rgba(255,255,255,.72)",
+              "muted2": "rgba(255,255,255,.45)",
+              "accent": "#ffd166"
+            },
+            "fonts": {
+              "display": "'Comfortaa', 'Be Vietnam Pro', system-ui, sans-serif",
+              "body": "'Comfortaa', 'Be Vietnam Pro', system-ui, sans-serif"
+            }
+          },
+          "tones": {},
+          "sceneFields": [],
+          "vars": {},
+          "transition": {
+            "type": "cut",
+            "seconds": 0.4
+          },
+          "code": {
+            "format": "html-gsap",
+            "source": "<style>\n  .stage { position: absolute; inset: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); overflow: hidden; }\n  .stage .content { position: absolute; inset: 0; }\n  /* One line at the bottom, never two: on a landscape frame a second line reads as a caption\n     under a photo, not as subtitles. The character cap on the Captions node is what keeps it\n     to one line — this only refuses to wrap, so an over-long cue is visibly clipped instead of\n     quietly climbing out of the band. */\n  .stage .captions {\n    position: absolute;\n    left: 160px; right: 160px; bottom: 150px;\n    display: flex; align-items: flex-end; justify-content: center;\n    text-align: center; white-space: nowrap;\n    font: 700 44px/1.3 var(--font-body);\n    color: #fff;\n    /* Ink that survives any photograph: a stroke first, then the fill, then a soft drop. */\n    -webkit-text-stroke: 0.14em rgba(0,0,0,.92);\n    paint-order: stroke fill;\n    text-shadow: 0 3px 14px rgba(0,0,0,.45);\n    --caption-on: var(--accent);\n  }\n</style>\n<div class=\"stage\">\n  <div class=\"content\" data-slot=\"content\"></div>\n  <div class=\"captions\" data-slot=\"captions\" data-caption-style=\"reveal\"></div>\n</div>"
+          },
+          "blocks": [
+            {
+              "id": "still",
+              "name": "Still",
+              "doc": {
+                "example": "{\"picture\":\"/api/assets/<hash>.jpg\"}",
+                "when": "A photograph filling the frame while the voice talks over it. The picture sets the mood; it does not have to illustrate the words."
+              },
+              "props": {
+                "picture": {
+                  "type": "image",
+                  "content": "image",
+                  "required": false,
+                  "hint": "a photograph filling the frame"
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<div class=\"shot\"><img data-prop=\"picture\" alt=\"\"></div>\n<style>\n  .shot { position: absolute; inset: 0; overflow: hidden; border-radius: 112px; background: var(--bg2); }\n  .shot img { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; margin: -540px 0 0 -960px; object-fit: cover; transform-origin: center center; }\n</style>\n<script>\n  nodecine.timeline(gsap.timeline().fromTo(\".shot img, .shot video\",\n    { scale: 1.06, xPercent: 0 },\n    { scale: 1.14, xPercent: -1.2, duration: Math.max(3, nodecine.duration || 4), ease: \"none\" }, 0));\n</script>"
+              }
+            },
+            {
+              "id": "still-clip",
+              "name": "Clip",
+              "doc": {
+                "example": "{\"footage\":\"/api/assets/<hash>.mp4\"}",
+                "when": "The same frame as Still, but moving: a clip from the clips folder instead of a photograph."
+              },
+              "props": {
+                "footage": {
+                  "type": "video",
+                  "content": "clip",
+                  "required": false,
+                  "hint": "a clip filling the frame"
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<div class=\"shot\"><video data-prop=\"footage\"></video></div>\n<style>\n  .shot { position: absolute; inset: 0; overflow: hidden; border-radius: 112px; background: var(--bg2); }\n  .shot video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\n</style>"
+              }
+            }
+          ],
+          "covers": [
+            {
+              "id": "portrait-cover",
+              "name": "Bìa dọc",
+              "frame": {
+                "width": 1080,
+                "height": 1920
+              },
+              "props": {
+                "picture": {
+                  "type": "image",
+                  "required": false,
+                  "hint": "the photograph behind the words"
+                },
+                "title": {
+                  "type": "text",
+                  "required": true,
+                  "max": 90,
+                  "hint": "the line that has to make someone stop"
+                },
+                "subtitle": {
+                  "type": "string",
+                  "required": false,
+                  "max": 60
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<div class=\"cv\">\n  <img class=\"cv-shot\" data-prop=\"picture\" alt=\"\">\n  <div class=\"cv-text\">\n    <div class=\"cv-title\" data-prop=\"title\"></div>\n    <div class=\"cv-sub\" data-prop=\"subtitle\" data-if=\"subtitle\"></div>\n  </div>\n</div>\n<style>\n  /* A ground of its own, so a cover with no photograph chosen yet is still a design and not\n     a black rectangle. The picture covers it whole when there is one. */\n  .cv { position: absolute; inset: 0; background: linear-gradient(155deg, var(--bg2) 0%, var(--bg) 62%, #000 100%); }\n  .cv-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\n  /* Centred on the FRAME, not inside a safe area: \"the words in the middle of the picture\".\n     Margins 220 a side leave a 640px column (59% of the frame) — wider than the platform's own\n     safe inset of 168, because on a real TikTok screenshot text at 168 still touches the button\n     column, and a frame whose only content is words needs more room than the minimum. */\n  /* The TITLE is what sits dead centre, and the subtitle hangs below it — so adding a subtitle\n     does not shove the title off the middle of the picture. Taking the subtitle out of the flow\n     is what buys that without having to measure the title first. */\n  .cv-text { position: absolute; left: 220px; right: 220px; top: 50%; transform: translateY(-50%); text-align: center; }\n  .cv-sub { position: absolute; left: 0; right: 0; top: 100%; }\n  /* 58px, the size of a caption and not much more. An earlier version doubled it for the channel\n     grid and was dropped: the cover stopped looking like the film. The point is a frame of the\n     video with one still sentence where the running subtitles would be. */\n  .cv-title { font: 700 58px/1.35 var(--font-body); color: #fff; }\n  .cv-sub { margin-top: 28px; font: 700 36px/1.3 var(--font-body); color: #fff; }\n  /* No wash over the photograph. Ink is what keeps the words readable on any picture: the stroke\n     is painted first and the fill over it, so the letters keep their shape instead of thickening. */\n  .cv-title, .cv-sub { -webkit-text-stroke: .14em rgba(0,0,0,.92); paint-order: stroke fill; text-shadow: 0 3px 14px rgba(0,0,0,.45); }\n</style>"
+              },
+              "defaults": {
+                "title": "Tiêu đề của bìa"
+              }
+            }
+          ],
+          "casting": []
+        },
+        "bypassed": false,
+        "position": {
+          "x": 700,
+          "y": 40
+        }
+      },
+      {
+        "id": "tts-provider",
+        "type": "core/tts-provider",
+        "params": {
+          "providerId": "system-tts",
+          "settings": {
+            "rate": 1
+          }
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1030,
+          "y": 640
+        }
+      },
+      {
+        "id": "tts",
+        "type": "core/tts-engine",
+        "params": {
+          "speed": 1
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1030,
+          "y": 40
+        }
+      },
+      {
+        "id": "transcribe",
+        "type": "core/transcribe",
+        "params": {
+          "model": "small"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1360,
+          "y": 40
+        }
+      },
+      {
+        "id": "captions",
+        "type": "core/captions",
+        "params": {
+          "maxChars": 52
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1690,
+          "y": 40
+        }
+      },
+      {
+        "id": "music",
+        "type": "core/audio-mix",
+        "params": {
+          "track": "",
+          "volume": 0.16,
+          "duck": 0.7,
+          "fadeInSeconds": 1,
+          "fadeOutSeconds": 2
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1360,
+          "y": 400
+        }
+      },
+      {
+        "id": "assembler",
+        "type": "core/timeline-assembler",
+        "params": {
+          "fps": 30,
+          "minTotalFrames": 180,
+          "title": "Still wide"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 2020,
+          "y": 260
+        }
+      },
+      {
+        "id": "engine",
+        "type": "core/hyperframes-engine",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 2350,
+          "y": 900
+        }
+      },
+      {
+        "id": "output",
+        "type": "core/video-output",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 2350,
+          "y": 40
+        }
+      },
+      {
+        "id": "export",
+        "type": "core/mp4-export",
+        "params": {
+          "codec": "h264",
+          "quality": "high",
+          "fileName": "still-wide",
+          "resolution": "1080p"
+        },
+        "bypassed": true,
+        "position": {
+          "x": 2680,
+          "y": 40
+        }
+      },
+      {
+        "id": "cover",
+        "type": "core/cover-export",
+        "params": {
+          "cover": "portrait-cover",
+          "props": {},
+          "fileName": "still-wide",
+          "resolution": "1080p"
+        },
+        "bypassed": true,
+        "position": {
+          "x": 2680,
+          "y": 440
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e0",
+        "source": "script",
+        "sourcePort": "scenes",
+        "target": "stock",
+        "targetPort": "scenes"
+      },
+      {
+        "id": "e1",
+        "source": "stock",
+        "sourcePort": "scenes",
+        "target": "art-director",
+        "targetPort": "scenes"
+      },
+      {
+        "id": "e2",
+        "source": "llm-provider",
+        "sourcePort": "llm",
+        "target": "stock",
+        "targetPort": "llm"
+      },
+      {
+        "id": "e3",
+        "source": "script",
+        "sourcePort": "script",
+        "target": "tts",
+        "targetPort": "script"
+      },
+      {
+        "id": "e4",
+        "source": "script",
+        "sourcePort": "script",
+        "target": "transcribe",
+        "targetPort": "script"
+      },
+      {
+        "id": "e5",
+        "source": "tts",
+        "sourcePort": "voiceover",
+        "target": "transcribe",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e6",
+        "source": "transcribe",
+        "sourcePort": "voiceover",
+        "target": "captions",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e7",
+        "source": "captions",
+        "sourcePort": "captions",
+        "target": "assembler",
+        "targetPort": "captions"
+      },
+      {
+        "id": "e8",
+        "source": "tts-provider",
+        "sourcePort": "tts",
+        "target": "tts",
+        "targetPort": "tts"
+      },
+      {
+        "id": "e9",
+        "source": "tts",
+        "sourcePort": "voiceover",
+        "target": "music",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e10",
+        "source": "art-director",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
+      },
+      {
+        "id": "e11",
+        "source": "music",
+        "sourcePort": "voiceover",
+        "target": "assembler",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e12",
+        "source": "assembler",
+        "sourcePort": "ir",
+        "target": "output",
+        "targetPort": "ir"
+      },
+      {
+        "id": "e13",
+        "source": "assembler",
+        "sourcePort": "ir",
+        "target": "export",
+        "targetPort": "ir"
+      },
+      {
+        "id": "e14",
+        "source": "assembler",
+        "sourcePort": "ir",
+        "target": "cover",
+        "targetPort": "ir"
+      },
+      {
+        "id": "e15",
+        "source": "engine",
+        "sourcePort": "engine",
+        "target": "cover",
+        "targetPort": "engine"
+      },
+      {
+        "id": "e16",
+        "source": "engine",
+        "sourcePort": "engine",
+        "target": "output",
+        "targetPort": "engine"
+      },
+      {
+        "id": "e17",
+        "source": "engine",
+        "sourcePort": "engine",
+        "target": "export",
+        "targetPort": "engine"
+      },
+      {
+        "id": "e-llm-ad1",
+        "source": "llm-provider",
+        "sourcePort": "llm",
+        "target": "art-director",
+        "targetPort": "llm"
+      }
+    ]
+  }
+}

@@ -39,6 +39,7 @@ export const CONTENT_GUIDE: Record<WrittenKey, string> = {
   attribution: 'who said the quote',
   code: 'one command or one line of code',
   source: 'where the content comes from: a site, a handle, a name',
+  entries: 'several things shown at once, as a JSON array: two to compare, three steps, up to six rows. Each is an object using these same keys (usually title or label, sometimes body or number). Only write it when the scene really shows more than one of a kind.',
 };
 
 export interface PromptInput {

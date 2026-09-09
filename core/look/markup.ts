@@ -53,14 +53,41 @@ export const scopedCss = (selector: string, css: string): string => (css ? `@sco
 
 export const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/**
+ * The typefaces every page bundles (ARCHITECTURE §6). Files, not links: a render must not depend on
+ * Google Fonts answering, and `font-display: block` keeps a frame from being captured mid-swap with
+ * the fallback still on screen.
+ *
+ * Comfortaa is one variable file per subset, 300 to 700 — asking for 800 makes the browser fake the
+ * weight by smearing, which shows as a furred edge over a photograph. It is split by unicode range
+ * the way Google serves it, so a Vietnamese caption pulls 7 KB and an English one never loads it.
+ */
+export const FONT_FILES = [
+  'JetBrainsMono-Regular.woff2',
+  'JetBrainsMono-Bold.woff2',
+  'JetBrainsMono-ExtraBold.woff2',
+  'Comfortaa-latin.woff2',
+  'Comfortaa-latin-ext.woff2',
+  'Comfortaa-vietnamese.woff2',
+] as const;
+
+const VIETNAMESE = 'U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB';
+const LATIN_EXT = 'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF';
+const LATIN = 'U+0000-005F, U+0061-007F, U+00A0-00A9, U+00AB-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD';
+
 export const fontFaces = (base: string): string =>
   [
-    ['400', 'JetBrainsMono-Regular.woff2'],
-    ['700', 'JetBrainsMono-Bold.woff2'],
-    ['800', 'JetBrainsMono-ExtraBold.woff2'],
-  ]
-    .map(([w, f]) => `@font-face { font-family: 'JetBrains Mono'; font-weight: ${w}; font-style: normal; font-display: block; src: url('${base}/${f}') format('woff2'); }`)
-    .join('\n');
+    ...[
+      ['400', 'JetBrainsMono-Regular.woff2'],
+      ['700', 'JetBrainsMono-Bold.woff2'],
+      ['800', 'JetBrainsMono-ExtraBold.woff2'],
+    ].map(([w, f]) => `@font-face { font-family: 'JetBrains Mono'; font-weight: ${w}; font-style: normal; font-display: block; src: url('${base}/${f}') format('woff2'); }`),
+    ...[
+      ['Comfortaa-vietnamese.woff2', VIETNAMESE],
+      ['Comfortaa-latin-ext.woff2', LATIN_EXT],
+      ['Comfortaa-latin.woff2', LATIN],
+    ].map(([f, range]) => `@font-face { font-family: 'Comfortaa'; font-weight: 300 700; font-style: normal; font-display: block; src: url('${base}/${f}') format('woff2'); unicode-range: ${range}; }`),
+  ].join('\n');
 
 /** The base styles every page that draws a stage shares. */
 export function baseStyles(stage: StageDef, width: number, height: number, fontBase: string): string {
@@ -110,12 +137,34 @@ export function timeVideos(html: string, start: number, duration: number): strin
 export const BIND_SCRIPT = String.raw`
 window.__nodecineBind = {
   props: function (root, props) {
+    // An entries container is filled from its own list, and everything inside it belongs to a row,
+    // not to the scene: a card's [data-prop="label"] must read its entry, or every card in a
+    // comparison shows the same words. So the insides are skipped by both passes below, and each
+    // cloned row is bound recursively against its entry — where the same rules apply one level down.
+    var groups = [];
+    root.querySelectorAll('[data-prop]').forEach(function (el) {
+      var v = props[el.getAttribute('data-prop')];
+      if (Array.isArray(v) && v.length && typeof v[0] === 'object' && v[0] !== null && el.firstElementChild) groups.push(el);
+    });
+    var inside = function (el) { return groups.some(function (g) { return g !== el && g.contains(el); }); };
     root.querySelectorAll('[data-if]').forEach(function (el) {
+      if (inside(el)) return;
       var v = props[el.getAttribute('data-if')];
       var empty = v === undefined || v === null || v === false || v === '' || (Array.isArray(v) && v.length === 0);
       if (empty) el.remove();
     });
+    groups.forEach(function (el) {
+      var template = el.firstElementChild;
+      var rows = props[el.getAttribute('data-prop')];
+      el.textContent = '';
+      rows.forEach(function (entry) {
+        var row = template.cloneNode(true);
+        window.__nodecineBind.props(row, entry);
+        el.appendChild(row);
+      });
+    });
     root.querySelectorAll('[data-prop]').forEach(function (el) {
+      if (groups.indexOf(el) !== -1 || inside(el)) return;
       var v = props[el.getAttribute('data-prop')];
       // An image element takes the value as its source; everything else takes it as text.
       if (el.tagName === 'IMG' || el.tagName === 'VIDEO') { if (v) el.setAttribute('src', String(v)); else el.removeAttribute('src'); return; }

@@ -1,8 +1,14 @@
 import { z, type ZodTypeAny } from 'zod';
-import { CONTENT_KEYS, SceneContentSchema, factListAt, type AudioScript, type ContentKey, type FactItem, type FactSheet, type SceneContent, type SceneScript, type WrittenKey } from '@/core/types/payloads';
+import { CONTENT_KEYS, EntryContentSchema, SceneContentSchema, factListAt, type AudioScript, type ContentKey, type FactItem, type FactSheet, type SceneContent, type SceneScript, type WrittenKey } from '@/core/types/payloads';
 
-/** What the model says over one scene: its narration plus what is on screen. An image is not its to write. */
-const SpokenSceneSchema = SceneContentSchema.omit({ image: true }).extend({ narration: z.string().min(1).max(600) });
+/**
+ * What the model says over one scene: its narration plus what is on screen. Files are not its to
+ * write — not at the top level and not inside an entry, since a model cannot know which files this
+ * machine holds; those come from a person or from a fact binding.
+ */
+const SpokenEntrySchema = EntryContentSchema.omit({ image: true, clip: true });
+const SpokenSceneSchema = SceneContentSchema.omit({ image: true, clip: true })
+  .extend({ entries: z.array(SpokenEntrySchema).max(12).optional(), narration: z.string().min(1).max(600) });
 
 /**
  * A director's beat list is configuration, not code (CORE_CONTRACTS §5.8). Each beat says what a

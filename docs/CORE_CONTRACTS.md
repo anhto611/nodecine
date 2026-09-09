@@ -17,7 +17,7 @@ Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ đư�
 | Định danh kiểu | Nhãn hiển thị | Ý nghĩa | Node lõi phát | Node lõi nhận |
 | --- | --- | --- | --- | --- |
 | `SourceRef` | Dữ liệu Nguồn | Chuỗi người dùng nhập, chưa diễn giải | Nhập Liệu | Truy Xuất Repo, Biên Kịch |
-| `SceneScript` | Phân cảnh | Video đã chia cảnh, mỗi cảnh một vai, một trọng số và **nội dung** theo từ vựng cố định — chưa có giao diện (2.11) | Kịch Bản Tĩnh, Biên Kịch | Đạo Diễn Mỹ Thuật |
+| `SceneScript` | Kịch bản phân cảnh | Video đã chia cảnh, mỗi cảnh một vai, một trọng số và **nội dung** theo từ vựng cố định — chưa có giao diện (2.11) | Kịch Bản Tĩnh, Biên Kịch, Phân Cảnh, Kho Tư Liệu | Phân Cảnh, Kho Tư Liệu, Đạo Diễn Mỹ Thuật |
 | `FactSheet` | Dữ kiện | Tập dữ kiện kiểm chứng được, có nguồn gốc | Truy Xuất Repo | Biên Kịch, Đóng Gói Timeline |
 | `ScenePlan` | Kế hoạch dựng | Stage, danh mục block và danh sách cảnh đã dàn (block, props, tone, trọng số) — tự chứa | Đạo Diễn Mỹ Thuật | Đóng Gói Timeline |
 | `AudioScript` | Lời thoại | Văn bản thuyết minh kèm ngôn ngữ | Kịch Bản Tĩnh, Biên Kịch | Giọng Đọc |
@@ -121,7 +121,7 @@ Stage cũng là nơi quyết định **chỗ phụ đề**: một phần tử `d
 
 - `id` (slug), `name`. Quy tắc đặt id: `<slug của tên lúc tạo>` (`text-card`, `hook`), không tiền tố vì đây là chữ mô hình viết vào `blockId` và beat trỏ tới; trùng trong node thì thêm `-2`; sinh một lần khi tạo, đổi tên sau đó không đổi id, giao diện hiện id mờ cạnh tên.
 - `doc.example`: một ví dụ props hợp lệ dạng JSON. `doc.when`: dùng khi nào, không dùng khi nào — nguồn duy nhất cho cả mô hình và người.
-- `props`: bản đồ tên → `{ type, content?, hint?, required (mặc định true), max?, min? }`, `type ∈ string | text | number | boolean | color | string[] | image`. Prop kiểu `image` nhận **một tài nguyên đã tải lên** (`/api/assets/<băm>.<đuôi>`, Kiến trúc mục 6), engine gán vào `src` của phần tử `<img data-prop="tên">`; giá trị khác dạng đó bị từ chối ngay ở lược đồ. `content` là khóa từ vựng (2.11) đổ vào prop này; bỏ trống thì lấy khóa trùng tên prop nếu có. Prop không ánh xạ được khóa nào thì không bao giờ được điền từ nội dung (chỉ còn đường ràng buộc dữ kiện hay để trống nếu không bắt buộc).
+- `props`: bản đồ tên → `{ type, content?, hint?, required (mặc định true), max?, min? }`, `type ∈ string | text | number | boolean | color | string[] | image | video | entries`. Prop kiểu `image` nhận **một tài nguyên đã tải lên** (`/api/assets/<băm>.<đuôi>`, Kiến trúc mục 6), engine gán vào `src` của phần tử `<img data-prop="tên">`; giá trị khác dạng đó bị từ chối ngay ở lược đồ. `content` là khóa từ vựng (2.11) đổ vào prop này; bỏ trống thì lấy khóa trùng tên prop nếu có. Prop không ánh xạ được khóa nào thì không bao giờ được điền từ nội dung (chỉ còn đường ràng buộc dữ kiện hay để trống nếu không bắt buộc).
 - `code`: xem 2.8.
 
 ### 2.8. Code cảnh (`SceneCode`)
@@ -149,8 +149,9 @@ Video đã chia cảnh nhưng chưa có giao diện — chặng kịch bản k�
 
 - `language` (BCP 47).
 - `scenes[]`: `{ role, weight, narration, content, factBindings? }`. `role` là tên beat (hook, quote, cta) — Đạo Diễn Mỹ Thuật dàn cảnh theo vai này; `narration` là lời đọc trên cảnh đó, cảnh dài đúng bằng lời (5.4); `weight` chỉ còn dùng khi không có đoạn lời; `factBindings` là `khóaNộiDung → khóaDữKiện`.
-- `content`: một đối tượng chỉ dùng các khóa của **từ vựng nội dung** (`CONTENT_KEYS`), khóa nào cũng tùy chọn, cảnh viết cái nó cần: `kicker` (nhãn 1–3 từ), `title` (tiêu đề ≤ 60 ký tự, cảnh nào cũng có), `body` (1–2 câu), `points` (2–4 dòng ngắn), `number` + `label` (một con số đúng dạng hiển thị và nó là gì), `quote` + `attribution`, `code` (một lệnh), `source` (nội dung lấy từ đâu), và `image` (ảnh của cảnh).
-- `image` là khóa duy nhất **mô hình không được viết**: mô hình không thể biết tên một tài nguyên đã tải lên. `WRITTEN_KEYS` là mười khóa còn lại — lược đồ đầu ra của Biên Kịch, danh sách trong prompt và ô ràng buộc dữ kiện đều chỉ nhận chúng. Ảnh vào cảnh bằng tay (ô chọn ảnh trên node Kịch Bản Tĩnh) hoặc bằng ràng buộc dữ kiện.
+- `content`: một đối tượng chỉ dùng các khóa của **từ vựng nội dung** (`CONTENT_KEYS`), khóa nào cũng tùy chọn, cảnh viết cái nó cần: `kicker` (nhãn 1–3 từ), `title` (tiêu đề ≤ 60 ký tự, cảnh nào cũng có), `body` (1–2 câu), `points` (2–4 dòng ngắn), `number` + `label` (một con số đúng dạng hiển thị và nó là gì), `quote` + `attribution`, `code` (một lệnh), `source` (nội dung lấy từ đâu), và `image` (ảnh của cảnh), `clip` (đoạn phim của cảnh), và `entries`.
+- `entries` là **nhiều thứ cùng loại trong một cảnh**: hai mục để so sánh, năm hàng bảng xếp hạng, ba bước hướng dẫn. Mỗi mục dùng lại đúng từ vựng này, **sâu đúng một cấp** (mục chứa mục thì bị lược bỏ, không báo lỗi). Từ vựng không mọc thêm danh từ cho từng thể loại — nó mọc thêm một chiều là sự lặp lại, và mười lăm từ sẵn có đủ mô tả từng mục. Block khai `type: 'entries'` cùng `min`/`max` (bao nhiêu mục nó chứa được) và `of` (khóa nào của mục nó vẽ); mục không có gì block vẽ thì bị bỏ, ít hơn `min` thì block coi như không hiện được cảnh. Trong markup, **phần tử con đầu tiên là khuôn**, nhân bản cho từng mục, và `data-prop` bên trong khuôn đọc mục đó chứ không đọc cảnh.
+- `image` và `clip` là các khóa **mô hình không được viết**, kể cả khi nằm trong một mục của `entries`: mô hình không thể biết tên một tài nguyên đã tải lên. `WRITTEN_KEYS` là mười khóa còn lại — lược đồ đầu ra của Biên Kịch và Phân Cảnh, danh sách trong prompt và ô ràng buộc dữ kiện đều chỉ nhận chúng. Ảnh vào cảnh bằng tay (ô chọn ảnh trên node Kịch Bản Tĩnh) hoặc bằng ràng buộc dữ kiện.
 
 Từ vựng là cố định để biên kịch không cần biết block nào tồn tại: mô hình viết theo mười khóa này, block khai prop của nó nhận khóa nào (2.7), và Đạo Diễn Mỹ Thuật ghép hai bên. Thêm khóa là sửa lõi, có chủ ý.
 
@@ -216,6 +217,8 @@ Node phát `SceneScript` (2.11) và `AudioScript` từ nội dung gõ tay, dành
 
 - Không còn ô lời thoại chung: `AudioScript.text` là các `narration` ghép lại, `segments` là từng đoạn. Không có tham số ngôn ngữ: người dùng đã viết lời cuối cùng nên ngôn ngữ của văn bản chính là ngôn ngữ của video. Node nhận diện bằng hàm thuần `detectLanguage(text)` của lõi (theo hệ chữ viết; chữ Latinh có dấu riêng của tiếng Việt thì là `vi`, chữ Latinh khác coi là `en`) và điền vào `SceneScript.language` lẫn `AudioScript.language`. Đoán sai thì người dùng chọn giọng tay trên Giọng Đọc.
 - `scenes` (Danh sách chỉnh sửa trực tiếp trên thân node): mỗi mục gồm `role`, `weight`, `narration` (lời đọc trên cảnh, một ô riêng) và `content` theo từ vựng (2.11) — thân node hiện một ô cho mỗi khóa đang dùng và một ô chọn để thêm khóa, `points` mỗi dòng một ý. Block, tone và trường stage là việc của Đạo Diễn Mỹ Thuật. Mặc định là ba cảnh `title / how / next`, mỗi cảnh một câu lời.
+
+- **Dán kịch bản** (`nodes/script/split.ts`): một mục gập lại trên đầu thân node nhận cả kịch bản rồi cắt thành cảnh, vì kịch bản viết ra là một khối văn xuôi chứ không phải từng cảnh một. Ba luật cắt do người chọn — dòng trống, mỗi dòng, mỗi câu — vì chỉ người viết mới biết mình đã viết theo lối nào; luật câu cắt nhầm ở chữ viết tắt (`v.v.`, `T.P.`), đó là lý do có ba luật chứ không phải một. Cắt là thuần cơ học: không gọi mô hình, không sửa một chữ nào, chỉ gộp khoảng trắng — số cảnh hiện ngay trên nút để đọc trước khi bấm. Bấm xong thì **thay** danh sách cảnh: mỗi khúc một cảnh, `weight` 1, `content` rỗng, `role` lấy theo cảnh đầu đang có. Đi qua `setParams` nên Ctrl+Z hoàn lại nguyên danh sách cũ.
 
 Cảnh chỉ kiểm tra được khi đã biết dây nối vào, nên việc kiểm tra `blockId`, `props` và `tone` là **preflight** (chặn trước khi chạy với `NODE_PARAMS_INVALID` và câu chỉ dẫn), không phải kiểm tra liên tục. Không có `factBindings` vì không có nguồn dữ kiện; người dùng gõ thẳng giá trị.
 
@@ -288,7 +291,7 @@ Node `core/art-director`, chặng giao diện của luồng: nhận `SceneScript
 
 **Dàn cảnh** (`nodes/art-director/cast.ts`, hàm thuần, không gọi mô hình): với từng cảnh, (1) nếu vai có block ghim trong `casting` và block đó hiện được cảnh thì dùng; (2) không thì chấm điểm mọi block: block thiếu prop bắt buộc mà nội dung không có (và không ràng buộc dữ kiện) bị loại, còn lại block **làm rơi ít nội dung nhất** thắng (một block *hiện được trọn* cảnh khi mọi khóa nội dung cảnh có đều có prop đón, trừ khóa stage tự vẽ như `kicker`; block hiện được nhưng bỏ rơi khóa nào thì kế hoạch ghi cảnh báo nêu khóa đó), rồi block **điền được nhiều prop nhất**, hòa thì block **ít prop tùy chọn bị bỏ trống nhất** (block sinh ra cho đúng nội dung này), rồi block **ít được dùng nhất** trong lần dàn này (một dãy cảnh giống nhau không dồn hết vào thẻ đầu danh mục), rồi thứ tự danh mục; (3) đổ nội dung vào prop theo ánh xạ `content` (2.7): chuỗi, danh sách ghép chuỗi, con số đọc từ chữ ("4,321" → 4321); chữ dài hơn `max` của prop bị cắt ở ranh giới từ kèm dấu ba chấm và ghi cảnh báo, danh sách dài hơn `max` bị cắt, danh sách ngắn hơn `min` coi như không có; (4) đổi `factBindings` khóa nội dung → khóa dữ kiện thành prop → dữ kiện của block đã chọn; (5) `fields` của stage lấy từ khóa nội dung trùng tên (`kicker`, `source`), tôn trọng `options`; (6) `tone` theo vai trong `casting` nếu stage có tone đó. Block ghim mà không hiện được cảnh thì ghi cảnh báo và rơi về (2). Cảnh không block nào hiện được là lỗi `NODE_PARAMS_INVALID` từ preflight, nêu block gần nhất còn thiếu gì.
 
-**Dàn cảnh bằng mô hình** (`nodes/art-director/cast-ai.ts`): Đạo Diễn Mỹ Thuật có cổng thành phần `llm` (`LLMRef`, tùy chọn). Nối vào, node gửi một prompt cho cả video — mỗi cảnh: vai, lời đọc, nội dung trên màn hình, và **danh sách block hiện được trọn cảnh đó** do quy tắc lọc sẵn (không block nào trọn thì mới đưa các block hiện được một phần, ghi rõ mỗi block làm rơi gì); mỗi block kèm `doc.when` của nó; các tone của stage — và nhận về block (và tone) cho từng cảnh. Thứ tự ưu tiên: bảng dàn cảnh của người dùng, rồi lựa chọn của mô hình, rồi quy tắc; mô hình chọn block ngoài danh sách thì cảnh đó về quy tắc kèm cảnh báo. Trả lời sai dạng thử lại một lần; lỗi lần hai thì cả video dàn theo quy tắc kèm cảnh báo, không chặn luồng. Không có gì để hỏi (mọi cảnh đã ghim hay chỉ một block hợp) thì không gọi.
+**Dàn cảnh bằng mô hình** (`nodes/art-director/cast-ai.ts`): Đạo Diễn Mỹ Thuật có cổng thành phần `llm` (`LLMRef`, tùy chọn). Nối vào, node gửi một prompt cho cả video — mỗi cảnh: vai, lời đọc, nội dung trên màn hình, và **danh sách block hiện được trọn cảnh đó** do quy tắc lọc sẵn (không block nào trọn thì mới đưa các block hiện được một phần, ghi rõ mỗi block làm rơi gì); mỗi block kèm `doc.when` của nó; các tone của stage — và nhận về block (và tone) cho từng cảnh. Thứ tự ưu tiên: bảng dàn cảnh của người dùng, rồi lựa chọn của mô hình, rồi quy tắc; mô hình chọn block ngoài danh sách thì cảnh đó về quy tắc kèm cảnh báo. Trả lời sai dạng thử lại một lần; lỗi lần hai thì cả video dàn theo quy tắc kèm cảnh báo, không chặn luồng. Mô hình còn được trả lời **`none`** cho một cảnh: không phải "không có gì hiện được" — quy tắc đã bắt việc đó — mà "không có cái nào **hợp** với beat này". Một tấm thẻ chứa được con số vẫn có thể là khung sai cho câu mà cả video xoay quanh, và chỉ thứ đọc được beat mới phán được. Cảnh bị trả lời `none` sẽ được **vẽ một block riêng** (`authorBlock`, 5.10), block đó thành lựa chọn của chính cảnh ấy — không phải chọn gì nữa, vì nó được viết cho đúng cảnh này. Cảnh người dùng đã ghim thì `none` không có hiệu lực. Tối đa **ba** block một lần chạy: mô hình xin nhiều hơn thì phần dư dàn theo quy tắc kèm cảnh báo, vì danh mục phình mỗi lần chạy thì không còn là một look. Khi có thể vẽ block, node **vẫn hỏi** cả khi mỗi cảnh chỉ có một ứng viên — "cái duy nhất hợp lại là cái sai" cũng là một quyết định; không nối mô hình thì không có gì để hỏi (mọi cảnh đã ghim hay chỉ một block hợp) và node không gọi.
 
 **Viết block mới** (`nodes/art-director/author.ts`): khi có mô hình nối vào, vai **chưa được ghim trong bảng dàn cảnh** (ghim là người dùng đã quyết, không viết đè), và cảnh **không block nào hiện được trọn** (mọi block đều thiếu chỗ cho ít nhất một khóa nội dung), node không dừng mà nhờ mô hình viết một block cho cảnh đó: prop ánh xạ đúng các khóa nội dung cảnh có (kể cả khóa ràng buộc dữ kiện), dòng `when`, ví dụ, và code theo token của stage, cùng bộ quy tắc với sửa bằng lời cộng một block sẵn có làm mẫu giọng. Block được kiểm như block viết tay: lược đồ, lint (`data-prop` cho mọi prop, không `from()`), và phải hiện được trọn cảnh; sai thì hỏi lại một lần kèm lý do, sai nữa là lỗi `BLOCK_AUTHOR_FAILED`. Hệ quả cho một workflow mới chỉ có `text-card`: cảnh chỉ có tiêu đề và thân dùng `text-card`, cảnh có gạch đầu dòng, con số hay trích dẫn được viết block riêng ngay lần chạy đầu, và node tích lũy bộ block của chính video đó. Block dùng ngay trong lần chạy này và được **ghi vào tham số của node** (`RunContext.patchParams`, Bộ Máy Thực Thi mục 3): workflow hiện chưa lưu, block xuất hiện trong mục blocks như block người dùng thêm, sửa hay bỏ như thường, hoàn tác được. Không nối mô hình thì preflight vẫn chặn như trước. Sửa giao diện vẫn không tốn: câu trả lời của mô hình được máy chủ giữ theo prompt (Bộ Máy Thực Thi mục 3), cùng kịch bản cùng danh mục là cùng câu trả lời, không gọi lại. Đổi tham số là đổi giao diện, lưu workflow là lưu luôn giao diện. Mặc định là stage `Dark` với ba tone `cool/warm/green`, trường `kicker`, và một block `text-card`.
 
@@ -310,7 +313,7 @@ Node lõi `core/transcribe`: nhận `Voiceover` và `AudioScript`, phát `Voiceo
 
 ### 5.13. Phụ Đề (Captions)
 
-Node lõi `core/captions`: nhận `Voiceover` có `words`, phát `CaptionTrack` (mục 2.10). Hàm thuần. Tham số duy nhất: `maxChars` (26), vì số ký tự một dòng chứa được là số đo bề rộng chỗ phụ đề mà stage dành ra. Voice-over không có `words` là lỗi `CAPTIONS_NO_WORDS` kèm hướng dẫn nối qua Căn Mốc Từ. Bốn bản mẫu đều mang sẵn cặp Căn Mốc Từ → Phụ Đề **đang bật**, nối vào cổng `captions` tùy chọn của Đóng Gói Timeline; tắt hai node là video không phụ đề và các mục danh sách rải đều thay vì theo lời (quy tắc cổng tùy chọn sau node bị bỏ qua ở Bộ Máy Thực Thi mục 2). Engine HyperFrames đổ các dòng vào chỗ `data-slot="captions"` của stage trong từng cảnh (dòng cắt ngang hai cảnh được vẽ ở cả hai), bật tắt dòng và tô từ trên timeline gốc; stage không khai chỗ thì engine thêm dải mặc định trong vùng an toàn dưới.
+Node lõi `core/captions`: nhận `Voiceover` có `words`, phát `CaptionTrack` (mục 2.10). Hàm thuần. Tham số duy nhất: `maxChars` (26), vì số ký tự một dòng chứa được là số đo bề rộng chỗ phụ đề mà stage dành ra. Voice-over không có `words` là lỗi `CAPTIONS_NO_WORDS` kèm hướng dẫn nối qua Căn Mốc Từ. Năm bản mẫu đều mang sẵn cặp Căn Mốc Từ → Phụ Đề **đang bật**, nối vào cổng `captions` tùy chọn của Đóng Gói Timeline; tắt hai node là video không phụ đề và các mục danh sách rải đều thay vì theo lời (quy tắc cổng tùy chọn sau node bị bỏ qua ở Bộ Máy Thực Thi mục 2). Engine HyperFrames đổ các dòng vào chỗ `data-slot="captions"` của stage trong từng cảnh (dòng cắt ngang hai cảnh được vẽ ở cả hai), bật tắt dòng và tô từ trên timeline gốc; stage không khai chỗ thì engine thêm dải mặc định trong vùng an toàn dưới.
 
 ---
 
@@ -364,11 +367,88 @@ Một cảnh chiếu được **video**, không chỉ ảnh tĩnh. `BlockField.t
 
 Phần nặng nhất **thư viện lo sẵn**: `executeRenderJob` của `@hyperframes/producer` có hẳn một chặng "extract videos" và tự nối `createVideoFrameInjector` — nó trích khung của clip bằng ffmpeg rồi thay thẻ `<video>` bằng ảnh khung lúc chụp, vì Chrome không chụp được video đang phát một cách xác định. Việc của NodeCine chỉ là **đặt đúng thẻ `<video>` vào trang**.
 
-Đúng ở đây nghĩa là mang mốc thời gian của **chính cảnh đó**. Producer đọc `data-start` và `data-duration` ngay trên thẻ video; thiếu thì nó coi clip bắt đầu ở giây 0 và chạy hết độ dài tự nhiên, tức một cảnh b-roll ở phút thứ hai sẽ nhảy lên đầu phim. `timeVideos` (`core/look/markup.ts`, hàm thuần) đóng dấu mốc đó lên mọi `<video>` trong cảnh, bỏ qua thẻ nào tác giả block đã tự ghi mốc. Nó cũng thêm `muted`: tiếng của phim là giọng đọc, tiếng của clip sẽ nói đè lên.
+**Cỡ của thẻ video phải đặt bằng hộp, không bằng con số.** Lúc kết xuất, producer thay thẻ `<video>` bằng ảnh từng khung và đóng **style inline** cỡ riêng lên bản thay thế đó; inline thắng luật theo class, nên một `width: 1920px` trong CSS của block bị bỏ qua và clip ra đúng cỡ gốc của nó, nằm ở góc khung. `inset: 0` với `width/height: 100%` thì sống sót qua lần tráo. Ảnh tĩnh không bị tráo nên vẫn dùng được lối đặt cỡ cố định mà Ken Burns cần.
+
+Đúng ở đây còn nghĩa là mang mốc thời gian của **chính cảnh đó**. Producer đọc `data-start` và `data-duration` ngay trên thẻ video; thiếu thì nó coi clip bắt đầu ở giây 0 và chạy hết độ dài tự nhiên, tức một cảnh b-roll ở phút thứ hai sẽ nhảy lên đầu phim. `timeVideos` (`core/look/markup.ts`, hàm thuần) đóng dấu mốc đó lên mọi `<video>` trong cảnh, bỏ qua thẻ nào tác giả block đã tự ghi mốc. Nó cũng thêm `muted`: tiếng của phim là giọng đọc, tiếng của clip sẽ nói đè lên.
 
 **Clip vào máy thế nào.** Một clip quá lớn để đi qua data URL base64 như một cái logo, nên nó theo lối của nhạc và giọng: người dùng bỏ tệp vào `.nodecine/clips`, ô chọn liệt kê theo tên, và `POST /api/assets/from-library` bảo máy chủ **đọc tệp ngay tại chỗ**, băm rồi chép vào kho tài nguyên. Chỉ cái tên đi qua dây. Cảnh giữ `/api/assets/<băm>.mp4` như mọi tài nguyên khác, nên bản kết xuất chép clip đi kèm y như chép ảnh.
 
-Chưa làm: clip **không hiện trong Ảnh Bìa** (mục 5.18). Phiên chụp một khung không chạy chặng trích khung của producer, nên chỗ clip sẽ là khung poster của thẻ video hoặc nền đen. Muốn ảnh bìa có b-roll thì phải nối injector vào đường chụp.
+Chưa làm: clip **không hiện trong Ảnh Bìa** (mục 5.18). Phiên chụp một khung không chạy chặng trích khung của producer, nên một bìa lấy nền từ clip sẽ ra khung tĩnh của thẻ video hoặc nền đen. Muốn bìa có b-roll thì phải nối injector vào đường chụp.
+
+### 5.19. Kho Tư Liệu (Stock Media)
+
+Node lõi `core/stock-media`: nhận `SceneScript`, phát `SceneScript` **đã có tư liệu ở mọi cảnh**. Cảnh chỉ được chiếu tệp máy này đang giữ (mục 2.7), nên node không phát ra một cái link: nó tìm, chọn ứng viên đầu tiên lấp được khung, **tải về kho tài nguyên** và đặt tài nguyên đó vào nội dung cảnh. Từ đó trở đi Đạo Diễn Mỹ Thuật và Đóng Gói không phân biệt được đâu là tư liệu kho, đâu là tư liệu người dùng tự chọn.
+
+**Clip trước, ảnh chỉ là dự phòng.** Một tấm ảnh đứng bốn giây đọc ra như khung hình bị treo, dù có trôi Ken Burns khéo tới đâu; Ken Burns là lời xin lỗi cho việc không có cảnh quay, không phải đích đến. Đây là thứ tự cutdown chốt (`downloadClip(...) ?? download(...)`), và các khung ở đây là bản port của khung đó. Tham số `media` quyết cảnh được lấp bằng gì: `auto` thử clip rồi chịu lấy ảnh khi không có clip nào hợp — và một phim khi ấy có thể **nửa clip nửa ảnh**; `clip` và `still` giữ mọi cảnh cùng một loại và **để cảnh trống còn hơn trộn**, vì vài cảnh tĩnh nằm giữa những cảnh động đọc ra như hỏng chứ không như một lựa chọn.
+
+Clip vào `content.clip`, ảnh vào `content.image` — **hai khóa nội dung khác nhau**, nên block nào được dàn là hệ quả tự nhiên của luật phủ nội dung: `still-clip` là block duy nhất có chỗ đặt clip, `still` là block duy nhất có chỗ đặt ảnh. Không cần ghim vai vào block nào, và ghim vào một trong hai là hỏng mọi cảnh nhận cái kia.
+
+**Phong cách** (`style`) chọn *vùng* ảnh: Phong cảnh, Đường phố, Thiên nhiên, Kiến trúc, Nội thất, Chi tiết đời thường, Phòng tối cinematic — cộng *Tự động* (mô hình chọn một nhóm cho cả video) và *Ngẫu nhiên* (mỗi cảnh một nhóm). Đây là **vùng để mô hình chọn bên trong**, không phải danh sách để nó đi theo, và đó là bài học đắt của cutdown: bản đầu mỗi phong cách mang thêm một chuỗi từ khoá "tham khảo" in vào prompt, đo trên bốn lần chạy `landscape` liên tiếp thì cả bốn đều đi núi → hồ → biển → đồng cỏ → hoàng hôn đúng thứ tự chuỗi đó, trên bốn kịch bản khác hẳn nhau — mô hình đọc "tham khảo" thành "storyboard". Và vì truy vấn giống nhau, kho trả về cùng một tấm: 3/4 video mở bằng cùng một cảnh núi mù sương. Trường ấy đã bỏ; chỉ còn `hint` mô tả vùng.
+
+Ba luật đi kèm mọi phong cách, và chúng mới là thứ giữ hai video khỏi giống nhau: ảnh chỉ tạo không khí, **không** minh hoạ lời đọc; không tìm người đang diễn lại cảm xúc hay hành động lời đọc nhắc tới; mỗi truy vấn neo vào **một vật cụ thể** (vách đá, đường ray, đèn bàn, rèm cửa) chứ không phải tên chung của nhóm — kho tìm theo từ khoá và trả lời tất định, nên truy vấn chung chung ra đúng tấm ảnh mọi người khác cũng lấy. Cộng thêm: đổi địa điểm, giờ trong ngày và khoảng cách máy quay giữa các cảnh, và đừng đi theo thứ tự liệt kê trong mô tả nhóm.
+
+Danh sách nhóm in vào prompt **sinh từ chính bảng** (`STOCK_GROUPS`), vì trước đây nó viết tay ở ba chỗ và thêm một phong cách mà quên một chỗ thì không lỗi nào được ném — "Ngẫu nhiên" chỉ xoay trong các nhóm cũ.
+
+Phong cách chỉ có tác dụng khi có mô hình: nó lái mô hình chứ không lái kho. Không nối mô hình thì node ghi cảnh báo nói rõ phong cách đang bị bỏ qua.
+
+Cổng `llm` **tùy chọn**, và nó là thứ làm node dùng được với ngôn ngữ mà kho ảnh không đánh chỉ mục: kho tìm bằng tiếng Anh, còn lời thoại thì không. Có mô hình, nó viết một cụm tiếng Anh hai đến bốn từ cho mỗi cảnh từ lời thoại. Không có, chính lời thoại là cụm tìm kiếm — đúng với video tiếng Anh, kém với mọi thứ khác, và thân node nói thẳng điều đó chứ không giả vờ.
+
+Luật chọn ảnh (chép từ cutdown, và mỗi con số có lý do):
+
+- **Cạnh dài từ 1200px.** Thấp hơn là đang phóng ảnh lên, và phóng lên thấy rõ trên điện thoại. Đo trên cạnh dài chứ không phải chiều cao, để một sàn đúng cho cả khung dọc lẫn ngang.
+- **Cạnh ngắn / cạnh dài ≤ 0,9.** Đúng hướng hoặc gần đúng: với khung dọc, ảnh 3:4 vẫn lấp đầy sau khi cắt còn ảnh ngang thì không.
+- **Clip phải dài hơn cảnh**, không thì nó chạy lại giữa cảnh: cùng chiếc rèm lay lại từ đầu, cùng chiếc xe chạy qua lần nữa. Không lỗi nào được ném, chỉ mắt thấy. Node này chạy **trước** Giọng Đọc nên chưa biết cảnh dài bao nhiêu — đúng ca mà cutdown để sàn tuyệt đối `MIN_CLIP_SEC = 4`, và ở đây cũng vậy.
+- **Chọn bản dựng: nhỏ nhất trong số những bản có cạnh dài đủ khung.** Pexels trả cùng một clip ở 5–7 cỡ, 240×426 tới 2160×3840. Lấy bản to nhất là tải 15,5 MB cho một cảnh năm giây rồi co xuống; lấy bản đầu danh sách thì có clip chỉ 338×640 đứng đầu, phóng lên 1080 là vỡ.
+- **Lấy clip hợp lệ ĐẦU TIÊN, không phải dài nhất.** Đo được: sắp theo dài nhất chọn phải clip 30 giây và tải 32 MB cho một cảnh năm giây; ứng viên hợp lệ đầu tiên là 8,6 MB. Dài hơn mức sàn không mua thêm gì, mà thứ tự kho trả về chính là thứ tự liên quan.
+- Trần tải riêng cho clip: **40 MB**, so với 4 MB của ảnh.
+- **Pexels: không dùng biến thể dựng sẵn nào.** `large2x` nghe như bản to nhưng là `w=940&h=650&dpr=2`, nên ảnh dọc về 867×1300 — thiếu 620px so với khung 1920, phóng lên là nhoè mà không cửa nào báo. Đường đúng là `original?h=<cạnh dài>`: đo thật trên một ảnh 3040×2361 ra 2472×1920, 262 KB.
+- **Pixabay: đo lại kích thước thay vì tin kho.** `largeImageURL` chỉ 1280px cạnh dài, lọt sàn cho khung ngang nhưng không đủ cho khung dọc.
+- **Một video không dùng lại một tấm ảnh.** Trang ảnh đã dùng bị loại trước khi thử, nên trang kết quả xin 30 tấm chứ không 15.
+- Tấm hợp lệ đầu tiên vẫn có thể tải hỏng; node thử tối đa bốn ứng viên trước khi bỏ cảnh đó không ảnh.
+
+Khóa API đọc từ **biến môi trường**, không bao giờ từ đồ thị (mục 9.1): `PEXELS_API_KEY` hoặc `PIXABAY_API_KEY` trong `.env.local`. Một workflow chia sẻ cho người khác không được mang theo khóa của người viết. Thiếu khóa là lỗi `STOCK_KEY_MISSING` nói rõ tên biến. Địa chỉ ảnh do kho trả về là địa chỉ **bên thứ ba chọn**, nên nó đi qua đúng bộ luật của `server/fetch-media.ts`: dựng lại địa chỉ, chặn host nội bộ, theo chuyển hướng từng bước, cắt ở 4 MB — cùng bộ luật Truy Xuất Trang dùng, để hai chỗ không trôi khỏi nhau.
+
+### 2.13. Bìa (Cover)
+
+Giao diện gồm **ba** thứ, không phải hai: **stage**, **block**, và **bìa**.
+
+Block là một mảnh **đặt vào trong** stage, ở khung của video, tại một ô thời gian, với props lấy từ từ vựng nội dung của cảnh. Bìa thì đứng một mình, ở **khung của riêng nó**, **không có thời gian**, và props do người dùng gõ. Đó là ba khác biệt, và chúng đủ để bìa là một loại riêng chứ không phải một biến thể của block.
+
+```
+CoverDef = { id, name, frame, props, defaults?, code }
+```
+
+Khác `BlockDef` hai trường: `frame` và `defaults`. Và đó là lý do tồn tại của cả kiểu này — video 16:9 vẫn muốn bìa 9:16, vì bìa là thứ nằm cạnh mọi video dọc khác trong luồng, và một thumbnail 16:9 có hai vạch đen ở đó đọc ra như lỗi.
+
+`defaults` là **giá trị bìa mang sẵn**, chọn ngay tại Đạo Diễn Mỹ Thuật: ảnh nền, chữ mặc định. Bìa là tấm ảnh người ta nhìn để quyết định có bấm vào video hay không, nên nó phải **xong ngay ở chỗ thiết kế**; node Ảnh Bìa chỉ đổi lại cho một lần xuất. Trước đây mọi prop đều để trống chờ bước xuất, nên bìa chưa ai điền vẽ ra **một hình chữ nhật đen** — đó không phải thiết kế, đó là lỗ hổng. `coverProps(cover, override)` gộp: ô trống ở bước xuất nghĩa là "giữ như đã thiết kế", không phải "xoá trắng"; muốn không có gì thì bỏ hẳn prop khỏi bìa. Bản xem trước trong node cũng vẽ qua đúng các giá trị này, nên thiết kế thấy sao thì tệp ra vậy.
+
+Nền của bìa theo thứ tự: **đã chọn trong Đạo Diễn Mỹ Thuật** > **một khung của phim** > không có gì. Bước giữa là thứ làm bìa có nghĩa trên một bản mẫu: tư liệu đổi mỗi lần chạy, nên nền ghim cứng khiến mọi video chung một bìa, còn bắt người dùng mở ra chọn ảnh sau mỗi lần chạy chính là thao tác tay mà node này sinh ra để bỏ đi. `coverGround` (thuần) chọn: prop kiểu ảnh còn trống thì tìm trong các cảnh, đọc kiểu tài nguyên **theo khai báo của block** chứ không đoán theo tên prop — gặp ảnh thì dùng thẳng, gặp clip thì trả về clip để node lấy một khung bằng ffmpeg (`server/video-still.ts`, lấy ở giây thứ nhất vì cảnh mở từ đen và khung 0 thường tối nhất). Đây **không phải** "chụp khung video làm ảnh bìa" — nền tảng nào cũng cho tua chọn thumbnail; đây là cái **nền** để dựng bìa riêng, có tiêu đề, bố cục và khung của riêng nó.
+
+Bìa **mượn tokens** của stage (bảng màu, font) nên nó và video trông cùng một bộ, nhưng **không mượn CSS bố cục**: code của stage đo bằng px cho khung của video, đổ sang khung dọc là đồ đạc rơi sai chỗ.
+
+Bìa nằm trong tham số Đạo Diễn Mỹ Thuật cùng stage và blocks, đi theo `ScenePlan` và IR. **Không có gì dàn bìa** — không cảnh nào "mặc" một cái bìa; nó chỉ đi nhờ tới node Ảnh Bìa, đúng như stage cũng chỉ được mang theo.
+
+**Vẽ bìa ở đâu:** mục *Bìa* trong thân node Đạo Diễn Mỹ Thuật, cùng chỗ với Blocks — danh sách bìa, ô chọn tỉ lệ (`FRAME_PRESETS`), bảng props, và modal sửa code với đủ cả tab Thành phần, tab Code và ô sửa bằng lời. Bìa dùng lại được toàn bộ đồ nghề đó vì nó **block-shaped** một khi đưa cho nó cái stage trần của riêng nó: `core/look/cover.ts` giữ `coverStage` và `coverAsBlock`, và **cả khung xem trước lẫn lúc kết xuất đều đi qua đúng hai hàm ấy** — hai bản khác nhau là thiết kế một đằng, tệp ra một nẻo.
+
+`doc.example` của một bìa không phải tài liệu mà là **thứ khung xem trước vẽ khi chưa ai gõ gì**: mỗi prop tự đại diện cho mình, lấy `hint` nếu có. Để rỗng thì xem trước ra hình đen, mà vẽ bìa trên một hình chữ nhật đen là vẽ mù.
+
+### 5.20. Phân Cảnh (Scene Breakdown)
+
+Node lõi `core/scene-breakdown`: nhận `SceneScript`, phát `SceneScript` **đã có gì đó trên hình ở mọi cảnh**. Cùng hình dạng với Kho Tư Liệu (5.19): một chặng làm giàu kịch bản, đứng giữa chặng kịch bản và Đạo Diễn Mỹ Thuật, không nối thì mọi thứ chạy như không có nó.
+
+**Vì sao là một node riêng.** Ngoài đời, kịch bản viết xong là hết việc của biên kịch; không ai đưa kịch bản có sẵn cho biên kịch khác viết lại. Việc còn lại là *phân cảnh*: đạo diễn hay người dựng đọc từng câu và quyết câu đó lên hình bằng gì, không sửa một chữ lời. Kịch Bản Tĩnh (5.2) thiếu đúng bước ấy — dán vào thì chỉ có lời thoại, nội dung trên hình phải gõ tay từng cảnh và đa số bỏ trống, nên Đạo Diễn Mỹ Thuật không có khóa nào để dàn. Đưa qua Biên Kịch (5.8) là sai vai: Biên Kịch đi từ đề bài ra lời và sẽ viết lại lời. Phân Cảnh đi từ lời ra hình. Khác Đạo Diễn Mỹ Thuật ở chỗ Phân Cảnh quyết *chữ gì* lên hình, Đạo Diễn Mỹ Thuật quyết chữ đó *trông ra sao*.
+
+**Lời thoại không bao giờ đổi, theo cấu trúc chứ không theo kiểm tra.** Mô hình không được hỏi về lời thoại: prompt in lời của từng cảnh làm ngữ cảnh và nói rõ "không trả lại", lược đồ đầu ra chỉ có các khóa nội dung, và node chép `narration`, `role`, `weight`, `factBindings` từ đầu vào sang. Không có `checkVerbatim` vì không có đường nào để lời đi qua mô hình theo chiều ra. Cutdown kiểm sau; ở đây đóng cửa trước.
+
+**Cùng từ vựng với Biên Kịch, không chép.** `CONTENT_GUIDE` (một dòng cho mỗi khóa: title tối đa 60 ký tự, points hai đến bốn dòng, chữ trên hình không lặp lời nguyên câu) nhập thẳng từ `nodes/screenwriter/prompt.ts`, và lược đồ đầu ra là `SceneContentSchema` bỏ hai khóa tệp — cùng cách Biên Kịch dựng `SpokenSceneSchema`. Hai node không thể trôi khỏi nhau về nghĩa của một `title`. Vòng gọi mô hình cũng dùng chung `runScreenwriter`: một lần thử lại cho sai cấu trúc, một lần cho sai ngôn ngữ; ngôn ngữ lấy từ `SceneScript.language`, không hỏi người dùng.
+
+**Đúng số cảnh, đúng thứ tự.** Đầu ra là tuple dài bằng số cảnh, không phải mảng: thiếu một mục là mọi cảnh sau nhận nhầm chữ của cảnh trước, và lược đồ bắt ngay chứ không để mắt thấy.
+
+**Chỉ điền cảnh trống.** Cảnh đã có bất kỳ khóa viết nào (`hasWritten`: một trong `WRITTEN_KEYS` mang giá trị; tệp không tính, tệp không phải chữ) thì giữ nguyên — người dùng gõ tay thắng mô hình, như Kho Tư Liệu giữ ảnh người dùng đã chọn. Cảnh giữ vẫn được in vào prompt để mô hình thấy mạch, đánh dấu *keep* và mô hình trả `{}`. `overwrite` bật thì viết lại tất cả. Dù thế nào, `image` và `clip` của cảnh đi qua nguyên vẹn (mô hình không được viết chúng, 2.11), và khóa đã ràng buộc dữ kiện bị bỏ khỏi câu trả lời để dữ kiện điền sau. Giá trị rỗng (`"title": ""`, `points: []`) coi như không viết.
+
+Tham số: `overwrite` (mặc định tắt) và `density` — `auto` để lời thoại quyết (một ý thì title, liệt kê thì points, so sánh thì entries, con số thì number + label), `sparse` mỗi cảnh một title và tối đa một khóa nữa, `rich` lấy hết những gì lời thoại liệt kê, so sánh hay đếm. Cổng `llm` **bắt buộc**: node này không có việc nào không cần mô hình; tùy chọn nằm ở đồ thị, không nối thì thôi.
+
+Thân node: form tham số, số cảnh đã có gì trên hình sau khi chạy, và một dòng mỗi cảnh (title, hoặc quote, số, ý đầu) để đọc kết quả mà không mở Đạo Diễn Mỹ Thuật.
 
 ### 5.17. Nhập Âm Thanh (Audio Input)
 
@@ -384,11 +464,15 @@ Lúc chạy, tệp được ffmpeg chuyển sang MP3 vào thư mục media dư�
 
 ### 5.18. Ảnh Bìa (Cover Image)
 
-Node lõi `core/poster-export`: nhận `VideoIR` và `EngineRef` (cần `render`), không phát gói nào, chụp **một khung hình của chính bản dựng đó** thành PNG. Ảnh bìa là thứ quyết định người ta có bấm xem hay không, mà chọn nó sau khi có MP4 nghĩa là phải mở video bằng công cụ khác để tua.
+Node lõi `core/cover-export`: nhận `VideoIR` và `EngineRef` (cần `render`), không phát gói nào, vẽ **một `CoverDef`** (mục 2.13) của giao diện ra PNG.
 
-Bỏ qua mặc định như Xuất MP4: một khung hình vẫn tốn một lần mở trình duyệt không giao diện, nên nó chờ được bấm. Tham số: `atSeconds` (kẹp vào trong phim và làm tròn về một khung có thật), `fileName`, `resolution`.
+**Không phải một khung của video.** Nền tảng nào cũng đã cho tua video chọn thumbnail rồi; thứ chúng không làm được là một tấm ảnh **dựng riêng để làm bìa** — khung riêng, chữ riêng, bố cục riêng. Nên node này chọn một bìa và điền props của bìa đó, chứ không có tham số thời gian nào.
 
-Chụp đi qua **chính bộ chụp của thư viện** (`createFileServer` → `createCaptureSession` → `captureFrameToBuffer` của `@hyperframes/producer`), là đúng thứ đường kết xuất MP4 dùng cho từng khung. Trang được dựng bằng cùng một hàm `buildProjectDir` với bản MP4: ảnh bìa đến từ một trang dựng khác đi thì không còn là một khung của video nữa. Tên tệp băm theo IR và tham số nên chụp lại cùng một khung là dùng lại tệp cũ.
+Cách vẽ: dựng một **video một khung, một cảnh**, ở khung của bìa, với bìa đóng vai block và một stage trần chỉ mang bảng màu cùng font của stage thật — rồi để đúng bộ chụp của engine lấy khung duy nhất đó. Nhờ vậy không có đường kết xuất thứ hai nào phải nuôi, và bìa vẫn trông cùng bộ với phim mà không thừa hưởng một bố cục đo cho khung khác.
+
+Tham số: `cover` (id, rỗng thì lấy cái đầu tiên), `props` (theo bảng props của chính bìa đó), `fileName`, `resolution`. Bỏ qua mặc định như Xuất MP4.
+
+Chưa làm: **clip không hiện trong bìa** — phiên chụp một khung không chạy chặng trích khung video của producer. Và cỡ chữ tiêu đề chưa tự co theo độ dài như `titleSize` của cutdown, nên tiêu đề rất dài sẽ tràn lên ảnh.
 
 ## 6. Adapter và Node Động Cơ
 
@@ -491,6 +575,6 @@ Một MP4 do NodeCine kết xuất **mang theo workflow** đã tạo ra nó (th�
 
 ### 10.2. Bài kiểm tra duy nhất
 
-**Mọi bản mẫu ship kèm phải dựng lại được từ canvas trống** bằng cách kéo node từ Thư viện và gõ tham số. `templates/__tests__` kiểm đúng điều đó: mọi node type có trong Thư viện, mọi tham số qua được lược đồ của chính node, mọi đạo diễn và Kịch Bản Tĩnh có Stage và chỉ nêu block đã nối, mọi ràng buộc dữ kiện trỏ vào prop có thật của block. Bản mẫu cần thứ gì người dùng không với tới thì không phải bản mẫu — đó là code trá hình.
+**Mọi bản mẫu ship kèm phải dựng lại được từ canvas trống** bằng cách kéo node từ Thư viện và gõ tham số. `templates/__tests__` kiểm đúng điều đó: mọi node type có trong Thư viện, mọi tham số qua được lược đồ của chính node, mọi đạo diễn có Stage và chỉ nêu block đã nối, mọi ràng buộc dữ kiện trỏ vào prop có thật của block. Bản mẫu cần thứ gì người dùng không với tới thì không phải bản mẫu — đó là code trá hình.
 
 Không thứ gì bên ngoài lõi được thêm kiểu cổng hay sửa lược đồ IR.

@@ -105,6 +105,13 @@ export function assetPath(fileName: string): string {
   return p;
 }
 
+/** The file behind an `/api/assets/<name>` URL; refuses anything that is not one. */
+export function fileNameFromAssetUrl(url: string): string {
+  const m = /^\/api\/assets\/([a-f0-9]{16,64}\.[a-z0-9]+)$/.exec(url);
+  if (!m) throw new Error(`Not an asset URL: ${url}`);
+  return m[1]!;
+}
+
 /** Every `/api/assets/<name>` a piece of code refers to, once each. */
 export function assetNamesIn(text: string): string[] {
   return [...new Set([...text.matchAll(/\/api\/assets\/([a-f0-9]{16,64}\.[a-z0-9]+)/g)].map((m) => m[1]!))];

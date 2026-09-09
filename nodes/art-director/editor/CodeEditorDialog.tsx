@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import { StageDefSchema, LookDefSchema, type BlockDef, type StageDef } from '@/core/types/payloads';
+import { StageDefSchema, LookDefSchema, type BlockDef, type CoverDef, type StageDef } from '@/core/types/payloads';
+import { coverAsBlock, coverStage } from '@/core/look/cover';
 import { useStudio } from '@/store/useStudio';
 import { Btn, useT } from '@/components/ui';
 import { Icon } from '@/components/icons';
@@ -27,20 +28,26 @@ export const CodeEditorDialog: React.FC = () => {
   const node = useStudio((s) => s.graph.nodes.find((n) => n.id === target?.nodeId));
   const setParams = useStudio((s) => s.setParams);
   const isBlock = target?.blockIndex !== undefined;
+  const isCover = target?.coverIndex !== undefined;
+  // A cover edits like a block — same props, same code — on its own frame and its own bare stage.
+  const isPiece = isBlock || isCover;
   // The Art Director's parameters carry both parts; parsing them as a StageDef strips the blocks.
   const stageParsed = React.useMemo(() => StageDefSchema.safeParse(node?.params), [node]);
   const stage: StageDef | null = stageParsed.success ? stageParsed.data : null;
-  const blocks = React.useMemo(() => (isBlock ? LookDefSchema.safeParse(node?.params) : null), [isBlock, node]);
-  const block: BlockDef | undefined = blocks?.success ? blocks.data.blocks[target!.blockIndex!] : undefined;
-  const initial = isBlock ? block?.code.source ?? '' : stage?.code.source ?? '';
-  const resetKey = `${target?.nodeId ?? ''}#${target?.blockIndex ?? ''}`;
+  const blocks = React.useMemo(() => (isPiece ? LookDefSchema.safeParse(node?.params) : null), [isPiece, node]);
+  const cover: CoverDef | undefined = isCover && blocks?.success ? (blocks.data.covers ?? [])[target!.coverIndex!] : undefined;
+  const block: BlockDef | undefined = isCover ? (cover ? coverAsBlock(cover) : undefined) : blocks?.success ? blocks.data.blocks[target!.blockIndex!] : undefined;
+  const initial = isPiece ? block?.code.source ?? '' : stage?.code.source ?? '';
+  const resetKey = `${target?.nodeId ?? ''}#${target?.blockIndex ?? ''}#${target?.coverIndex ?? ''}`;
   const draft = useDraft(initial, resetKey);
-  const frame = useFrame();
+  const stageFrame = useFrame();
+  // A cover is drawn at its own shape, not the film's — the drag handles must measure that one.
+  const frame = cover?.frame ?? stageFrame;
   const FRAME = React.useMemo(() => ({ w: frame.width, h: frame.height }), [frame]);
 
   const [leftTab, setLeftTab] = React.useState<'elements' | 'code'>(() => { try { return localStorage.getItem(TAB_KEY) === 'code' ? 'code' : 'elements'; } catch { return 'elements'; } });
   const chooseTab = (tab: 'elements' | 'code') => { setLeftTab(tab); try { localStorage.setItem(TAB_KEY, tab); } catch { /* private mode */ } };
-  const layout = !isBlock && leftTab === 'elements';
+  const layout = !isPiece && leftTab === 'elements';
   const [rects, setRects] = React.useState<MeasuredRect[]>([]);
   const [selected, setSelected] = React.useState<string | null>(null);
   const [savedAt, setSavedAt] = React.useState<number | null>(null);
@@ -56,22 +63,24 @@ export const CodeEditorDialog: React.FC = () => {
     if (!target) return;
     const src = sourceRef.current;
     const p = partsRef.current;
-    if (isBlock && blocks?.success) {
+    if (isCover && blocks?.success) {
+      setParams(target.nodeId, { covers: (blocks.data.covers ?? []).map((c, i) => (i === target.coverIndex ? { ...c, ...(p.props ? { props: p.props } : {}), code: { format: 'html-gsap', source: src } } : c)) });
+    } else if (isBlock && blocks?.success) {
       setParams(target.nodeId, { blocks: blocks.data.blocks.map((b, i) => (i === target.blockIndex ? { ...b, ...(p.props ? { props: p.props } : {}), ...(p.doc ? { doc: p.doc } : {}), code: { format: 'html-gsap', source: src } } : b)) });
     } else {
       setParams(target.nodeId, { ...(p.tokens ? { tokens: p.tokens } : {}), ...(p.tones ? { tones: p.tones } : {}), ...(p.sceneFields ? { sceneFields: p.sceneFields } : {}), code: { format: 'html-gsap', source: src } });
     }
     draft.markSaved();
     setSavedAt(Date.now());
-  }, [target, isBlock, blocks, setParams, sourceRef, partsRef, draft]);
+  }, [target, isBlock, isCover, blocks, setParams, sourceRef, partsRef, draft]);
   const saveIfDirty = React.useCallback(() => { if (draft.dirty) save(); }, [draft.dirty, save]);
   const doClose = React.useCallback(() => close(null), [close]);
 
   if (!target || !node) return null;
 
-  const previewStage: StageDef = isBlock ? (stage ?? DEFAULT_STAGE) : draftStage(stage ?? DEFAULT_STAGE, draft.parts, draft.source);
-  const previewBlock: BlockDef | undefined = isBlock && block ? { ...block, ...(draft.parts.props ? { props: draft.parts.props } : {}), code: { format: 'html-gsap', source: draft.source } } : undefined;
-  const title = isBlock ? t('code.block', { id: block?.id ?? '' }) : t('code.stage', { id: stage?.name ?? '' });
+  const previewStage: StageDef = isCover && cover ? coverStage(stage ?? DEFAULT_STAGE, cover) : isBlock ? (stage ?? DEFAULT_STAGE) : draftStage(stage ?? DEFAULT_STAGE, draft.parts, draft.source);
+  const previewBlock: BlockDef | undefined = isPiece && block ? { ...block, ...(draft.parts.props ? { props: draft.parts.props } : {}), code: { format: 'html-gsap', source: draft.source } } : undefined;
+  const title = isCover ? t('code.cover', { id: cover?.id ?? '' }) : isBlock ? t('code.block', { id: block?.id ?? '' }) : t('code.stage', { id: stage?.name ?? '' });
 
   return (
     <div className="nc-modal-bg" onClick={doClose}>

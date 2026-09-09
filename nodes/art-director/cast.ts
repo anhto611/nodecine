@@ -45,13 +45,38 @@ export function propValue(field: BlockField, value: unknown): unknown {
     case 'string':
     case 'text':
       return clipText(Array.isArray(value) ? value.join(', ') : String(value), field.max);
+    // A picture and a clip are the same thing here: a hashed asset the server put there. Only the
+    // block's markup tells them apart (`<img>` against `<video>`). `video` was missing from this
+    // switch when clips arrived, so every clip fell through to `undefined` — the block was cast with
+    // no footage in it and the film came out black, with only a "has no place for clip" note to say so.
     case 'image':
+    case 'video':
       return AssetUrlSchema.safeParse(String(value)).success ? String(value) : undefined;
     case 'string[]': {
       // A list with too few items for the block cannot be shown; too many are cut to the limit.
       const items = (Array.isArray(value) ? value : [String(value)]).map((x) => String(x).trim()).filter(Boolean);
       if (items.length === 0 || (field.min !== undefined && items.length < field.min)) return undefined;
       return field.max !== undefined ? items.slice(0, field.max) : items;
+    }
+    case 'entries': {
+      // Several things shown at once. Each entry is trimmed to the keys the block draws, and one
+      // that ends up with nothing is dropped rather than rendered as an empty card. Too few left
+      // means the block cannot show this scene at all — the same answer as a missing picture.
+      const of = field.of?.length ? field.of : undefined;
+      const rows = (Array.isArray(value) ? value : [])
+        .map((row) => {
+          const entry = row as Record<string, unknown>;
+          const out: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(entry)) {
+            if (!isContentKey(k) || (of && !of.includes(k))) continue;
+            const kept = propValue({ type: k === 'image' ? 'image' : k === 'clip' ? 'video' : k === 'points' ? 'string[]' : 'string', required: false }, v);
+            if (kept !== undefined) out[k] = kept;
+          }
+          return out;
+        })
+        .filter((row) => Object.keys(row).length > 0);
+      if (rows.length === 0 || (field.min !== undefined && rows.length < field.min)) return undefined;
+      return field.max !== undefined ? rows.slice(0, field.max) : rows;
     }
     case 'number': {
       // "4,321" and "98%" carry a figure; "many" does not, and must not become 0.
@@ -125,7 +150,12 @@ export function bindingsFor(block: BlockDef, bindings: Partial<Record<ContentKey
 }
 
 /** One scene's choice made outside the rule: by the user's casting table or by a model. */
-export interface Pick { block?: string; tone?: string }
+export interface Pick {
+  block?: string;
+  tone?: string;
+  /** The model looked at the catalogue and asked for a block to be drawn for this scene instead. */
+  none?: boolean;
+}
 
 /**
  * For every scene: the blocks that cover it (show all of it), the ones that merely fit (show it
@@ -162,7 +192,7 @@ export class CastError extends Error {
  * Throws `CastError` when a scene has no block that can show it.
  */
 export function castScenes(script: SceneScript, look: LookDef, casting: Casting, picks: (Pick | undefined)[] = []): { plan: ScenePlan; notes: string[] } {
-  const { blocks, ...stage } = look;
+  const { blocks, covers, ...stage } = look;
   const notes: string[] = [];
   const byRole = new Map(casting.map((c) => [c.role, c]));
   const used = new Map<string, number>();
@@ -226,5 +256,6 @@ export function castScenes(script: SceneScript, look: LookDef, casting: Casting,
       ...(Object.keys(factBindings).length ? { factBindings } : {}),
     };
   });
-  return { plan: { language: script.language, stage, blocks, scenes }, notes };
+  // Covers are carried, not cast: nothing here decides which scene wears one (CORE_CONTRACTS §2.13).
+  return { plan: { language: script.language, stage, blocks, ...(covers?.length ? { covers } : {}), scenes }, notes };
 }

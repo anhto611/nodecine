@@ -4,7 +4,7 @@ import { createServerServices } from '../services.server';
 import { buildCaptionTrack, retime } from '@/nodes/captions/cues';
 import { buildIR } from '@/nodes/assembler/build-ir';
 import { mediaUrl } from '../paths';
-import staticScript from '@/templates/static-script.json';
+import staticScript from '@/lib/first-run.json';
 import type { BlockDef, StageDef } from '@/core/types/payloads';
 
 /**

@@ -36,10 +36,13 @@ export const Header: React.FC = () => {
         <span onDoubleClick={() => setEditing(true)} title={t('header.projectName')} style={{ fontSize: 'var(--fs-title)', color: 'var(--tx-2)', padding: '4px 8px', border: '1px solid transparent', borderRadius: 4, cursor: 'text' }}>{projectName}</span>
       )}
       <div style={{ flex: 1 }} />
+        {/* Shift skips the signature cache and runs every node again (EXECUTION_ENGINE §4). The
+            cache cannot see a reason to re-run that lives outside the graph — a model that would
+            answer differently today, a file changed under a path — so a person needs a way to say so. */}
       {running ? (
         <Btn danger onClick={cancel}><Icon.stop /> {t('header.stop')}{batch ? ` ${batch.index}/${batch.total}` : ''}</Btn>
       ) : (
-        <Btn primary disabled={disabled} onClick={() => void run()} title={disabled ? t('header.runDisabled', { n: issues.length }) : plan.runs > 1 ? t('header.runBatch', { n: plan.runs }) : 'Ctrl+Enter'}>
+        <Btn primary disabled={disabled} onClick={(e) => void run({ force: e.shiftKey })} title={disabled ? t('header.runDisabled', { n: issues.length }) : `${plan.runs > 1 ? t('header.runBatch', { n: plan.runs }) : 'Ctrl+Enter'} · ${t('header.runForce')}`}>
           <Icon.play /> {t('header.run')}{plan.runs > 1 ? ` · ${plan.runs}` : ''}
         </Btn>
       )}

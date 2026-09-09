@@ -1,11 +1,13 @@
 'use client';
 import React from 'react';
-import { CONTENT_KEYS, type ContentKey, type SceneContent } from '@/core/types/payloads';
+import { CONTENT_KEYS, type ContentKey, type EntryContent, type SceneContent } from '@/core/types/payloads';
 import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { uploadImage, useLibraryFile } from '@/nodes/art-director/editor/assets.client';
 import { LibraryPicker, useLibrary } from '@/nodes/library-picker';
+import { Section } from '@/nodes/art-director/forms';
+import { SPLIT_RULES, splitScript, type SplitRule } from '@/nodes/script/split';
 
 type SceneRow = { role: string; weight: number; narration: string; content: SceneContent };
 
@@ -19,6 +21,9 @@ export const StaticScriptBody: React.FC<BodyProps> = ({ nodeId }) => {
   const add = () => set({ scenes: [...scenes, { role: `scene ${scenes.length + 1}`, weight: 1, narration: '', content: { title: '' } }] });
   return (
     <>
+      <PasteScript
+        onCut={(chunks) => set({ scenes: chunks.map((narration) => ({ role: scenes[0]?.role ?? 'scene', weight: 1, narration, content: {} })) })}
+      />
       <div className="nc-k">{t('node.scenes')}</div>
       {scenes.map((s, i) => (
         <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 3, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -34,6 +39,61 @@ export const StaticScriptBody: React.FC<BodyProps> = ({ nodeId }) => {
       ))}
       <Btn small className={stopFlow} onClick={add} style={{ alignSelf: 'flex-start' }}><Icon.plus size={10} /> {t('node.addScene')}</Btn>
     </>
+  );
+};
+
+/**
+ * A whole script in, one scene per chunk out.
+ *
+ * A script is written as prose and pasted as prose; typing it back in a scene at a time is work the
+ * app should be doing. The cut is mechanical — see `split.ts` — so nothing said is reworded, and the
+ * count on the button is the check: it is read before the list is replaced, not after.
+ */
+const PasteScript: React.FC<{ onCut: (chunks: string[]) => void }> = ({ onCut }) => {
+  const t = useT();
+  const [open, setOpen] = React.useState(false);
+  const [text, setText] = React.useState('');
+  const [rule, setRule] = React.useState<SplitRule>('blank-line');
+  const chunks = React.useMemo(() => splitScript(text, rule), [text, rule]);
+  return (
+    <Section title={t('script.paste')} open={open} onToggle={() => setOpen(!open)}>
+      <div className="nc-hint">{t('script.pasteHint')}</div>
+      <textarea className={`nc-textarea ${stopFlow}`} rows={5} placeholder={t('script.pastePlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
+      <span style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select className={`nc-select ${stopFlow}`} value={rule} onChange={(e) => setRule(e.target.value as SplitRule)}>
+          {SPLIT_RULES.map((r) => <option key={r} value={r}>{t(`script.rule.${r}`)}</option>)}
+        </select>
+        <Btn small className={stopFlow} disabled={chunks.length === 0} onClick={() => { onCut(chunks); setText(''); setOpen(false); }}>
+          {t('script.cut')} · {chunks.length}
+        </Btn>
+      </span>
+    </Section>
+  );
+};
+
+/**
+ * The several things one scene shows at once: two to compare, three steps, a handful of rows.
+ *
+ * Each entry is the same form as the scene itself, one level down — so a person who has filled in a
+ * scene already knows how to fill in an entry, and a block that wants a label and a picture per card
+ * needs no new kind of editor.
+ */
+const EntriesEditor: React.FC<{ entries: EntryContent[]; onChange: (entries: EntryContent[]) => void }> = ({ entries, onChange }) => {
+  const t = useT();
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+      {entries.map((entry, i) => (
+        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 3, padding: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div className="nc-scene-row">
+            <span className="nc-k" style={{ color: 'var(--accent-2)' }}>{i + 1}</span>
+            <span style={{ flex: 1 }} />
+            <button className={`nc-chip ${stopFlow}`} onClick={() => onChange(entries.filter((_, j) => j !== i))} title={t('look.remove')}><Icon.x size={9} /></button>
+          </div>
+          <ContentEditor content={entry} onChange={(c) => onChange(entries.map((e, j) => (j === i ? c : e)))} />
+        </div>
+      ))}
+      <Btn small className={stopFlow} onClick={() => onChange([...entries, {}])} style={{ alignSelf: 'flex-start' }}><Icon.plus size={10} /> {t('script.addEntry')}</Btn>
+    </div>
   );
 };
 
@@ -90,7 +150,7 @@ const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneConten
   const t = useT();
   const used = CONTENT_KEYS.filter((k) => k in content);
   const unused = CONTENT_KEYS.filter((k) => !(k in content));
-  const setKey = (k: ContentKey, v: string | string[] | undefined) => {
+  const setKey = (k: ContentKey, v: string | string[] | EntryContent[] | undefined) => {
     const next = { ...content } as Record<string, unknown>;
     if (v === undefined) delete next[k];
     else next[k] = v;
@@ -105,6 +165,8 @@ const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneConten
               <ImagePick url={content.image} onPick={(url) => setKey('image', url)} />
             ) : k === 'clip' ? (
               <ClipPick url={content.clip} onPick={(url) => setKey('clip', url)} />
+            ) : k === 'entries' ? (
+              <EntriesEditor entries={content.entries ?? []} onChange={(entries) => setKey('entries', entries.length ? entries : undefined)} />
             ) : k === 'points' ? (
               <textarea className={`nc-textarea ${stopFlow}`} rows={3} placeholder={t('script.pointsHint')} value={(content.points ?? []).join('\n')} onChange={(e) => setKey('points', e.target.value.split('\n').map((x) => x.trimEnd()))} />
             ) : k === 'body' || k === 'quote' ? (
@@ -117,7 +179,7 @@ const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: SceneConten
         } />
       ))}
       {unused.length > 0 && (
-        <select className={`nc-select ${stopFlow}`} value="" onChange={(e) => { const k = e.target.value as ContentKey; if (k) setKey(k, k === 'points' ? [] : k === 'image' || k === 'clip' ? undefined : ''); }}>
+        <select className={`nc-select ${stopFlow}`} value="" onChange={(e) => { const k = e.target.value as ContentKey; if (k) setKey(k, k === 'points' ? [] : k === 'entries' ? [{}, {}] : k === 'image' || k === 'clip' ? undefined : ''); }}>
           <option value="">{t('script.addKey')}</option>
           {unused.map((k) => <option key={k} value={k}>{t(`content.${k}`)}</option>)}
         </select>

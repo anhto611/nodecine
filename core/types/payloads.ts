@@ -54,7 +54,7 @@ export type FactSheet = z.infer<typeof FactSheetSchema>;
  * scene. A block prop names the key that fills it (`content`), or is filled by the key of its own name.
  */
 /** The keys a model writes. An image is not among them: a model cannot know an uploaded asset's name. */
-export const WRITTEN_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source'] as const;
+export const WRITTEN_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source', 'entries'] as const;
 /** The two a model can never fill: only a person or a fact points at a file this machine holds. */
 export const CONTENT_KEYS = [...WRITTEN_KEYS, 'image', 'clip'] as const;
 export type WrittenKey = (typeof WRITTEN_KEYS)[number];
@@ -70,13 +70,19 @@ export const isContentKey = (k: string): k is ContentKey => (CONTENT_KEYS as rea
 export const AssetUrlSchema = z.string().regex(/^\/api\/assets\/[a-f0-9]{16,64}\.[a-z0-9]+$/, 'must be an uploaded asset');
 
 export const BlockFieldSchema = z.object({
-  type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image', 'video']),
+  type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image', 'video', 'entries']),
   /** Which scene content fills this prop; absent means the prop's own name, when that is a content key. */
   content: z.enum(CONTENT_KEYS).optional(),
   hint: z.string().max(200).optional(),
   required: z.boolean().default(true),
   max: z.number().int().positive().optional(),
   min: z.number().optional(),
+  /**
+   * For an `entries` prop: which keys of each entry this block draws. What it does not name is not
+   * copied in, so a block asking for a label and a picture never receives the paragraph as well —
+   * and a scene carrying more than the block reads still counts as fully shown.
+   */
+  of: z.array(z.enum(CONTENT_KEYS)).max(12).optional(),
 });
 export type BlockField = z.infer<typeof BlockFieldSchema>;
 
@@ -122,6 +128,44 @@ export const StageDefSchema = z.object({
 });
 export type StageDef = z.infer<typeof StageDefSchema>;
 
+/**
+ * A cover image (CORE_CONTRACTS §2.13): the third thing a look is made of, beside the stage and the
+ * blocks. It is not a block, and the difference is the `frame`.
+ *
+ * A block is a piece placed *inside* a stage, on the video's frame, in a scene's slot of time. A
+ * cover stands alone, on a frame of its **own** — a 16:9 video wants a 9:16 cover, because that is
+ * what the platform shows beside every other portrait video — with no time at all, and props the
+ * person types rather than props filled from a scene's content. What it borrows from the stage is
+ * the palette and the fonts, so the cover and the video look like one piece of work.
+ */
+export const CoverDefSchema = z.object({
+  id: z.string().regex(SLUG).max(60),
+  name: z.string().min(1).max(80),
+  /** Its own, and this is the whole point of the type. */
+  frame: z.object({ width: z.number().int().min(16).max(8192), height: z.number().int().min(16).max(8192) }),
+  props: z.record(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), BlockFieldSchema),
+  /**
+   * What the cover already says before anybody fills it in — chosen where the cover is designed.
+   *
+   * A cover is a picture the video is judged by, so it must be a finished thing the moment the look
+   * exists: a ground, a face, the words in place. Leaving every prop to the export step meant an
+   * unfilled cover rendered as a black rectangle, which is not a design, it is a hole. The export
+   * node overrides what it is given and inherits the rest.
+   */
+  defaults: z.record(z.string(), z.unknown()).optional(),
+  code: SceneCodeSchema,
+});
+export type CoverDef = z.infer<typeof CoverDefSchema>;
+
+/** What a cover is rendered with: the design's own values, with whatever the export step filled in on top. */
+export function coverProps(cover: CoverDef, override: Record<string, unknown> = {}): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...(cover.defaults ?? {}) };
+  // An empty box at the export step is "leave it as designed", not "clear it": a person who wants
+  // nothing there takes the prop out of the cover, they do not blank one field of the render form.
+  for (const [k, v] of Object.entries(override)) if (v !== undefined && v !== null && v !== '') out[k] = v;
+  return out;
+}
+
 /** Block ids unique within one look; shared by the LookDef and the Art Director node's parameters. */
 export const uniqueBlockIds = (v: { blocks: { id: string }[] }, ctx: z.RefinementCtx): void => {
   const seen = new Set<string>();
@@ -136,11 +180,11 @@ export const uniqueBlockIds = (v: { blocks: { id: string }[] }, ctx: z.Refinemen
  * catalogue of blocks that play on it, block ids unique. It is the Art Director node's data; it does not
  * travel on a wire — the Art Director turns a scene script into a plan (§5.9) and sends that.
  */
-export const LookDefBaseSchema = StageDefSchema.extend({ blocks: z.array(BlockDefSchema).min(1) });
+export const LookDefBaseSchema = StageDefSchema.extend({ blocks: z.array(BlockDefSchema).min(1), covers: z.array(CoverDefSchema).optional() });
 export const LookDefSchema = LookDefBaseSchema.superRefine(uniqueBlockIds);
 export type LookDef = z.infer<typeof LookDefSchema>;
 /** The two parts of a look, as the plan and the renderers take them. */
-export const splitLook = (look: LookDef): { stage: StageDef; blocks: BlockDef[] } => { const { blocks, ...stage } = look; return { stage, blocks }; };
+export const splitLook = (look: LookDef): { stage: StageDef; blocks: BlockDef[]; covers: CoverDef[] } => { const { blocks, covers, ...stage } = look; return { stage, blocks, covers: covers ?? [] }; };
 
 /** One scene of a plan: a block from the plan's catalogue, what goes into it, and how the stage dresses it. */
 export const SceneSpecSchema = z.object({
@@ -164,6 +208,8 @@ export const ScenePlanSchema = z
     language: bcp47,
     stage: StageDefSchema,
     blocks: z.array(BlockDefSchema).min(1),
+    /** The covers the look carries; nothing casts them, they travel to the Cover Image node. */
+    covers: z.array(CoverDefSchema).optional(),
     scenes: z.array(SceneSpecSchema).min(1),
   })
   .superRefine((plan, ctx) => {
@@ -185,21 +231,41 @@ export const AudioScriptSchema = z.object({
 });
 export type AudioScript = z.infer<typeof AudioScriptSchema>;
 
+/** The vocabulary itself, shared by a scene and by one entry inside it. */
+const contentShape = {
+  kicker: z.string().max(40),
+  title: z.string().max(120),
+  body: z.string().max(400),
+  points: z.array(z.string().min(1).max(120)).max(6),
+  number: z.string().max(24),
+  label: z.string().max(60),
+  quote: z.string().max(300),
+  attribution: z.string().max(80),
+  code: z.string().max(200),
+  source: z.string().max(80),
+  image: AssetUrlSchema,
+  clip: AssetUrlSchema,
+};
+
+/**
+ * One of several things a scene shows at once (CORE_CONTRACTS §2.11): the same vocabulary, one level
+ * down. Two of them are a comparison, five are a ranking, three are the steps of a how-to.
+ *
+ * The vocabulary does not grow a noun per genre — it grows one dimension, repetition, and the
+ * fifteen words it already has describe each entry. One level only: an entry holding entries is a
+ * layout engine in disguise, and a block that needs a tree is a block someone should draw by hand.
+ */
+export const EntryContentSchema = z.object(contentShape).partial().strip();
+export type EntryContent = z.infer<typeof EntryContentSchema>;
+/** The keys an entry may carry, for a block that does not narrow them. */
+export const ENTRY_KEYS = Object.keys(contentShape) as (keyof typeof contentShape)[];
+
 /** What one scene says, in the content vocabulary; every key optional, a scene writes what it needs. */
 export const SceneContentSchema = z
   .object({
-    kicker: z.string().max(40),
-    title: z.string().max(120),
-    body: z.string().max(400),
-    points: z.array(z.string().min(1).max(120)).max(6),
-    number: z.string().max(24),
-    label: z.string().max(60),
-    quote: z.string().max(300),
-    attribution: z.string().max(80),
-    code: z.string().max(200),
-    source: z.string().max(80),
-    image: AssetUrlSchema,
-    clip: AssetUrlSchema,
+    ...contentShape,
+    /** Several things shown at once. A block declares how many it takes and which keys it reads. */
+    entries: z.array(EntryContentSchema).max(12),
   })
   .partial()
   .strip();

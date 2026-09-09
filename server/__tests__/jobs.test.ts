@@ -7,7 +7,7 @@ import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
 import { _resetCodeRenderers, registerCodeRenderer } from '@/core/look/renderers';
 import { makeFakeServices } from '@/core/__tests__/fakes';
-import staticScript from '@/templates/static-script.json';
+import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
 
 const graph = () => structuredClone(staticScript.graph) as Graph;

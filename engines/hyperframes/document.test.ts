@@ -76,6 +76,16 @@ describe('buildHyperframesDocument', () => {
     expect(html).toContain("tr.type === 'fade'");
   });
 
+  it('keeps the outgoing scene up for the length of a fade, so there is something to fade from', () => {
+    // A transition needs two scenes on screen at once. Without the overlap the outgoing scene ends
+    // exactly where the incoming one begins and the fade has nothing under it — which reads as a cut,
+    // and so does a fade short enough to be a few frames.
+    const fade = buildHyperframesDocument({ ...ir, stage: { ...ir.stage, transition: { type: 'fade', seconds: 0.4 } } }, opts);
+    expect(fade).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3.4"');
+    const cut = buildHyperframesDocument({ ...ir, stage: { ...ir.stage, transition: { type: 'cut', seconds: 0.4 } } }, opts);
+    expect(cut).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3"');
+  });
+
   it('sends the pictures a scene names to the project, not only the ones in the code', () => {
     const shot = '/api/assets/0123456789abcdef0123456789abcdef01234567.png';
     const withShot = buildHyperframesDocument(

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BlockDefSchema, MediaUrlSchema, StageDefSchema } from './payloads';
+import { BlockDefSchema, CoverDefSchema, MediaUrlSchema, StageDefSchema } from './payloads';
 
 /**
  * Universal Video IR — generic and self-contained (CORE_CONTRACTS §3). It carries the stage and the
@@ -38,6 +38,8 @@ export const VideoIRSchema = z.object({
   }),
   stage: StageDefSchema,
   blocks: z.array(BlockDefSchema).min(1),
+  /** Cover designs the look carries (CORE_CONTRACTS §2.13). Not drawn in the video; the Cover Image node renders one. */
+  covers: z.array(CoverDefSchema).optional(),
   audioTrack: z.object({
     voiceoverUrl: MediaUrlSchema,
     durationSeconds: z.number().positive(),

@@ -59,6 +59,25 @@ describe('an image prop', () => {
   });
 });
 
+describe('a video prop', () => {
+  // The regression that made the still-wide template render black: a clip filled nothing, so the
+  // block was cast without footage and the note said only "has no place for clip".
+  const clip = '/api/assets/89abcdef0123456789abcdef0123456789abcdef.mp4';
+  const withFootage = { ...TEXT_CARD, id: 'clip-card', props: { footage: { type: 'video' as const, content: 'clip' as const, required: false } } };
+  it('takes an uploaded clip the same way a picture is taken', () => {
+    expect(propValue({ type: 'video', required: false }, clip)).toBe(clip);
+    expect(propValue({ type: 'video', required: false }, 'https://example.com/a.mp4')).toBeUndefined();
+    expect(fillProps(withFootage, { clip }, new Set())).toEqual({ footage: clip });
+  });
+
+  it('a block with a video prop shows a scene that has a clip, losing nothing', () => {
+    const fit = fitOf(withFootage, { clip }, new Set());
+    expect(fit.missing).toEqual([]);
+    expect(fit.dropped).toEqual([]);
+    expect(fit.filled).toBe(1);
+  });
+});
+
 describe('fitOf / fillProps / bindingsFor', () => {
   it('counts the props the content fills and names the required ones it cannot', () => {
     const fit = fitOf(CARD, { title: 'T', points: ['a', 'b', 'c'] }, new Set());

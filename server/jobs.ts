@@ -66,6 +66,15 @@ export interface JobSubmission {
   name?: string;
   nodeId?: string;
   force?: boolean;
+  /**
+   * The browser's id for this submission, so submitting it twice queues it once.
+   *
+   * The client retries a request the server answered with an empty 5xx — in development that is a
+   * route being rebuilt, and the handler never ran. "Never ran" is a guess, though, and guessing
+   * wrong on a submit means two renders of the same film. With this it cannot: the second arrival
+   * gets back the job the first one made.
+   */
+  requestId?: string;
 }
 
 const KEY = /^[a-zA-Z0-9_-]{1,80}$/;
@@ -92,6 +101,8 @@ export class JobHub {
   private pumping = false;
   /** The last run job per key, so an export that follows can be filed under it. */
   private lastRun = new Map<string, string>();
+  /** Submissions already accepted, by the browser's request id: a retry must not queue a second job. */
+  private byRequest = new Map<string, string>();
 
   constructor(private readonly servicesFor: (slot: () => Slot | undefined) => NodeServices = (slot) => createServerServices({ workflow: () => { const s = slot(); return s ? { name: s.name, graph: s.executor.getGraph() } : null; } })) {
     this.load();
@@ -203,9 +214,12 @@ export class JobHub {
       if (hasBlockingIssues(issues)) throw new GraphInvalidError(issues.filter((i) => i.severity === 'error'));
     }
     if (input.kind === 'node' && !input.nodeId) throw Object.assign(new Error('nodeId is required'), { code: 'JOB_INVALID' });
+    const seen = input.requestId ? this.jobs.get(this.byRequest.get(input.requestId) ?? '') : undefined;
+    if (seen) return seen;
     this.slot(input.key, input.graph, input.name);
     const job: Job = { id: `job-${Date.now().toString(36)}-${(this.seq++).toString(36)}`, key: input.key, kind: input.kind, nodeId: input.nodeId, force: input.force, status: 'pending', createdAt: Date.now() };
     this.jobs.set(job.id, job);
+    if (input.requestId) this.byRequest.set(input.requestId, job.id);
     this.queue.push(job);
     this.write(job);
     this.emit({ type: 'job', key: job.key, job: { ...job } });

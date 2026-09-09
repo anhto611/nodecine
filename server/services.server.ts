@@ -5,7 +5,7 @@ import { getLLMProviderFactory, getTTSProviderFactory } from '@/core/providers/r
 import { getEngineFactory } from '@/core/adapters/registry';
 import { makeEngineRef } from '@/core/adapters/types';
 import { buildTTSRef } from '@/providers/system-tts';
-import { mediaUrl } from '@/server/paths';
+import { fileNameFromAssetUrl, mediaUrl } from '@/server/paths';
 import { ensureServerRegistrations } from '@/server/register';
 import { embedWorkflow } from '@/server/video-meta';
 import { ensureTmpDir, fileNameFromMediaUrl, mediaPath } from '@/server/paths';
@@ -13,7 +13,9 @@ import { alignWordsOnServer } from '@/nodes/transcribe/align.server';
 import { readPageOnServer } from '@/nodes/web/page.server';
 import { mixAudioOnServer } from '@/nodes/audio/mix.server';
 import { importAudioOnServer } from '@/nodes/audio/import.server';
+import { fetchStockMediaOnServer } from '@/nodes/stock/search.server';
 import { concatMp3, measureDurationSeconds } from '@/server/audio';
+import { stillFromVideo } from '@/server/video-still';
 import { contentHash } from '@/core/hash';
 import fs from 'node:fs/promises';
 
@@ -86,6 +88,10 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
     readPage: readPageOnServer,
     mixAudio: mixAudioOnServer,
     importAudio: importAudioOnServer,
+    async stillFromVideo(clipUrl, atSeconds, signal) {
+      return stillFromVideo(fileNameFromAssetUrl(clipUrl), atSeconds, signal);
+    },
+    fetchStockMedia: fetchStockMediaOnServer,
     async concatAudio(parts, gapSeconds, signal) {
       const files = parts.map((p) => mediaPath(fileNameFromMediaUrl(p.audioUrl)));
       // Named by what went in, so the same parts joined twice are one file.

@@ -11,6 +11,8 @@ const Body = z.object({
   name: z.string().max(200).optional(),
   nodeId: z.string().optional(),
   force: z.boolean().optional(),
+  /** The browser's id for this submission; a retry of the same one gets the same job back. */
+  requestId: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/).optional(),
 });
 
 /** Submit a job (like ComfyUI's POST /prompt) or list recent ones. An invalid graph is refused with its issues. */

@@ -1,0 +1,421 @@
+{
+  "id": "compare-explainer",
+  "name": {
+    "en": "Compare Two Sides",
+    "vi": "So Sánh Hai Bên"
+  },
+  "description": {
+    "en": "Portrait explainer: two cards set against each other, a character under them, the voice running between the two. The cards change scene by scene.",
+    "vi": "Dọc 9:16, kiểu giảng bài: hai thẻ đặt cạnh nhau để so sánh, nhân vật đứng dưới, phụ đề chạy ở giữa. Hai thẻ đổi theo từng cảnh. Không cần mạng."
+  },
+  "category": "faceless",
+  "graph": {
+    "nodes": [
+      {
+        "id": "script",
+        "type": "core/static-script",
+        "params": {
+          "scenes": [
+            {
+              "role": "hoi",
+              "weight": 1,
+              "narration": "Website với Web App, nghe thì giống mà khác nhau xa lắm.",
+              "content": {
+                "title": "Website và Web App *khác nhau* chỗ nào?"
+              }
+            },
+            {
+              "role": "so-sanh",
+              "weight": 1,
+              "narration": "Website là để đọc. Web App là để làm.",
+              "content": {
+                "entries": [
+                  {
+                    "label": "Website",
+                    "title": "Đọc là chính"
+                  },
+                  {
+                    "label": "Web App",
+                    "title": "Làm là chính"
+                  }
+                ]
+              }
+            },
+            {
+              "role": "so-sanh",
+              "weight": 1,
+              "narration": "Website ai vào cũng thấy như nhau, còn web app thì mỗi người một màn hình.",
+              "content": {
+                "entries": [
+                  {
+                    "label": "Website",
+                    "title": "Ai vào cũng thấy như nhau"
+                  },
+                  {
+                    "label": "Web App",
+                    "title": "Mỗi người một màn hình"
+                  }
+                ]
+              }
+            },
+            {
+              "role": "so-sanh",
+              "weight": 1,
+              "narration": "Một bên sống bằng nội dung mới, một bên sống bằng tài khoản và dữ liệu.",
+              "content": {
+                "entries": [
+                  {
+                    "label": "Website",
+                    "title": "Sống bằng nội dung mới"
+                  },
+                  {
+                    "label": "Web App",
+                    "title": "Sống bằng dữ liệu người dùng"
+                  }
+                ]
+              }
+            },
+            {
+              "role": "chot",
+              "weight": 1,
+              "narration": "Bạn cần người ta đọc, hay cần người ta làm?",
+              "content": {
+                "title": "Bạn cần người ta *đọc*, hay cần người ta *làm*?"
+              }
+            }
+          ]
+        },
+        "bypassed": false,
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "llm-provider",
+        "type": "core/llm-provider",
+        "params": {
+          "providerId": "claude-code",
+          "settings": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 0,
+          "y": 900
+        }
+      },
+      {
+        "id": "art-director",
+        "type": "core/art-director",
+        "params": {
+          "name": "Bảng trắng",
+          "frame": {
+            "width": 1080,
+            "height": 1920
+          },
+          "tokens": {
+            "palette": {
+              "bg": "#ffffff",
+              "bg2": "#f5f6f8",
+              "panel": "#f7f8fa",
+              "line": "#e3e5ea",
+              "fg": "#15171c",
+              "muted": "rgba(21,23,28,.72)",
+              "muted2": "rgba(21,23,28,.45)",
+              "accent": "#2f6bff"
+            },
+            "fonts": {
+              "display": "'Comfortaa', 'Be Vietnam Pro', system-ui, sans-serif",
+              "body": "'Comfortaa', 'Be Vietnam Pro', system-ui, sans-serif"
+            }
+          },
+          "tones": {
+            "warm": {
+              "accent": "#e5484d"
+            },
+            "calm": {
+              "accent": "#12866f"
+            }
+          },
+          "sceneFields": [],
+          "vars": {},
+          "transition": {
+            "type": "fade",
+            "seconds": 0.35
+          },
+          "code": {
+            "format": "html-gsap",
+            "source": "<style>\n  .stage { position: absolute; inset: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); overflow: hidden; }\n  /* Three bands, and the block owns two of them. The middle one is the stage's: the voice runs\n     there, between what is being compared and whoever is doing the comparing. */\n  .stage .content { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }\n  .stage .captions {\n    position: absolute;\n    left: 96px; right: 96px; top: 46%;\n    display: flex; align-items: center; justify-content: center;\n    text-align: center;\n    font: 700 52px/1.25 var(--font-body);\n    color: var(--fg);\n    --caption-on: var(--accent);\n  }\n  .stage .signature { position: absolute; left: 0; right: 0; bottom: 44px; text-align: center; font: 700 26px/1 var(--font-body); letter-spacing: .08em; color: var(--muted2); }\n</style>\n<div class=\"stage\">\n  <div class=\"content\" data-slot=\"content\"></div>\n  <div class=\"captions\" data-slot=\"captions\" data-caption-style=\"karaoke\"></div>\n  <div class=\"signature\">@kenh-cua-ban</div>\n</div>"
+          },
+          "blocks": [
+            {
+              "id": "hero-question",
+              "name": "Câu hỏi mở",
+              "doc": {
+                "when": "the beat asks the question the video answers, or closes it — one line, no comparison yet",
+                "example": "{\"headline\":\"Website và Web App *khác nhau* chỗ nào?\"}"
+              },
+              "props": {
+                "headline": {
+                  "type": "string",
+                  "content": "title",
+                  "required": true,
+                  "max": 70,
+                  "hint": "the question or the closing line"
+                },
+                "character": {
+                  "type": "image",
+                  "content": "image",
+                  "required": false,
+                  "hint": "the person doing the talking, a drawing on a clear background"
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<div class=\"wrap\">\n  <h1 class=\"q\" data-prop=\"headline\"></h1>\n  <div class=\"who\" data-if=\"character\"><img data-prop=\"character\" alt=\"\"></div>\n</div>\n<style>\n  .wrap { position: absolute; inset: 0; }\n  /* Centred in the same band the cards use, so the question and the comparison sit at one height\n     and the cut between them does not jump. */\n  .q { position: absolute; left: 96px; right: 96px; top: 96px; bottom: 56%; margin: 0; display: flex; align-items: center; justify-content: center; font: 800 92px/1.15 var(--font-display); color: var(--fg); text-align: center; }\n  .q .nc-emph { color: var(--accent); font-style: normal; }\n  .who { position: absolute; left: 0; right: 0; top: 56%; bottom: 110px; display: flex; align-items: flex-end; justify-content: center; }\n  .who img { max-width: 62%; max-height: 100%; object-fit: contain; }\n</style>"
+              }
+            },
+            {
+              "id": "compare-cards",
+              "name": "Hai thẻ so sánh",
+              "doc": {
+                "when": "the beat sets two things against each other: one card each, a name and a line",
+                "example": "{\"cards\":[{\"label\":\"Website\",\"title\":\"Đọc là chính\"},{\"label\":\"Web App\",\"title\":\"Làm là chính\"}]}"
+              },
+              "props": {
+                "cards": {
+                  "type": "entries",
+                  "content": "entries",
+                  "required": true,
+                  "min": 2,
+                  "max": 2,
+                  "of": [
+                    "label",
+                    "title",
+                    "image"
+                  ],
+                  "hint": "the two sides: a name, a line, and a picture if there is one"
+                },
+                "character": {
+                  "type": "image",
+                  "content": "image",
+                  "required": false,
+                  "hint": "the person doing the talking"
+                }
+              },
+              "code": {
+                "format": "html-gsap",
+                "source": "<div class=\"wrap\">\n  <div class=\"band\"><div class=\"cards\" data-prop=\"cards\">\n    <div class=\"card\">\n      <div class=\"lab\" data-prop=\"label\"></div>\n      <div class=\"pic\" data-if=\"image\"><img data-prop=\"image\" alt=\"\"></div>\n      <div class=\"ttl\" data-prop=\"title\"></div>\n    </div>\n  </div></div>\n  <div class=\"who\" data-if=\"character\"><img data-prop=\"character\" alt=\"\"></div>\n</div>\n<style>\n  .wrap { position: absolute; inset: 0; }\n  /* Two cards of equal width, whatever their words: a comparison where one side is wider reads as\n     the wider side mattering more. Any number the block is given is laid out the same way. */\n  /* The band above the voice. The row inside it is only as tall as its cards, and is centred in the\n     band: with pictures the cards are tall, without them they are a compact pair in the upper half\n     rather than two empty boxes reaching for the captions. */\n  .band { position: absolute; left: 72px; right: 72px; top: 96px; bottom: 56%; display: flex; align-items: center; }\n  .cards { width: 100%; max-height: 100%; display: flex; align-items: stretch; gap: 40px; }\n  .card { flex: 1 1 0; min-width: 0; background: var(--panel); border: 3px solid var(--line); border-radius: 40px; padding: 44px 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }\n  .lab { font: 800 54px/1.1 var(--font-display); color: var(--accent); text-align: center; }\n  /* The picture is optional and the card must not collapse without it, so the box only exists when\n     there is one — a template ships with no files, and a person adds them later. */\n  .pic { height: 320px; align-self: stretch; display: flex; align-items: center; justify-content: center; }\n  .pic img { max-width: 100%; max-height: 100%; object-fit: contain; }\n  .ttl { font: 500 34px/1.35 var(--font-body); color: var(--fg); text-align: center; }\n  /* The character stands in the bottom band, under the captions. Contained, not cropped: a drawing\n     cut off at the ankles is the first thing that makes one of these look cheap. */\n  .who { position: absolute; left: 0; right: 0; top: 56%; bottom: 110px; display: flex; align-items: flex-end; justify-content: center; }\n  .who img { max-width: 62%; max-height: 100%; object-fit: contain; }\n</style>"
+              }
+            }
+          ],
+          "covers": [],
+          "casting": []
+        },
+        "bypassed": false,
+        "position": {
+          "x": 520,
+          "y": 60
+        }
+      },
+      {
+        "id": "tts-provider",
+        "type": "core/tts-provider",
+        "params": {
+          "providerId": "system-tts",
+          "settings": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 520,
+          "y": 760
+        }
+      },
+      {
+        "id": "tts",
+        "type": "core/tts-engine",
+        "params": {
+          "speed": 1
+        },
+        "bypassed": false,
+        "position": {
+          "x": 520,
+          "y": 980
+        }
+      },
+      {
+        "id": "transcribe",
+        "type": "core/transcribe",
+        "params": {
+          "model": "small"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1040,
+          "y": 980
+        }
+      },
+      {
+        "id": "captions",
+        "type": "core/captions",
+        "params": {
+          "maxChars": 42
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1560,
+          "y": 980
+        }
+      },
+      {
+        "id": "assembler",
+        "type": "core/timeline-assembler",
+        "params": {
+          "fps": 30,
+          "minTotalFrames": 180,
+          "title": "So sánh"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1560,
+          "y": 300
+        }
+      },
+      {
+        "id": "engine",
+        "type": "core/hyperframes-engine",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 2080,
+          "y": 700
+        }
+      },
+      {
+        "id": "output",
+        "type": "core/video-output",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 2080,
+          "y": 60
+        }
+      },
+      {
+        "id": "export",
+        "type": "core/mp4-export",
+        "params": {
+          "codec": "h264",
+          "quality": "high",
+          "fileName": "so-sanh",
+          "resolution": "1080p"
+        },
+        "bypassed": true,
+        "position": {
+          "x": 2080,
+          "y": 380
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "script",
+        "sourcePort": "scenes",
+        "target": "art-director",
+        "targetPort": "scenes"
+      },
+      {
+        "id": "e2",
+        "source": "llm-provider",
+        "sourcePort": "llm",
+        "target": "art-director",
+        "targetPort": "llm"
+      },
+      {
+        "id": "e3",
+        "source": "script",
+        "sourcePort": "script",
+        "target": "tts",
+        "targetPort": "script"
+      },
+      {
+        "id": "e4",
+        "source": "script",
+        "sourcePort": "script",
+        "target": "transcribe",
+        "targetPort": "script"
+      },
+      {
+        "id": "e5",
+        "source": "tts-provider",
+        "sourcePort": "tts",
+        "target": "tts",
+        "targetPort": "tts"
+      },
+      {
+        "id": "e6",
+        "source": "tts",
+        "sourcePort": "voiceover",
+        "target": "transcribe",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e7",
+        "source": "transcribe",
+        "sourcePort": "voiceover",
+        "target": "captions",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e8",
+        "source": "captions",
+        "sourcePort": "captions",
+        "target": "assembler",
+        "targetPort": "captions"
+      },
+      {
+        "id": "e9",
+        "source": "art-director",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
+      },
+      {
+        "id": "e10",
+        "source": "tts",
+        "sourcePort": "voiceover",
+        "target": "assembler",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "e11",
+        "source": "assembler",
+        "sourcePort": "ir",
+        "target": "output",
+        "targetPort": "ir"
+      },
+      {
+        "id": "e12",
+        "source": "assembler",
+        "sourcePort": "ir",
+        "target": "export",
+        "targetPort": "ir"
+      },
+      {
+        "id": "e13",
+        "source": "engine",
+        "sourcePort": "engine",
+        "target": "output",
+        "targetPort": "engine"
+      },
+      {
+        "id": "e14",
+        "source": "engine",
+        "sourcePort": "engine",
+        "target": "export",
+        "targetPort": "engine"
+      }
+    ]
+  }
+}

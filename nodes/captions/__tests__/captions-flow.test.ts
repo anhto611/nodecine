@@ -6,7 +6,7 @@ import { registerNodes } from '@/nodes';
 import { makeFakeServices } from '@/core/__tests__/fakes';
 import { captionsToFrames } from '@/nodes/assembler/build-ir';
 import { buildHyperframesDocument } from '@/engines/hyperframes/document';
-import staticScript from '@/templates/static-script.json';
+import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
 import type { VideoIR } from '@/core/types/ir';
 import type { Voiceover } from '@/core/types/payloads';

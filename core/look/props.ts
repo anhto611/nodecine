@@ -1,5 +1,5 @@
 import { z, type ZodTypeAny } from 'zod';
-import { AssetUrlSchema, type BlockDef, type BlockField, type StageDef } from '../types/payloads';
+import { AssetUrlSchema, ENTRY_KEYS, EntryContentSchema, type BlockDef, type BlockField, type StageDef } from '../types/payloads';
 
 /**
  * A block's `props` table is the only description of what goes into it (CORE_CONTRACTS §2.7).
@@ -44,6 +44,16 @@ export function fieldSchema(f: BlockField): ZodTypeAny {
       s = a;
       break;
     }
+    case 'entries': {
+      // Only the keys the block says it draws: what it does not name never reaches the plan, so a
+      // block asking for a label and a picture cannot be handed the paragraph as well.
+      const of = f.of?.length ? f.of : ENTRY_KEYS;
+      let a = z.array(EntryContentSchema.pick(Object.fromEntries(of.map((k) => [k, true])) as never).strip());
+      if (f.min !== undefined) a = a.min(f.min);
+      if (f.max !== undefined) a = a.max(f.max);
+      s = a;
+      break;
+    }
   }
   return f.required ? s : s.nullable().optional();
 }
@@ -82,6 +92,11 @@ export function describeBlockField(f: BlockField): string {
     case 'string[]':
       shape = `[${f.min !== undefined && f.min === f.max ? `exactly ${f.min}` : f.max !== undefined ? `up to ${f.max}` : 'any number of'} × text]`;
       break;
+    case 'entries': {
+      const many = f.min !== undefined && f.min === f.max ? `exactly ${f.min}` : f.max !== undefined ? `up to ${f.max}` : 'any number of';
+      shape = `${many} entries, each with ${(f.of?.length ? f.of : ENTRY_KEYS).join(', ')}`;
+      break;
+    }
   }
   return `${shape}${f.hint ? ` — ${f.hint}` : ''}${f.required ? '' : ' (optional)'}`;
 }

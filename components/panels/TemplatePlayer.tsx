@@ -21,6 +21,24 @@ export function lookOfTemplate(graph: Graph): LookDef | null {
 }
 
 /**
+ * What the card says a template makes: the shape of its frame and how many frames a second.
+ *
+ * Both were a single hardcoded string in the dictionary ("9:16 · 30 fps") back when every template
+ * was a portrait video. The first 16:9 template made the line a lie on every card that showed it,
+ * and a lie about the one thing a person picks a template by. Read from the graph instead: the frame
+ * from the Art Director's stage, the rate from the Timeline Assembler, both absent on a template
+ * that has neither.
+ */
+export function shapeOfTemplate(graph: Graph): { ratio: string; fps: number } | null {
+  const frame = lookOfTemplate(graph)?.frame;
+  if (!frame) return null;
+  const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+  const d = gcd(frame.width, frame.height) || 1;
+  const fps = graph.nodes.find((n) => n.type === 'core/timeline-assembler')?.params.fps;
+  return { ratio: `${frame.width / d}:${frame.height / d}`, fps: typeof fps === 'number' ? fps : 30 };
+}
+
+/**
  * A template card that plays (USER_FLOWS §1.3, after cutdown's gallery): the template's own stage
  * with its blocks one after another, each with its sample props and a tone, animated by the same
  * scripts the render runs. Starts when the card scrolls into view and stops when it leaves, so a

@@ -70,10 +70,24 @@ export function revealTimes(labels: string[], words: RevealWord[], sceneDuration
 }
 
 /** Reveal times for every list prop of a scene, by prop name. */
+/**
+ * The words to listen for in one item. A list of strings is its own label; an entry is an object,
+ * and what the voice actually says of it is the title or the label — not "[object Object]", which
+ * matches nothing and leaves every entry on its evenly spread slot.
+ */
+function labelOf(item: unknown): string {
+  if (item && typeof item === 'object') {
+    const e = item as Record<string, unknown>;
+    for (const k of ['title', 'label', 'number', 'quote', 'body', 'kicker']) if (typeof e[k] === 'string' && e[k]) return e[k] as string;
+    return '';
+  }
+  return String(item);
+}
+
 export function revealMap(props: Record<string, unknown>, words: RevealWord[], sceneDuration: number, opts?: RevealOptions): Record<string, number[]> {
   const out: Record<string, number[]> = {};
   for (const [name, value] of Object.entries(props)) {
-    if (Array.isArray(value) && value.length) out[name] = revealTimes(value.map((v) => String(v)), words, sceneDuration, opts);
+    if (Array.isArray(value) && value.length) out[name] = revealTimes(value.map(labelOf), words, sceneDuration, opts);
   }
   return out;
 }

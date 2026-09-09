@@ -8,7 +8,7 @@ import type { RunRecord } from '@/core/engine/history';
 import { UndoStack } from '@/lib/undo-stack';
 import { contentHash } from '@/core/hash';
 import { getNodeType } from '@/core/nodes/definition';
-import staticScriptJson from '@/templates/static-script.json';
+import firstRunGraph from '@/lib/first-run.json';
 import { getTemplate, templateGraph, type TemplateDefinition, localized } from '@/core/templates/registry';
 import type { VideoIR } from '@/core/types/ir';
 import type { EngineRef } from '@/core/types/payloads';
@@ -65,7 +65,7 @@ export interface StudioState {
   workflowsTick: number;
   settingsOpen: boolean;
   /** The stage of a Art Director node, or one of its blocks, open in the code editor. */
-  codeEditor: { nodeId: string; blockIndex?: number } | null;
+  codeEditor: { nodeId: string; blockIndex?: number; coverIndex?: number } | null;
   selectedNodeId: string | null;
   canUndo: boolean;
   canRedo: boolean;
@@ -87,7 +87,12 @@ export interface StudioState {
   /** Move the end of an existing wire: one graph change, so one undo step. */
   reconnect(edgeId: string, edge: { source: string; sourcePort: string; target: string; targetPort: string }): boolean;
   toggleBypass(nodeId: string): void;
-  run(): Promise<void>;
+  /**
+   * Run the whole graph. `force` ignores the signature cache — Shift+Run: what a person reaches for
+   * when the answer on disk is stale for a reason the signature cannot see (a model that would
+   * answer differently today, a file changed under a path, code edited while the app was open).
+   */
+  run(opts?: { force?: boolean }): Promise<void>;
   cancel(): void;
   runNode(nodeId: string): Promise<void>;
   loadTemplate(id: TemplateId): void;
@@ -113,7 +118,7 @@ export interface StudioState {
   toggleLogs(): void;
   setTemplatesOpen(open: boolean): void;
   setSettingsOpen(open: boolean): void;
-  setCodeEditor(target: { nodeId: string; blockIndex?: number } | null): void;
+  setCodeEditor(target: { nodeId: string; blockIndex?: number; coverIndex?: number } | null): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
 }
@@ -212,7 +217,10 @@ export const useStudio = create<StudioState>((set, get) => {
       // A tab stored clean is, by definition, at its saved state: give it the hash it predates.
       const tabs: WorkflowTab[] = stored?.tabs.length
         ? stored.tabs.map((t) => (t.savedHash || t.dirty ? t : { ...t, savedHash: savedHashOf(t.name, t.graph) }))
-        : [{ key: tabKey(), fileId: null, name: 'Static Script', graph: structuredClone(staticScriptJson.graph) as Graph, dirty: false }];
+        // Nothing stored: the app opens on a graph that runs with no network, no model and no key —
+        // seven nodes from typed lines to an MP4. It is not in the template browser (a person opens
+        // the app to *their* work, not to a demo they must delete first), it is what "first run" is.
+        : [{ key: tabKey(), fileId: null, name: 'Static Script', graph: structuredClone(firstRunGraph.graph) as Graph, dirty: false }];
       const active = tabs.find((t) => t.key === stored?.active) ?? tabs[0]!;
       const graph = active.graph;
       const executor = new RemoteExecutor(active.key, graph, active.name, {
@@ -399,7 +407,7 @@ export const useStudio = create<StudioState>((set, get) => {
       refresh({ ...get().graph, nodes: get().graph.nodes.map((n) => (n.id === nodeId ? { ...n, bypassed: !node.bypassed } : n)) });
     },
 
-    async run() {
+    async run(opts = {}) {
       const ex = get().executor;
       if (!ex) return;
       if (get().running) {
@@ -414,7 +422,7 @@ export const useStudio = create<StudioState>((set, get) => {
         // makes both slower — the same reason Remotion tells you to render one video at a time.
         const graphs = expandBatch(get().graph);
         if (graphs.length === 1) {
-          await ex.run();
+          await ex.run({ force: opts.force });
         } else {
           for (const [i, g] of graphs.entries()) {
             if (stopBatch) break;
@@ -422,7 +430,7 @@ export const useStudio = create<StudioState>((set, get) => {
             ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'info', message: `batch ${i + 1}/${graphs.length}` });
             // One bad line does not abandon the rest, the way a failed prompt does not empty
             // ComfyUI's queue. Only an unusable graph or a lost server throws, and that ends it.
-            const { ok } = await ex.run({ graph: g });
+            const { ok } = await ex.run({ graph: g, force: opts.force });
             if (!ok) ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'warn', message: `batch ${i + 1}/${graphs.length} did not finish; carrying on` });
           }
           // Leave the server holding the graph the canvas shows, not the last variant of the batch.

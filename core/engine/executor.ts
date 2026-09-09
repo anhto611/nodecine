@@ -78,10 +78,20 @@ export class Executor {
     return this.abort !== null;
   }
 
+  /**
+   * Bring the runtime map in line with the graph. Called on every graph the canvas pushes — moving a
+   * node is one — so it must only reconcile, never undo work.
+   *
+   * The bypassed flag of an **on-demand** node is not a user's toggle: it is what the type is, so it
+   * never takes part in a Run and only runs when its own button is pressed. Forcing its state back
+   * to `bypassed` here threw away a finished result on the next graph push: render a cover, drag the
+   * node an inch, and the picture vanished — a state change with no cause the person could see.
+   */
   private syncRuntimes(): void {
     for (const n of this.graph.nodes) {
-      if (!this.runtimes.has(n.id)) this.runtimes.set(n.id, initialRuntime(n.bypassed));
-      else if (n.bypassed && this.runtimes.get(n.id)!.state !== 'bypassed') this.setState(n.id, { state: 'bypassed' });
+      if (!this.runtimes.has(n.id)) { this.runtimes.set(n.id, initialRuntime(n.bypassed)); continue; }
+      if (getNodeType(n.type)?.kind === 'ondemand') continue;
+      if (n.bypassed && this.runtimes.get(n.id)!.state !== 'bypassed') this.setState(n.id, { state: 'bypassed' });
       else if (!n.bypassed && this.runtimes.get(n.id)!.state === 'bypassed') this.setState(n.id, { state: 'idle' });
     }
     for (const id of [...this.runtimes.keys()]) if (!nodeById(this.graph, id)) this.runtimes.delete(id);

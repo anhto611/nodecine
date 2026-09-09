@@ -4,7 +4,7 @@ import { validateGraph, GraphInvalidError, type Graph } from '../engine/graph';
 import { _resetNodeRegistry } from '../nodes/definition';
 import { registerNodes } from '@/nodes';
 import { _resetCodeRenderers, registerCodeRenderer } from '../look/renderers';
-import staticScriptJson from '@/templates/static-script.json';
+import staticScriptJson from '@/lib/first-run.json';
 const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
 import { validateIR } from '../types/validate-ir';
 import type { VideoIR } from '../types/ir';
@@ -69,6 +69,23 @@ describe('Phase A run', () => {
     expect(ir.timeline).toHaveLength(3);
     expect(ir.timeline.reduce((a, s) => a + s.durationInFrames, 0)).toBe(ir.meta.totalDurationInFrames);
     expect(services.calls.filter((c) => c.name === 'render')).toHaveLength(0);
+  });
+
+  it('keeps what an on-demand node produced when the canvas pushes a graph', async () => {
+    // Moving a node is a graph change like any other, and it reaches the executor as one. An
+    // on-demand node is bypassed by type — it never joins a Run — so re-applying that flag on every
+    // push used to wipe the result of its own button: render an export, drag the node, picture gone.
+    const { executor, graph } = setup();
+    await executor.run();
+    await executor.runNode('export');
+    expect(executor.runtime('export').state).toBe('success');
+    const before = executor.runtime('export').result;
+
+    const moved = { ...graph, nodes: graph.nodes.map((n) => (n.id === 'export' ? { ...n, position: { x: n.position.x + 120, y: n.position.y + 40 } } : n)) };
+    executor.setGraph(moved);
+
+    expect(executor.runtime('export').state).toBe('success');
+    expect(executor.runtime('export').result).toBe(before);
   });
 
   it('second run reuses everything; changing TTS speed re-runs only TTS and downstream', async () => {

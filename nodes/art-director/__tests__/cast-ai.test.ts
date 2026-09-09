@@ -87,3 +87,41 @@ describe('pickWithModel', () => {
     expect(warnings[1]).toMatch(/casting by content instead/);
   });
 });
+
+/**
+ * The model may look at the whole catalogue and say none of it belongs in this beat. That is the
+ * difference between "nothing can show this" (the rule already catches it) and "nothing here is
+ * right for this" — the second is a judgement, and only something reading the beat can make it.
+ */
+describe('when the model turns the catalogue down', () => {
+  it('offers the choice only when a block can actually be drawn', () => {
+    const withDraw = buildCastingPrompt(script, look2, [], { mayDraw: true })!;
+    expect(withDraw.prompt).toContain('answer "none"');
+    expect(buildCastingPrompt(script, look2, [])!.prompt).not.toContain('answer "none"');
+  });
+
+  it('asks even when every scene has one candidate, because "the only one is wrong" is a decision', () => {
+    // One block, so nothing to choose between: silent today, worth asking once a block can be drawn.
+    const single = { ...STAGE, blocks: [CARD] };
+    expect(buildCastingPrompt(script, single, [])).toBeNull();
+    expect(buildCastingPrompt(script, single, [], { mayDraw: true })).not.toBeNull();
+  });
+
+  it('reads "none" as a request to draw, and keeps the tone it asked for', () => {
+    const candidates = sceneCandidates(script, look2, []);
+    const picks = picksFromAnswer({ scenes: [{ block: 'none', tone: 'cool' }, { block: 'card' }] }, candidates);
+    expect(picks[0]).toEqual({ none: true, tone: 'cool' });
+    expect(picks[1]).toEqual({ block: 'card' });
+  });
+
+  it('never lets it override a block the user pinned', () => {
+    const candidates = sceneCandidates(script, look2, [{ role: 'open', block: 'text-card' }]);
+    expect(picksFromAnswer({ scenes: [{ block: 'none' }, { block: 'card' }] }, candidates)[0]).toEqual({ block: 'text-card' });
+  });
+
+  it('falls back to the rule for a scene it turned down but nothing was drawn for', () => {
+    // `none` with no block written leaves the pick empty, and casting picks by content as always.
+    const { plan } = castScenes(script, look2, [], [{ none: true }, undefined]);
+    expect(plan.scenes[0]!.blockId).toBeTruthy();
+  });
+});

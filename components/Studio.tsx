@@ -40,7 +40,7 @@ export const Studio: React.FC = () => {
       const target = e.target instanceof Element ? e.target : null;
       const inField = !!target && (!!target.closest('input, textarea, select') || (target as HTMLElement).isContentEditable);
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key === 'Enter') { e.preventDefault(); if (!s.running) void s.run(); return; }
+      if (mod && e.key === 'Enter') { e.preventDefault(); if (!s.running) void s.run({ force: e.shiftKey }); return; }
       if (mod && e.key.toLowerCase() === 'j') { e.preventDefault(); s.toggleLogs(); return; }
       if (mod && e.key === ',') { e.preventDefault(); s.setSettingsOpen(true); return; }
       if (mod && e.key.toLowerCase() === 'b' && s.selectedNodeId) { e.preventDefault(); s.toggleBypass(s.selectedNodeId); return; }

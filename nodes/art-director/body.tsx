@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { BlockDefSchema, StageDefSchema, type BlockDef, type LookDef, type StageDef } from '@/core/types/payloads';
+import { BlockDefSchema, CoverDefSchema, StageDefSchema, type BlockDef, type CoverDef, type LookDef, type StageDef } from '@/core/types/payloads';
 import type { Casting } from '@/nodes/art-director/cast';
 
 const BlockDefSchemaOk = (b: unknown): b is BlockDef => BlockDefSchema.safeParse(b).success;
@@ -8,9 +8,11 @@ import { Kv, useT, stopFlow } from '@/components/ui';
 import { useStudio } from '@/store/useStudio';
 import { DEFAULT_BLOCK as DEFAULT_TEXT_CARD } from '@/nodes/art-director/blocks';
 import { DEFAULT_STAGE } from '@/nodes/art-director/node';
+import { coverAsBlock, coverStage } from '@/core/look/cover';
 import { LookPreview } from '@/nodes/art-director/preview';
 import { FRAME_PRESETS, frameOf } from '@/core/look/frame';
 import { FontsEditor, PaletteEditor, PropsEditor, Section, TonesEditor, VarsEditor } from '@/nodes/art-director/forms';
+import { CoverFields } from '@/nodes/cover-fields';
 
 /**
  * The roles the script upstream will send, read from that node's parameters (the screenwriter's beats or
@@ -78,7 +80,7 @@ export const ArtDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
   const roles = useUpstreamRoles(nodeId);
   const tokens = p.tokens ?? { palette: {}, fonts: {} };
   const frame = p.frame ?? { width: 1080, height: 1920 };
-  const [open, setOpen] = React.useState<'palette' | 'fonts' | 'tones' | 'vars' | 'blocks' | 'casting' | null>(null);
+  const [open, setOpen] = React.useState<'palette' | 'fonts' | 'tones' | 'vars' | 'blocks' | 'covers' | 'casting' | null>(null);
   const openCode = useStudio((s) => s.setCodeEditor);
   const valid = StageDefSchema.safeParse(p);
   return (
@@ -94,7 +96,10 @@ export const ArtDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
       } />
       <Kv k={t('node.transition')} v={
         <span style={{ display: 'flex', gap: 4 }}>
-          <select className={`nc-select ${stopFlow}`} value={p.transition?.type ?? 'fade'} onChange={(e) => set({ transition: { type: e.target.value as 'cut' | 'fade' | 'slide' | 'zoom', seconds: p.transition?.seconds ?? 0.4 } })}>
+          {/* Leaving a cut carries no length worth keeping: while the type was `cut` the seconds
+              beside it did nothing, so a stage that happened to store 0.1 would hand the person a
+              three-frame fade — which looks exactly like the cut they just left. */}
+          <select className={`nc-select ${stopFlow}`} value={p.transition?.type ?? 'fade'} onChange={(e) => set({ transition: { type: e.target.value as 'cut' | 'fade' | 'slide' | 'zoom', seconds: p.transition?.type === 'cut' ? 0.4 : p.transition?.seconds ?? 0.4 } })}>
             {(['cut', 'fade', 'slide', 'zoom'] as const).map((k) => <option key={k} value={k}>{t(`node.transition.${k}`)}</option>)}
           </select>
           {(p.transition?.type ?? 'fade') !== 'cut' && <input className={`nc-input ${stopFlow}`} style={{ width: 52 }} type="number" min={0.1} max={2} step={0.1} value={p.transition?.seconds ?? 0.4} title="s" onChange={(e) => set({ transition: { type: p.transition?.type ?? 'fade', seconds: Math.min(2, Math.max(0.1, Number(e.target.value) || 0.4)) } })} />}
@@ -117,6 +122,10 @@ export const ArtDirectorBody: React.FC<BodyProps> = ({ nodeId }) => {
       <Section title={t('node.blocksSection')} count={(p.blocks ?? []).length} open={open === 'blocks'} onToggle={() => setOpen(open === 'blocks' ? null : 'blocks')}>
         <div className="nc-hint">{t('look.blocksHint')}</div>
         <BlocksSection nodeId={nodeId} stage={valid.success ? valid.data : DEFAULT_STAGE} />
+      </Section>
+      <Section title={t('look.covers')} count={(p.covers ?? []).length} open={open === 'covers'} onToggle={() => setOpen(open === 'covers' ? null : 'covers')}>
+        <div className="nc-hint">{t('look.coversHint')}</div>
+        <CoversSection nodeId={nodeId} stage={valid.success ? valid.data : DEFAULT_STAGE} />
       </Section>
       <Section title={t('look.casting')} count={(p.casting ?? []).filter((c) => c.block || c.tone).length} open={open === 'casting'} onToggle={() => setOpen(open === 'casting' ? null : 'casting')}>
         <div className="nc-hint">{t('look.castingHint')}</div>
@@ -185,6 +194,108 @@ const BlockEditor: React.FC<{ block: BlockDef; onChange: (patch: Partial<BlockDe
       </Section>
       <div className="nc-kv"><span className="nc-k">{t('node.example')}</span></div>
       <textarea className={`nc-textarea nc-code ${stopFlow}`} rows={2} value={doc.example} spellCheck={false} onChange={(e) => set({ doc: { ...doc, example: e.target.value } })} />
+    </>
+  );
+};
+
+/** The form for one cover: what it is called, what shape it is, and what a person fills in. */
+const CoverEditor: React.FC<{ cover: CoverDef; onChange: (patch: Partial<CoverDef>) => void }> = ({ cover: p, onChange: set }) => {
+  const t = useT();
+  const [propsOpen, setPropsOpen] = React.useState(false);
+  const [defaultsOpen, setDefaultsOpen] = React.useState(false);
+  const preset = FRAME_PRESETS.find((f) => f.width === p.frame?.width && f.height === p.frame?.height);
+  return (
+    <>
+      <Identity id={p.id ?? ''} name={p.name ?? ''} onChange={set} />
+      {/* A cover picks its own shape, and that is the whole reason it is not a block: a 16:9 film
+          still wants a 9:16 cover, because that is what a feed shows beside every portrait video. */}
+      <Kv k={t('node.frame')} v={
+        <select className={`nc-select ${stopFlow}`} value={preset?.id ?? ''} onChange={(e) => { const f = FRAME_PRESETS.find((x) => x.id === e.target.value); if (f) set({ frame: { width: f.width, height: f.height } }); }}>
+          {!preset && <option value="">{p.frame ? `${p.frame.width}×${p.frame.height}` : '—'}</option>}
+          {FRAME_PRESETS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+        </select>
+      } />
+      <Section title={t('node.props')} count={Object.keys(p.props ?? {}).length} open={propsOpen} onToggle={() => setPropsOpen(!propsOpen)}>
+        <div className="nc-hint">{t('look.coverPropsHint')}</div>
+        <PropsEditor props={p.props ?? {}} onChange={(props) => set({ props })} />
+      </Section>
+      {/* The cover is finished here, ground and all, and the Cover Image node only swaps one of
+          these for one export. Designed with nothing in it, it renders as a black rectangle. */}
+      <Section title={t('look.coverDefaults')} count={Object.keys(p.defaults ?? {}).length} open={defaultsOpen} onToggle={() => setDefaultsOpen(!defaultsOpen)}>
+        <CoverFields
+          cover={p}
+          values={p.defaults ?? {}}
+          placeholderHint={t('look.coverDefaultsHint')}
+          onChange={(name, v) => {
+            const next = { ...(p.defaults ?? {}) };
+            if (v === undefined || v === '') delete next[name];
+            else next[name] = v;
+            set({ defaults: next });
+          }}
+        />
+      </Section>
+    </>
+  );
+};
+
+const DEFAULT_COVER: CoverDef = {
+  id: 'cover',
+  name: 'Cover',
+  frame: { width: 1080, height: 1920 },
+  props: { title: { type: 'text', required: true, max: 90 } },
+  code: {
+    format: 'html-gsap',
+    source: [
+      '<div class="cv"><div class="cv-title" data-prop="title"></div></div>',
+      '<style>',
+      '  .cv { position: absolute; inset: 0; }',
+      '  .cv-title { position: absolute; left: 220px; right: 220px; top: 50%; transform: translateY(-50%); text-align: center; font: 700 58px/1.35 var(--font-body); color: #fff; -webkit-text-stroke: .14em rgba(0,0,0,.92); paint-order: stroke fill; }',
+      '</style>',
+    ].join('\n'),
+  },
+};
+
+/**
+ * The covers a look carries: one row each, the selected one open for editing.
+ *
+ * Mirrors the block catalogue, and the previews go through the same `LookPreview` — a cover is
+ * block-shaped once you hand it its own bare stage, so nothing here needed a second renderer. The
+ * one thing that differs is that each preview is drawn at **that cover's** frame rather than the
+ * video's, which is what makes a portrait cover next to a landscape film readable at a glance.
+ */
+const CoversSection: React.FC<BodyProps & { stage: StageDef }> = ({ nodeId, stage }) => {
+  const t = useT();
+  const [p, set] = useParams<Pick<LookDef, 'covers'>>(nodeId);
+  const openCode = useStudio((s) => s.setCodeEditor);
+  const list = p.covers ?? [];
+  const [open, setOpen] = React.useState<number | null>(null);
+  const update = (i: number, patch: Partial<CoverDef>) => set({ covers: list.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
+  const fresh = (base: CoverDef, name: string): CoverDef => ({ ...structuredClone(base), id: slugFor(name, list.map((c) => c.id)), name });
+  const add = () => { const c = fresh(list[list.length - 1] ?? DEFAULT_COVER, `Cover ${list.length + 1}`); set({ covers: [...list, c] }); setOpen(list.length); };
+  const remove = (i: number) => { set({ covers: list.filter((_, j) => j !== i) }); setOpen(null); };
+  const ok = (c: CoverDef) => CoverDefSchema.safeParse(c).success;
+  return (
+    <>
+      {list.map((c, i) => (
+        <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 3, padding: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }} onClick={() => setOpen(open === i ? null : i)}>
+            {ok(c) ? <LookPreview options={{ stage: coverStage(stage, c), block: coverAsBlock(c), ...c.frame }} style={{ width: 36, flex: 'none' }} /> : <div style={{ width: 36, aspectRatio: '9 / 16', background: '#000' }} />}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="nc-k" style={{ color: open === i ? 'var(--accent-2)' : undefined }}>{open === i ? '▾' : '▸'} {c.id}</div>
+              <div className="nc-v nc-dim" style={{ textAlign: 'left' }}>{c.name} · {c.frame?.width}×{c.frame?.height}</div>
+            </div>
+          </div>
+          {open === i && (
+            <>
+              {ok(c) ? <LookPreview options={{ stage: coverStage(stage, c), block: coverAsBlock(c), ...c.frame }} onClick={() => openCode({ nodeId, coverIndex: i })} style={{ cursor: 'pointer' }} /> : null}
+              <button className={`nc-btn nc-btn-sm ${stopFlow}`} style={{ justifyContent: 'center' }} onClick={() => openCode({ nodeId, coverIndex: i })}>{t('node.editCode')}</button>
+              <CoverEditor cover={c} onChange={(patch) => update(i, patch)} />
+              <button className={`nc-chip ${stopFlow}`} onClick={() => remove(i)}>{t('node.removeCover')}</button>
+            </>
+          )}
+        </div>
+      ))}
+      <button className={`nc-chip ${stopFlow}`} style={{ alignSelf: 'flex-start' }} onClick={add}>+ {t('node.addCover')}</button>
     </>
   );
 };

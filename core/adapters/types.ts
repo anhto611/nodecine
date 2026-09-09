@@ -59,7 +59,7 @@ export interface EngineAdapter {
   ): Promise<RenderResult>;
   /**
    * Server-side only, and optional: an engine that cannot take a still simply leaves it out, and the
-   * Poster node blocks with a reason instead of the contract growing a capability nobody reports.
+   * Cover Image node blocks with a reason instead of the contract growing a capability nobody reports.
    */
   capture?(ir: VideoIR, settings: CaptureSettings, signal: AbortSignal): Promise<CaptureResult>;
 }

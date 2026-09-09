@@ -98,6 +98,7 @@ export function buildIR(input: BuildIRInput): VideoIR {
     },
     stage: plan.stage,
     blocks: plan.blocks,
+    ...(plan.covers?.length ? { covers: plan.covers } : {}),
     vars: videoVars(plan.stage, plan.language, input.now ?? Date.now()),
     audioTrack: {
       voiceoverUrl: voiceover.audioUrl,

@@ -48,6 +48,32 @@ export interface MixResult {
   durationSeconds: number;
 }
 
+/** What the Stock Images node asks a picture library for (CORE_CONTRACTS §5.19). */
+export interface StockRequest {
+  provider: 'pexels' | 'pixabay';
+  query: string;
+  orientation: 'landscape' | 'portrait' | 'square';
+  /** The frame's long edge, so the footage is asked for at the size it will be shown. */
+  longEdge: number;
+  /**
+   * `auto` tries a clip and takes a photograph when none fits; `clip` and `still` allow only the
+   * one kind, and come back empty rather than substituting the other.
+   */
+  want: 'auto' | 'clip' | 'still';
+  /** Pages already used in this video, so no two scenes get the same photograph. */
+  used: string[];
+}
+export interface StockResult {
+  /** Which content key it fills: a clip goes in `clip`, a photograph in `image`. */
+  kind: 'clip' | 'photo';
+  assetUrl: string;
+  author: string;
+  page: string;
+  width: number;
+  height: number;
+  durationSec?: number;
+}
+
 export interface NodeServices {
   probeLLM(providerId: string, settings: Record<string, unknown>): Promise<LLMRef>;
   probeTTS(providerId: string, settings: Record<string, unknown>): Promise<TTSRef>;
@@ -84,10 +110,17 @@ export interface NodeServices {
   saveText(text: string, extension: string): Promise<{ url: string; bytes: number }>;
   /** A recording from this machine's voice folder, brought in as a voice-over (CORE_CONTRACTS §5.17). */
   importAudio(fileName: string, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number }>;
+  /** One piece of footage for one scene, kept as a look asset; null when nothing in the library fits. */
+  fetchStockMedia(req: StockRequest, signal: AbortSignal): Promise<StockResult | null>;
   /**
    * One file from several, in order, with a pause after each part. Returns the file, its measured
    * length and where each part starts and how long it lasts, pause included (CORE_CONTRACTS §5.3).
    */
   concatAudio(parts: { audioUrl: string; durationSeconds: number }[], gapSeconds: number, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number; segments: { start: number; durationSeconds: number }[] }>;
+  /**
+   * One frame of a clip, kept as an image asset: the ground a cover is drawn on when the film is
+   * footage and nobody pinned a picture (CORE_CONTRACTS §5.18).
+   */
+  stillFromVideo(clipUrl: string, atSeconds: number, signal: AbortSignal): Promise<string>;
   now(): number;
 }

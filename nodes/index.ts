@@ -4,6 +4,8 @@ import { githubFetcher } from './github/node';
 import { webFetcher } from './web/node';
 import { staticScript } from './script/node';
 import { screenwriter } from './screenwriter/node';
+import { stockMedia } from './stock/node';
+import { sceneBreakdown } from './breakdown/node';
 import { artDirector } from './art-director/node';
 import { hyperframesEngine, llmProvider, remotionEngine, ttsProvider } from './resources/node';
 import { ttsEngine } from './tts/node';
@@ -11,7 +13,7 @@ import { transcribe } from './transcribe/node';
 import { audioInput, audioMix } from './audio/node';
 import { captions, captionExport } from './captions/node';
 import { timelineAssembler } from './assembler/node';
-import { mp4Export, posterExport, videoOutput } from './output/node';
+import { mp4Export, coverExport, videoOutput } from './output/node';
 
 /**
  * Every node the app ships, one family per directory (ARCHITECTURE §2): the definition, its logic,
@@ -26,6 +28,8 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   staticScript,
   artDirector,
   screenwriter,
+  stockMedia,
+  sceneBreakdown,
   llmProvider,
   ttsProvider,
   ttsEngine,
@@ -39,7 +43,7 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   hyperframesEngine,
   videoOutput,
   mp4Export,
-  posterExport,
+  coverExport,
 ] as unknown as AnyNodeDefinition[];
 
 export function registerNodes(): void {
@@ -48,7 +52,9 @@ export function registerNodes(): void {
 
 export { audioInput, audioMix, AUDIO_INPUT, AUDIO_MIX } from './audio/node';
 export { captionExport } from './captions/node';
-export { posterExport, POSTER_EXPORT } from './output/node';
+export { coverExport, COVER_EXPORT } from './output/node';
+export { stockMedia, STOCK_MEDIA } from './stock/node';
+export { sceneBreakdown, SCENE_BREAKDOWN } from './breakdown/node';
 export { inputTrigger, githubFetcher, webFetcher, staticScript, artDirector, screenwriter, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
 export { pickVoice } from './tts/node';
 export { DEFAULT_STATIC_SCRIPT } from './script/node';

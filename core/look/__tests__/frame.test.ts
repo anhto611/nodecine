@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { describeFrame, frameOf } from '../frame';
-import staticScript from '@/templates/static-script.json';
+import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
 
 describe('frameOf', () => {
