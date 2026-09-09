@@ -67,7 +67,17 @@ export const isContentKey = (k: string): k is ContentKey => (CONTENT_KEYS as rea
  * user's own folder through `POST /api/assets/from-library`. Either way it is addressed by its hash
  * (ARCHITECTURE §6) — a scene may only show a file this machine is already holding.
  */
-export const AssetUrlSchema = z.string().regex(/^\/api\/assets\/[a-f0-9]{16,64}\.[a-z0-9]+$/, 'must be an uploaded asset');
+const HASHED_ASSET = /^\/api\/assets\/[a-f0-9]{16,64}\.[a-z0-9]+$/;
+/**
+ * The one other form: a small SVG carried inline. A template is a JSON file and cannot ship a file
+ * beside it, and a workflow shared with someone else loses every hashed asset it names — a drawing
+ * that travels inside the graph survives both. SVG only, and small, so a graph stays a graph and not
+ * a picture archive; a photograph is uploaded and hashed like before.
+ */
+const INLINE_SVG = /^data:image\/svg\+xml;base64,[A-Za-z0-9+/]+=*$/;
+export const INLINE_ASSET_MAX_CHARS = 64 * 1024;
+export const isInlineAsset = (url: string): boolean => url.length <= INLINE_ASSET_MAX_CHARS && INLINE_SVG.test(url);
+export const AssetUrlSchema = z.string().refine((s) => HASHED_ASSET.test(s) || isInlineAsset(s), 'must be an uploaded asset, or an inline SVG under 64 KB');
 
 export const BlockFieldSchema = z.object({
   type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image', 'video', 'entries']),

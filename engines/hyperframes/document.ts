@@ -89,7 +89,7 @@ export const BOOTSTRAP = String.raw`
     if (block) bindProps(block, scene.props || {});
     var g = scopedGsap(root);
     var collected = [];
-    var nodecine = { timeline: function (tl) { collected.push(unwrap.get(tl) || tl); }, props: scene.props || {}, fields: scene.fields || {}, root: root, duration: scene.duration || 0, reveal: scene.reveal || {} };
+    var nodecine = { timeline: function (tl) { collected.push(unwrap.get(tl) || tl); }, props: scene.props || {}, fields: scene.fields || {}, root: root, index: scene.index || 0, duration: scene.duration || 0, reveal: scene.reveal || {} };
     __REVEAL_HELPERS__
     (scene.scripts || []).forEach(function (src) {
       try { new Function('gsap', 'nodecine', 'root', src)(g, nodecine, root); }
@@ -194,7 +194,7 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
       start: s.startFrame / fps,
       duration: s.durationInFrames / fps,
       html: `<div id="${esc(s.id)}" class="clip nc-scene" data-start="${s.startFrame / fps}" data-duration="${clipSeconds}" data-track-index="0" data-stage${s.tone ? ` data-tone="${esc(s.tone)}"` : ''} style="${esc(tokenVars(stage, s.tone))}">${markup}</div>`,
-      data: { id: s.id, start: s.startFrame / fps, duration: s.durationInFrames / fps, reveal: revealMap(s.props, spokenWords, s.durationInFrames / fps), props: s.props, fields: s.fields ?? {}, scripts: [...stageCode.scripts, ...bc.scripts], captions: cues.map((cue) => ({ id: cue.id, show: cue.show, hide: cue.hide, style: cue.style, words: cue.words.map((w) => ({ id: w.id, at: w.at })) })) },
+      data: { id: s.id, index: si, start: s.startFrame / fps, duration: s.durationInFrames / fps, reveal: revealMap(s.props, spokenWords, s.durationInFrames / fps), props: s.props, fields: s.fields ?? {}, scripts: [...stageCode.scripts, ...bc.scripts], captions: cues.map((cue) => ({ id: cue.id, show: cue.show, hide: cue.hide, style: cue.style, words: cue.words.map((w) => ({ id: w.id, at: w.at })) })) },
     };
   });
 

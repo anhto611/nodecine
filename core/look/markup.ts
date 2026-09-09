@@ -343,7 +343,7 @@ export const ANIMATE_SCRIPT = String.raw`
     unwrap.set(proxy, tl); return proxy;
   };
   var g = { timeline: function (v) { return wrap(gsap.timeline(v)); }, to: function (t, v) { return gsap.to(fix(t), v); }, from: function (t, v) { return gsap.from(fix(t), v); }, fromTo: function (t, a, b) { return gsap.fromTo(fix(t), a, b); }, set: function (t, v) { return gsap.set(fix(t), v); }, utils: gsap.utils, q: q };
-  var nodecine = { timeline: function (tl) { timelines.push(unwrap.get(tl) || tl); }, props: d.props || {}, fields: d.fields || {}, root: root, duration: d.loop || 4, reveal: d.reveal || {} };
+  var nodecine = { timeline: function (tl) { timelines.push(unwrap.get(tl) || tl); }, props: d.props || {}, fields: d.fields || {}, root: root, index: 0, duration: d.loop || 4, reveal: d.reveal || {} };
   __REVEAL_HELPERS__
   (d.scripts || []).forEach(function (src) { try { new Function('gsap', 'nodecine', 'root', src)(g, nodecine, root); } catch (e) { console.error('[nodecine] preview script failed:', e); } });
   var master = gsap.timeline({ repeat: -1, repeatDelay: 1 });
