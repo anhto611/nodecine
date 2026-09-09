@@ -75,6 +75,7 @@ export const vi: Record<DictKey, string> = {
   'templates.warning': 'Mở bản mẫu sẽ thay toàn bộ đồ thị hiện tại.',
   'templates.cancel': 'Hủy',
   'templates.open': 'Mở {name}',
+  'templates.pickOne': 'Chọn một bản mẫu',
   'settings.title': 'Cài đặt',
   'settings.noKeys': 'Nhà cung cấp cục bộ không cần khóa: Claude Code, Ollama, giọng hệ điều hành, Piper. ElevenLabs và Vbee đọc khóa từ .env.local (ELEVENLABS_API_KEY, VBEE_TOKEN + VBEE_APP_ID); node nhà cung cấp báo khóa có dùng được không. Không nhập khóa vào app.',
   'settings.locale': 'Ngôn ngữ giao diện',

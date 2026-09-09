@@ -41,7 +41,7 @@ export const TemplateBrowser: React.FC = () => {
   // Only consulted under the breakpoint; above it the CSS shows the list whatever this says.
   const [sideOpen, setSideOpen] = React.useState(false);
   const pick = (id: string) => { setCat(id); setSideOpen(false); };
-  // The first card, whatever ships: a hardcoded id outlives the template it named.
+  // Nothing chosen until the person chooses: a preselected first card is one Enter away from a template nobody asked for.
   const [sel, setSel] = React.useState<string>('');
   // One card plays at a time: the one selected, or the one under the pointer. Three full-frame documents animating at once was the lag.
   const [hover, setHover] = React.useState<string | null>(null);
@@ -57,7 +57,7 @@ export const TemplateBrowser: React.FC = () => {
   // A category nobody has a template for would open onto an empty grid, so it is not offered.
   const cats = React.useMemo(() => CATS.filter(([id]) => all.some((c) => c.category === id)), [all]);
   const CARDS = React.useMemo(() => all.filter((c) => cat === 'all' || c.category === cat), [all, cat]);
-  const selected = CARDS.find((c) => c.id === sel) ?? CARDS[0];
+  const selected = CARDS.find((c) => c.id === sel);
   const canOpen = !!selected;
   const open = () => { if (selected) load(selected.id as TemplateId); };
   return (
@@ -124,7 +124,7 @@ export const TemplateBrowser: React.FC = () => {
           <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('templates.warning')}</span>
           <div style={{ flex: 1 }} />
           <Btn onClick={() => close(false)}>{t('templates.cancel')}</Btn>
-          <Btn primary disabled={!canOpen} onClick={open}>{t('templates.open', { name: selected?.name ?? '' })}</Btn>
+          <Btn primary disabled={!canOpen} onClick={open}>{selected ? t('templates.open', { name: selected.name }) : t('templates.pickOne')}</Btn>
         </div>
       </div>
     </div>

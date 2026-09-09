@@ -73,6 +73,7 @@ export const en = {
   'templates.warning': 'Opening a template replaces the current graph.',
   'templates.cancel': 'Cancel',
   'templates.open': 'Open {name}',
+  'templates.pickOne': 'Pick a template',
   'settings.title': 'Settings',
   'settings.noKeys': 'Local providers need no key: Claude Code, Ollama, the OS voice and Piper. ElevenLabs and Vbee read theirs from .env.local (ELEVENLABS_API_KEY, VBEE_TOKEN + VBEE_APP_ID); the provider node reports whether the key works. Nothing is typed into the app.',
   'settings.locale': 'Interface language',
