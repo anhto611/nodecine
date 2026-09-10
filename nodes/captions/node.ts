@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Voiceover } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import { ErrorCode } from '@/core/errors';
+import { CaptionsErrorCode } from './errors';
 import { buildCaptionTrack } from '@/core/captions/cues';
 
 const Params = z.object({
@@ -26,7 +26,7 @@ export const captions: NodeDefinition<typeof Params> = {
   run: async ({ params, inputs, log }) => {
     const voiceover = inputs.voiceover!.payload as Voiceover;
     if (!voiceover.words?.length) {
-      throw Object.assign(new Error('the voice-over carries no word timings'), { code: ErrorCode.CAPTIONS_NO_WORDS, fix: 'wire the voice-over through a Transcribe node first' });
+      throw Object.assign(new Error('the voice-over carries no word timings'), { code: CaptionsErrorCode.CAPTIONS_NO_WORDS, fix: 'wire the voice-over through a Transcribe node first' });
     }
     const track = buildCaptionTrack(voiceover.words, params);
     log('info', `${track.cues.length} lines from ${voiceover.words.length} words · ≤${params.maxChars} chars`);

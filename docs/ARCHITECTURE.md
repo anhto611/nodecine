@@ -79,12 +79,14 @@ nodecine/
 │  └─ providers/                  CHỈ giao diện Provider và registry rỗng
 │     ├─ types.ts
 │     └─ registry.ts              providerId → factory
-├─ providers/                     Cài đặt cụ thể của nhà cung cấp, được phép sinh tiến trình
-│  ├─ installed.ts                Mô tả nhà cung cấp cho cả hai phía: tên, các trường tham số, mặc định
-│  ├─ installed.server.ts         Đăng ký factory, chỉ chạy trên máy chủ
-│  ├─ claude-code/index.ts        Gọi CLI đã đăng nhập
-│  ├─ piper/index.ts             Giọng máy học chạy cục bộ, chung một đường trên mọi hệ điều hành
-│  └─ system-tts/index.ts         macOS say + ffmpeg
+├─ providers/                     Mỗi nhà cung cấp là một capsule, cùng luật với node
+│  ├─ .generated/                 descriptors (cho trình duyệt), server, locales; sinh tự động, không sửa tay
+│  ├─ installed.ts                Kiểu ProviderDescriptor và các hàm tra cứu; danh sách lấy từ .generated
+│  ├─ api-shared.ts               Phần dùng chung của các nhà cung cấp gọi HTTP
+│  ├─ claude-code/                provider.manifest.json, settings.ts (Zod, an toàn cho trình duyệt),
+│  │                              locales.ts, index.ts (gọi CLI đã đăng nhập, chỉ máy chủ)
+│  ├─ piper/                      Giọng máy học chạy cục bộ, chung một đường trên mọi hệ điều hành
+│  └─ system-tts/                 macOS say + ffmpeg
 ├─ server/                        Phần chỉ chạy trên máy chủ, không React
 │  ├─ register.ts                 Đăng ký node, nhà cung cấp, engine một lần cho mọi route
 │  ├─ jobs.ts                     Hàng đợi việc và các executor theo khóa; phát sự kiện cho SSE
@@ -111,8 +113,9 @@ nodecine/
 │  ├─ mp4-export/                 Một node kết xuất MP4
 │  └─ …/                          Mọi thư mục còn lại giữ cùng contract một-capsule
 ├─ scripts/
-│  ├─ discover-nodes.mjs          Quét manifest và sinh static imports cho Next.js
-│  └─ check-node-boundaries.mjs   Chặn core→node và node→node trong mã production
+│  ├─ discover-nodes.mjs          Quét node.manifest.json và sinh static imports cho Next.js
+│  ├─ discover-providers.mjs      Quét provider.manifest.json và sinh descriptors / server / locales
+│  └─ check-node-boundaries.mjs   Chặn core→node, core→provider, node→node và provider→provider
 ├─ components/                    Thành phần giao diện Studio (canvas, dải, panel, thẻ node); thân node nằm ở nodes/
 ├─ locales/                       Từ điển chuỗi hiển thị
 └─ docs/
@@ -125,8 +128,11 @@ Quy tắc phụ thuộc bắt buộc, kiểm tra được bằng công cụ phâ
 - `core/` không được phép nhập bất cứ thứ gì từ `nodes/`, `providers/`, `server/`, `templates/`, `app/` hay `components/`. Nó chỉ chứa giao diện Adapter, Provider cùng các registry rỗng (engine, nhà cung cấp, renderer theo định dạng, bản mẫu); các lớp cài đặt cụ thể nằm ngoài lõi và tự đăng ký vào registry ở thời điểm khởi động ứng dụng. Nếu quy tắc này bị vi phạm, tuyên bố độc lập engine trở thành lời nói suông và Hyperframes Adapter sẽ không bao giờ cài đặt được.
 - Capsule engine (`nodes/hyperframes-engine/`, `nodes/remotion-engine/`), `providers/*` và `server/*` được nhập giao diện và kiểu từ `core/`, và được nhập thư viện của riêng chúng như Remotion hay React; `core/` không bao giờ nhập ngược lại. Một engine đăng ký renderer cho định dạng code nó chạy được; không gì nhập Adapter của engine khác. `templates/` chỉ chứa JSON và một tệp đăng ký; nó không import node nào.
 - Mỗi `nodes/<tên>/` bắt buộc có đúng một `node.manifest.json`, một `node.ts` và một `body.tsx`; manifest khai ID, export định nghĩa, export body, icon/nhóm, `translations` (bắt buộc: `locales.ts` của capsule giữ mọi chuỗi kể cả tên `node.<id>` và mô tả `node.desc.<id>`), feature, service server, thư viện tệp, đăng ký engine và overlay tùy chọn. `scripts/discover-nodes.mjs` sinh registry trước dev, test, typecheck và build; không còn danh sách node viết tay. `NodeServices.invoke()` là cổng service tổng quát nên core không biết tên nghiệp vụ của bất kỳ node nào.
-- Một capsule không được import capsule khác, **kể cả trong test**; test chạy nhiều node cùng nhau đặt ở `nodes/__tests__/`. Logic dùng chung phải chuyển vào `core/`, `server/` hoặc `components/node-runtime/` theo môi trường chạy. Thư mục tệp người dùng (`music`, `voice`, `clips`) do capsule đọc nó khai trong manifest (`libraries`), `server/paths.ts` là registry rỗng. `npm run nodes:check` thực thi ranh giới này và cũng cấm `core/` import `nodes/`.
-- **Thân node sinh từ schema** như `INPUT_TYPES` của ComfyUI và `properties[]` của n8n: một node khai tham số một lần bằng Zod, `FormBody` (`nodes/form-body.tsx`) đọc schema đó và vẽ select cho enum, ô số có biên cho số, ô chữ cho chuỗi, checkbox cho boolean; nhãn theo tên trường trong từ điển. Thân node chỉ viết tay phần schema không nói được (xem trước, danh sách beat, trình phát, dòng trạng thái) và nhúng `FormBody` cho phần còn lại, có thể chọn tập trường, thay widget hay tự vẽ một trường tại đúng vị trí của nó. Nhập Liệu, Phụ Đề, Căn Mốc Từ, Đóng Gói Timeline, tốc độ Giọng Đọc, Xuất MP4, Remotion Engine dùng cách này; Họa Sĩ, Biên Kịch, Kịch Bản Tĩnh, Xuất Bản Video, Provider (form riêng theo nhà cung cấp) viết tay.
+- Một capsule không được import capsule khác, **kể cả trong test**; test chạy nhiều node cùng nhau đặt ở `nodes/__tests__/`, test đặt nhiều nhà cung cấp cạnh nhau đặt ở `providers/__tests__/`. Logic dùng chung phải chuyển vào `core/`, `server/` hoặc `components/node-runtime/` theo môi trường chạy. Thư mục tệp người dùng (`music`, `voice`, `clips`) do capsule đọc nó khai trong manifest (`libraries`), `server/paths.ts` là registry rỗng. `npm run nodes:check` thực thi ranh giới này và cũng cấm `core/` import `nodes/`.
+- **Nhà cung cấp là capsule, cùng một khuôn.** Mỗi `providers/<tên>/` có đúng một `provider.manifest.json` khai id, loại (`tts` hay `llm`), tên hàm đăng ký, lược đồ tham số, widget và `translations`. Lược đồ nằm ở `settings.ts` — Zod thuần, không nhập gì của Node — nên trình duyệt vẽ form từ **đúng lược đồ máy chủ dùng để kiểm định**; `index.ts` sinh tiến trình và chỉ máy chủ nạp. Tham số mặc định không được viết tay ở đâu cả: registry tính bằng `defaultSettingsOf(settingsSchema)`. Chuỗi hiển thị của nhà cung cấp nằm trong `locales.ts` của chính nó, theo khóa `provider.<id>` và `provider.<id>.note`. Trước đây cùng một nhà cung cấp được mô tả ở ba nơi và không gì bắt ba nơi đó khớp nhau.
+- **Đồ thị đã lưu có đường đi tới hiện tại.** Ba thứ có thể lỗi thời và mỗi thứ có cách riêng. Hình dạng tài liệu quanh đồ thị là `schemaVersion`, đi từng bậc qua các bước đăng ký trong `nodes/migrations.ts` — đây là tệp duy nhất được phép nêu tên loại node đã chết cạnh loại còn sống, vì đó chính là định nghĩa của di trú. Tham số của một loại node là `NodeDefinition.version` so với `version` đóng dấu trên node đã lưu, và capsule tự viết `migrate` của mình. Loại node biến mất thì không suy ra được từ đâu cả nên phải khai: `nodes/retired.json` nói cái gì thay thế nó, hoặc nói thẳng là không có gì. `core/engine/migrate.ts` giữ cơ chế và không biết tên nào. Mọi cửa một đồ thị đi vào đều chạy qua đó: đọc tệp, nhập tệp, mở bản mẫu, và các tab khôi phục từ trình duyệt. Node đóng dấu phiên bản lúc **ghi**, không phải lúc đọc, nên mở một tệp không bao giờ là một lần sửa. `core/__tests__/fixtures/` giữ tệp thật của từng định dạng cũ; một bước di trú hỏng làm đỏ bộ test.
+- **Mã lỗi thuộc về nơi ném nó.** `core/errors.ts` chỉ giữ mã mà lõi, bộ máy và tầng nhà cung cấp ném ra. Một thất bại của riêng một node nằm ở `nodes/<tên>/errors.ts`, khai trong manifest bằng trường `errors`, và câu chữ hiển thị nằm trong `locales.ts` của chính capsule đó. Test `nodes/__tests__/errors.test.ts` kiểm mỗi mã có đúng một chủ và có câu chữ ở mọi ngôn ngữ.
+- **Thân node sinh từ schema** như `INPUT_TYPES` của ComfyUI và `properties[]` của n8n: một node khai tham số một lần bằng Zod, `FormBody` (`nodes/form-body.tsx`) đọc schema đó bằng `core/schema-form.ts` và vẽ select cho enum, ô số có biên cho số, ô chữ cho chuỗi, checkbox cho boolean; nhãn theo tên trường trong từ điển. Thân node chỉ viết tay phần schema không nói được (xem trước, danh sách beat, trình phát, dòng trạng thái) và nhúng `FormBody` cho phần còn lại, có thể chọn tập trường, thay widget hay tự vẽ một trường tại đúng vị trí của nó. Nhập Liệu, Phụ Đề, Căn Mốc Từ, Đóng Gói Timeline, tốc độ Giọng Đọc, Xuất MP4, Remotion Engine dùng cách này, và hai node Nhà Cung Cấp cũng vậy — chúng vẽ tham số của nhà cung cấp đang chọn bằng chính `SchemaControl` của form; Họa Sĩ, Biên Kịch, Kịch Bản Tĩnh, Xuất Bản Video viết tay.
 - `components/` được nhập từ `core/` và `nodes/index.client`, nhưng `core/` không bao giờ nhập ngược lại. Trình phát Remotion là một component do `nodes/remotion-engine/` cung cấp qua `mountPlayer()`, tầng giao diện chỉ gọi hàm đó chứ không nhập Remotion trực tiếp.
 - Lệnh gọi mạng ra ngoài chỉ nằm trong `nodes/*` và `providers/*`, tức là trong executor ở máy chủ; `core/` và `components/` không gọi mạng.
 

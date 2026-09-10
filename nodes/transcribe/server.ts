@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { access } from 'node:fs/promises';
 import { ErrorCode } from '@/core/errors';
+import { TranscribeErrorCode } from './errors';
 import type { Word } from '@/core/types/payloads';
 import { exec, findBinary } from '@/server/exec';
 import { fileNameFromMediaUrl, mediaPath } from '@/server/paths';
@@ -48,15 +49,15 @@ export async function alignWordsOnServer(audioUrl: string, text: string, languag
   if (r.code !== 0) {
     const err = r.stderr.trim();
     if (/No module named 'stable_whisper'/.test(err)) throw Object.assign(new Error('stable-ts is not installed for this interpreter'), { code: ErrorCode.PROVIDER_NOT_INSTALLED, fix: ALIGN_INSTALL_HINT });
-    throw Object.assign(new Error(`aligner failed: ${err.split('\n').slice(-3).join(' ').slice(0, 400) || r.code}`), { code: ErrorCode.ALIGN_FAILED });
+    throw Object.assign(new Error(`aligner failed: ${err.split('\n').slice(-3).join(' ').slice(0, 400) || r.code}`), { code: TranscribeErrorCode.ALIGN_FAILED });
   }
   let words: Word[];
   try {
     words = parseAlignerOutput(r.stdout);
   } catch (e) {
-    throw Object.assign(new Error(`aligner output unreadable (${r.stdout.length} bytes${r.truncated ? ', cut at the output cap' : ''}): ${e instanceof Error ? e.message : String(e)}`), { code: ErrorCode.ALIGN_FAILED });
+    throw Object.assign(new Error(`aligner output unreadable (${r.stdout.length} bytes${r.truncated ? ', cut at the output cap' : ''}): ${e instanceof Error ? e.message : String(e)}`), { code: TranscribeErrorCode.ALIGN_FAILED });
   }
-  if (!words.length) throw Object.assign(new Error('aligner returned no words'), { code: ErrorCode.ALIGN_FAILED });
+  if (!words.length) throw Object.assign(new Error('aligner returned no words'), { code: TranscribeErrorCode.ALIGN_FAILED });
   return words;
 }
 

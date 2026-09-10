@@ -23,7 +23,9 @@ export const WorkflowsPanel: React.FC = () => {
   const remove = useStudio((s) => s.deleteWorkflow);
   const importWorkflow = useStudio((s) => s.importWorkflow);
   const importVideo = useStudio((s) => s.importWorkflowVideo);
-  const [importError, setImportError] = React.useState<string | null>(null);
+  // One line for whatever the last action could not do: import, open, download. A file that will
+  // not open used to do nothing at all when clicked, which reads as the app ignoring the click.
+  const [notice, setNotice] = React.useState<{ what: 'import' | 'open' | 'download' | 'migrated'; why: string } | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const [files, setFiles] = React.useState<WorkflowSummary[] | null>(null);
   const [renaming, setRenaming] = React.useState<{ id: string; name: string } | null>(null);
@@ -36,8 +38,13 @@ export const WorkflowsPanel: React.FC = () => {
   }, [tick]);
 
   const download = async (id: string) => {
-    const def = await workflowsApi.read(id).catch(() => null);
-    if (!def) return;
+    let def: Awaited<ReturnType<typeof workflowsApi.read>>;
+    try {
+      def = await workflowsApi.read(id);
+    } catch (e) {
+      setNotice({ what: 'download', why: e instanceof Error ? e.message : String(e) });
+      return;
+    }
     const blob = new Blob([JSON.stringify(def, null, 2)], { type: 'application/json' });
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${id}.json` });
     a.click();
@@ -54,10 +61,16 @@ export const WorkflowsPanel: React.FC = () => {
           const f = e.target.files?.[0];
           e.target.value = '';
           if (!f) return;
-          setImportError(/\.mp4$/i.test(f.name) || f.type === 'video/mp4' ? await importVideo(f) : await importWorkflow(await f.text()));
+          const why = /\.mp4$/i.test(f.name) || f.type === 'video/mp4' ? await importVideo(f) : await importWorkflow(await f.text());
+          setNotice(why ? { what: 'import', why } : null);
         }} />
       </div>
-      {importError && <div style={{ padding: '6px 12px', fontSize: 'var(--fs-body)', color: 'var(--err)', borderBottom: '1px solid var(--line)' }}>{t('workflows.importBad', { why: importError })}</div>}
+      {notice && (
+        <div style={{ padding: '6px 12px', fontSize: 'var(--fs-body)', color: notice.what === 'migrated' ? 'var(--warn)' : 'var(--err)', borderBottom: '1px solid var(--line)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+          <span style={{ flex: 1, minWidth: 0 }}>{t(`workflows.${notice.what}Bad`, { why: notice.why })}</span>
+          <button className="nc-chip" style={{ border: 0, flex: 'none' }} onClick={() => setNotice(null)}><Icon.x size={11} /></button>
+        </div>
+      )}
       <div style={{ padding: '6px 12px', fontSize: 'var(--fs-hint)', color: 'var(--tx-3)', borderBottom: '1px solid var(--line)' }}>{t('workflows.where')}</div>
       <div style={{ overflowY: 'auto', flex: 1 }}>
         {files === null && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>…</div>}
@@ -65,7 +78,11 @@ export const WorkflowsPanel: React.FC = () => {
         {files?.map((f) => {
           const isOpen = tabs.some((x) => x.fileId === f.id);
           return (
-            <div key={f.id} className={`nc-wf ${isOpen ? 'open' : ''}`} onClick={() => { if (!renaming && confirm !== f.id) void open(f.id); }}>
+            <div key={f.id} className={`nc-wf ${isOpen ? 'open' : ''}`} onClick={async () => {
+              if (renaming || confirm === f.id) return;
+              const outcome = await open(f.id);
+              setNotice(outcome ? { what: outcome.kind === 'failed' ? 'open' : 'migrated', why: outcome.why } : null);
+            }}>
               <div style={{ minWidth: 0, flex: 1 }}>
                 {renaming?.id === f.id ? (
                   <div style={{ display: 'flex', gap: 4, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>

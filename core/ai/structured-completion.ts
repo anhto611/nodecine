@@ -84,3 +84,16 @@ export async function runScreenwriter<S extends ZodTypeAny>(
     return output;
   }
 }
+
+/**
+ * Models sometimes wrap JSON in a code fence; take the outermost braces. Every provider that reads
+ * an answer needs this, so it is nobody's in particular — it used to live inside the Claude Code
+ * provider, and Ollama reached across for it.
+ */
+export function extractJson(text: string): string {
+  const fence = /```(?:json)?\s*([\s\S]*?)```/.exec(text);
+  const body = fence ? fence[1]! : text;
+  const start = body.indexOf('{');
+  const end = body.lastIndexOf('}');
+  return start >= 0 && end > start ? body.slice(start, end + 1) : body;
+}

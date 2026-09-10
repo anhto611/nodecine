@@ -1,4 +1,12 @@
-/** Stable error and reason codes (EXECUTION_ENGINE §6). UI messages come from locale dictionaries keyed by code. */
+/**
+ * Stable error and reason codes (EXECUTION_ENGINE §6). UI messages come from locale dictionaries
+ * keyed by code.
+ *
+ * Only what the core, the engine and the provider layer raise. A failure that belongs to one node
+ * belongs in that node's capsule — `nodes/<name>/errors.ts` beside its strings in the capsule's own
+ * locales — the way the Web Fetcher and the GitHub Fetcher already keep theirs. Core carrying
+ * `ALIGN_FAILED` meant core knew there was such a thing as an aligner.
+ */
 export const ErrorCode = {
   INPUT_EMPTY: 'INPUT_EMPTY',
   PROVIDER_NOT_CONNECTED: 'PROVIDER_NOT_CONNECTED',
@@ -11,22 +19,14 @@ export const ErrorCode = {
   LLM_UPSTREAM: 'LLM_UPSTREAM',
   /** A provider could not get schema-valid JSON out of the model. Thrown by providers, so core's. */
   LLM_SCHEMA_INVALID: 'LLM_SCHEMA_INVALID',
-  /** The screenwriter asked for one language and the model wrote in another, twice. */
+  /** A model was asked for one language and wrote in another, twice (core/ai/structured-completion). */
   LLM_LANGUAGE_MISMATCH: 'LLM_LANGUAGE_MISMATCH',
   TTS_UPSTREAM: 'TTS_UPSTREAM',
   TTS_AUDIO_UNREADABLE: 'TTS_AUDIO_UNREADABLE',
-  TTS_VOICE_LANGUAGE_MISMATCH: 'TTS_VOICE_LANGUAGE_MISMATCH',
-  /** The aligner could not run or returned nothing usable. */
-  ALIGN_FAILED: 'ALIGN_FAILED',
-  /** The Captions node got a voice-over without word timings. */
-  CAPTIONS_NO_WORDS: 'CAPTIONS_NO_WORDS',
-  FACTS_NOT_CONNECTED: 'FACTS_NOT_CONNECTED',
   IR_INVALID: 'IR_INVALID',
   IR_VERSION_UNSUPPORTED: 'IR_VERSION_UNSUPPORTED',
   ENGINE_NOT_READY: 'ENGINE_NOT_READY',
   ENGINE_SCENE_UNSUPPORTED: 'ENGINE_SCENE_UNSUPPORTED',
-  EXPORT_FAILED: 'EXPORT_FAILED',
-  EXPORT_CANCELLED: 'EXPORT_CANCELLED',
   NODE_BYPASSED_UPSTREAM: 'NODE_BYPASSED_UPSTREAM',
   GRAPH_CYCLE: 'GRAPH_CYCLE',
   GRAPH_PORT_UNCONNECTED: 'GRAPH_PORT_UNCONNECTED',

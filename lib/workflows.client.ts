@@ -1,10 +1,12 @@
 'use client';
 import type { TemplateDefinition } from '@/core/templates/registry';
-import type { Graph } from '@/core/engine/graph';
 
 /** The browser's side of the workflow files (server/workflows.ts). Thin: every function is one request. */
 
 export interface WorkflowSummary { id: string; name: TemplateDefinition['name']; description?: TemplateDefinition['description']; category: string; updatedAt: string; nodes: number }
+
+/** A file that had to be brought forward reports what changed, so the person is told, not surprised. */
+export type WorkflowRead = TemplateDefinition & { migrations?: { code: string; message: string; nodeId?: string }[] };
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -16,7 +18,7 @@ const post = (body: unknown, method = 'POST'): RequestInit => ({ method, headers
 
 export const workflowsApi = {
   list: () => json<{ workflows: WorkflowSummary[] }>('/api/workflows').then((r) => r.workflows),
-  read: (id: string) => json<TemplateDefinition>(`/api/workflows/${encodeURIComponent(id)}`),
+  read: (id: string) => json<WorkflowRead>(`/api/workflows/${encodeURIComponent(id)}`),
   save: (def: Omit<TemplateDefinition, 'category'> & { category?: string }) => json<TemplateDefinition>('/api/workflows', post(def)),
   replace: (id: string, def: Omit<TemplateDefinition, 'id' | 'category'> & { category?: string }) => json<TemplateDefinition>(`/api/workflows/${encodeURIComponent(id)}`, post(def, 'PUT')),
   remove: (id: string) => json<{ deleted: boolean }>(`/api/workflows/${encodeURIComponent(id)}`, { method: 'DELETE' }),

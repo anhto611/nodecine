@@ -54,7 +54,7 @@ export function buildScreenwriterPrompt(p: PromptInput): string {
     // though the words on screen come from the same data without passing through the model.
     if (!s.item) return [head];
     const fields = Object.entries(s.item)
-      .filter(([k, v]) => v !== null && v !== '' && !/^\/api\/assets\//.test(String(v)))
+      .filter(([, v]) => v !== null && v !== '' && !/^\/api\/assets\//.test(String(v)))
       .map(([k, v]) => `${k}: ${String(v).slice(0, 400)}`);
     return [head, ...fields.map((f) => `     ${f}`)];
   });

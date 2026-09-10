@@ -1,0 +1,13 @@
+{
+  "id": "format-2-retired-nodes",
+  "name": "A workflow from before the Illustrator replaced the Art Director",
+  "category": "mine",
+  "schemaVersion": 2,
+  "graph": {
+    "nodes": [
+      { "id": "art", "type": "core/art-director", "params": { "stages": [], "tone": "calm" }, "bypassed": false, "position": { "x": 0, "y": 0 } },
+      { "id": "cover", "type": "core/cover-export", "params": { "fileName": "cover.png" }, "bypassed": false, "position": { "x": 200, "y": 0 } }
+    ],
+    "edges": []
+  }
+}

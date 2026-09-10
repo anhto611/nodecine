@@ -56,10 +56,13 @@ describe('workflow files', () => {
     expect((await readWorkflow(CURRENT_WORKFLOW_ID))?.name).toBe('canvas');
   });
 
-  it('does not read a file from another schema version (no migrators), and leaves it on disk', async () => {
+  it('refuses a file from another schema version (no migrators), says so, and leaves it on disk', async () => {
     const other = { id: 'other', name: 'Other', category: 'mine', schemaVersion: PROJECT_SCHEMA_VERSION + 1, graph: { nodes: [], edges: [] } };
     await writeFile(path.join(dir, 'other.json'), JSON.stringify(other));
-    expect(await readWorkflow('other')).toBeNull();
+    // Refused with a reason, not with `null`: `null` means "no such file", and a person who clicked
+    // a workflow that is right there needs to be told why it did not open.
+    await expect(readWorkflow('other')).rejects.toMatchObject({ code: 'WORKFLOW_VERSION_UNSUPPORTED' });
+    // The list still skips it rather than falling over.
     expect((await listWorkflows()).some((w) => w.id === 'other')).toBe(false);
     expect((await readFile(path.join(dir, 'other.json'), 'utf8')).length).toBeGreaterThan(0);
   });
@@ -73,5 +76,30 @@ describe('workflow files', () => {
   it('makes a file-safe id from a name', () => {
     expect(workflowIdFor('Video giới thiệu #1', 1000)).toBe('video-gioi-thieu-1-rs');
     expect(workflowIdFor('   ', 1000)).toBe('workflow-rs');
+  });
+});
+
+describe('a workflow file that will not open', () => {
+  const write = (id: string, body: string) => writeFile(path.join(dir, `${id}.json`), body, 'utf8');
+
+  it('says the file is simply not there', async () => {
+    // The one case that is not a failure: nothing to report beyond "no such workflow".
+    expect(await readWorkflow('never-saved')).toBeNull();
+  });
+
+  it('says which format it was saved in, and which this build reads', async () => {
+    await write('from-the-future', JSON.stringify({ id: 'from-the-future', name: 'Old', category: 'mine', graph, schemaVersion: PROJECT_SCHEMA_VERSION + 7 }));
+    await expect(readWorkflow('from-the-future')).rejects.toMatchObject({ code: 'WORKFLOW_VERSION_UNSUPPORTED' });
+    await expect(readWorkflow('from-the-future')).rejects.toThrow(String(PROJECT_SCHEMA_VERSION + 7));
+  });
+
+  it('says what is wrong with a file that is not a workflow', async () => {
+    await write('half-written', '{"id": "half-written", "nam');
+    await expect(readWorkflow('half-written')).rejects.toMatchObject({ code: 'WORKFLOW_MALFORMED' });
+
+    await write('no-graph', JSON.stringify({ id: 'no-graph', name: 'No graph', category: 'mine', schemaVersion: PROJECT_SCHEMA_VERSION }));
+    await expect(readWorkflow('no-graph')).rejects.toMatchObject({ code: 'WORKFLOW_MALFORMED' });
+    // The message names the field, so the reason reaches the panel instead of a blank shrug.
+    await expect(readWorkflow('no-graph')).rejects.toThrow(/graph/);
   });
 });

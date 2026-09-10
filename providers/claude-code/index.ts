@@ -2,8 +2,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { z, type ZodTypeAny } from 'zod';
+import { claudeCodeSettings } from './settings';
 import { registerLLMProvider } from '@/core/providers/registry';
 import { ErrorCode } from '@/core/errors';
+import { extractJson } from '@/core/ai/structured-completion';
 import type { LLMProvider } from '@/core/providers/types';
 import type { Capability, LLMRef } from '@/core/types/payloads';
 import { exec, findBinary } from '@/server/exec';
@@ -85,21 +87,11 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
   };
 }
 
-/** Models sometimes wrap JSON in a code fence; take the outermost braces. */
-export function extractJson(text: string): string {
-  const fence = /```(?:json)?\s*([\s\S]*?)```/.exec(text);
-  const body = fence ? fence[1]! : text;
-  const start = body.indexOf('{');
-  const end = body.lastIndexOf('}');
-  return start >= 0 && end > start ? body.slice(start, end + 1) : body;
-}
-
 export function registerClaudeCode(): void {
   registerLLMProvider({
     id: CLAUDE_CODE_ID,
     displayName: 'Claude Code',
     factory: createClaudeCodeProvider,
-    settingsSchema: z.object({ model: z.string().optional() }),
-    defaultSettings: {},
+    settingsSchema: claudeCodeSettings,
   });
 }

@@ -1,0 +1,1 @@
+{"id": "system-tts", "kind": "tts", "register": "registerSystemTts", "settings": "systemTtsSettings", "widgets": "systemTtsWidgets", "translations": "systemTtsTranslations"}

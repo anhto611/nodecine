@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createPiperProvider, lengthScaleFor, parsePiperVoice, voicesDir } from '../piper';
+import { createPiperProvider, lengthScaleFor, parsePiperVoice, voicesDir } from '..';
 
 const OLD = { ...process.env };
 afterEach(() => {

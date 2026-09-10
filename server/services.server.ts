@@ -4,11 +4,10 @@ import type { NodeServices } from '@/core/engine/services';
 import { getLLMProviderFactory, getTTSProviderFactory } from '@/core/providers/registry';
 import { getEngineFactory } from '@/core/adapters/registry';
 import { makeEngineRef } from '@/core/adapters/types';
-import { buildTTSRef } from '@/providers/system-tts';
-import { fileNameFromAssetUrl, mediaUrl } from '@/server/paths';
+import { buildTTSRef } from '@/core/providers/types';
 import { ensureServerRegistrations } from '@/server/register';
 import { embedWorkflow } from '@/server/video-meta';
-import { ensureTmpDir, fileNameFromMediaUrl, mediaPath } from '@/server/paths';
+import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
 import { NODE_SERVICE_EXTENSIONS } from '@/nodes/.generated/server';
 import { concatMp3, measureDurationSeconds } from '@/server/audio';
 import { contentHash } from '@/core/hash';
@@ -26,7 +25,9 @@ export function llmCacheDir(): string {
 export function createServerServices(opts: { workflow?: () => { name: string; graph: unknown } | null } = {}): NodeServices {
   ensureServerRegistrations();
   const extensions = Object.assign({}, ...NODE_SERVICE_EXTENSIONS) as Record<string, (...args: unknown[]) => Promise<unknown>>;
-  const services: Partial<NodeServices> = {
+  // Typed as the interface itself, not a Partial cast to it: a method dropped from here is a
+  // compile error, the way losing `align` from the services was not.
+  const services: NodeServices = {
     async invoke<T>(serviceId: string, args: unknown[]): Promise<T> {
       const service = extensions[serviceId];
       if (!service) throw new Error(`unknown node service ${serviceId}`);
@@ -60,8 +61,10 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
     async complete<S extends ZodTypeAny>(ref: { providerId: string; settings: Record<string, unknown> }, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean }): Promise<z.infer<S>> {
       const f = getLLMProviderFactory(ref.providerId);
       if (!f) throw Object.assign(new Error(`unknown llm provider ${ref.providerId}`), { code: 'PROVIDER_NOT_CONNECTED' });
-      // The same prompt to the same provider is the same answer (EXECUTION_ENGINE §3): kept on disk, never in the graph.
-      const file = path.join(llmCacheDir(), `${contentHash({ providerId: ref.providerId, prompt })}.json`);
+      // The same prompt to the same provider *set up the same way* is the same answer
+      // (EXECUTION_ENGINE §3): kept on disk, never in the graph. The settings belong in the key —
+      // without them, switching the model on the Provider node handed back the old model's answer.
+      const file = path.join(llmCacheDir(), `${contentHash({ providerId: ref.providerId, settings: ref.settings, prompt })}.json`);
       if (!opts?.fresh) {
         const hit = await fs.readFile(file, 'utf8').then((t) => JSON.parse(t) as unknown, () => undefined);
         if (hit !== undefined) {
@@ -109,5 +112,5 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       return result;
     },
   };
-  return services as NodeServices;
+  return services;
 }

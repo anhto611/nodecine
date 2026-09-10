@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ErrorCode } from '@/core/errors';
+import { TtsErrorCode } from './errors';
 import type { AudioScript, TTSRef, Voice } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 
@@ -49,7 +50,7 @@ export const ttsEngine: NodeDefinition<typeof Params> = {
     const ref = inputs.tts!.payload as TTSRef;
     const { voice, fallback } = pickVoice(ref, script.language, params.voice);
     if (fallback) {
-      log('warn', `no voice for "${script.language}", using fallback "${voice.displayName}"`, ErrorCode.TTS_VOICE_LANGUAGE_MISMATCH);
+      log('warn', `no voice for "${script.language}", using fallback "${voice.displayName}"`, TtsErrorCode.TTS_VOICE_LANGUAGE_MISMATCH);
     }
     log('info', `voice=${voice.id} speed=${params.speed}`);
     const segments = script.segments?.filter((s) => s.trim()) ?? [];

@@ -1,1 +1,1 @@
-{"id": "core/github-fetcher", "definition": "githubFetcher", "body": "GithubFetcherBody", "icon": "branch", "group": "source", "translations": "githubFetcherTranslations"}
+{"id": "core/github-fetcher", "definition": "githubFetcher", "body": "GithubFetcherBody", "icon": "branch", "group": "source", "translations": "githubFetcherTranslations", "errors": "GithubErrorCode"}

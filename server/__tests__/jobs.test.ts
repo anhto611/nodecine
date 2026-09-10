@@ -131,3 +131,27 @@ describe('JobHub', () => {
     expect(JSON.parse(await readFile(path.join(dir, 'job-stale.json'), 'utf8')).status).toBe('cancelled');
   });
 });
+
+describe('JobHub on a cold process', () => {
+  let dir: string;
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'nodecine-jobs-cold-'));
+    process.env.NODECINE_JOBS_DIR = dir;
+    // Nothing registered: exactly what a freshly started server looks like before a request lands.
+    _resetNodeRegistry();
+    _resetCodeRenderers();
+  });
+  afterEach(async () => {
+    delete process.env.NODECINE_JOBS_DIR;
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('registers the node types before it reads a graph against them', () => {
+    const hub = new JobHub(() => makeFakeServices());
+    // Registration used to happen inside the executor's services, which are built after this
+    // validation: the first submission a server ever saw called every node NODE_TYPE_UNKNOWN.
+    const job = hub.submit({ key: 'cold-1', kind: 'run', graph: graph(), name: 'Static' });
+    expect(job.status).toBe('pending');
+    hub.cancel(job.id);
+  });
+});

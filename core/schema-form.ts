@@ -1,11 +1,12 @@
 import type { ZodTypeAny } from 'zod';
 
 /**
- * A node's parameter form, read off its Zod schema (ARCHITECTURE §2): the schema already says a
- * codec is one of two values, a count sits between 8 and 80, a title is a string — so the body
- * need not say it again in JSX. Bodies call `FormBody`; this file is the schema reading, pure so
- * it can be tested without React. Kinds the form cannot draw (records, arrays, objects) are left
- * out, and the body draws those by hand.
+ * A form read off a Zod schema (ARCHITECTURE §2): the schema already says a codec is one of two
+ * values, a count sits between 8 and 80, a title is a string — so nothing else need say it again in
+ * JSX. Node bodies reach it through `FormBody`; the provider nodes draw their chosen provider's
+ * settings from the same reading, which is why it sits in core rather than in `nodes/`. Pure, so it
+ * can be tested without React. Kinds a form cannot draw (records, arrays, objects) are left out and
+ * are drawn by hand.
  */
 export type FormField =
   | { name: string; kind: 'text'; optional: boolean; max?: number; defaultValue?: string }

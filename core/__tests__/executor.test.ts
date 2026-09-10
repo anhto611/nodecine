@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import { validateGraph, GraphInvalidError, type Graph } from '../engine/graph';
-import { _resetNodeRegistry } from '../nodes/definition';
+import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition } from '../nodes/definition';
+import { canTransition } from '../engine/state';
 import { registerNodes } from '@/nodes';
 import { _resetCodeRenderers, registerCodeRenderer } from '../visual/renderers';
 import staticScriptJson from '@/lib/first-run.json';
@@ -259,5 +261,67 @@ describe('errors and cancellation', () => {
     const { executor, graph } = setup();
     graph.edges = graph.edges.filter((e) => e.id !== 'e2');
     await expect(executor.run()).rejects.toThrow(GraphInvalidError);
+  });
+});
+
+describe('a run always ends', () => {
+  const boomGraph = (): Graph => ({ nodes: [{ id: 'boom', type: 'test/boom', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] });
+
+  /** A node capsule with a bug in it: `preflight` is called outside the guard that catches a failing `run`. */
+  function withThrowingPreflight() {
+    const { services } = setup();
+    registerNodeType({
+      type: 'test/boom',
+      version: 1,
+      kind: 'source',
+      inputs: [],
+      outputs: [],
+      paramsSchema: z.object({}),
+      defaultParams: {},
+      preflight: () => { throw new Error('preflight blew up'); },
+      run: async () => ({}),
+    } as unknown as AnyNodeDefinition);
+    return new Executor(boomGraph(), services);
+  }
+
+  it('a throw escaping the run leaves the executor free to run again', async () => {
+    const executor = withThrowingPreflight();
+    await expect(executor.run()).rejects.toThrow('preflight blew up');
+    expect(executor.isRunning()).toBe(false);
+    // Before, `abort` stayed set and every later run answered "A run is already in progress"
+    // until the server was restarted.
+    await expect(executor.run()).rejects.toThrow('preflight blew up');
+  });
+
+  it('params the schema refuses fail their own node, not the run', async () => {
+    const { services, graph } = setup();
+    graph.nodes.find((n) => n.id === 'assembler')!.params.fps = 0;
+    const executor = new Executor(graph, services);
+    const state = await executor.runNode('assembler');
+    expect(state).toBe('error');
+    expect(executor.runtime('assembler').error?.code).toBe('NODE_PARAMS_INVALID');
+    expect(executor.isRunning()).toBe(false);
+  });
+});
+
+describe('the node state machine', () => {
+  it('knows which changes have a path and which do not', () => {
+    expect(canTransition('running', 'success')).toBe(true);
+    // The signature cache answers from `queued` without ever running.
+    expect(canTransition('queued', 'success')).toBe(true);
+    // Bypassing, un-bypassing and queueing are things a person does, reachable from anywhere.
+    expect(canTransition('error', 'bypassed')).toBe(true);
+    expect(canTransition('error', 'queued')).toBe(true);
+    // Nothing reaches a result without passing through the queue first.
+    expect(canTransition('idle', 'success')).toBe(false);
+    expect(canTransition('error', 'running')).toBe(false);
+    expect(canTransition('bypassed', 'error')).toBe(false);
+  });
+
+  it('the executor refuses a state change with no path, under test', () => {
+    const { executor } = setup();
+    // `setState` is private on purpose; this reaches it the way a new code path would.
+    const setState = (executor as unknown as { setState: (id: string, patch: { state: string }) => void }).setState.bind(executor);
+    expect(() => setState('script', { state: 'success' })).toThrow(/illegal state change on script: idle → success/);
   });
 });

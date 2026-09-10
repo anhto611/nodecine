@@ -35,19 +35,34 @@ export function initialRuntime(bypassed: boolean): NodeRuntime {
   return { state: bypassed ? 'bypassed' : 'idle', outputs: {}, reused: false };
 }
 
-/** Allowed transitions (EXECUTION_ENGINE §1 table). */
+/**
+ * Where a node may go next (EXECUTION_ENGINE §1 table). The executor checks this on every state it
+ * writes, outside production, so a state change with no path to it shows up as a warning in the log
+ * bar rather than as a badge nobody can explain.
+ *
+ * The user-facing table in the spec lists what *running* a node produces. These three are what a
+ * person does to the node instead, and they are reachable from anywhere: bypassing it, un-bypassing
+ * it, and putting it in the queue — every non-bypassed node is queued at the top of a run, whatever
+ * it was before.
+ */
+const FROM_ANYWHERE: NodeState[] = ['bypassed', 'idle', 'queued'];
+
 const TRANSITIONS: Record<NodeState, NodeState[]> = {
-  idle: ['queued', 'blocked', 'bypassed'],
-  queued: ['running', 'blocked', 'idle', 'cancelled'],
+  idle: ['blocked'],
+  /**
+   * `success` without running is the signature cache: the node is reused, not executed. `error`
+   * without running is a node type that is not registered, or params the schema refuses.
+   */
+  queued: ['running', 'success', 'blocked', 'error', 'cancelled'],
   running: ['success', 'error', 'cancelled'],
-  success: ['stale', 'queued', 'blocked', 'bypassed'],
-  stale: ['queued', 'blocked', 'bypassed'],
-  error: ['queued', 'bypassed'],
-  blocked: ['queued', 'idle', 'stale', 'bypassed'],
-  cancelled: ['queued', 'bypassed', 'stale'],
-  bypassed: ['queued', 'idle', 'stale'],
+  success: ['stale', 'blocked'],
+  stale: ['blocked'],
+  error: [],
+  blocked: ['stale'],
+  cancelled: ['stale'],
+  bypassed: [],
 };
 
 export function canTransition(from: NodeState, to: NodeState): boolean {
-  return from === to || TRANSITIONS[from].includes(to);
+  return from === to || FROM_ANYWHERE.includes(to) || TRANSITIONS[from].includes(to);
 }

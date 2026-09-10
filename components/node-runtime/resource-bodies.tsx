@@ -6,7 +6,7 @@ import { Kv, Dot, useT, stopFlow } from '@/components/ui';
 import { useRuntime, useStudio } from '@/store/useStudio';
 import { findProvider, providersOfKind } from '@/providers/installed';
 import { useParams, type BodyProps } from '@/nodes/kit';
-import { FormBody } from '@/nodes/form-body';
+import { FormBody, SchemaControl } from '@/nodes/form-body';
 
 /**
  * One capability, as a row: a label and a word. The reason a capability is unavailable is a
@@ -41,8 +41,9 @@ function capIssues(payload: unknown, keys: string[]): { reason?: string; fix?: s
 }
 
 /**
- * One body for both provider nodes: pick the provider, then whatever fields that provider declares.
- * The picker and the fields come from `providers/installed.ts`, so a new provider needs no UI work.
+ * One body for both provider nodes: pick the provider, then whatever fields that provider's settings
+ * schema declares, drawn by the same control a node's own form uses. A new provider is a folder with
+ * a manifest and a schema; no UI work, and no list to keep in step.
  */
 export const ProviderBody: React.FC<BodyProps & { kind: 'tts' | 'llm' }> = ({ nodeId, kind }) => {
   const t = useT();
@@ -88,18 +89,8 @@ export const ProviderBody: React.FC<BodyProps & { kind: 'tts' | 'llm' }> = ({ no
       )}
       {kind === 'tts' && <Kv k={t('node.voices')} v={ref ? String((ref as TTSRef).voices.length) : '—'} />}
       {chosen?.fields.map((f) => (
-        <Kv key={f.name} k={t(f.label)} v={
-          f.type === 'number' ? (
-            <input className={`nc-input ${stopFlow}`} type="number" style={{ width: 70 }} min={f.min} max={f.max} step={f.step}
-              value={String(settings[f.name] ?? '')} onChange={(e) => setSetting(f.name, e.target.value === '' ? undefined : Number(e.target.value))} />
-          ) : f.type === 'select' ? (
-            <select className={`nc-select ${stopFlow}`} value={String(settings[f.name] ?? '')} onChange={(e) => setSetting(f.name, e.target.value)}>
-              {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          ) : (
-            <input className={`nc-input ${stopFlow}`} placeholder={f.placeholder}
-              value={String(settings[f.name] ?? '')} onChange={(e) => setSetting(f.name, e.target.value || undefined)} />
-          )
+        <Kv key={f.name} k={t(`node.${f.name}`)} v={
+          <SchemaControl field={f} widget={chosen.widgets[f.name] ?? {}} value={settings[f.name]} onChange={(v) => setSetting(f.name, v)} />
         } />
       ))}
       <div className="nc-hint">{t('node.probeEveryRun')}</div>

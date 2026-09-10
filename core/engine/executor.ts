@@ -12,7 +12,7 @@ import {
   GraphInvalidError,
   type Graph,
 } from './graph';
-import { initialRuntime, type NodeRuntime, type NodeState } from './state';
+import { canTransition, initialRuntime, type NodeRuntime, type NodeState } from './state';
 import { computeSignature } from './signature';
 import { LogBuffer } from './log';
 import type { NodeServices } from './services';
@@ -100,6 +100,15 @@ export class Executor {
   private setState(nodeId: string, patch: Partial<NodeRuntime> & { state?: NodeState }): NodeRuntime {
     const prev = this.runtime(nodeId);
     const next: NodeRuntime = { ...prev, ...patch };
+    // The state machine is a spec only as long as something reads it, and until now nothing did.
+    // Under test it is an assertion, so a new path that skips a state fails the suite that added it.
+    // In development it is a line in the log bar: a badge nobody can explain says where it came
+    // from. In production, nothing — a wrong badge must never take a good run down with it.
+    if (process.env.NODE_ENV !== 'production' && !canTransition(prev.state, next.state)) {
+      const message = `illegal state change on ${nodeId}: ${prev.state} → ${next.state}`;
+      if (process.env.NODE_ENV === 'test') throw new Error(message);
+      this.log(nodeId, 'warn', message);
+    }
     this.runtimes.set(nodeId, next);
     this.hooks.onStateChange?.(nodeId, next);
     return next;
@@ -151,27 +160,36 @@ export class Executor {
     let ok = true;
     let step = 0;
     let cancelledAt: string | undefined;
-    for (const nodeId of sorted.order) {
-      const node = nodeById(this.graph, nodeId)!;
-      if (node.bypassed) {
-        this.log(nodeId, 'info', 'bypassed');
-        continue;
+    // Whatever happens in here, the run has to end: an escaping throw used to leave `abort` set, and
+    // from then on every Run answered "A run is already in progress" until the server was restarted.
+    try {
+      for (const nodeId of sorted.order) {
+        const node = nodeById(this.graph, nodeId);
+        // The canvas can push a graph while this runs; a node that left it has nothing to run.
+        if (!node) continue;
+        if (node.bypassed) {
+          this.log(nodeId, 'info', 'bypassed');
+          continue;
+        }
+        if (cancelledAt) {
+          this.setState(nodeId, { state: 'blocked', blockedBy: { kind: 'upstream', code: ErrorCode.RUN_CANCELLED, message: 'run cancelled', nodeId: cancelledAt } });
+          continue;
+        }
+        step += 1;
+        this.hooks.onStep?.({ nodeId, step, stepTotal: toRun.length });
+        const outcome = await this.executeNode(nodeId, { force: opts.force ?? false });
+        if (outcome === 'cancelled') { cancelledAt = nodeId; ok = false; }
+        else if (outcome === 'error' || outcome === 'blocked') ok = false;
       }
-      if (cancelledAt) {
-        this.setState(nodeId, { state: 'blocked', blockedBy: { kind: 'upstream', code: ErrorCode.RUN_CANCELLED, message: 'run cancelled', nodeId: cancelledAt } });
-        continue;
-      }
-      step += 1;
-      this.hooks.onStep?.({ nodeId, step, stepTotal: toRun.length });
-      const outcome = await this.executeNode(nodeId, { force: opts.force ?? false });
-      if (outcome === 'cancelled') { cancelledAt = nodeId; ok = false; }
-      else if (outcome === 'error' || outcome === 'blocked') ok = false;
+    } catch (err) {
+      ok = false;
+      throw err;
+    } finally {
+      const durationMs = this.services.now() - startedAt;
+      this.log('run', 'info', `run #${runId} ${ok ? 'finished' : 'ended with issues'} · ${durationMs}ms`);
+      this.abort = null;
+      this.hooks.onRunEnd?.({ runId, ok, durationMs });
     }
-
-    const durationMs = this.services.now() - startedAt;
-    this.log('run', 'info', `run #${runId} ${ok ? 'finished' : 'ended with issues'} · ${durationMs}ms`);
-    this.abort = null;
-    this.hooks.onRunEnd?.({ runId, ok, durationMs });
     return { ok };
   }
 
@@ -280,7 +298,16 @@ export class Executor {
       this.setState(nodeId, { state: 'error', error: { code: ErrorCode.NODE_TYPE_UNKNOWN, message: node.type, retryable: false } });
       return 'error';
     }
-    const params = def.paramsSchema.parse(node.params) as Record<string, unknown>;
+    // Params the schema refuses are this node's failure, not the run's. Throwing here took the whole
+    // run down with it, and a graph pushed mid-run is not validated per node the way a submission is.
+    const parsedParams = def.paramsSchema.safeParse(node.params);
+    if (!parsedParams.success) {
+      const message = parsedParams.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+      this.setState(nodeId, { state: 'error', error: { code: ErrorCode.NODE_PARAMS_INVALID, message, retryable: false } });
+      this.log(nodeId, 'error', message, ErrorCode.NODE_PARAMS_INVALID);
+      return 'error';
+    }
+    const params = parsedParams.data as Record<string, unknown>;
 
     const gathered = this.gatherInputs(nodeId, def, opts.single ?? false);
     if (gathered.missing) {

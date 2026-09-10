@@ -28,3 +28,18 @@ export interface TTSProvider {
 
 export type LLMProviderFactory = (settings: Record<string, unknown>) => LLMProvider;
 export type TTSProviderFactory = (settings: Record<string, unknown>) => TTSProvider;
+
+/**
+ * The packet a probed voice provider puts on its port. Beside the interface it is built from, the
+ * way `makeEngineRef` sits beside `EngineAdapter` — it is every provider's, not any one of them's.
+ */
+export function buildTTSRef(provider: TTSProvider, probe: Awaited<ReturnType<TTSProvider['probe']>>, settings: Record<string, unknown>): TTSRef {
+  return {
+    providerId: provider.providerId,
+    displayName: provider.displayName,
+    transport: provider.transport,
+    capabilities: probe.capabilities,
+    voices: probe.voices,
+    settings: { defaultVoice: settings.defaultVoice as string | undefined, rate: (settings.rate as number | undefined) ?? 1 },
+  };
+}

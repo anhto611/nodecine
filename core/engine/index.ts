@@ -5,3 +5,4 @@ export * from './services';
 export * from './log';
 export * from './history';
 export * from './executor';
+export * from './migrate';

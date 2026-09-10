@@ -9,13 +9,12 @@ import type { LLMProviderFactory, TTSProviderFactory } from './types';
  * selected, so the registry has to describe the settings as well as build the provider.
  */
 
-export interface ProviderRegistration<F> {
+export interface ProviderInstallation<F> {
   id: string;
   displayName: string;
   factory: F;
   /** Shape of `settings` for this provider; the node validates and renders from it. */
   settingsSchema: ZodTypeAny;
-  defaultSettings: Record<string, unknown>;
   /**
    * Setting names that hold a credential. Nothing reads this yet: the hosted providers take their
    * keys from the environment, so no credential sits in a graph. A provider that must carry one in
@@ -24,17 +23,26 @@ export interface ProviderRegistration<F> {
   secretSettings?: string[];
 }
 
+/** What the registry holds: the installation plus the settings a fresh node starts with. */
+export type ProviderRegistration<F> = ProviderInstallation<F> & { defaultSettings: Record<string, unknown> };
+
 export type LLMProviderRegistration = ProviderRegistration<LLMProviderFactory>;
 export type TTSProviderRegistration = ProviderRegistration<TTSProviderFactory>;
 
 const llm = new Map<string, LLMProviderRegistration>();
 const tts = new Map<string, TTSProviderRegistration>();
 
-export function registerLLMProvider(reg: LLMProviderRegistration): void {
-  llm.set(reg.id, reg);
+/** The settings a provider has when nothing is set: what its own schema says, never a second list. */
+export function defaultSettingsOf(settingsSchema: ZodTypeAny): Record<string, unknown> {
+  const parsed = settingsSchema.safeParse({});
+  return parsed.success ? (parsed.data as Record<string, unknown>) : {};
 }
-export function registerTTSProvider(reg: TTSProviderRegistration): void {
-  tts.set(reg.id, reg);
+
+export function registerLLMProvider(reg: ProviderInstallation<LLMProviderFactory>): void {
+  llm.set(reg.id, { ...reg, defaultSettings: defaultSettingsOf(reg.settingsSchema) });
+}
+export function registerTTSProvider(reg: ProviderInstallation<TTSProviderFactory>): void {
+  tts.set(reg.id, { ...reg, defaultSettings: defaultSettingsOf(reg.settingsSchema) });
 }
 
 export function getLLMProvider(id: string): LLMProviderRegistration | undefined {

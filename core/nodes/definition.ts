@@ -86,6 +86,12 @@ export interface NodeDefinition<S extends ZodTypeAny = ZodTypeAny> {
   defaultBypassed?: boolean;
   /** Continuous validation of params (EXECUTION_ENGINE §2 item 2). */
   validate?: (params: z.infer<S>) => NodeIssue[];
+  /**
+   * Bring parameters written by an older version of this node up to `version` (core/engine/migrate).
+   * Bumping `version` without writing this says the old results are stale; writing this says the old
+   * *workflows* still open. A node that only ever added optional parameters needs neither.
+   */
+  migrate?: (params: Record<string, unknown>, from: number) => Record<string, unknown>;
   /** Checked before run with the resolved inputs; a returned reason blocks the node by capability. */
   preflight?: (inputs: Record<string, Packet>, params: z.infer<S>, lists: Record<string, Packet[]>) => BlockReason | null;
   run: (ctx: RunContext<z.infer<S>>) => Promise<Record<string, unknown>>;
@@ -104,9 +110,35 @@ export function getNodeType(type: string): AnyNodeDefinition | undefined {
 export function listNodeTypes(): AnyNodeDefinition[] {
   return [...registry.values()];
 }
+/**
+ * Node types that no longer exist, and what became of them. Empty here like every other registry;
+ * `nodes/retired.json` fills it at startup. A type that is simply gone cannot be derived from
+ * anything, so it has to be written down — otherwise a workflow that used it reports an unknown
+ * node type, which tells the person nothing they can act on.
+ */
+export interface RetiredNodeType {
+  /** The type that took over, when one did. */
+  replacedBy?: string;
+  /** When it went, so the message can say so. */
+  since: string;
+}
+
+const retired = new Map<string, RetiredNodeType>();
+
+export function registerRetiredNodeType(type: string, info: RetiredNodeType): void {
+  retired.set(type, info);
+}
+export function getRetiredNodeType(type: string): RetiredNodeType | undefined {
+  return retired.get(type);
+}
+export function listRetiredNodeTypes(): [string, RetiredNodeType][] {
+  return [...retired.entries()];
+}
+
 /** Test-only. */
 export function _resetNodeRegistry(): void {
   registry.clear();
+  retired.clear();
 }
 
 /** Returns the capability object at `key` inside a reference payload, or undefined. */

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { rename, writeFile } from 'node:fs/promises';
-import { z } from 'zod';
+import { vbeeSettings } from './settings';
 import { registerTTSProvider } from '@/core/providers/registry';
 import type { SynthesizeResult, TTSProvider } from '@/core/providers/types';
 import type { Capability, Voice } from '@/core/types/payloads';
@@ -144,7 +144,6 @@ export function registerVbee(): void {
     id: VBEE_ID,
     displayName: 'Vbee',
     factory: (settings) => createVbeeProvider(settings),
-    settingsSchema: z.object({ rate: z.number().positive().default(1) }),
-    defaultSettings: { rate: 1 },
+    settingsSchema: vbeeSettings,
   });
 }

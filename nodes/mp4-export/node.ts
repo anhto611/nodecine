@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ErrorCode } from '@/core/errors';
+import { Mp4ExportErrorCode } from './errors';
 import { safeFileName } from '@/core/file-name';
 import { missingCodeRenderers } from '@/core/visual/renderers';
 import { SCENE_FORMAT, type EngineRef } from '@/core/types/payloads';
@@ -21,7 +22,18 @@ export const mp4Export: NodeDefinition<typeof Params> = {
     const ir = inputs.ir!.payload as VideoIR;
     const engine = inputs.engine!.payload as EngineRef;
     const fileName = safeFileName(params.fileName, 'nodecine.mp4');
-    const result = await services.render(engine, ir, { ...params, fileName }, (p) => progress(p.totalFrames ? p.renderedFrames / p.totalFrames : 0, `${p.renderedFrames}/${p.totalFrames}`), signal);
+    // A render is minutes of somebody's evening: when it fails, the log should say a render failed,
+    // not repeat whichever subprocess message came back up the stack under a generic code.
+    let result;
+    try {
+      result = await services.render(engine, ir, { ...params, fileName }, (p) => progress(p.totalFrames ? p.renderedFrames / p.totalFrames : 0, `${p.renderedFrames}/${p.totalFrames}`), signal);
+    } catch (e) {
+      const cause = e instanceof Error ? e.message : String(e);
+      if (signal.aborted || (e as { code?: string }).code === ErrorCode.RUN_CANCELLED) {
+        throw Object.assign(new Error(`render cancelled: ${cause}`), { code: Mp4ExportErrorCode.EXPORT_CANCELLED });
+      }
+      throw Object.assign(new Error(`${engine.displayName} could not render this film: ${cause}`), { code: Mp4ExportErrorCode.EXPORT_FAILED, retryable: true });
+    }
     log('info', `done · ${result.bytes} bytes · ${result.outputUrl}`);
     return { ...result, fileName };
   },

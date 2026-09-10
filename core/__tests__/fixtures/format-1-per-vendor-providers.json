@@ -1,0 +1,14 @@
+{
+  "id": "format-1-per-vendor-providers",
+  "name": "A workflow from before the provider nodes merged",
+  "category": "mine",
+  "schemaVersion": 1,
+  "graph": {
+    "nodes": [
+      { "id": "script", "type": "core/static-script", "params": { "scenes": [] }, "bypassed": false, "position": { "x": 0, "y": 0 } },
+      { "id": "voice", "type": "core/system-tts-provider", "params": { "rate": 1.15, "defaultVoice": "samantha" }, "bypassed": false, "position": { "x": 200, "y": 0 } },
+      { "id": "brain", "type": "core/claude-code-provider", "params": { "model": "sonnet" }, "bypassed": false, "position": { "x": 200, "y": 120 } }
+    ],
+    "edges": []
+  }
+}

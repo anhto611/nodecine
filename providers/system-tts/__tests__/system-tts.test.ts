@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import os from 'node:os';
-import { parseSayVoices, createSystemTtsProvider } from '../system-tts';
+import { parseSayVoices, createSystemTtsProvider } from '..';
 import { measureDurationSeconds } from '@/server/audio';
 
 describe('parseSayVoices', () => {

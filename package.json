@@ -6,7 +6,7 @@
   "scripts": {
     "nodes:discover": "node scripts/discover-nodes.mjs",
     "nodes:check": "node scripts/check-node-boundaries.mjs",
-    "nodes:prepare": "npm run nodes:discover && npm run nodes:check",
+    "nodes:prepare": "npm run nodes:discover && npm run providers:discover && npm run nodes:check",
     "predev": "npm run nodes:prepare",
     "dev": "next dev",
     "prebuild": "npm run nodes:prepare",
@@ -14,10 +14,14 @@
     "start": "next start",
     "pretypecheck": "npm run nodes:prepare",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "pretest": "npm run nodes:prepare",
     "test": "vitest run",
     "test:watch": "vitest",
-    "setup:align": "bash scripts/setup-align.sh"
+    "setup:align": "bash scripts/setup-align.sh",
+    "providers:discover": "node scripts/discover-providers.mjs"
   },
   "dependencies": {
     "@codemirror/lang-html": "^6.4.12",
@@ -44,11 +48,15 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.25",
     "postcss": "^8.4.0",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

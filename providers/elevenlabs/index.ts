@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { rename, writeFile } from 'node:fs/promises';
-import { z } from 'zod';
+import { elevenlabsSettings, ELEVENLABS_MODELS } from './settings';
 import { registerTTSProvider } from '@/core/providers/registry';
 import type { SynthesizeResult, TTSProvider } from '@/core/providers/types';
 import type { Capability, Voice } from '@/core/types/payloads';
@@ -22,7 +22,6 @@ import { clamp, codedError, defaultApiDeps, envFirst, exists, withTimeout, type 
  */
 
 export const ELEVENLABS_ID = 'elevenlabs';
-export const ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_turbo_v2_5', 'eleven_flash_v2_5'] as const;
 const API = 'https://api.elevenlabs.io/v1';
 const ready: Capability = { status: 'ready' };
 const KEY_HINT = 'set ELEVENLABS_API_KEY in .env.local';
@@ -112,7 +111,6 @@ export function registerElevenlabs(): void {
     id: ELEVENLABS_ID,
     displayName: 'ElevenLabs',
     factory: (settings) => createElevenlabsProvider(settings),
-    settingsSchema: z.object({ model: z.enum(ELEVENLABS_MODELS).default(ELEVENLABS_MODELS[0]), rate: z.number().positive().default(1) }),
-    defaultSettings: { model: ELEVENLABS_MODELS[0], rate: 1 },
+    settingsSchema: elevenlabsSettings,
   });
 }

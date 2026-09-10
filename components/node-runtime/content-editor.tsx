@@ -3,7 +3,7 @@ import React from 'react';
 import { CONTENT_KEYS, type ContentKey, type EntryContent, type SceneContent } from '@/core/types/payloads';
 import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
-import { uploadImage, useLibraryFile } from '@/lib/assets.client';
+import { uploadImage, takeLibraryFile } from '@/lib/assets.client';
 import { LibraryPicker, useLibrary } from '@/nodes/library-picker';
 
 /**
@@ -74,7 +74,7 @@ const ClipPick: React.FC<{ url?: string; onPick: (url: string | undefined) => vo
     if (!file) { onPick(undefined); return; }
     setBusy(true);
     setErr(null);
-    try { onPick(await useLibraryFile('clips', file)); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+    try { onPick(await takeLibraryFile('clips', file)); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   };
   return (
     <span style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>

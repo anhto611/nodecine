@@ -1,0 +1,6 @@
+.next
+.nodecine
+node_modules
+nodes/.generated
+package-lock.json
+tsconfig.tsbuildinfo

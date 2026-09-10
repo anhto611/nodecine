@@ -3,12 +3,12 @@ import path from 'node:path';
 import { writeFile, rename } from 'node:fs/promises';
 import { registerTTSProvider } from '@/core/providers/registry';
 import type { TTSProvider, SynthesizeResult } from '@/core/providers/types';
-import type { Capability, TTSRef, Voice } from '@/core/types/payloads';
+import type { Capability, Voice } from '@/core/types/payloads';
 import { exec, ExecError, findBinary } from '@/server/exec';
 import { convertToMp3, ffmpegBin, measureDurationSeconds } from '@/server/audio';
 import { ensureTmpDir } from '@/server/paths';
 import { contentHash } from '@/core/hash';
-import { z } from 'zod';
+import { systemTtsSettings } from './settings';
 
 /**
  * System TTS provider (CORE_CONTRACTS §8): the OS speech synthesizer plus ffmpeg.
@@ -111,18 +111,6 @@ export function registerSystemTts(): void {
     id: SYSTEM_TTS_ID,
     displayName: 'System voice',
     factory: createSystemTtsProvider,
-    settingsSchema: z.object({ rate: z.number().positive().default(1) }),
-    defaultSettings: { rate: 1 },
+    settingsSchema: systemTtsSettings,
   });
-}
-
-export function buildTTSRef(provider: TTSProvider, probe: Awaited<ReturnType<TTSProvider['probe']>>, settings: Record<string, unknown>): TTSRef {
-  return {
-    providerId: provider.providerId,
-    displayName: provider.displayName,
-    transport: provider.transport,
-    capabilities: probe.capabilities,
-    voices: probe.voices,
-    settings: { defaultVoice: settings.defaultVoice as string | undefined, rate: (settings.rate as number | undefined) ?? 1 },
-  };
 }

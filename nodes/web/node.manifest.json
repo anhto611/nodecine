@@ -1,1 +1,1 @@
-{"id": "core/web-fetcher", "definition": "webFetcher", "body": "WebFetcherBody", "icon": "doc", "group": "source", "translations": "webFetcherTranslations", "services": "webFetcherServices"}
+{"id": "core/web-fetcher", "definition": "webFetcher", "body": "WebFetcherBody", "icon": "doc", "group": "source", "translations": "webFetcherTranslations", "services": "webFetcherServices", "errors": "WebErrorCode"}

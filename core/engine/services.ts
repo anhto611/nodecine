@@ -31,10 +31,6 @@ export interface NodeServices {
     signal: AbortSignal,
   ): Promise<RenderResult>;
   /**
-   * Word timings for a voice-over whose text is known: forced alignment, not transcription. Returns
-   * the words of `text` in order, each with its start and end in seconds.
-   */
-  /**
    * Text kept as a file the browser can download, named by its own content (CORE_CONTRACTS §5.16).
    * `extension` is the kind of file it is — `srt`, `vtt` — and never a path.
    */

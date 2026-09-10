@@ -3,12 +3,11 @@ import type { Graph } from '@/core/engine/graph';
 import type { Locale } from './i18n';
 
 /**
- * Schema version stamped on every saved document. A document from another version is not read and
- * the app starts clean. Bump this when the saved shape changes.
+ * The saved-document format lives with the migrations that move between versions, so the browser and
+ * the server read the same number and the same chain (core/engine/migrate).
  */
-export const PROJECT_SCHEMA_VERSION = 2;
-/** The versions this build reads. */
-export const READABLE_SCHEMA_VERSIONS = [PROJECT_SCHEMA_VERSION];
+export { PROJECT_SCHEMA_VERSION } from '@/core/engine/migrate';
+import { migrateDoc, PROJECT_SCHEMA_VERSION } from '@/core/engine/migrate';
 
 export interface ProjectDoc {
   schemaVersion: number;
@@ -53,9 +52,19 @@ export function loadTabs(): TabsDoc | null {
   if (!raw) return null;
   try {
     const doc = JSON.parse(raw) as TabsDoc;
-    // Another version's tabs are not read (EXECUTION_ENGINE §7.3): the app starts clean.
-    if (!READABLE_SCHEMA_VERSIONS.includes(doc.schemaVersion) || !Array.isArray(doc.tabs)) return null;
-    return doc;
+    if (!Array.isArray(doc.tabs)) return null;
+    // The tabs somebody left open are saved graphs like any other, so an upgrade brings them
+    // forward instead of throwing the session away. A format with no way forward still starts clean.
+    return {
+      ...doc,
+      schemaVersion: PROJECT_SCHEMA_VERSION,
+      tabs: doc.tabs.map((tab) => {
+        const { doc: forward, notes } = migrateDoc({ schemaVersion: doc.schemaVersion, graph: tab.graph });
+        // A tab whose graph had to change is no longer the file it came from, so it loses the hash
+        // that says "saved"; the dot comes back and Ctrl+S writes the brought-forward version.
+        return notes.length ? { ...tab, graph: forward.graph, savedHash: undefined } : tab;
+      }),
+    };
   } catch {
     return null;
   }

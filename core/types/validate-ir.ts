@@ -1,4 +1,5 @@
-import { VideoIRSchema, type VideoIR } from './ir';
+import { IR_VERSION, VideoIRSchema, type VideoIR } from './ir';
+import { ErrorCode } from '../errors';
 
 /**
  * The five IR invariants (CORE_CONTRACTS §3.1). Runs before an IR leaves the assembler
@@ -8,6 +9,12 @@ import { VideoIRSchema, type VideoIR } from './ir';
 export type IRValidation = { ok: true } | { ok: false; violations: string[] };
 
 export function validateIR(ir: unknown): IRValidation {
+  // Asked first and on its own: an IR saved by an older build is a different failure from a
+  // malformed one, and "expected literal 2" is not a sentence anyone can act on.
+  const version = (ir as { irVersion?: unknown } | null | undefined)?.irVersion;
+  if (version !== undefined && version !== IR_VERSION) {
+    return { ok: false, violations: [`${ErrorCode.IR_VERSION_UNSUPPORTED}: this video plan is version ${String(version)}, this build reads version ${IR_VERSION}`] };
+  }
   const parsed = VideoIRSchema.safeParse(ir);
   if (!parsed.success) {
     return {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Graph } from '../engine/graph';
+import { migrateGraph } from '../engine/migrate';
 
 /**
  * Template registry (CORE_CONTRACTS §10): the pre-wired graphs the Template Browser offers.
@@ -20,6 +21,8 @@ const NodeInstanceSchema = z.object({
   params: z.record(z.string(), z.unknown()),
   bypassed: z.boolean(),
   position: z.object({ x: z.number(), y: z.number() }),
+  /** Which version of the node type wrote `params`; absent on anything saved before the stamp. */
+  version: z.number().int().positive().optional(),
 });
 const EdgeSchema = z.object({ id: z.string().min(1), source: z.string(), sourcePort: z.string(), target: z.string(), targetPort: z.string() });
 export const GraphSchema = z.object({ nodes: z.array(NodeInstanceSchema), edges: z.array(EdgeSchema) });
@@ -51,9 +54,13 @@ export function listTemplates(): TemplateDefinition[] {
   return [...templates.values()];
 }
 
-/** A fresh copy of the graph, so editing the canvas never edits the template. */
+/**
+ * A fresh copy of the graph, so editing the canvas never edits the template. Brought forward on the
+ * way out: a template shipped in the repo goes stale exactly as a user's file does, and it should
+ * not be the one graph in the app that is allowed to be behind.
+ */
 export function templateGraph(def: TemplateDefinition): Graph {
-  return structuredClone(def.graph);
+  return migrateGraph(structuredClone(def.graph)).graph;
 }
 
 export function localized(text: LocalizedText | undefined, locale: string, fallback = ''): string {

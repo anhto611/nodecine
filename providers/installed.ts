@@ -1,95 +1,33 @@
+import type { ZodTypeAny } from 'zod';
+import type { FormField } from '@/core/schema-form';
+import type { FieldWidget } from '@/nodes/form-body';
+import { PROVIDERS } from './.generated/descriptors';
+
 /**
- * The providers this build ships, described in a form both sides can read.
+ * The providers this build ships, in a form both sides can read.
  *
- * The factories themselves are server-only: they spawn processes and touch the filesystem. But the
- * Studio needs to render the list and the fields of whichever provider is selected, so the shape of
- * each provider lives here, in a module with no Node imports, and the heavy half stays in
- * `installed.server.ts`. One node per port type then covers every provider, the way ComfyUI's Load
- * Checkpoint covers every checkpoint.
+ * The factories are server-only: they spawn processes and touch the filesystem. The Studio still has
+ * to render the list and the fields of whichever provider is selected, so each capsule keeps its
+ * `settings.ts` free of Node imports and the generated descriptors are built from those — the same
+ * schema the server validates against, read into fields by `core/schema-form`. One node per port
+ * type then covers every provider, the way ComfyUI's Load Checkpoint covers every checkpoint.
  */
-
-export type SettingField =
-  /** `label` and `placeholder` are dictionary keys, not literals. */
-  | { name: string; label: string; type: 'number'; min?: number; max?: number; step?: number }
-  | { name: string; label: string; type: 'text'; placeholder?: string }
-  | { name: string; label: string; type: 'select'; options: { value: string; label: string }[] };
-
 export interface ProviderDescriptor {
   id: string;
   kind: 'tts' | 'llm';
-  /** Dictionary key for the name shown in the picker; the id is the fallback. */
+  /** Dictionary key for the name shown in the picker; the capsule's own locales carry it. */
   nameKey: string;
   /** Dictionary key for the line under the picker: what this provider needs to work. */
-  noteKey?: string;
-  fields: SettingField[];
+  noteKey: string;
+  settingsSchema: ZodTypeAny;
   defaultSettings: Record<string, unknown>;
-  /**
-   * Settings that hold a credential. Still empty everywhere: the hosted voices (ElevenLabs, Vbee)
-   * read their keys from the environment, so no credential ever sits in a graph.
-   */
-  secretSettings?: string[];
+  /** Read off `settingsSchema`, never written by hand. */
+  fields: FormField[];
+  /** What the schema alone cannot say about drawing a field: a step, a placeholder. */
+  widgets: Record<string, FieldWidget>;
 }
 
-const RATE_FIELD: SettingField = { name: 'rate', label: 'node.rate', type: 'number', min: 0.5, max: 2, step: 0.05 };
-
-export const PROVIDERS: ProviderDescriptor[] = [
-  {
-    id: 'system-tts',
-    kind: 'tts',
-    nameKey: 'provider.system-tts',
-    noteKey: 'provider.system-tts.note',
-    fields: [RATE_FIELD],
-    defaultSettings: { rate: 1 },
-  },
-  {
-    id: 'piper',
-    kind: 'tts',
-    nameKey: 'provider.piper',
-    noteKey: 'provider.piper.note',
-    fields: [RATE_FIELD],
-    defaultSettings: { rate: 1 },
-  },
-  {
-    id: 'elevenlabs',
-    kind: 'tts',
-    nameKey: 'provider.elevenlabs',
-    noteKey: 'provider.elevenlabs.note',
-    fields: [
-      { name: 'model', label: 'node.model', type: 'select', options: [
-        { value: 'eleven_multilingual_v2', label: 'Multilingual v2' },
-        { value: 'eleven_turbo_v2_5', label: 'Turbo v2.5' },
-        { value: 'eleven_flash_v2_5', label: 'Flash v2.5' },
-      ] },
-      { name: 'rate', label: 'node.rate', type: 'number', min: 0.7, max: 1.2, step: 0.05 },
-    ],
-    defaultSettings: { model: 'eleven_multilingual_v2', rate: 1 },
-  },
-  {
-    id: 'vbee',
-    kind: 'tts',
-    nameKey: 'provider.vbee',
-    noteKey: 'provider.vbee.note',
-    fields: [RATE_FIELD],
-    defaultSettings: { rate: 1 },
-  },
-  {
-    id: 'claude-code',
-    kind: 'llm',
-    nameKey: 'provider.claude-code',
-    noteKey: 'provider.claude-code.note',
-    fields: [{ name: 'model', label: 'node.model', type: 'text', placeholder: 'default' }],
-    defaultSettings: {},
-  },
-  {
-    id: 'ollama',
-    kind: 'llm',
-    nameKey: 'provider.ollama',
-    noteKey: 'provider.ollama.note',
-    fields: [{ name: 'model', label: 'node.model', type: 'text', placeholder: 'llama3.2' }],
-    defaultSettings: { model: 'llama3.2' },
-  },
-];
-
+export { PROVIDERS };
 export const providersOfKind = (kind: 'tts' | 'llm'): ProviderDescriptor[] => PROVIDERS.filter((p) => p.kind === kind);
 export const findProvider = (id: string): ProviderDescriptor | undefined => PROVIDERS.find((p) => p.id === id);
 /** What a freshly dropped node should select. */

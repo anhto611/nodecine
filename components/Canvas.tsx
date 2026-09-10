@@ -114,7 +114,7 @@ function CanvasInner() {
         animated: edgeKind(graph, e) === 'resource',
         className: `${edgeKind(graph, e) === 'resource' ? 'nc-edge-resource' : 'nc-edge-flow'} ${runtimes[e.source]?.outputs[e.sourcePort] && runtimes[e.source]?.state === 'success' ? 'active' : ''}`,
       })),
-    [graph.edges, runtimes],
+    [graph, runtimes],
   );
 
   const onNodesChange = (changes: NodeChange<Node>[]) => {

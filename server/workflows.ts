@@ -1,7 +1,9 @@
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { TemplateDefinitionSchema, type TemplateDefinition } from '@/core/templates/registry';
-import { PROJECT_SCHEMA_VERSION, READABLE_SCHEMA_VERSIONS } from '@/lib/storage';
+import { PROJECT_SCHEMA_VERSION } from '@/lib/storage';
+import { migrateDoc, stampVersions, type SavedDoc } from '@/core/engine/migrate';
+import { ensureServerRegistrations } from '@/server/register';
 
 /**
  * Workflows as files on the server (CORE_CONTRACTS §10.1) — the way ComfyUI keeps a user's
@@ -20,6 +22,8 @@ export const MAX_WORKFLOW_BYTES = 4_000_000;
 export interface WorkflowFile extends TemplateDefinition {
   schemaVersion: number;
   updatedAt: string;
+  /** What had to change for this file to open today; absent when nothing did. */
+  migrations?: { code: string; message: string; nodeId?: string }[];
 }
 export type WorkflowSummary = Pick<WorkflowFile, 'id' | 'name' | 'description' | 'category' | 'updatedAt'> & { nodes: number };
 
@@ -38,9 +42,16 @@ function fileFor(id: string): string {
 
 /** Validate an incoming definition and stamp it; `category` defaults to `mine`. */
 export function toWorkflowFile(input: unknown, now = new Date()): WorkflowFile {
+  ensureServerRegistrations();
   const raw = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>;
   const def = TemplateDefinitionSchema.parse({ category: 'mine', ...raw });
-  return { ...def, schemaVersion: PROJECT_SCHEMA_VERSION, updatedAt: now.toISOString() };
+  const from = typeof raw.schemaVersion === 'number' ? raw.schemaVersion : PROJECT_SCHEMA_VERSION;
+  // An imported file is brought forward here, once, on its way to disk. Stamping it current without
+  // migrating it would be worse than refusing it: the file would look right and be wrong.
+  const { doc, notes } = migrateDoc({ ...def, schemaVersion: from } as SavedDoc);
+  // Every node goes to disk carrying the version that wrote its parameters. A later build cannot
+  // bring anything forward without knowing what it is looking at.
+  return { ...def, graph: stampVersions(doc.graph), schemaVersion: PROJECT_SCHEMA_VERSION, updatedAt: now.toISOString(), ...(notes.length ? { migrations: notes } : {}) };
 }
 
 async function readFileAs(p: string): Promise<WorkflowFile | null> {
@@ -51,11 +62,31 @@ async function readFileAs(p: string): Promise<WorkflowFile | null> {
     if ((e as { code?: string }).code === 'ENOENT') return null;
     throw e;
   }
-  const doc = JSON.parse(text) as Partial<WorkflowFile>;
-  // A file from a version this build reads is brought forward as it is parsed (the graph schema migrates); any other version is not a workflow this app can open.
-  if (typeof doc.schemaVersion === 'number' && !READABLE_SCHEMA_VERSIONS.includes(doc.schemaVersion)) return null;
-  const def = TemplateDefinitionSchema.parse(doc);
-  return { ...def, schemaVersion: PROJECT_SCHEMA_VERSION, updatedAt: typeof doc.updatedAt === 'string' ? doc.updatedAt : new Date(0).toISOString() };
+  // Three different things can be wrong with a file, and only one of them means "there is no such
+  // file". Collapsing all three into `null` is what made a workflow that would not open do nothing
+  // at all when it was clicked: no message, no reason, no way to tell a stale file from a broken one.
+  let doc: Partial<WorkflowFile>;
+  try {
+    doc = JSON.parse(text) as Partial<WorkflowFile>;
+  } catch (e) {
+    throw Object.assign(new Error(`this file is not JSON: ${e instanceof Error ? e.message : String(e)}`), { code: 'WORKFLOW_MALFORMED' });
+  }
+  // The node types have to be known before a graph can be brought forward against them.
+  ensureServerRegistrations();
+  const parsed = TemplateDefinitionSchema.safeParse(doc);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    throw Object.assign(new Error(`${first?.path.join('.') || 'file'}: ${first?.message ?? 'not a workflow'}`), { code: 'WORKFLOW_MALFORMED' });
+  }
+  // Throws DocVersionUnsupportedError, which carries the same code the route already reports.
+  const { doc: forward, notes } = migrateDoc({ ...parsed.data, schemaVersion: typeof doc.schemaVersion === 'number' ? doc.schemaVersion : PROJECT_SCHEMA_VERSION } as SavedDoc);
+  return {
+    ...parsed.data,
+    graph: forward.graph,
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    updatedAt: typeof doc.updatedAt === 'string' ? doc.updatedAt : new Date(0).toISOString(),
+    ...(notes.length ? { migrations: notes } : {}),
+  };
 }
 
 export async function readWorkflow(id: string): Promise<WorkflowFile | null> {

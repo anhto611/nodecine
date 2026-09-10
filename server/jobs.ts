@@ -9,6 +9,7 @@ import { LogBuffer, type LogEntry } from '@/core/engine/log';
 import type { NodeRuntime } from '@/core/engine/state';
 import type { NodeServices } from '@/core/engine/services';
 import { createServerServices } from './services.server';
+import { ensureServerRegistrations } from './register';
 import { NODE_FEATURES } from '@/nodes';
 
 const hasNodeFeature = (type: string, feature: string): boolean => NODE_FEATURES[type]?.includes(feature) ?? false;
@@ -149,13 +150,18 @@ export class JobHub {
     renameSync(tmp, target);
   }
 
-  /** Keep the newest files; a finished job without a video is the first to go. */
+  /** Keep the newest files. Runs on every submission, so a session that never restarts stays bounded. */
   private prune(): void {
     const all = [...this.jobs.values()].sort((a, b) => b.createdAt - a.createdAt);
+    const gone = new Set<string>();
     for (const job of all.slice(MAX_JOB_FILES)) {
       this.jobs.delete(job.id);
+      gone.add(job.id);
       try { unlinkSync(path.join(jobsDir(), `${job.id}.json`)); } catch { /* already gone */ }
     }
+    // The request ids of jobs that are gone point at nothing; dropping them keeps that map as small
+    // as the queue it speaks for, instead of growing for as long as the process lives.
+    if (gone.size) for (const [requestId, jobId] of this.byRequest) if (gone.has(jobId)) this.byRequest.delete(requestId);
   }
 
   history(key: string): RunRecord[] {
@@ -175,6 +181,7 @@ export class JobHub {
 
   /** The executor for a key, created on first sight with the graph given. */
   slot(key: string, graph?: Graph, name?: string): Slot {
+    ensureServerRegistrations();
     if (!KEY.test(key)) throw Object.assign(new Error(`invalid executor key "${key}"`), { code: 'JOB_KEY_INVALID' });
     let slot = this.slots.get(key);
     if (!slot) {
@@ -212,6 +219,10 @@ export class JobHub {
 
   /** Validates like ComfyUI's /prompt: a graph that cannot run is refused here, not queued. */
   submit(input: JobSubmission): Job {
+    // Before the graph is read against the node registry, not after: validating first and
+    // registering later (inside the executor's services) meant a cold process could answer the very
+    // first submission with every node reported NODE_TYPE_UNKNOWN.
+    ensureServerRegistrations();
     if (input.kind === 'run') {
       const issues = validateGraph(input.graph);
       if (hasBlockingIssues(issues)) throw new GraphInvalidError(issues.filter((i) => i.severity === 'error'));
@@ -225,6 +236,7 @@ export class JobHub {
     if (input.requestId) this.byRequest.set(input.requestId, job.id);
     this.queue.push(job);
     this.write(job);
+    this.prune();
     this.emit({ type: 'job', key: job.key, job: { ...job } });
     // Start on the next tick so the caller sees the job as queued, the way ComfyUI answers /prompt.
     queueMicrotask(() => void this.pump());

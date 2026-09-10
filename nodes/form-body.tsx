@@ -4,7 +4,7 @@ import { Kv, useT, stopFlow } from '@/components/ui';
 import { getNodeType } from '@/core/nodes/definition';
 import { hasTranslation } from '@/lib/i18n';
 import { useNode } from '@/store/useStudio';
-import { schemaFields, settleNumber, type FormField } from './form';
+import { schemaFields, settleNumber, type FormField } from '@/core/schema-form';
 import { useParams } from './kit';
 
 /**
@@ -40,7 +40,7 @@ export const FormBody: React.FC<{ nodeId: string; fields?: string[]; widgets?: R
     <>
       {shown.map((f) => {
         const w = widgets[f.name] ?? {};
-        const control = w.render ?? <Control field={f} widget={w} value={p[f.name]} onChange={(v) => set({ [f.name]: v })} />;
+        const control = w.render ?? <SchemaControl field={f} widget={w} value={p[f.name]} onChange={(v) => set({ [f.name]: v })} />;
         if (w.label === false) return <React.Fragment key={f.name}>{control}</React.Fragment>;
         return <Kv key={f.name} k={t(`node.${f.name}`)} v={control} />;
       })}
@@ -48,7 +48,12 @@ export const FormBody: React.FC<{ nodeId: string; fields?: string[]; widgets?: R
   );
 };
 
-const Control: React.FC<{ field: FormField; widget: FieldWidget; value: unknown; onChange: (v: unknown) => void }> = ({ field, widget, value, onChange }) => {
+/**
+ * One field of a schema as a control. Exported because the provider nodes draw the settings of
+ * whichever provider is chosen, and those are a Zod schema like any other — they should get the
+ * same select, the same bounded number that settles on blur, the same value labels.
+ */
+export const SchemaControl: React.FC<{ field: FormField; widget: FieldWidget; value: unknown; onChange: (v: unknown) => void }> = ({ field, widget, value, onChange }) => {
   const t = useT();
   switch (field.kind) {
     case 'select':

@@ -8,7 +8,7 @@ import { exec, ExecError, findBinary } from '@/server/exec';
 import { convertToMp3, ffmpegBin, measureDurationSeconds } from '@/server/audio';
 import { ensureTmpDir } from '@/server/paths';
 import { contentHash } from '@/core/hash';
-import { z } from 'zod';
+import { piperSettings } from './settings';
 
 /**
  * Piper provider (CORE_CONTRACTS §8): a local neural voice, offline and without a key.
@@ -131,7 +131,6 @@ export function registerPiper(): void {
     id: PIPER_ID,
     displayName: 'Piper',
     factory: createPiperProvider,
-    settingsSchema: z.object({ rate: z.number().positive().default(1) }),
-    defaultSettings: { rate: 1 },
+    settingsSchema: piperSettings,
   });
 }

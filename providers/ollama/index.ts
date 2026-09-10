@@ -1,9 +1,10 @@
 import { z, type ZodTypeAny } from 'zod';
+import { ollamaSettings, OLLAMA_DEFAULT_MODEL } from './settings';
 import { registerLLMProvider } from '@/core/providers/registry';
 import type { LLMProvider } from '@/core/providers/types';
 import { ErrorCode } from '@/core/errors';
 import type { Capability, LLMRef } from '@/core/types/payloads';
-import { extractJson } from '../claude-code';
+import { extractJson } from '@/core/ai/structured-completion';
 
 /**
  * Ollama provider (CORE_CONTRACTS §7): a local model server, offline and without a key.
@@ -20,7 +21,6 @@ import { extractJson } from '../claude-code';
 export const OLLAMA_ID = 'ollama';
 const ready: Capability = { status: 'ready' };
 const DEFAULT_URL = 'http://127.0.0.1:11434';
-const DEFAULT_MODEL = 'llama3.2';
 
 /** Where the server lives: the override first, then Ollama's own default port on this machine. */
 export function ollamaUrl(): string {
@@ -58,7 +58,7 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
 }
 
 export function createOllamaProvider(settings: Record<string, unknown>, deps: OllamaDeps = defaultDeps()): LLMProvider {
-  const model = ((settings.model as string | undefined) || DEFAULT_MODEL).trim();
+  const model = ((settings.model as string | undefined) || OLLAMA_DEFAULT_MODEL).trim();
 
   return {
     providerId: OLLAMA_ID,
@@ -155,7 +155,6 @@ export function registerOllama(): void {
     id: OLLAMA_ID,
     displayName: 'Ollama',
     factory: (settings) => createOllamaProvider(settings),
-    settingsSchema: z.object({ model: z.string().default(DEFAULT_MODEL) }),
-    defaultSettings: { model: DEFAULT_MODEL },
+    settingsSchema: ollamaSettings,
   });
 }

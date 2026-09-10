@@ -2,14 +2,15 @@
 import { en, type DictKey } from '@/locales/en';
 import { vi } from '@/locales/vi';
 import { NODE_TRANSLATIONS } from '@/nodes/.generated/locales';
+import { PROVIDER_TRANSLATIONS } from '@/providers/.generated/locales';
 
 export type Locale = 'en' | 'vi';
 export const LOCALES: Locale[] = ['en', 'vi'];
 
 /** The two dictionaries. */
 const DICTS: Record<Locale, Record<string, string>> = {
-  en: { ...en, ...NODE_TRANSLATIONS.en },
-  vi: { ...vi, ...NODE_TRANSLATIONS.vi },
+  en: { ...en, ...NODE_TRANSLATIONS.en, ...PROVIDER_TRANSLATIONS.en },
+  vi: { ...vi, ...NODE_TRANSLATIONS.vi, ...PROVIDER_TRANSLATIONS.vi },
 };
 
 

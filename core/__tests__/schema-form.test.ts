@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { schemaFields, settleNumber } from '../form';
+import { schemaFields, settleNumber } from '@/core/schema-form';
+import { registerNodes } from '@/nodes';
+import { _resetNodeRegistry, listNodeTypes } from '@/core/nodes/definition';
 
 describe('schemaFields', () => {
   it('reads enums, strings, bounded numbers and booleans off an object schema, in order', () => {
@@ -38,5 +40,24 @@ describe('settleNumber', () => {
     expect(settleNumber(maxChars, '')).toBe(26);
     expect(settleNumber(maxChars, 'abc')).toBe(26);
     expect(settleNumber({ ...maxChars, optional: true }, '')).toBeUndefined();
+  });
+});
+
+describe('the Zod internals schemaFields reads', () => {
+  it('still look the way it expects', () => {
+    const def = (z.object({ a: z.string() }) as unknown as { _def: { typeName?: string; shape?: unknown } })._def;
+    const why = 'Zod moved `_def`. nodes/form.ts reads it directly, so every schema-driven node body goes blank without a single error. Check the Zod version before anything else.';
+    expect(def.typeName, why).toBe('ZodObject');
+    expect(typeof def.shape, why).toBe('function');
+  });
+
+  it('draws a form for every node that declares scalar parameters', () => {
+    _resetNodeRegistry();
+    registerNodes();
+    for (const node of listNodeTypes()) {
+      const scalars = Object.entries(node.defaultParams as Record<string, unknown>).filter(([, v]) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean');
+      if (!scalars.length) continue;
+      expect(schemaFields(node.paramsSchema).length, `${node.type} has scalar parameters but its schema yields no fields`).toBeGreaterThan(0);
+    }
   });
 });

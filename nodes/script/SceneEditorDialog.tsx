@@ -20,12 +20,14 @@ export const SceneEditorDialog: React.FC = () => {
   const t = useT();
   const overlay = useStudio((s) => s.overlay);
   const setOverlay = useStudio((s) => s.setOverlay);
-  // The store holds one overlay for the whole Studio; this dialog answers only when it is a Static Script's.
-  const target = overlay && isSceneTarget(overlay) ? { nodeId: overlay.nodeId, index: overlay.data.index } : null;
+  // The store holds one overlay for the whole Studio; this dialog answers only when it is a Static
+  // Script's. Both of these are held still across renders so the effect below runs when the scene
+  // being edited actually changes, not on every keystroke in it.
+  const target = React.useMemo(() => (overlay && isSceneTarget(overlay) ? { nodeId: overlay.nodeId, index: overlay.data.index } : null), [overlay]);
   const open = (t: { nodeId: string; index: number } | null) => setOverlay(t ? { nodeId: t.nodeId, data: { index: t.index } } : null);
   const setParams = useStudio((s) => s.setParams);
   const node = useNode(target?.nodeId ?? '');
-  const scenes = ((node?.params as { scenes?: SceneRow[] } | undefined)?.scenes ?? []);
+  const scenes = React.useMemo(() => (node?.params as { scenes?: SceneRow[] } | undefined)?.scenes ?? [], [node]);
   const index = target?.index ?? 0;
   const scene = scenes[index];
   const close = () => open(null);
@@ -34,8 +36,8 @@ export const SceneEditorDialog: React.FC = () => {
 
   React.useEffect(() => {
     // The node went away, or the scene did: nothing left to edit.
-    if (target && (!node || !scenes[index])) open(null);
-  }, [target, node, scenes, index, open]);
+    if (target && (!node || !scenes[index])) setOverlay(null);
+  }, [target, node, scenes, index, setOverlay]);
   if (!target || !scene) return null;
 
   return (

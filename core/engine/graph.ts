@@ -9,6 +9,12 @@ export interface NodeInstance {
   params: Record<string, unknown>;
   bypassed: boolean;
   position: { x: number; y: number };
+  /**
+   * Which version of the node type wrote these parameters. Without it a later build cannot know
+   * what it is looking at, so it cannot bring anything forward. Absent means the first version:
+   * a graph saved before the stamp existed.
+   */
+  version?: number;
 }
 
 export interface Edge {

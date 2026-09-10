@@ -1,0 +1,1 @@
+{"id": "ollama", "kind": "llm", "register": "registerOllama", "settings": "ollamaSettings", "widgets": "ollamaWidgets", "translations": "ollamaTranslations"}

@@ -4,7 +4,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { createElevenlabsProvider, elevenlabsSpeed, parseElevenlabsVoices } from '../elevenlabs';
 import { createVbeeProvider, describeVbeeError, parseVbeeVoices, vbeeSpeed } from '../vbee';
-import type { TTSRef } from '@/core/types/payloads';
 import type { ApiDeps } from '../api-shared';
 
 /**

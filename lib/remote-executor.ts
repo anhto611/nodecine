@@ -164,7 +164,7 @@ export class RemoteExecutor {
   }
 
   async runNode(nodeId: string): Promise<string> {
-    const job = await this.submit('node', { nodeId });
+    await this.submit('node', { nodeId });
     return this.runtime(nodeId).state;
   }
 

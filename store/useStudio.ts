@@ -10,8 +10,6 @@ import { contentHash } from '@/core/hash';
 import { getNodeType } from '@/core/nodes/definition';
 import firstRunGraph from '@/lib/first-run.json';
 import { getTemplate, templateGraph, type TemplateDefinition, localized } from '@/core/templates/registry';
-import type { VideoIR } from '@/core/types/ir';
-import type { EngineRef } from '@/core/types/payloads';
 import { bootstrapClient } from '@/lib/bootstrap.client';
 import { loadUserTemplates, saveUserTemplates, loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 import { workflowsApi } from '@/lib/workflows.client';
@@ -100,7 +98,11 @@ export interface StudioState {
   /** Package the current graph as a template the browser lists and a file that can be shared. */
   /** Tab bar, ComfyUI-style. */
   newWorkflow(): void;
-  openWorkflow(fileId: string): Promise<void>;
+  /**
+   * Opens a saved file in a tab. Returns why it could not be opened, or what had to be brought
+   * forward for it to open, or null when it just opened.
+   */
+  openWorkflow(fileId: string): Promise<{ kind: 'failed' | 'migrated'; why: string } | null>;
   activateTab(key: string): void;
   closeTab(key: string): void;
   /** Saves the active tab to its file; a draft has no file and reports `needs-name`. */
@@ -126,6 +128,26 @@ export interface StudioState {
 
 let uid = 0;
 const newId = (type: string) => `${type.split('/')[1] ?? 'node'}-${Date.now().toString(36)}-${(uid++).toString(36)}`;
+
+/**
+ * The graph one more wire would make, or null when the two ports do not agree. Pure, so both drawing
+ * a new wire and moving the end of an existing one can ask for the result before anything is
+ * committed — and each of them then lands as exactly one change, one undo step.
+ *
+ * One edge per input: a new connection replaces the old one (USER_FLOWS Scenario 2) — except on a
+ * `multiple` port, which keeps every wire and only refuses the very same wire twice.
+ */
+const withEdge = (g: Graph, { source, sourcePort, target, targetPort }: { source: string; sourcePort: string; target: string; targetPort: string }): Graph | null => {
+  const src = getNodeType(g.nodes.find((n) => n.id === source)?.type ?? '');
+  const dst = getNodeType(g.nodes.find((n) => n.id === target)?.type ?? '');
+  const sp = src?.outputs.find((p) => p.name === sourcePort);
+  const tp = dst?.inputs.find((p) => p.name === targetPort);
+  if (!sp || !tp || sp.type !== tp.type || source === target) return null;
+  const edges = tp.multiple
+    ? g.edges.filter((e) => !(e.target === target && e.targetPort === targetPort && e.source === source && e.sourcePort === sourcePort))
+    : g.edges.filter((e) => !(e.target === target && e.targetPort === targetPort));
+  return { ...g, edges: [...edges, { id: `e-${newId('edge')}`, source, sourcePort, target, targetPort }] };
+};
 
 export const useStudio = create<StudioState>((set, get) => {
   let tabSeq = 0;
@@ -267,10 +289,18 @@ export const useStudio = create<StudioState>((set, get) => {
 
     async openWorkflow(fileId) {
       const open = get().tabs.find((t) => t.fileId === fileId);
-      if (open) { showTab(open); return; }
-      const def = await workflowsApi.read(fileId).catch(() => null);
-      if (!def) return;
-      addTab({ fileId, name: localized(def.name, get().locale, fileId), graph: structuredClone(def.graph), dirty: false });
+      if (open) { showTab(open); return null; }
+      // A file that will not open has a reason, and the person who clicked it is owed that reason.
+      // So is a file that did open but is not quite what they saved.
+      try {
+        const def = await workflowsApi.read(fileId);
+        // Brought forward on the server; the tab is dirty so saving writes the new shape to disk.
+        const migrated = def.migrations?.length ? def.migrations : null;
+        addTab({ fileId, name: localized(def.name, get().locale, fileId), graph: structuredClone(def.graph), dirty: !!migrated, ...(migrated ? { savedHash: undefined } : {}) });
+        return migrated ? { kind: 'migrated', why: migrated.map((m) => m.message).join('; ') } : null;
+      } catch (e) {
+        return { kind: 'failed', why: e instanceof Error ? e.message : String(e) };
+      }
     },
 
     activateTab(key) {
@@ -351,7 +381,8 @@ export const useStudio = create<StudioState>((set, get) => {
     addNode(type, position) {
       const def = getNodeType(type);
       if (!def) throw new Error(`unknown node type ${type}`);
-      const node: NodeInstance = { id: newId(type), type, params: { ...(def.defaultParams as Record<string, unknown>) }, bypassed: def.defaultBypassed ?? false, position };
+      // Stamped as it is made, so the file it lands in says which version wrote these parameters.
+      const node: NodeInstance = { id: newId(type), type, version: def.version, params: { ...(def.defaultParams as Record<string, unknown>) }, bypassed: def.defaultBypassed ?? false, position };
       refresh({ ...get().graph, nodes: [...get().graph.nodes, node] });
       if (def.kind === 'resource') void get().executor?.runNode(node.id);
       return node.id;
@@ -375,28 +406,22 @@ export const useStudio = create<StudioState>((set, get) => {
       const g = get().graph;
       const old = g.edges.find((e) => e.id === edgeId);
       if (!old) return false;
-      // The wire comes off first so the check below sees the port it is leaving as free.
-      set({ graph: { ...g, edges: g.edges.filter((e) => e.id !== edgeId) } });
-      if (get().connect(edge)) { get().executor?.invalidate(old.target); return true; }
-      set({ graph: g });
-      return false;
+      // The wire comes off before the ports are checked, so the one it is leaving reads as free. It
+      // comes off a copy, never off the store: the graph the undo step records has to be the one the
+      // person is looking at, or one Ctrl+Z after moving a wire leaves the wire deleted.
+      const next = withEdge({ ...g, edges: g.edges.filter((e) => e.id !== edgeId) }, edge);
+      if (!next) return false;
+      refresh(next);
+      get().executor?.invalidate(old.target);
+      get().executor?.invalidate(edge.target);
+      return true;
     },
 
-    connect({ source, sourcePort, target, targetPort }) {
-      const g = get().graph;
-      const src = getNodeType(g.nodes.find((n) => n.id === source)?.type ?? '');
-      const dst = getNodeType(g.nodes.find((n) => n.id === target)?.type ?? '');
-      const sp = src?.outputs.find((p) => p.name === sourcePort);
-      const tp = dst?.inputs.find((p) => p.name === targetPort);
-      if (!sp || !tp || sp.type !== tp.type || source === target) return false;
-      // One edge per input: a new connection replaces the old one (USER_FLOWS Scenario 2) — except on a
-      // `multiple` port, which keeps every wire and only refuses the very same wire twice.
-      const edges = tp.multiple
-        ? g.edges.filter((e) => !(e.target === target && e.targetPort === targetPort && e.source === source && e.sourcePort === sourcePort))
-        : g.edges.filter((e) => !(e.target === target && e.targetPort === targetPort));
-      edges.push({ id: `e-${newId('edge')}`, source, sourcePort, target, targetPort });
-      refresh({ ...g, edges });
-      get().executor?.invalidate(target);
+    connect(edge) {
+      const next = withEdge(get().graph, edge);
+      if (!next) return false;
+      refresh(next);
+      get().executor?.invalidate(edge.target);
       return true;
     },
 
@@ -495,8 +520,9 @@ export const useStudio = create<StudioState>((set, get) => {
         const def = parsed as TemplateDefinition;
         const saved = await workflowsApi.save({ ...def, id: `${def.id ?? 'workflow'}-${Date.now().toString(36)}`.slice(0, 64), category: 'mine' });
         set({ workflowsTick: get().workflowsTick + 1 });
-        await get().openWorkflow(saved.id);
-        return null;
+        // Saving brought it forward already, so anything left here is a refusal.
+        const outcome = await get().openWorkflow(saved.id);
+        return outcome?.kind === 'failed' ? outcome.why : null;
       } catch (e) {
         return e instanceof Error ? e.message : String(e);
       }
@@ -507,8 +533,8 @@ export const useStudio = create<StudioState>((set, get) => {
         const fromVideo = await workflowsApi.fromVideo(file);
         const saved = await workflowsApi.save({ ...fromVideo, id: `${fromVideo.id}-${Date.now().toString(36)}`.slice(0, 64), category: 'mine' });
         set({ workflowsTick: get().workflowsTick + 1 });
-        await get().openWorkflow(saved.id);
-        return null;
+        const outcome = await get().openWorkflow(saved.id);
+        return outcome?.kind === 'failed' ? outcome.why : null;
       } catch (e) {
         return e instanceof Error ? e.message : String(e);
       }

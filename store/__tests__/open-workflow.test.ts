@@ -1,0 +1,56 @@
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { useStudio } from '@/store/useStudio';
+import { workflowsApi } from '@/lib/workflows.client';
+import { _resetNodeRegistry } from '@/core/nodes/definition';
+import { registerNodes } from '@/nodes';
+
+/**
+ * A file that will not open has a reason, and clicking it must not simply do nothing. The store used
+ * to swallow every failure with `.catch(() => null)` and return, so the panel had nothing to show.
+ */
+
+let seq = 0;
+beforeEach(() => {
+  _resetNodeRegistry();
+  registerNodes();
+  useStudio.setState({ graph: { nodes: [], edges: [] }, tabs: [], activeTab: `open-${seq++}`, executor: null });
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe('opening a saved workflow', () => {
+  it('says what had to be brought forward, and leaves the tab unsaved so it can be written back', async () => {
+    vi.spyOn(workflowsApi, 'read').mockResolvedValue({
+      id: 'old', name: 'Old', category: 'mine', graph: { nodes: [], edges: [] },
+      migrations: [{ code: 'NODE_REPLACED', message: '"core/art-director" became "core/illustrator" in 2026-09-10' }],
+    });
+    const outcome = await useStudio.getState().openWorkflow('old');
+    expect(outcome).toMatchObject({ kind: 'migrated' });
+    expect(outcome!.why).toContain('core/illustrator');
+    expect(useStudio.getState().tabs[0]!.dirty).toBe(true);
+  });
+
+  it('hands back why the server refused it', async () => {
+    vi.spyOn(workflowsApi, 'read').mockRejectedValue(
+      Object.assign(new Error('this workflow was saved in format 1; this build reads 2'), { code: 'WORKFLOW_VERSION_UNSUPPORTED' }),
+    );
+    const outcome = await useStudio.getState().openWorkflow('from-an-older-build');
+    expect(outcome).toMatchObject({ kind: 'failed' });
+    expect(outcome!.why).toContain('saved in format 1');
+    expect(useStudio.getState().tabs).toHaveLength(0);
+  });
+
+  it('opens the file in a tab and reports nothing when it works', async () => {
+    vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } });
+    const outcome = await useStudio.getState().openWorkflow('mine');
+    expect(outcome).toBeNull();
+    expect(useStudio.getState().tabs.map((t) => t.fileId)).toEqual(['mine']);
+  });
+
+  it('reports nothing when the file is already open in a tab', async () => {
+    const read = vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } });
+    await useStudio.getState().openWorkflow('mine');
+    read.mockClear();
+    expect(await useStudio.getState().openWorkflow('mine')).toBeNull();
+    expect(read).not.toHaveBeenCalled();
+  });
+});

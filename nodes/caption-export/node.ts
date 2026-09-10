@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ErrorCode } from '@/core/errors';
+import { CaptionExportErrorCode } from './errors';
 import { safeFileName } from '@/core/file-name';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import type { CaptionTrack } from '@/core/types/payloads';
@@ -12,7 +12,7 @@ export const captionExport: NodeDefinition<typeof Params> = {
   paramsSchema: Params, defaultParams: { format: 'srt', fileName: 'nodecine' },
   run: async ({ params, inputs, services, log }) => {
     const track = inputs.captions!.payload as CaptionTrack;
-    if (!track.cues.length) throw Object.assign(new Error('the caption track has no lines'), { code: ErrorCode.CAPTIONS_NO_WORDS, fix: 'run Captions on a timed voice-over' });
+    if (!track.cues.length) throw Object.assign(new Error('the caption track has no lines'), { code: CaptionExportErrorCode.CAPTIONS_EMPTY, fix: 'run Captions on a timed voice-over' });
     const text = toSubtitles(track, params.format);
     const fileName = safeFileName(params.fileName, 'nodecine', params.format);
     const { url, bytes } = await services.saveText(text, params.format);

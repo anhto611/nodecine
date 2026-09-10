@@ -1,1 +1,1 @@
-{"id": "core/transcribe", "definition": "transcribe", "body": "TranscribeBody", "icon": "wave", "group": "audio", "translations": "transcribeTranslations", "services": "transcribeServices"}
+{"id": "core/transcribe", "definition": "transcribe", "body": "TranscribeBody", "icon": "wave", "group": "audio", "translations": "transcribeTranslations", "services": "transcribeServices", "errors": "TranscribeErrorCode"}

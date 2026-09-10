@@ -94,7 +94,7 @@ describe('core/screenwriter', () => {
   it('holds the model to the exact scene count', async () => {
     let calls = 0;
     const services = makeFakeServices({
-      complete: async (prompt: string) => {
+      complete: async (_prompt: string) => {
         calls++;
         return calls === 1 ? { ...goodAnswer, scenes: goodAnswer.scenes.slice(0, 2) } : goodAnswer;
       },
