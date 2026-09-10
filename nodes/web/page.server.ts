@@ -9,7 +9,7 @@ import type { PageRead, ReadPageOptions } from '@/core/engine/services';
  * Reading a public page, on the server (ARCHITECTURE §5). Every address is vetted and rebuilt by
  * `parsePageUrl` before it is used, redirects are followed by hand so each hop is vetted too, and
  * both the page and its picture are capped. A picture the page names is downloaded and kept as a
- * look asset, because a scene may only show images this machine holds (CORE_CONTRACTS §2.7).
+ * scene asset, because a scene may only show images this machine holds (CORE_CONTRACTS §2.7).
  */
 
 const MAX_HTML = 2 * 1024 * 1024;

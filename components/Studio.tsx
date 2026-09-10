@@ -12,7 +12,7 @@ import { HistoryPanel } from './panels/HistoryPanel';
 import { LogsPanel } from './panels/LogsPanel';
 import { TemplateBrowser } from './panels/TemplateBrowser';
 import { SettingsDialog } from './panels/SettingsDialog';
-import { CodeEditorDialog } from '@/nodes/art-director/editor/CodeEditorDialog';
+import { SceneEditorDialog } from '@/nodes/script/SceneEditorDialog';
 
 /** Studio shell: header, rail, optional left panel, canvas, optional bottom logs, modals. */
 export const Studio: React.FC = () => {
@@ -22,7 +22,7 @@ export const Studio: React.FC = () => {
   const logsOpen = useStudio((s) => s.logsOpen);
   const templatesOpen = useStudio((s) => s.templatesOpen);
   const settingsOpen = useStudio((s) => s.settingsOpen);
-  const codeEditor = useStudio((s) => s.codeEditor);
+  const sceneEditor = useStudio((s) => s.sceneEditor);
 
   React.useEffect(() => {
     init();
@@ -44,7 +44,7 @@ export const Studio: React.FC = () => {
       if (mod && e.key.toLowerCase() === 'j') { e.preventDefault(); s.toggleLogs(); return; }
       if (mod && e.key === ',') { e.preventDefault(); s.setSettingsOpen(true); return; }
       if (mod && e.key.toLowerCase() === 'b' && s.selectedNodeId) { e.preventDefault(); s.toggleBypass(s.selectedNodeId); return; }
-      if (e.key === 'Escape') { s.setTemplatesOpen(false); s.setSettingsOpen(false); s.setCodeEditor(null); if (s.panel) s.setPanel(s.panel); return; }
+      if (e.key === 'Escape') { s.setTemplatesOpen(false); s.setSettingsOpen(false); s.setSceneEditor(null); if (s.panel) s.setPanel(s.panel); return; }
       if (inField || mod) return;
       if (e.key.toLowerCase() === 'w') s.setPanel('workflows');
       if (e.key.toLowerCase() === 'n') s.setPanel('library');
@@ -73,7 +73,7 @@ export const Studio: React.FC = () => {
       </div>
       {templatesOpen && <TemplateBrowser />}
       {settingsOpen && <SettingsDialog />}
-      {codeEditor && <CodeEditorDialog />}
+      {sceneEditor && <SceneEditorDialog />}
     </div>
   );
 };

@@ -74,16 +74,16 @@ Nguyên tắc phân chia node, theo mô hình ComfyUI: mỗi node một trách n
 ### 4.3. Bộ Node Lõi
 
 1. Nhập Liệu (Input Trigger): Ô văn bản, phát Dữ liệu Nguồn, không diễn giải, không gọi mạng.
-2. Kịch Bản Tĩnh (Static Script): Người dùng gõ tay lời thoại và danh sách cảnh (vai, trọng số, nội dung theo từ vựng cố định); Đạo Diễn Mỹ Thuật đứng sau dàn block và tone. Phát Kịch bản Phân cảnh và Lời thoại. Là cách dựng video không cần mô hình ngôn ngữ, và là node dùng để nghiệm thu khung.
-2b. Biên Kịch (Screenwriter): Node biên kịch duy nhất. Nhận `LLMRef` và tùy chọn `FactSheet` hoặc `SourceRef`; người dùng viết đề bài và các beat (vai trò, mô tả, số cảnh, ràng buộc dữ kiện). Mô hình chỉ viết nội dung cảnh theo từ vựng nội dung cố định, không biết block nào tồn tại; dữ kiện đã ràng buộc không đi qua mô hình. Một video GitHub hay một video trích dẫn khác nhau chỉ ở tham số của node này và của Đạo Diễn Mỹ Thuật.
-2c. Đạo Diễn Mỹ Thuật (Art Director): Chặng giao diện, đứng **sau** kịch bản. Mang giao diện dưới dạng dữ liệu: sân khấu chung (token, tone, trường theo cảnh, markup) và danh mục block (mỗi block: props, tài liệu cho mô hình, code HTML/GSAP). Nhận Kịch bản Phân cảnh và tùy chọn `LLMRef`, dàn block và tone cho từng cảnh, viết block mới khi không cái nào hợp, phát Kế hoạch Phân cảnh. Một workflow mang theo giao diện của chính nó, nên bản mẫu chia sẻ là đủ.
+2. Kịch Bản Tĩnh (Static Script): Người dùng gõ tay lời thoại và danh sách cảnh (vai, trọng số, nội dung theo từ vựng cố định); Họa Sĩ đứng sau vẽ bố cục. Phát Kịch bản Phân cảnh và Lời thoại. Là cách dựng video không cần mô hình ngôn ngữ, và là node dùng để nghiệm thu khung.
+2b. Biên Kịch (Screenwriter): Node biên kịch duy nhất. Nhận `LLMRef` và tùy chọn `FactSheet` hoặc `SourceRef`; người dùng viết đề bài và các beat (vai trò, mô tả, số cảnh, ràng buộc dữ kiện). Mô hình chỉ viết nội dung cảnh theo từ vựng nội dung cố định, không biết giao diện; dữ kiện đã ràng buộc không đi qua mô hình. Một video GitHub hay một video trích dẫn khác nhau chỉ ở tham số của node này và mô tả phong cách của Họa Sĩ.
+2c. Họa Sĩ (Illustrator): Chặng hình, đứng **sau** kịch bản, một node một việc: mỗi lần chạy, mô hình vẽ giao diện cho đúng kịch bản này — phong cách (bảng màu, font, nền, chỗ đặt nội dung, chỗ phụ đề) rồi một bố cục cho mỗi kiểu nội dung, gán cho từng cảnh — và phát Kế hoạch dựng. Nhận Kịch bản Phân cảnh và `LLMRef` bắt buộc. Tham số chỉ là chữ: mô tả phong cách, tỉ lệ, ảnh nhân vật tùy chọn. Không lưu gì; câu trả lời mô hình cache theo prompt nên chạy lại là miễn phí và giống nhau, chạy ép là vẽ mới. Một bản mẫu mang giao diện dưới dạng một câu mô tả.
 2d. Node lấy dữ liệu: Truy Xuất Repo (GitHub) và Truy Xuất Trang (đọc trang web, tùy chọn chụp ảnh trang) — mỗi nguồn một node, cùng phát Dữ kiện.
 3. Nhà Cung Cấp Mô Hình Ngôn Ngữ: **một** node tài nguyên phát `LLMRef`, chọn nhà cung cấp ngay trong node theo mẫu Load Checkpoint của ComfyUI — thêm nhà cung cấp không thêm node. Thân node hiện `capabilities` từ `probe()` và các tham số riêng của nhà cung cấp đang chọn; đường dẫn tệp thực thi và địa chỉ máy chủ chỉ đến từ biến môi trường, không bao giờ từ đồ thị. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
 4. Nhà Cung Cấp Giọng Đọc: **một** node tài nguyên phát `TTSRef`, cùng cơ chế chọn nhà cung cấp như trên. Thân node liệt kê giọng mà `probe()` tìm được. Danh sách nhà cung cấp hiện có ở `STATUS.md`.
 5. Giọng Đọc (TTS Engine): Nhận Lời thoại kèm ngôn ngữ và `TTSRef`, tự chọn giọng khớp ngôn ngữ, tạo MP3, đo thời lượng từ tệp.
 5b. Căn Mốc Từ, Phụ Đề, Nhạc Nền: ba node xử lý âm thanh sau Giọng Đọc — căn chỉnh cưỡng bức để biết mỗi từ đọc lúc nào, gom từ thành dòng phụ đề, và đặt một bản nhạc dưới giọng có hạ nhạc khi nói.
 6. Đóng Gói Timeline (Timeline Assembler): Hàm thuần. Nhận Kế hoạch Phân cảnh, Âm thanh, và tùy chọn Dữ kiện và Phụ đề. Phân bổ khung hình theo trọng số, đè dữ kiện lên props theo `factBindings`, kiểm định bất biến IR, phát Bản Đặc Tả Video Trung Gian.
-7. Động Cơ (Hyperframes Engine xem trước và kết xuất block `html-gsap` bằng thư viện HyperFrames; Remotion Engine chờ định dạng block `react`): Node tài nguyên phát `EngineRef`, tương đương Load Checkpoint của ComfyUI. Đổi engine là thay node; engine không vẽ được định dạng của block thì node xuất tự chặn.
+7. Động Cơ (Hyperframes Engine xem trước và kết xuất cảnh `html-gsap` bằng thư viện HyperFrames; Remotion Engine chờ định dạng cảnh `react`): Node tài nguyên phát `EngineRef`, tương đương Load Checkpoint của ComfyUI. Đổi engine là thay node; engine không vẽ được định dạng của cảnh thì node xuất tự chặn.
 8. Xuất Bản Video (Video Output): Nhận IR và `EngineRef`, tự thân là trình phát, theo mô hình PreviewImage. Không có khung xem trước nào khác.
 9. Xuất MP4 (MP4 Export): Nhận cùng hai đầu vào, mang tham số codec, chất lượng, tên tệp, theo mô hình SaveImage nhưng bỏ qua mặc định vì kết xuất tốn hàng chục giây; bấm Kết xuất trên node để chạy riêng.
 
@@ -96,8 +96,8 @@ Ranh giới trách nhiệm:
 
 ### 4.4. Kiến trúc Độc lập Engine và Độc lập Gói
 
-- Giao diện Adapter dùng chung, nhận IR generic tự chứa; mỗi Node Động Cơ bọc đúng một Adapter và đăng ký renderer theo định dạng code của block. Hyperframes chạy `html-gsap` đầy đủ (xem trước và MP4). Remotion chưa có định dạng nào; định dạng `react` là việc của bản sau.
-- Bản Đặc Tả Video Trung Gian không biết tên bất kỳ kiểu cảnh nào: nó mang theo stage và các block của chính nó, mỗi cảnh chỉ vào một block bằng `blockId`. Engine chỉ đăng ký một renderer cho định dạng code (`html-gsap`), cùng pattern với registry engine và nhà cung cấp. Thêm bản mẫu mới không đụng tới IR, Adapter hay node lõi.
+- Giao diện Adapter dùng chung, nhận IR generic tự chứa; mỗi Node Động Cơ bọc đúng một Adapter và đăng ký renderer theo định dạng code của cảnh. Hyperframes chạy `html-gsap` đầy đủ (xem trước và MP4). Remotion chưa có định dạng nào; định dạng `react` là việc của bản sau.
+- Bản Đặc Tả Video Trung Gian không biết tên bất kỳ kiểu cảnh nào: mỗi cảnh mang bức vẽ của chính nó, IR mang phong cách chung. Engine chỉ đăng ký một renderer cho định dạng code (`html-gsap`), cùng pattern với registry engine và nhà cung cấp. Thêm bản mẫu mới không đụng tới IR, Adapter hay node lõi.
 - Dữ kiện kiểm chứng được đi từ node truy xuất của gói thẳng tới Đóng Gói Timeline qua cổng Dữ kiện và cơ chế `factBindings` của lõi, không qua mô hình ngôn ngữ. Lõi đảm bảo bằng cấu trúc; gói chỉ khai báo ánh xạ.
 - So sánh hai engine: hai Node Động Cơ và hai Node Xuất Bản Video trên cùng đồ thị. Bố cục cho phép; việc cả hai cùng phát một lúc xem `STATUS.md`.
 
@@ -123,7 +123,7 @@ Ranh giới trách nhiệm:
 Khung phải chạy được và qua nghiệm thu trước khi bất kỳ gói nào bắt đầu. Lý do: mọi quyết định của gói đều xây trên hợp đồng lõi, và lỗi ở lõi phát hiện sau khi có gói sẽ tốn gấp nhiều lần.
 
 - **Pha A — khung lõi.** Tầng lõi, ba registry, bộ node lõi, giao diện Studio, đa ngôn ngữ, Remotion Adapter. Đồ thị nghiệm thu là **đồ thị Kịch Bản Tĩnh** bảy node: Kịch Bản Tĩnh, Giọng Đọc Nguồn, Giọng Đọc, Đóng Gói Timeline, Remotion Engine, Xuất Bản Video, Xuất MP4. Không mạng, không mô hình ngôn ngữ, không khóa.
-- **Pha B — bản mẫu đầu tiên có mô hình ngôn ngữ.** GitHub Repo Showcase: node Truy Xuất Repo, stage `developer-dark`, ba block và một đồ thị mười bốn node dùng Biên Kịch, theo `templates/github-showcase.md`. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
+- **Pha B — bản mẫu đầu tiên có mô hình ngôn ngữ.** GitHub Repo Showcase: node Truy Xuất Repo và một đồ thị dùng Biên Kịch, theo `templates/github-showcase.md`. Chỉ bắt đầu khi Pha A đạt đủ tiêu chí mục 6.
 
 Pha nào đã qua nghiệm thu, xem `STATUS.md`.
 
@@ -175,9 +175,9 @@ Tiêu chí riêng của bản mẫu nằm tại `templates/github-showcase.md` m
 
 Các hạng mục dưới đây đã được cân nhắc và cố ý loại khỏi v0.1. Chúng được ghi lại ở đây để tránh việc vô tình thiết kế chặn đường chúng:
 
-- Định dạng block `react` cho Remotion Engine: code block là mã một component React dạng chuỗi, dịch lúc chạy trong trình duyệt và trong bundle kết xuất; Đạo Diễn Mỹ Thuật có ô chọn định dạng cho từng block.
+- Định dạng cảnh `react` cho Remotion Engine: code cảnh là mã một component React dạng chuỗi, dịch lúc chạy trong trình duyệt và trong bundle kết xuất; Họa Sĩ chọn định dạng theo engine nối vào.
 - Node biên kịch generic dùng chung cho mọi gói, nhận "công thức" gồm lời nhắc và lược đồ cảnh từ gói thay vì mỗi gói tự viết node.
-- Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng JSON, mỗi bản mang stage và block của nó; node lấy dữ liệu mới (RSS, YouTube) là node lõi riêng.
+- Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng JSON, mỗi bản mang mô tả phong cách của nó; node lấy dữ liệu mới (RSS, YouTube) là node lõi riêng.
 - Họ node truy xuất dữ liệu mở rộng: Reddit Fetcher, CSV và Google Sheet Loader, Market API Fetcher. Chúng dùng chung vị trí và vai trò với Node Truy Xuất Repo trong đồ thị.
 - Nhà cung cấp cần khóa API: Anthropic, ElevenLabs và các dịch vụ đám mây khác. Tất cả cắm vào cùng cổng `LLMRef` hoặc `TTSRef` đã có, và vào cùng hai node nhà cung cấp — cái phải làm thêm là két giữ khóa, không phải node mới.
 - Chạy hàng loạt (batch) nhiều biến thể video từ một nguồn dữ liệu bảng tính.

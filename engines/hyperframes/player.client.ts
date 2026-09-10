@@ -6,7 +6,7 @@ import type { MountPlayer } from './adapter';
 
 /**
  * Browser preview: the HyperFrames web component with the composition passed inline as `srcdoc`
- * and run in an opaque-origin sandbox — the block code cannot reach the Studio, and the page's own
+ * and run in an opaque-origin sandbox — the scene code cannot reach the Studio, and the page's own
  * CSP keeps it off the network. The two vendored scripts are fetched from the app once and inlined.
  */
 
@@ -30,7 +30,7 @@ function vendorSources() {
   return vendor;
 }
 
-/** gsap's source, for a preview that plays the look's scripts; cached with the player's vendor bundle. */
+/** GSAP source for previews that play scene scripts; cached with the player's vendor bundle. */
 export const gsapSource = (): Promise<string> => vendorSources().then((v) => v.gsapSource);
 
 let elementDefined: Promise<void> | null = null;

@@ -42,7 +42,7 @@ Khi người dùng sửa một tham số của node, node đó và toàn bộ no
 2. Kiểm tra tính đầy đủ: mọi cổng nhận bắt buộc phải có đúng một dây nối tới. Thiếu dây nối là lỗi mức đồ thị, không phải lỗi mức node. Kiểm tra này chạy liên tục theo mỗi thay đổi của đồ thị, kết quả hiện ngay trên node liên quan và trên nút Chạy Luồng bị vô hiệu hóa, nên không có bước kiểm tra riêng lúc bấm. Số lượng Node Xuất Bản Video và Node Xuất MP4 không bị giới hạn, kể cả bằng không; đồ thị không có node đích nào chỉ nhận cảnh báo `GRAPH_NO_SINK` chứ không bị chặn, vì người dùng có thể đang dựng dở.
 3. Node ở trạng thái `bypassed` bị bỏ qua khi duyệt. Nếu một node phía sau cần đầu ra của node bị bỏ qua ở một cổng **bắt buộc**, node đó chuyển sang `blocked` với thông báo nêu tên node bị bỏ qua. Cổng **tùy chọn** nối vào node bị bỏ qua được coi như không nối: Đóng Gói Timeline vẫn chạy khi người dùng bỏ qua cặp Căn Mốc Từ → Phụ Đề của bản mẫu, chỉ không có phụ đề. Node Xuất MP4 bị bỏ qua không node nào phụ thuộc, nên luồng chạy hết các node còn lại.
 4. Các node được chạy theo thứ tự tô-pô, tuần tự, kể cả với những node về lý thuyết có thể chạy song song. Đồ thị mẫu chỉ có khoảng mười node và node thắt cổ chai nằm ở lệnh gọi ra ngoài, nên chạy song song không mang lại lợi ích đáng kể mà lại làm phức tạp việc báo tiến độ.
-5. Dây luồng và dây thành phần (Hợp Đồng Lõi mục 1.1) là một với bộ máy: một node chờ mọi dây vào của nó, dù dây đó mang nội dung hay mang stage, mô hình, giọng, động cơ. Sự phân biệt chỉ nằm ở cách vẽ trên canvas.
+5. Dây luồng và dây thành phần (Hợp Đồng Lõi mục 1.1) là một với bộ máy: một node chờ mọi dây vào của nó, dù dây đó mang nội dung hay mang mô hình, giọng, động cơ. Sự phân biệt chỉ nằm ở cách vẽ trên canvas.
 6. Trước khi chạy một node, bộ máy tính chữ ký của node đó. Nếu chữ ký trùng với chữ ký của kết quả đang lưu, node được bỏ qua và kết quả cũ được tái sử dụng.
 
 ---
@@ -75,9 +75,9 @@ Ghi chú về node truy xuất dữ kiện của gói: dữ kiện lấy từ ng
 
 ---
 
-**Node sửa tham số của chính nó.** `RunContext.patchParams(patch)` là đường duy nhất để một node đổi tham số của mình trong lúc chạy (hiện chỉ Đạo Diễn Mỹ Thuật dùng, để giữ block do mô hình viết). Bộ máy ghi patch vào đồ thị ngay, phát sự kiện `params` (JobHub → SSE → store, vào lịch sử hoàn tác, workflow chuyển sang chưa lưu), và **ký kết quả trên tham số đã vá**: lần chạy sau với đồ thị đã mang patch có cùng chữ ký nên dùng lại, không làm lại việc. Đồ thị khách gửi lên sau đó chỉ xác nhận điều máy chủ đã biết.
+**Node sửa tham số của chính nó.** `RunContext.patchParams(patch)` là đường duy nhất để một node đổi tham số của mình trong lúc chạy (hiện không node lõi nào dùng; một đời Họa Sĩ trước dùng để giữ thứ mô hình vẽ). Bộ máy ghi patch vào đồ thị ngay, phát sự kiện `params` (JobHub → SSE → store, vào lịch sử hoàn tác, workflow chuyển sang chưa lưu), và **ký kết quả trên tham số đã vá**: lần chạy sau với đồ thị đã mang patch có cùng chữ ký nên dùng lại, không làm lại việc. Đồ thị khách gửi lên sau đó chỉ xác nhận điều máy chủ đã biết.
 
-**Bộ nhớ câu trả lời mô hình.** `services.complete` trên máy chủ ghi mọi câu trả lời xuống `.nodecine/cache/llm/<băm(nhà cung cấp, prompt)>.json` (đổi bằng `NODECINE_CACHE_DIR`) và trả lại từ đó khi gặp lại đúng prompt: sau khi restart, hay khi một node đứng sau Đạo Diễn Mỹ Thuật chạy lại vì sửa giao diện, không tốn thêm một lần gọi và kết quả y hệt. Chạy ép (Shift+Run, Thử lại, chạy một node) đi kèm `fresh` nên hỏi lại thật sự. Bộ nhớ này nằm ngoài đồ thị và ngoài chữ ký; xóa thư mục chỉ khiến lần chạy tới gọi lại.
+**Bộ nhớ câu trả lời mô hình.** `services.complete` trên máy chủ ghi mọi câu trả lời xuống `.nodecine/cache/llm/<băm(nhà cung cấp, prompt)>.json` (đổi bằng `NODECINE_CACHE_DIR`) và trả lại từ đó khi gặp lại đúng prompt: sau khi restart, hay khi Họa Sĩ chạy lại cùng một mô tả trên cùng một kịch bản, không tốn thêm một lần gọi và kết quả y hệt. Chạy ép (Shift+Run, Thử lại, chạy một node) đi kèm `fresh` nên hỏi lại thật sự. Bộ nhớ này nằm ngoài đồ thị và ngoài chữ ký; xóa thư mục chỉ khiến lần chạy tới gọi lại.
 
 ## 4. Hủy Luồng Đang Chạy
 

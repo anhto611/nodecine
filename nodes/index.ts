@@ -6,14 +6,14 @@ import { staticScript } from './script/node';
 import { screenwriter } from './screenwriter/node';
 import { stockMedia } from './stock/node';
 import { sceneBreakdown } from './breakdown/node';
-import { artDirector } from './art-director/node';
+import { illustrator } from './illustrator/node';
 import { hyperframesEngine, llmProvider, remotionEngine, ttsProvider } from './resources/node';
 import { ttsEngine } from './tts/node';
 import { transcribe } from './transcribe/node';
 import { audioInput, audioMix } from './audio/node';
 import { captions, captionExport } from './captions/node';
 import { timelineAssembler } from './assembler/node';
-import { mp4Export, coverExport, videoOutput } from './output/node';
+import { mp4Export, videoOutput } from './output/node';
 
 /**
  * Every node the app ships, one family per directory (ARCHITECTURE §2): the definition, its logic,
@@ -26,7 +26,7 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   githubFetcher,
   webFetcher,
   staticScript,
-  artDirector,
+  illustrator,
   screenwriter,
   stockMedia,
   sceneBreakdown,
@@ -43,7 +43,6 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   hyperframesEngine,
   videoOutput,
   mp4Export,
-  coverExport,
 ] as unknown as AnyNodeDefinition[];
 
 export function registerNodes(): void {
@@ -52,13 +51,11 @@ export function registerNodes(): void {
 
 export { audioInput, audioMix, AUDIO_INPUT, AUDIO_MIX } from './audio/node';
 export { captionExport } from './captions/node';
-export { coverExport, COVER_EXPORT } from './output/node';
 export { stockMedia, STOCK_MEDIA } from './stock/node';
 export { sceneBreakdown, SCENE_BREAKDOWN } from './breakdown/node';
-export { inputTrigger, githubFetcher, webFetcher, staticScript, artDirector, screenwriter, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
+export { inputTrigger, githubFetcher, webFetcher, staticScript, illustrator, screenwriter, llmProvider, ttsProvider, ttsEngine, transcribe, captions, timelineAssembler, remotionEngine, hyperframesEngine, videoOutput, mp4Export };
 export { pickVoice } from './tts/node';
 export { DEFAULT_STATIC_SCRIPT } from './script/node';
 export { SCREENWRITER, DEFAULT_SCREENWRITER } from './screenwriter/node';
-export { ART_DIRECTOR, DEFAULT_STAGE, DEFAULT_ART_DIRECTOR } from './art-director/node';
-export { DEFAULT_BLOCK, DEFAULT_BLOCKS } from './art-director/blocks';
+export { ILLUSTRATOR, DEFAULT_ILLUSTRATOR } from './illustrator/node';
 export { GITHUB_FETCHER } from './github/node';

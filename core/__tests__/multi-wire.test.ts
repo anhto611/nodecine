@@ -7,7 +7,7 @@ import { makeFakeServices } from './fakes';
 
 /**
  * A `multiple` port takes any number of wires and hands the packets to run() as a list, in edge
- * order. No core node uses one since the look became a single wire, but the engine keeps the
+ * order. No core node currently uses one, but the engine keeps the
  * feature for nodes that gather many of a kind.
  */
 const Params = z.object({ value: z.string() });

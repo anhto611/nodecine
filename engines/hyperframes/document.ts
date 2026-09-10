@@ -1,21 +1,17 @@
 import type { VideoIR } from '@/core/types/ir';
-import type { BlockDef } from '@/core/types/payloads';
-import { BIND_SCRIPT, baseStyles, esc, fillNamedSlot, findSlot, sceneMarkup, scopedCss, splitCode, timeVideos, tokenVars } from '@/core/look/markup';
-import { CAPTION_STYLES, type CaptionStyle } from '@/core/types/payloads';
-import { REVEAL_HELPERS, revealMap } from '@/core/look/reveal';
-import { captionStyleOf, captionStyles } from '@/core/look/markup';
+import { BIND_SCRIPT, SCENE_HELPERS, SCOPED_GSAP, baseLayer, baseStyles, captionLine, captionStyleOf, captionStyles, esc, sceneMarkup, scopedCss, styleCss } from '@/core/visual/markup';
 
-export { splitCode, fillSlot, tokenVars } from '@/core/look/markup';
+export { splitCode, captionStyleOf, captionStyles } from '@/core/visual/markup';
 
 /**
  * One self-contained HyperFrames composition per IR (CORE_CONTRACTS §2.8, §6.3).
  *
- * The page carries everything: gsap and the HyperFrames runtime inlined, the stage and block styles
- * scoped with `@scope`, one timed clip per scene with the stage markup wrapping the block markup,
- * the voice-over as a timed `<audio>`, and a bootstrap that binds props, runs each block's script
- * against a scene-scoped gsap, and registers the master timeline under `window.__timelines`. The
- * same string feeds the browser player (as `srcdoc`) and the producer (as `index.html`); only the
- * media and font paths differ.
+ * The page carries everything: gsap and the HyperFrames runtime inlined, the film's style sheet and
+ * each scene's own styles scoped with `@scope`, one timed clip per scene holding the scene's markup,
+ * the voice-over as a timed `<audio>`, and a bootstrap that binds the video's values, runs each
+ * scene's script against a scene-scoped gsap, and registers the master timeline under
+ * `window.__timelines`. The same string feeds the browser player (as `srcdoc`) and the producer (as
+ * `index.html`); only the media and font paths differ.
  *
  * Isomorphic and pure: strings in, string out, no DOM. Testable without a browser.
  */
@@ -40,8 +36,8 @@ export const RUNTIME_MARKER = '<!-- hyperframe.runtime.iife.js (inlined) -->';
 export const COMPOSITION_ID = 'nodecine';
 
 /**
- * Runs inside the composition before the runtime initialises. Binds props and fields into the
- * markup, runs the stage and block scripts of every scene with a gsap whose string targets are
+ * Runs inside the composition before the runtime initialises. Binds the video's values and each
+ * scene's facts into the markup, runs every scene's script with a gsap whose string targets are
  * resolved inside that scene only, and assembles the master timeline.
  */
 export const BOOTSTRAP = String.raw`
@@ -49,48 +45,17 @@ export const BOOTSTRAP = String.raw`
   var data = JSON.parse(document.getElementById('nodecine-data').textContent);
   var timelines = [];
   var unwrap = new WeakMap();
-  var bindProps = window.__nodecineBind.props;
-  var bindFields = window.__nodecineBind.fields;
-
-  function scopedGsap(root) {
-    var q = gsap.utils.selector(root);
-    var fix = function (t) { return typeof t === 'string' ? q(t) : t; };
-    var wrap = function (tl) {
-      var proxy = new Proxy(tl, {
-        get: function (target, key) {
-          if (key === 'to' || key === 'from' || key === 'fromTo' || key === 'set') {
-            return function (t) { var args = Array.prototype.slice.call(arguments, 1); target[key].apply(target, [fix(t)].concat(args)); return proxy; };
-          }
-          if (key === 'add') return function () { target.add.apply(target, arguments); return proxy; };
-          var v = target[key];
-          return typeof v === 'function' ? v.bind(target) : v;
-        }
-      });
-      unwrap.set(proxy, tl);
-      return proxy;
-    };
-    return {
-      timeline: function (vars) { return wrap(gsap.timeline(vars)); },
-      to: function (t, v) { return gsap.to(fix(t), v); },
-      from: function (t, v) { return gsap.from(fix(t), v); },
-      fromTo: function (t, a, b) { return gsap.fromTo(fix(t), a, b); },
-      set: function (t, v) { return gsap.set(fix(t), v); },
-      utils: gsap.utils,
-      q: q
-    };
-  }
+  __SCOPED_GSAP__
 
   data.scenes.forEach(function (scene) {
     var root = document.getElementById(scene.id);
     if (!root) return;
-    bindFields(root, scene.fields || {});
     window.__nodecineBind.vars(root, data.vars || {});
-    var block = root.querySelector('[data-block]');
-    if (block) bindProps(block, scene.props || {});
-    var g = scopedGsap(root);
+    window.__nodecineBind.facts(root, scene.facts || {});
+    var g = scopedGsap(root, unwrap);
     var collected = [];
-    var nodecine = { timeline: function (tl) { collected.push(unwrap.get(tl) || tl); }, props: scene.props || {}, fields: scene.fields || {}, root: root, index: scene.index || 0, duration: scene.duration || 0, reveal: scene.reveal || {} };
-    __REVEAL_HELPERS__
+    var nodecine = { timeline: function (tl) { collected.push(unwrap.get(tl) || tl); }, root: root, index: scene.index || 0, duration: scene.duration || 0, words: scene.words || [] };
+    __SCENE_HELPERS__
     (scene.scripts || []).forEach(function (src) {
       try { new Function('gsap', 'nodecine', 'root', src)(g, nodecine, root); }
       catch (e) { console.error('[nodecine] scene ' + scene.id + ' script failed:', e); }
@@ -101,7 +66,7 @@ export const BOOTSTRAP = String.raw`
   var master = gsap.timeline({ paused: true });
   timelines.forEach(function (entry) { entry.tl.paused(false); master.add(entry.tl, entry.at); });
 
-  // Captions sit inside each scene's caption slot, so the stage's own CSS positions and styles
+  // Captions sit inside each scene's caption slot, so the scene's own CSS positions and styles
   // them. Lines and words are switched on the master timeline at absolute times; the CSS holds the
   // initial state (line hidden, reveal words transparent), so a seek reads the same frame as a play.
   data.scenes.forEach(function (scene) {
@@ -144,9 +109,7 @@ export const BOOTSTRAP = String.raw`
   window.__timelines = window.__timelines || {};
   window.__timelines[data.compositionId] = master;
 })();
-`.replace('__REVEAL_HELPERS__', REVEAL_HELPERS);
-
-export { captionStyleOf, captionStyles } from '@/core/look/markup';
+`.replace('__SCOPED_GSAP__', SCOPED_GSAP).replace('__SCENE_HELPERS__', SCENE_HELPERS);
 
 export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): string {
   const { width, height, fps, totalDurationInFrames } = ir.meta;
@@ -154,27 +117,21 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
   // The file's pixels; everything inside stays in design coordinates and is zoomed by the root.
   const outW = Math.round(width * scale / 2) * 2;
   const outH = Math.round(height * scale / 2) * 2;
-  const stage = ir.stage;
-  const blocks = new Map(ir.blocks.map((b) => [b.id, b] as [string, BlockDef]));
-  const stageCode = splitCode(stage.code.source);
-  const blockCode = new Map([...blocks].map(([id, b]) => [id, splitCode(b.code.source)]));
 
   const duration = totalDurationInFrames / fps;
-  // The stage decides where captions go and how they look (its `data-slot="captions"`); a stage
-  // that declares no slot gets the default band inside the safe zone.
-  const captionSlot = findSlot(stageCode.markup, 'captions');
-  const stageMarkup = ir.captions && !captionSlot ? `${stageCode.markup}<div class="nc-captions-default" data-slot="captions"></div>` : stageCode.markup;
-  const captionStyle = captionStyleOf(captionSlot?.tag ?? '');
-  const transition = stage.transition ?? { type: 'cut' as const, seconds: 0 };
+  const transition = ir.transition;
   const overlap = transition.type === 'cut' ? 0 : transition.seconds;
+  const allCues = ir.captions?.cues ?? [];
   const scenes = ir.timeline.map((s, si) => {
-    const bc = blockCode.get(s.blockId)!;
     const sceneStart = s.startFrame;
     const sceneEnd = s.startFrame + s.durationInFrames;
     // Every scene but the last stays up through the next one's transition; the incoming scene is drawn on top.
     const clipSeconds = si < ir.timeline.length - 1 ? Math.min(duration - sceneStart / fps, s.durationInFrames / fps + overlap) : s.durationInFrames / fps;
+    // Each scene decides where its captions go (its `data-slot="captions"`); one without a slot gets the default band.
+    const bare = sceneMarkup(s.source, { withCaptions: !!ir.captions, start: sceneStart / fps, duration: s.durationInFrames / fps });
+    const captionStyle = captionStyleOf(bare.captionSlot?.tag ?? '');
     // Every line spoken while this scene is on screen; a line across a cut is drawn in both scenes.
-    const cues = (ir.captions?.cues ?? [])
+    const cues = allCues
       .map((c, ci) => ({ c, ci }))
       .filter(({ c }) => c.startFrame < sceneEnd && c.startFrame + c.durationInFrames > sceneStart)
       .map(({ c, ci }) => ({
@@ -184,30 +141,29 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
         style: captionStyle,
         words: c.words.map((w, wi) => ({ id: `nc-cap-${si}-${ci}-w${wi}`, text: w.text, at: w.startFrame / fps })),
       }));
-    // The words the voice says while this scene is up, on the scene's own clock, for the reveal times.
-    const spokenWords = (ir.captions?.cues ?? []).flatMap((c) => c.words).filter((w) => w.startFrame >= sceneStart && w.startFrame < sceneEnd).map((w) => ({ text: w.text, start: (w.startFrame - sceneStart) / fps }));
-    const cuesHtml = cues.map((cue) => `<div id="${cue.id}" class="nc-cap-line">${cue.words.map((w) => `<span id="${w.id}" class="nc-cap-w"${captionStyle === 'reveal' ? ' style="opacity:0"' : ''}>${esc(w.text)}</span>`).join(' ')}</div>`).join('');
-    // A clip in this scene runs while this scene is on screen, not from the top of the film.
-    const markup = timeVideos(fillNamedSlot(sceneMarkup(stageMarkup, bc.markup, s.blockId), 'captions', cuesHtml), s.startFrame / fps, s.durationInFrames / fps);
+    // The words the voice says while this scene is up, on the scene's own clock, for `nodecine.when`.
+    const words = allCues.flatMap((c) => c.words).filter((w) => w.startFrame >= sceneStart && w.startFrame < sceneEnd).map((w) => ({ text: w.text, start: (w.startFrame - sceneStart) / fps }));
+    const cuesHtml = cues.map((cue) => captionLine(cue.id, cue.words, captionStyle)).join('');
+    const scene = sceneMarkup(s.source, { captionsHtml: cuesHtml, withCaptions: !!ir.captions, start: sceneStart / fps, duration: s.durationInFrames / fps });
     return {
       id: s.id,
-      start: s.startFrame / fps,
-      duration: s.durationInFrames / fps,
-      html: `<div id="${esc(s.id)}" class="clip nc-scene" data-start="${s.startFrame / fps}" data-duration="${clipSeconds}" data-track-index="0" data-stage${s.tone ? ` data-tone="${esc(s.tone)}"` : ''} style="${esc(tokenVars(stage, s.tone))}">${markup}</div>`,
-      data: { id: s.id, index: si, start: s.startFrame / fps, duration: s.durationInFrames / fps, reveal: revealMap(s.props, spokenWords, s.durationInFrames / fps), props: s.props, fields: s.fields ?? {}, scripts: [...stageCode.scripts, ...bc.scripts], captions: cues.map((cue) => ({ id: cue.id, show: cue.show, hide: cue.hide, style: cue.style, words: cue.words.map((w) => ({ id: w.id, at: w.at })) })) },
+      html: `<div id="${esc(s.id)}" class="clip nc-scene" data-scene="${esc(s.id)}" data-start="${s.startFrame / fps}" data-duration="${clipSeconds}" data-track-index="0">${scene.html}</div>`,
+      css: scopedCss(`[data-scene="${esc(s.id)}"]`, scene.styles.join('\n')),
+      defaultBand: !scene.captionSlot,
+      data: { id: s.id, index: si, start: s.startFrame / fps, duration: s.durationInFrames / fps, facts: s.facts ?? {}, words, scripts: scene.scripts, captions: cues },
     };
   });
 
   const styles = [
-    baseStyles(stage, width, height, o.fontBase),
-    `.clip { position: absolute; inset: 0; visibility: hidden; overflow: hidden; }`,
+    baseStyles(width, height, o.fontBase),
+    baseLayer(`.clip { position: absolute; inset: 0; visibility: hidden; overflow: hidden; }`),
     // The runtime sizes the composition root from data-width/height (the file's pixels), so the
     // scenes live in an inner frame that keeps the design size and is scaled as one picture. A
     // transform, not `zoom`: zoom left bottom-anchored offsets unscaled.
-    ...(scale !== 1 ? [`html, body, [data-composition-id] { width: ${outW}px; height: ${outH}px; }`, `.nc-frame { position: absolute; left: 0; top: 0; width: ${width}px; height: ${height}px; transform: scale(${scale}); transform-origin: 0 0; overflow: hidden; }`] : []),
-    ...(ir.captions ? [captionStyles(width, height, !captionSlot)] : []),
-    scopedCss('[data-stage]', stageCode.styles.join('\n')),
-    ...[...blockCode].map(([id, bc]) => scopedCss(`[data-block="${id}"]`, bc.styles.join('\n'))),
+    ...(scale !== 1 ? [`html, body, [data-composition-id] { width: ${outW}px; height: ${outH}px; }`, `.nc-frame { position: absolute; left: 0; top: 0; width: ${width}px; height: ${height}px; transform: scale(${scale}); transform-origin: 0 0; }`] : []),
+    ...(ir.captions ? [baseLayer(captionStyles(width, height, scenes.some((s) => s.defaultBand)))] : []),
+    styleCss(ir.style),
+    ...scenes.map((s) => s.css),
   ].filter(Boolean);
 
   // One map for the whole video, bound into every scene: the date and the like do not change per scene.

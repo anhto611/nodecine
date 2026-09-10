@@ -4,8 +4,7 @@ import { createServerServices } from '../services.server';
 import { buildCaptionTrack, retime } from '@/nodes/captions/cues';
 import { buildIR } from '@/nodes/assembler/build-ir';
 import { mediaUrl } from '../paths';
-import staticScript from '@/lib/first-run.json';
-import type { BlockDef, StageDef } from '@/core/types/payloads';
+import { SCENE_SOURCE, STYLE } from '@/core/__tests__/scene-fixtures';
 
 /**
  * Manual: real alignment (stable-ts) on a real voice-over, then a real producer render with karaoke
@@ -27,11 +26,8 @@ describe.skipIf(!enabled)('captions, for real', () => {
     console.log('words', words.map((w) => `${w.text}@${w.start}`).join(' '));
     const track = buildCaptionTrack(words, { maxChars: 26 });
     console.log('lines', track.cues.map((c) => c.words.map((w) => w.text).join(' ')));
-    const nodes = staticScript.graph.nodes;
-    const stage = nodes.find((n) => n.type === 'core/art-director')!.params as unknown as StageDef;
-    const blocks = (nodes.find((n) => n.type === 'core/art-director')!.params as unknown as { blocks: BlockDef[] }).blocks;
     const ir = buildIR({
-      plan: { language: 'vi', stage, blocks, scenes: [{ blockId: 'text-card', weight: 1, props: { headline: 'Phụ đề karaoke', body: 'Căn mốc từ bằng stable-ts' }, fields: { kicker: 'NodeCine' } }] },
+      plan: { language: 'vi', frame: { width: 1080, height: 1920 }, style: STYLE, transition: { type: 'fade', seconds: 0.4 }, vars: {}, scenes: [{ weight: 1, source: SCENE_SOURCE.replace('Hello', 'Phụ đề karaoke').replace('First', 'Căn mốc từ bằng stable-ts') }] },
       voiceover: { audioUrl, durationSeconds, voiceName: 'vbee', language: 'vi-VN', speed: 1, words },
       captions: track,
       params: { title: 'Captions check', minTotalFrames: 30 },

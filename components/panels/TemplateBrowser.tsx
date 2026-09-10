@@ -4,10 +4,9 @@ import { listTemplates, localized } from '@/core/templates/registry';
 import { useStudio, type TemplateId } from '@/store/useStudio';
 import { Icon } from '../icons';
 import { Btn, useT } from '../ui';
-import { TemplatePlayer, lookOfTemplate, shapeOfTemplate } from './TemplatePlayer';
-import type { LookDef } from '@/core/types/payloads';
+import { shapeOfTemplate } from './TemplatePlayer';
 
-type Card = { id: string; name: string; description: string; nodes: number; category: string; look: LookDef | null; shape: { ratio: string; fps: number } | null };
+type Card = { id: string; name: string; description: string; nodes: number; category: string; shape: { ratio: string; fps: number } | null };
 
 /**
  * Cards share the row and always use all of it: a readable floor, then they grow to fill. Capping
@@ -43,15 +42,12 @@ export const TemplateBrowser: React.FC = () => {
   const pick = (id: string) => { setCat(id); setSideOpen(false); };
   // Nothing chosen until the person chooses: a preselected first card is one Enter away from a template nobody asked for.
   const [sel, setSel] = React.useState<string>('');
-  // One card plays at a time: the one selected, or the one under the pointer. Three full-frame documents animating at once was the lag.
-  const [hover, setHover] = React.useState<string | null>(null);
   const all = React.useMemo<Card[]>(() => listTemplates().map((tpl) => ({
     id: tpl.id,
     name: localized(tpl.name, locale, tpl.id),
     description: localized(tpl.description, locale),
     nodes: tpl.graph.nodes.length,
     category: tpl.category,
-    look: lookOfTemplate(tpl.graph),
     shape: shapeOfTemplate(tpl.graph),
   })), [locale]);
   // A category nobody has a template for would open onto an empty grid, so it is not offered.
@@ -90,21 +86,17 @@ export const TemplateBrowser: React.FC = () => {
             {CARDS.map((c) => {
               const name = c.name;
               return (
-                <div key={c.id} className={`nc-card ${sel === c.id ? 'on' : ''}`} style={CARD} onClick={() => setSel(c.id)} onDoubleClick={() => load(c.id as TemplateId)} onMouseEnter={() => setHover(c.id)} onMouseLeave={() => setHover((h) => (h === c.id ? null : h))}>
+                <div key={c.id} className={`nc-card ${sel === c.id ? 'on' : ''}`} style={CARD} onClick={() => setSel(c.id)} onDoubleClick={() => load(c.id as TemplateId)}>
                   {/* `overflow: hidden` keeps this square: without it a long template name wraps to
                       an extra line and pushes the box past the height aspect-ratio gave it. */}
                   <div style={{ aspectRatio: '1 / 1', width: '100%', maxHeight: PICTURE_MAX_HEIGHT, alignSelf: 'center', flexShrink: 0, overflow: 'hidden', background: '#08090c', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* The frame the template renders, edge to edge in the square. Sized relative
                         to it rather than in pixels, so it keeps filling it whatever the column width
                         becomes. */}
-                    {c.look ? (
-                      <TemplatePlayer look={c.look} playing={(hover ?? sel) === c.id} />
-                    ) : (
-                      <div style={{ height: '100%', aspectRatio: (c.shape?.ratio ?? '9:16').replace(':', ' / '), overflow: 'hidden', background: '#0b0c10', borderLeft: '1px solid #23262c', borderRight: '1px solid #23262c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 8px' }}>
+                    <div style={{ height: '100%', aspectRatio: (c.shape?.ratio ?? '9:16').replace(':', ' / '), overflow: 'hidden', background: '#0b0c10', borderLeft: '1px solid #23262c', borderRight: '1px solid #23262c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 8px' }}>
                         <div style={{ width: 24, height: 2, background: '#a78bfa' }} />
                         <div style={{ fontSize: 'var(--fs-body)', color: '#fff', fontWeight: 700, textAlign: 'center', lineHeight: 1.35 }}>{name.split(' ').slice(0, 3).join('\n')}</div>
                       </div>
-                    )}
                   </div>
                   <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
                     <div title={name} style={{ fontSize: 'var(--fs-label)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>

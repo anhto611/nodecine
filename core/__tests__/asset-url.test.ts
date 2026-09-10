@@ -21,3 +21,16 @@ describe('AssetUrlSchema', () => {
     expect(isInlineAsset(svg)).toBe(true);
   });
 });
+
+describe('a var of the video', () => {
+  it('is text, or a picture', async () => {
+    const { VarsSchema, isAssetUrl } = await import('@/core/types/payloads');
+    const ok = (vars: Record<string, string>) => VarsSchema.safeParse(vars).success;
+    expect(ok({ channel: '@kenh', character: '/api/assets/0123456789abcdef.png' })).toBe(true);
+    expect(ok({ character: svg })).toBe(true);
+    expect(ok({ character: 'x'.repeat(201) })).toBe(false);
+    // A link is short text as far as the schema goes; it is simply not drawn as a picture.
+    expect(ok({ character: 'https://example.com/a.png' })).toBe(true);
+    expect(isAssetUrl('https://example.com/a.png')).toBe(false);
+  });
+});

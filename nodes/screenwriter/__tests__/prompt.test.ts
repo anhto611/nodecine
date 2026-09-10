@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildScreenwriterPrompt, factsForPrompt } from '@/nodes/screenwriter/prompt';
 import { expandBeats } from '@/nodes/screenwriter/beats';
-import { describeBlockField } from '@/core/look/props';
 import type { FactSheet } from '@/core/types/payloads';
 
 const sheet: FactSheet = {
@@ -10,15 +9,6 @@ const sheet: FactSheet = {
   fetchedAt: '2026-09-05T00:00:00.000Z',
   facts: { name: 'widget', description: 'Tiny widgets for the web.', stars: 4321, topics: ['widgets', 'web'], url: 'github.com/acme/widget', installCommand: 'npm install widget' },
 };
-
-describe('describeBlockField', () => {
-  it('turns a field into an honest hint: shape from the type and limits, intent from the hint', () => {
-    expect(describeBlockField({ type: 'string', required: true, max: 60, hint: 'six words' })).toBe('text, up to 60 characters — six words');
-    expect(describeBlockField({ type: 'number', required: false, min: 0, max: 10 })).toBe('number 0–10 (optional)');
-    expect(describeBlockField({ type: 'string[]', required: true, min: 3, max: 3 })).toBe('[exactly 3 × text]');
-    expect(describeBlockField({ type: 'color', required: true })).toBe('#rrggbb');
-  });
-});
 
 describe('factsForPrompt', () => {
   it('shows every fact except the ones bound straight into a scene', () => {
@@ -42,7 +32,7 @@ describe('buildScreenwriterPrompt', () => {
     { role: 'proof', brief: '', weight: 1, count: 2, factBindings: { number: 'stars' } },
   ]);
 
-  it('carries the brief, the count, the language, the beats and the content vocabulary — and no block', () => {
+  it('carries the brief, count, language, beats and content vocabulary — without drawing instructions', () => {
     const p = buildScreenwriterPrompt({ brief: 'Introduce widget to busy people.', facts: sheet, excludeFacts: new Set(['stars']), scenes, language: 'vi', strict: false });
     expect(p).toContain('Introduce widget to busy people.');
     expect(p).toContain('video with 3 scenes');

@@ -28,10 +28,10 @@ describe.skipIf(!enabled)('github-showcase, end to end', () => {
     });
     const t0 = Date.now();
     const { ok } = await ex.run();
-    const plan = ex.runtime('screenwriter').outputs.plan?.payload as ScenePlan | undefined;
+    const plan = ex.runtime('illustrator').outputs.plan?.payload as ScenePlan | undefined;
     const script = ex.runtime('screenwriter').outputs.script?.payload as AudioScript | undefined;
     if (script) console.log(`narration (${script.text.split(/\s+/).length} words):\n${script.text}`);
-    if (plan) console.log('scenes:', plan.scenes.map((s) => `${s.blockId}${s.tone ? `/${s.tone}` : ''}`).join(', '));
+    if (plan) console.log('scenes:', plan.scenes.length, 'in', plan.style.name);
     expect(ok).toBe(true);
     const ir = ex.runtime('assembler').outputs.ir!.payload as VideoIR;
     console.log(`video: ${(ir.meta.totalDurationInFrames / ir.meta.fps).toFixed(1)}s, ${ir.timeline.length} scenes, voice ${ir.audioTrack.durationSeconds}s`);

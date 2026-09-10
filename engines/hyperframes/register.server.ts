@@ -1,8 +1,9 @@
 import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises';
+import { keepWebGlobals } from '@/server/web-globals';
 import path from 'node:path';
 import { registerEngine } from '@/core/adapters/registry';
-import { registerCodeRenderer } from '@/core/look/renderers';
-import type { CaptureResult, CaptureSettings, ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
+import { registerCodeRenderer } from '@/core/visual/renderers';
+import type { ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
 import type { VideoIR } from '@/core/types/ir';
 import { contentHash } from '@/core/hash';
 import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
@@ -10,8 +11,8 @@ import { createHyperframesAdapter } from './adapter';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { buildHyperframesDocument } from './document';
 import { vendorSource } from './vendor.server';
-import { renderScaleFor } from '@/core/look/frame';
-import { FONT_FILES } from '@/core/look/markup';
+import { renderScaleFor } from '@/core/visual/frame';
+import { FONT_FILES } from '@/core/visual/markup';
 import { assetNamesIn, assetPath } from '@/server/paths';
 
 /**
@@ -26,8 +27,7 @@ const QUALITY: Record<ExportSettings['quality'], 'high' | 'standard' | 'draft'> 
 
 /**
  * The project directory a headless Chrome is pointed at: index.html, the voice-over beside it, the
- * fonts and any images the look refers to. The MP4 render and the cover capture both start here —
- * a cover drawn on a differently built page would not carry the film's own type and colour.
+ * fonts and any images the scenes refer to.
  */
 async function buildProjectDir(ir: VideoIR, settings: Pick<ExportSettings, 'resolution'>, key: string): Promise<{ projectDir: string; scale: number }> {
   const tmp = await ensureTmpDir();
@@ -36,9 +36,9 @@ async function buildProjectDir(ir: VideoIR, settings: Pick<ExportSettings, 'reso
 
   await copyFile(mediaPath(fileNameFromMediaUrl(ir.audioTrack.voiceoverUrl)), path.join(projectDir, 'voiceover.mp3'));
   for (const f of FONT_FILES) await copyFile(path.resolve(process.cwd(), 'public/fonts', f), path.join(projectDir, 'fonts', f));
-  // Images the stage or blocks refer to come along, by their hashed names.
-  // Scene props carry images too, not only the code: an asset named in a prop and left behind is a hole in the MP4.
-  const assets = assetNamesIn(JSON.stringify([ir.stage.code.source, ...ir.blocks.map((b) => b.code.source), ir.timeline]));
+  // Images the scenes, the style sheet or the video's values refer to come along, by their hashed names:
+  // an asset named anywhere in the IR and left behind is a hole in the MP4.
+  const assets = assetNamesIn(JSON.stringify([ir.style.css, ir.timeline, ir.vars ?? {}]));
   if (assets.length) await mkdir(path.join(projectDir, 'assets'), { recursive: true });
   for (const a of assets) await copyFile(assetPath(a), path.join(projectDir, 'assets', a)).catch(() => undefined);
 
@@ -59,53 +59,16 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
   const outputPath = path.join(tmp, fileName);
   const total = ir.meta.totalDurationInFrames;
   const job = createRenderJob({ fps: ir.meta.fps, quality: QUALITY[settings.quality], format: 'mp4' });
-  await executeRenderJob(job, projectDir, outputPath, (j) => {
+  // The producer's file server would swap the global Request/Response out from under Next (see server/web-globals.ts).
+  await keepWebGlobals(() => executeRenderJob(job, projectDir, outputPath, (j) => {
     const fraction = j.progress > 1 ? j.progress / 100 : j.progress;
     onProgress({ renderedFrames: Math.min(total, Math.round(fraction * total)), totalFrames: total });
-  }, signal);
+  }, signal));
   const s = await stat(outputPath);
   return { outputUrl: mediaUrl(fileName), bytes: s.size };
 }
 
-/**
- * One frame of a composition, as a PNG (CORE_CONTRACTS §5.18) — the cover, drawn as a one-frame
- * film. The producer's own capture session does the work: it serves the project directory, seeks
- * the page's timeline and screenshots deterministically, which is exactly what the MP4 path does
- * frame by frame. Rolling our own puppeteer here would be a second, subtly different renderer.
- */
-export async function captureCoverWithProducer(ir: VideoIR, opts: CaptureSettings, signal: AbortSignal): Promise<CaptureResult> {
-  const { createFileServer, createCaptureSession, initializeSession, captureFrameToBuffer, closeCaptureSession } = await import('@hyperframes/producer');
-  const key = contentHash({ ir, opts, engine: HYPERFRAMES_ENGINE_ID, kind: 'cover' });
-  const fileName = `${key}.png`;
-  const outputPath = mediaPath(fileName);
-  if (await stat(outputPath).then(() => true, () => false)) {
-    return { outputUrl: mediaUrl(fileName), bytes: (await stat(outputPath)).size };
-  }
-
-  const { projectDir, scale } = await buildProjectDir(ir, opts, key);
-  // The second the user asked for, clamped inside the film and quantised to a real frame.
-  const frame = Math.min(Math.max(0, Math.round(opts.atSeconds * ir.meta.fps)), Math.max(0, ir.meta.totalDurationInFrames - 1));
-  const server = await createFileServer({ projectDir, fps: { num: ir.meta.fps, den: 1 } });
-  let session: Awaited<ReturnType<typeof createCaptureSession>> | null = null;
-  try {
-    session = await createCaptureSession(server.url, projectDir, {
-      width: Math.round(ir.meta.width * scale),
-      height: Math.round(ir.meta.height * scale),
-      fps: { num: ir.meta.fps, den: 1 },
-      format: 'png',
-    });
-    await initializeSession(session);
-    if (signal.aborted) throw Object.assign(new Error('cancelled'), { code: 'RUN_CANCELLED' });
-    const shot = await captureFrameToBuffer(session, frame, frame / ir.meta.fps);
-    await writeFile(outputPath, shot.buffer);
-    return { outputUrl: mediaUrl(fileName), bytes: shot.buffer.byteLength };
-  } finally {
-    if (session) await closeCaptureSession(session).catch(() => undefined);
-    server.close();
-  }
-}
-
 export function registerHyperframesServer(): void {
   registerCodeRenderer('html-gsap', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
-  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer, capture: captureCoverWithProducer }));
+  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer }));
 }

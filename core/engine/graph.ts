@@ -26,7 +26,7 @@ export interface Graph {
 
 /**
  * The kind of a wire follows the port it leaves: content flowing step to step, or a resource (a
- * look, a model, a voice, an engine) plugged into the node that uses it. Unknown node types count
+ * footage, a model, a voice, an engine) plugged into the node that uses it. Unknown node types count
  * as flow so an unregistered graph still lays out.
  */
 export function edgeKind(graph: Graph, e: Graph['edges'][number]): 'flow' | 'resource' {

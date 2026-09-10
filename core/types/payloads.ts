@@ -50,8 +50,7 @@ export type FactSheet = z.infer<typeof FactSheetSchema>;
 
 /**
  * The content vocabulary (CORE_CONTRACTS §2.11): the fixed set of things a scene can say, written by
- * the screenwriter without knowing any block, and consumed by the Art Director when it casts a block for the
- * scene. A block prop names the key that fills it (`content`), or is filled by the key of its own name.
+ * the screenwriter without knowing any drawing, and read by the Illustrator when it draws the scene.
  */
 /** The keys a model writes. An image is not among them: a model cannot know an uploaded asset's name. */
 export const WRITTEN_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source', 'entries'] as const;
@@ -61,9 +60,8 @@ export type WrittenKey = (typeof WRITTEN_KEYS)[number];
 export type ContentKey = (typeof CONTENT_KEYS)[number];
 export const isContentKey = (k: string): k is ContentKey => (CONTENT_KEYS as readonly string[]).includes(k);
 
-/** One thing that goes into a block (CORE_CONTRACTS §2.7). The hint is shown in the Art Director node's props table. */
 /**
- * A file a look carries: an image uploaded through `POST /api/assets`, or a clip taken in from the
+ * A file a scene carries: an image uploaded through `POST /api/assets`, or a clip taken in from the
  * user's own folder through `POST /api/assets/from-library`. Either way it is addressed by its hash
  * (ARCHITECTURE §6) — a scene may only show a file this machine is already holding.
  */
@@ -78,158 +76,61 @@ const INLINE_SVG = /^data:image\/svg\+xml;base64,[A-Za-z0-9+/]+=*$/;
 export const INLINE_ASSET_MAX_CHARS = 64 * 1024;
 export const isInlineAsset = (url: string): boolean => url.length <= INLINE_ASSET_MAX_CHARS && INLINE_SVG.test(url);
 export const AssetUrlSchema = z.string().refine((s) => HASHED_ASSET.test(s) || isInlineAsset(s), 'must be an uploaded asset, or an inline SVG under 64 KB');
+/** Whether a string names a file a scene may show: hashed upload or inline SVG. A var that is one is drawn as a picture. */
+export const isAssetUrl = (s: string): boolean => HASHED_ASSET.test(s) || isInlineAsset(s);
 
-export const BlockFieldSchema = z.object({
-  type: z.enum(['string', 'text', 'number', 'boolean', 'color', 'string[]', 'image', 'video', 'entries']),
-  /** Which scene content fills this prop; absent means the prop's own name, when that is a content key. */
-  content: z.enum(CONTENT_KEYS).optional(),
-  hint: z.string().max(200).optional(),
-  required: z.boolean().default(true),
-  max: z.number().int().positive().optional(),
-  min: z.number().optional(),
-  /**
-   * For an `entries` prop: which keys of each entry this block draws. What it does not name is not
-   * copied in, so a block asking for a label and a picture never receives the paragraph as well —
-   * and a scene carrying more than the block reads still counts as fully shown.
-   */
-  of: z.array(z.enum(CONTENT_KEYS)).max(12).optional(),
-});
-export type BlockField = z.infer<typeof BlockFieldSchema>;
+const IDENT = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 
-/** Scene code shared by stage and block: an HTML fragment with inline style and an optional GSAP timeline. */
-export const SceneCodeSchema = z.object({
-  format: z.literal('html-gsap'),
-  source: z.string().max(200_000),
-});
-export type SceneCode = z.infer<typeof SceneCodeSchema>;
+/** The frame a plan is drawn for: the design coordinates its code is written in (CORE_CONTRACTS §2.3). */
+export const FrameSchema = z.object({ width: z.number().int().min(16).max(8192), height: z.number().int().min(16).max(8192) });
+export type Frame = z.infer<typeof FrameSchema>;
 
-const SLUG = /^[a-z0-9][a-z0-9-]*$/;
-
-/** A scene archetype the screenwriter may pick: what to write, when to use it, how it draws. */
-export const BlockDefSchema = z.object({
-  id: z.string().regex(SLUG).max(60),
-  name: z.string().min(1).max(80),
-  doc: z.object({ example: z.string().max(2000), when: z.string().max(1000) }),
-  props: z.record(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), BlockFieldSchema),
-  code: SceneCodeSchema,
-});
-export type BlockDef = z.infer<typeof BlockDefSchema>;
-
-
-/** The persistent shell every scene plays on; one per workflow (CORE_CONTRACTS §2.6). */
-export const StageDefSchema = z.object({
-  name: z.string().min(1).max(80),
-  /** The frame this stage is drawn for; the video takes its size from here (CORE_CONTRACTS §2.6). */
-  frame: z.object({ width: z.number().int().min(16).max(8192), height: z.number().int().min(16).max(8192) }).default({ width: 1080, height: 1920 }),
-  tokens: z.object({ palette: z.record(z.string()), fonts: z.record(z.string()) }),
-  /** Named palette overrides a scene may switch to; keys are what the model writes into `tone`. */
-  tones: z.record(z.record(z.string())).default({}),
-  /** How one scene gives way to the next (CORE_CONTRACTS §2.6): one kind for the whole film, the film's own rhythm. */
-  transition: z.object({ type: z.enum(['cut', 'fade', 'slide', 'zoom']), seconds: z.number().min(0.1).max(2) }).default({ type: 'fade', seconds: 0.4 }),
-  /**
-   * Values the stage draws once for the whole video (CORE_CONTRACTS §2.6): the date, the episode,
-   * the channel. Written by the person, never by the model, and the same in every scene — that is
-   * what makes them different from `sceneFields`. The stage draws one with `data-var="name"`.
-   */
-  vars: z.record(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), z.string().max(200)).default({}),
-  /** Extra per-scene fields the stage draws itself; the rule teaches the model how to write each. */
-  sceneFields: z.array(z.object({ name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), rule: z.string().max(300), options: z.array(z.string()).optional() })).default([]),
-  code: SceneCodeSchema,
-});
-export type StageDef = z.infer<typeof StageDefSchema>;
+/** The one scene-code format there is: an HTML fragment with inline style and an optional GSAP timeline (CORE_CONTRACTS §2.8). */
+export const SCENE_FORMAT = 'html-gsap' as const;
+export const SCENE_SOURCE_MAX = 200_000;
 
 /**
- * A cover image (CORE_CONTRACTS §2.13): the third thing a look is made of, beside the stage and the
- * blocks. It is not a block, and the difference is the `frame`.
- *
- * A block is a piece placed *inside* a stage, on the video's frame, in a scene's slot of time. A
- * cover stands alone, on a frame of its **own** — a 16:9 video wants a 9:16 cover, because that is
- * what the platform shows beside every other portrait video — with no time at all, and props the
- * person types rather than props filled from a scene's content. What it borrows from the stage is
- * the palette and the fonts, so the cover and the video look like one piece of work.
+ * What every scene of a video shares (CORE_CONTRACTS §2.6): a name, and one sheet of CSS — the
+ * colours, the type, the classes the scenes' markup uses. Drawn by the Illustrator for the run.
  */
-export const CoverDefSchema = z.object({
-  id: z.string().regex(SLUG).max(60),
+export const StyleSchema = z.object({
   name: z.string().min(1).max(80),
-  /** Its own, and this is the whole point of the type. */
-  frame: z.object({ width: z.number().int().min(16).max(8192), height: z.number().int().min(16).max(8192) }),
-  props: z.record(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/), BlockFieldSchema),
-  /**
-   * What the cover already says before anybody fills it in — chosen where the cover is designed.
-   *
-   * A cover is a picture the video is judged by, so it must be a finished thing the moment the look
-   * exists: a ground, a face, the words in place. Leaving every prop to the export step meant an
-   * unfilled cover rendered as a black rectangle, which is not a design, it is a hole. The export
-   * node overrides what it is given and inherits the rest.
-   */
-  defaults: z.record(z.string(), z.unknown()).optional(),
-  code: SceneCodeSchema,
+  css: z.string().max(SCENE_SOURCE_MAX),
 });
-export type CoverDef = z.infer<typeof CoverDefSchema>;
+export type Style = z.infer<typeof StyleSchema>;
 
-/** What a cover is rendered with: the design's own values, with whatever the export step filled in on top. */
-export function coverProps(cover: CoverDef, override: Record<string, unknown> = {}): Record<string, unknown> {
-  const out: Record<string, unknown> = { ...(cover.defaults ?? {}) };
-  // An empty box at the export step is "leave it as designed", not "clear it": a person who wants
-  // nothing there takes the prop out of the cover, they do not blank one field of the render form.
-  for (const [k, v] of Object.entries(override)) if (v !== undefined && v !== null && v !== '') out[k] = v;
-  return out;
-}
-
-/** Block ids unique within one look; shared by the LookDef and the Art Director node's parameters. */
-export const uniqueBlockIds = (v: { blocks: { id: string }[] }, ctx: z.RefinementCtx): void => {
-  const seen = new Set<string>();
-  v.blocks.forEach((b, i) => {
-    if (seen.has(b.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['blocks', i, 'id'], message: `block id "${b.id}" is used twice` });
-    seen.add(b.id);
-  });
-};
+/** How one scene gives way to the next (CORE_CONTRACTS §2.6): one kind for the whole film. */
+export const TransitionSchema = z.object({ type: z.enum(['cut', 'fade', 'slide', 'zoom']), seconds: z.number().min(0.1).max(2) });
+export type Transition = z.infer<typeof TransitionSchema>;
 
 /**
- * The whole look of a workflow (CORE_CONTRACTS §2.7): the stage every scene plays on and the
- * catalogue of blocks that play on it, block ids unique. It is the Art Director node's data; it does not
- * travel on a wire — the Art Director turns a scene script into a plan (§5.9) and sends that.
+ * Values of the whole video (CORE_CONTRACTS §2.6): a channel name, an episode number, and a
+ * character or a logo as a picture. The same in every scene; a scene draws one with `data-var`.
  */
-export const LookDefBaseSchema = StageDefSchema.extend({ blocks: z.array(BlockDefSchema).min(1), covers: z.array(CoverDefSchema).optional() });
-export const LookDefSchema = LookDefBaseSchema.superRefine(uniqueBlockIds);
-export type LookDef = z.infer<typeof LookDefSchema>;
-/** The two parts of a look, as the plan and the renderers take them. */
-export const splitLook = (look: LookDef): { stage: StageDef; blocks: BlockDef[]; covers: CoverDef[] } => { const { blocks, covers, ...stage } = look; return { stage, blocks, covers: covers ?? [] }; };
+export const VarsSchema = z.record(z.string().regex(IDENT), z.union([z.string().max(200), AssetUrlSchema]));
 
-/** One scene of a plan: a block from the plan's catalogue, what goes into it, and how the stage dresses it. */
+/** One scene of a plan (CORE_CONTRACTS §2.3): its own drawing, complete. */
 export const SceneSpecSchema = z.object({
-  blockId: z.string().regex(SLUG),
   weight: z.number().positive(),
-  props: z.record(z.string(), z.unknown()),
-  /** One of the stage's tones; absent means the stage's base palette. */
-  tone: z.string().optional(),
-  /** Values for the stage's `sceneFields`, by name. */
-  fields: z.record(z.string(), z.string()).optional(),
+  /** The scene's HTML fragment: markup, `<style>`, optional `<script>` (CORE_CONTRACTS §2.8). */
+  source: z.string().min(1).max(SCENE_SOURCE_MAX),
+  /** fact key → element: `data-fact="<key>"` in the source takes `facts[key]` at assembly; facts always win. */
   factBindings: z.record(z.string(), z.string()).optional(),
 });
 export type SceneSpec = z.infer<typeof SceneSpecSchema>;
 
 /**
- * A plan is self-contained (CORE_CONTRACTS §2.3): it carries the stage and every block its scenes
- * may use, so the assembler, the engines and a saved project need nothing registered anywhere.
+ * A plan is self-contained (CORE_CONTRACTS §2.3): every scene carries its own drawing and the
+ * style they share, so the assembler, the engines and a saved project need nothing registered.
  */
-export const ScenePlanSchema = z
-  .object({
-    language: bcp47,
-    stage: StageDefSchema,
-    blocks: z.array(BlockDefSchema).min(1),
-    /** The covers the look carries; nothing casts them, they travel to the Cover Image node. */
-    covers: z.array(CoverDefSchema).optional(),
-    scenes: z.array(SceneSpecSchema).min(1),
-  })
-  .superRefine((plan, ctx) => {
-    const ids = new Set(plan.blocks.map((b) => b.id));
-    if (ids.size !== plan.blocks.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['blocks'], message: 'block ids must be unique' });
-    plan.scenes.forEach((s, i) => {
-      if (!ids.has(s.blockId)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scenes', i, 'blockId'], message: `the plan carries no block "${s.blockId}"` });
-      if (s.tone !== undefined && !(s.tone in plan.stage.tones)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scenes', i, 'tone'], message: `the stage has no tone "${s.tone}"` });
-    });
-  });
+export const ScenePlanSchema = z.object({
+  language: bcp47,
+  frame: FrameSchema.default({ width: 1080, height: 1920 }),
+  style: StyleSchema,
+  transition: TransitionSchema.default({ type: 'fade', seconds: 0.4 }),
+  vars: VarsSchema.default({}),
+  scenes: z.array(SceneSpecSchema).min(1),
+});
 export type ScenePlan = z.infer<typeof ScenePlanSchema>;
 
 export const AudioScriptSchema = z.object({
@@ -263,18 +164,18 @@ const contentShape = {
  *
  * The vocabulary does not grow a noun per genre — it grows one dimension, repetition, and the
  * fifteen words it already has describe each entry. One level only: an entry holding entries is a
- * layout engine in disguise, and a block that needs a tree is a block someone should draw by hand.
+ * layout engine in disguise.
  */
 export const EntryContentSchema = z.object(contentShape).partial().strip();
 export type EntryContent = z.infer<typeof EntryContentSchema>;
-/** The keys an entry may carry, for a block that does not narrow them. */
+/** The keys an entry may carry. */
 export const ENTRY_KEYS = Object.keys(contentShape) as (keyof typeof contentShape)[];
 
 /** What one scene says, in the content vocabulary; every key optional, a scene writes what it needs. */
 export const SceneContentSchema = z
   .object({
     ...contentShape,
-    /** Several things shown at once. A block declares how many it takes and which keys it reads. */
+    /** Several things shown at once: two to compare, five to rank, three steps. */
     entries: z.array(EntryContentSchema).max(12),
   })
   .partial()
@@ -283,15 +184,15 @@ export type SceneContent = z.infer<typeof SceneContentSchema>;
 
 /**
  * The scene script (CORE_CONTRACTS §2.11): the video broken into scenes with their content, before
- * any look. Written by the Screenwriter or typed into the Static Script; the Art Director casts a block, a
- * tone and the stage fields for each scene and emits the ScenePlan.
+ * any drawing instructions. Written by the Screenwriter or typed into Static Script; the Illustrator draws each
+ * scene from it and emits the ScenePlan.
  */
 export const SceneScriptSchema = z.object({
   language: bcp47,
   scenes: z
     .array(
       z.object({
-        /** The beat this scene belongs to: hook, quote, cta. The Art Director casts by role. */
+        /** The beat this scene belongs to: hook, quote, cta. */
         role: z.string().min(1).max(40),
         weight: z.number().positive(),
         /** What is said over this scene. The scene lasts as long as its narration (CORE_CONTRACTS §5.4). */
@@ -325,10 +226,10 @@ export const VoiceoverSchema = z.object({
 });
 export type Voiceover = z.infer<typeof VoiceoverSchema>;
 
-/** How the spoken word is marked; read off the stage's caption slot, never carried by the track. */
+/** How the spoken word is marked; read off the scene's caption slot, never carried by the track. */
 export const CAPTION_STYLES = ['karaoke', 'reveal'] as const;
 export type CaptionStyle = (typeof CAPTION_STYLES)[number];
-/** Caption lines on the voice-over's clock (CORE_CONTRACTS §2.10): what is said, when. Where and how is the stage's. */
+/** Caption lines on the voice-over's clock (CORE_CONTRACTS §2.10): what is said, when. Where and how is the scene's. */
 export const CaptionTrackSchema = z.object({
   cues: z.array(z.object({ start: z.number().nonnegative(), end: z.number().nonnegative(), words: z.array(WordSchema).min(1) })),
 });

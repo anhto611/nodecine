@@ -1,7 +1,7 @@
 import type { ZodTypeAny, z } from 'zod';
 import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover, Word } from '../types/payloads';
 import type { VideoIR } from '../types/ir';
-import type { CaptureResult, CaptureSettings, ExportSettings, RenderProgress, RenderResult } from '../adapters/types';
+import type { ExportSettings, RenderProgress, RenderResult } from '../adapters/types';
 
 /**
  * Everything a node needs from outside the graph. The executor runs on the server (ARCHITECTURE
@@ -15,7 +15,7 @@ export interface ReadPageOptions {
   height: number;
 }
 
-/** What a page said about itself, plus any pictures kept as look assets (CORE_CONTRACTS §5.14). */
+/** What a page said about itself, plus any pictures kept as scene assets (CORE_CONTRACTS §5.14). */
 export interface PageRead {
   /** The address actually read, after redirects. */
   url: string;
@@ -81,12 +81,10 @@ export interface NodeServices {
   synthesize(ref: TTSRef, text: string, voice: Voice, speed: number, signal: AbortSignal): Promise<Voiceover>;
   /**
    * Ask the model. The server keeps every answer on disk by provider and prompt, so the same
-   * question asked again — after a restart, or because a node downstream of the look re-ran — is
+   * question asked again — after a restart, or because a downstream visual node re-ran — is
    * free and identical; `fresh` skips that and asks again (a forced run, a retry).
    */
   complete<S extends ZodTypeAny>(ref: LLMRef, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean }): Promise<z.infer<S>>;
-  /** One still of the composition; rejects when the engine cannot take one (CORE_CONTRACTS §5.18). */
-  capture(ref: EngineRef, ir: VideoIR, settings: CaptureSettings, signal: AbortSignal): Promise<CaptureResult>;
   render(
     ref: EngineRef,
     ir: VideoIR,
@@ -110,17 +108,12 @@ export interface NodeServices {
   saveText(text: string, extension: string): Promise<{ url: string; bytes: number }>;
   /** A recording from this machine's voice folder, brought in as a voice-over (CORE_CONTRACTS §5.17). */
   importAudio(fileName: string, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number }>;
-  /** One piece of footage for one scene, kept as a look asset; null when nothing in the library fits. */
+  /** One piece of footage for one scene, kept as an asset; null when nothing in the library fits. */
   fetchStockMedia(req: StockRequest, signal: AbortSignal): Promise<StockResult | null>;
   /**
    * One file from several, in order, with a pause after each part. Returns the file, its measured
    * length and where each part starts and how long it lasts, pause included (CORE_CONTRACTS §5.3).
    */
   concatAudio(parts: { audioUrl: string; durationSeconds: number }[], gapSeconds: number, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number; segments: { start: number; durationSeconds: number }[] }>;
-  /**
-   * One frame of a clip, kept as an image asset: the ground a cover is drawn on when the film is
-   * footage and nobody pinned a picture (CORE_CONTRACTS §5.18).
-   */
-  stillFromVideo(clipUrl: string, atSeconds: number, signal: AbortSignal): Promise<string>;
   now(): number;
 }

@@ -3,10 +3,12 @@ import type { Graph } from '@/core/engine/graph';
 import type { Locale } from './i18n';
 
 /**
- * Schema version stamped on every saved document. There are no migrators: a document from another
- * version is not read, and the app starts clean. Bump this when the saved shape changes.
+ * Schema version stamped on every saved document. A document from another version is not read and
+ * the app starts clean. Bump this when the saved shape changes.
  */
-export const PROJECT_SCHEMA_VERSION = 1;
+export const PROJECT_SCHEMA_VERSION = 2;
+/** The versions this build reads. */
+export const READABLE_SCHEMA_VERSIONS = [PROJECT_SCHEMA_VERSION];
 
 export interface ProjectDoc {
   schemaVersion: number;
@@ -52,7 +54,7 @@ export function loadTabs(): TabsDoc | null {
   try {
     const doc = JSON.parse(raw) as TabsDoc;
     // Another version's tabs are not read (EXECUTION_ENGINE §7.3): the app starts clean.
-    if (doc.schemaVersion !== PROJECT_SCHEMA_VERSION || !Array.isArray(doc.tabs)) return null;
+    if (!READABLE_SCHEMA_VERSIONS.includes(doc.schemaVersion) || !Array.isArray(doc.tabs)) return null;
     return doc;
   } catch {
     return null;

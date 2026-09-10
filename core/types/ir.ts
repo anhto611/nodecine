@@ -1,22 +1,22 @@
 import { z } from 'zod';
-import { BlockDefSchema, CoverDefSchema, MediaUrlSchema, StageDefSchema } from './payloads';
+import { MediaUrlSchema, StyleSchema, TransitionSchema, VarsSchema } from './payloads';
 
 /**
- * Universal Video IR — generic and self-contained (CORE_CONTRACTS §3). It carries the stage and the
- * blocks its scenes use, so an engine needs nothing registered to draw it and a saved IR replays
- * anywhere. It knows no scene by name: a scene is a block id into its own catalogue.
+ * Universal Video IR — generic and self-contained (CORE_CONTRACTS §3). Every scene carries its own
+ * drawing and the film carries the style they share, so an engine needs nothing registered to draw
+ * it and a saved IR replays anywhere. It knows no scene by name.
  */
 
-export const IR_VERSION = 1 as const;
+export const IR_VERSION = 2 as const;
 
 export const TimelineEntrySchema = z.object({
   id: z.string().min(1),
-  blockId: z.string().min(1),
   startFrame: z.number().int().nonnegative(),
   durationInFrames: z.number().int().positive(),
-  props: z.record(z.string(), z.unknown()),
-  tone: z.string().optional(),
-  fields: z.record(z.string(), z.string()).optional(),
+  /** The scene's HTML fragment, complete (CORE_CONTRACTS §2.8). */
+  source: z.string().min(1),
+  /** Verified values the scene's `data-fact` elements take, by fact key; resolved by the assembler. */
+  facts: z.record(z.string(), z.unknown()).optional(),
 });
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
 
@@ -36,18 +36,17 @@ export const VideoIRSchema = z.object({
     height: z.number().int().positive(),
     totalDurationInFrames: z.number().int().positive(),
   }),
-  stage: StageDefSchema,
-  blocks: z.array(BlockDefSchema).min(1),
-  /** Cover designs the look carries (CORE_CONTRACTS §2.13). Not drawn in the video; the Cover Image node renders one. */
-  covers: z.array(CoverDefSchema).optional(),
+  /** What every scene shares: copied from the plan. */
+  style: StyleSchema,
+  transition: TransitionSchema,
   audioTrack: z.object({
     voiceoverUrl: MediaUrlSchema,
     durationSeconds: z.number().positive(),
     padTailFrames: z.number().int().nonnegative(),
   }),
   timeline: z.array(TimelineEntrySchema).min(1),
-  /** What the stage draws for the whole video (CORE_CONTRACTS §2.6): its own `vars`, plus `date` and `time` of the run unless it declares them. */
-  vars: z.record(z.string(), z.string()).optional(),
+  /** Values of the whole video (CORE_CONTRACTS §2.6): the plan's `vars`, plus `date` and `time` of the run unless it sets them. */
+  vars: VarsSchema.optional(),
   captions: IRCaptionsSchema.optional(),
 });
 export type VideoIR = z.infer<typeof VideoIRSchema>;

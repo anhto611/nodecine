@@ -10,7 +10,7 @@ const Params = z.object({
   title: z.string().default('Untitled'),
 });
 
-/** CORE_CONTRACTS §5.4 — pure function; facts are optional. The frame size is the stage's, not a parameter here. */
+/** CORE_CONTRACTS §5.4 — pure function; facts are optional. The frame size is the plan's, not a parameter here. */
 export const timelineAssembler: NodeDefinition<typeof Params> = {
   type: 'core/timeline-assembler',
   version: 1,

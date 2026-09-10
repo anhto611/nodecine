@@ -28,13 +28,12 @@ export const DEFAULT_SCREENWRITER: z.infer<typeof Params> = {
 };
 
 /**
- * The one director (CORE_CONTRACTS §5.8). It asks a language model for a narration and, for every
- * scene of every beat, what the scene says in the content vocabulary — no block, no stage: the Art Director
- * casts those afterwards. It hands
- * the Timeline Assembler a self-contained plan: stage, blocks, scenes.
+ * The Screenwriter (CORE_CONTRACTS §5.8). It asks a language model for a narration and, for every
+ * scene of every beat, what the scene says in the content vocabulary — no drawing: the Illustrator
+ * draws that afterwards.
  *
  * Nothing about any particular kind of video lives here. The brief and the beats are parameters, the
- * look arrives on wires as data, the output shape is derived from the blocks' own props tables, and
+ * output shape is the content vocabulary, and
  * any prop bound to a fact is left out of the prompt entirely — checkable data reaches the video
  * through the Facts port, never through the model. That is what lets a user build a GitHub showcase,
  * a quote reel or anything else from a blank canvas, and share the result as a template that is only data.

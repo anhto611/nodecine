@@ -6,103 +6,12 @@
   "graph": {
     "nodes": [
       {
-        "id": "art-director",
-        "type": "core/art-director",
+        "id": "illustrator",
+        "type": "core/illustrator",
         "params": {
-          "name": "Dark",
-          "frame": {
-            "width": 1080,
-            "height": 1920
-          },
-          "tokens": {
-            "palette": {
-              "bg": "#0b0c10",
-              "bg2": "#101218",
-              "panel": "#14161c",
-              "line": "#2a2e37",
-              "fg": "#f2f3f5",
-              "muted": "#9aa0ab",
-              "muted2": "#5f6570",
-              "accent": "#7c5cff"
-            },
-            "fonts": {
-              "display": "'JetBrains Mono', ui-monospace, Menlo, monospace",
-              "body": "'JetBrains Mono', ui-monospace, Menlo, monospace"
-            }
-          },
-          "tones": {
-            "cool": {
-              "accent": "#58a6ff",
-              "bg2": "#0f1420"
-            },
-            "warm": {
-              "accent": "#e3b341",
-              "bg2": "#1a150e"
-            },
-            "green": {
-              "accent": "#3fb950",
-              "bg2": "#0e1a12"
-            }
-          },
-          "sceneFields": [
-            {
-              "name": "kicker",
-              "rule": "two or three words naming what the scene is about, uppercase, shown small above the content"
-            }
-          ],
-          "code": {
-            "format": "html-gsap",
-            "source": "<style>\n  .stage { position: absolute; inset: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); }\n  /* The glow is its own layer, moved by transform (a compositor job, no repaint): the stage script drives --drift from 1 to 1.18 over the scene. */\n  .stage::before { content: ''; position: absolute; inset: -12%; background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 65%); transform: scale(var(--drift, 1)); transform-origin: 50% 0%; will-change: transform; pointer-events: none; }\n  .stage .kicker { position: absolute; left: 72px; top: 200px; font: 600 28px/1 var(--font-body); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }\n  .stage .content { position: absolute; left: 72px; right: 168px; top: 260px; bottom: 680px; display: flex; flex-direction: column; justify-content: center; }\n  .stage .rule { position: absolute; left: 72px; right: 168px; bottom: 640px; height: 2px; background: var(--line); }\n  .stage .captions { position: absolute; left: 72px; right: 168px; bottom: 720px; text-align: center; font: 700 44px/1.3 var(--font-body); color: color-mix(in srgb, var(--fg) 85%, transparent); text-shadow: 0 2px 10px color-mix(in srgb, var(--bg) 70%, transparent); --caption-on: var(--accent); }\n</style>\n<div class=\"stage\">\n  <div class=\"kicker\" data-field=\"kicker\"></div>\n  <div class=\"content\" data-slot=\"content\"></div>\n  <div class=\"rule\"></div>\n  <div class=\"captions\" data-slot=\"captions\" data-caption-style=\"karaoke\"></div>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".kicker\", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.4, ease: \"power2.out\" }, 0)\n    .fromTo(\".rule\", { scaleX: 0, transformOrigin: \"left center\" }, { scaleX: 1, duration: 0.6, ease: \"power2.out\" }, 0.1)\n    .fromTo(\".stage\", { \"--drift\": 1 }, { \"--drift\": 1.18, duration: Math.max(4, nodecine.duration || 6), ease: \"none\" }, 0));\n</script>"
-          },
-          "blocks": [
-            {
-              "id": "text-card",
-              "name": "Text card",
-              "doc": {
-                "example": "{\"headline\":\"Ship video from a graph\",\"body\":\"Wire a source to a script, a voice and an engine.\"}",
-                "when": "One idea on screen: a headline and at most one supporting line. Use it for openings, transitions and closings; not for lists or numbers."
-              },
-              "props": {
-                "headline": {
-                  "type": "string",
-                  "hint": "up to six words, title case",
-                  "required": true,
-                  "max": 60,
-                  "content": "title"
-                },
-                "body": {
-                  "type": "text",
-                  "hint": "one sentence, or leave it out",
-                  "required": false,
-                  "max": 160
-                }
-              },
-              "code": {
-                "format": "html-gsap",
-                "source": "<style>\n  .card { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 32px; }\n  .card h1 { font: 800 88px/1.05 var(--font-display); color: var(--fg); margin: 0; letter-spacing: -0.01em; }\n  .card p  { font: 400 38px/1.4 var(--font-body); color: var(--muted); margin: 0; max-width: 760px; }\n  .card .bar { width: 120px; height: 10px; border-radius: 5px; background: var(--accent); transform-origin: left center; }\n</style>\n<div class=\"card\">\n  <div class=\"bar\"></div>\n  <h1 data-prop=\"headline\"></h1>\n  <p data-prop=\"body\" data-if=\"body\"></p>\n</div>\n<script>\n  nodecine.timeline(gsap.timeline()\n    .fromTo(\".card .bar\", { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: \"power2.out\" }, 0)\n    .fromTo(\".card h1\", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: \"power3.out\" }, 0.2)\n    .fromTo(\".card p\", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: \"power3.out\" }, 0.5));\n</script>"
-              }
-            }
-          ],
-          "casting": [
-            {
-              "role": "title",
-              "block": "text-card"
-            },
-            {
-              "role": "how",
-              "block": "text-card",
-              "tone": "cool"
-            },
-            {
-              "role": "next",
-              "block": "text-card",
-              "tone": "warm"
-            }
-          ],
-          "transition": {
-            "type": "fade",
-            "seconds": 0.4
-          }
+          "brief": "Thẻ chữ đơn giản trên nền tối: tiêu đề lớn, kicker nhỏ phía trên, chữ mono.",
+          "frame": "9:16",
+          "character": ""
         },
         "bypassed": false,
         "position": {
@@ -251,6 +160,19 @@
           "x": 1740,
           "y": 303
         }
+      },
+      {
+        "id": "llm-provider",
+        "type": "core/llm-provider",
+        "params": {
+          "providerId": "claude-code",
+          "settings": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1030,
+          "y": 1091
+        }
       }
     ],
     "edges": [
@@ -258,7 +180,7 @@
         "id": "scenes",
         "source": "script",
         "sourcePort": "scenes",
-        "target": "art-director",
+        "target": "illustrator",
         "targetPort": "scenes"
       },
       {
@@ -291,7 +213,7 @@
       },
       {
         "id": "plan",
-        "source": "art-director",
+        "source": "illustrator",
         "sourcePort": "plan",
         "target": "assembler",
         "targetPort": "plan"
@@ -344,6 +266,13 @@
         "sourcePort": "engine",
         "target": "export",
         "targetPort": "engine"
+      },
+      {
+        "id": "e-llm-illustrator",
+        "source": "llm-provider",
+        "sourcePort": "llm",
+        "target": "illustrator",
+        "targetPort": "llm"
       }
     ]
   }

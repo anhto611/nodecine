@@ -1,6 +1,6 @@
 'use client';
 import { registerEngine } from '@/core/adapters/registry';
-import { registerCodeRenderer } from '@/core/look/renderers';
+import { registerCodeRenderer } from '@/core/visual/renderers';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { createHyperframesAdapter } from './adapter';
 import { mountHyperframesPlayer } from './player.client';

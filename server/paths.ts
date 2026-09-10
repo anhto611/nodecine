@@ -78,7 +78,7 @@ export async function listLibrary(library: Library): Promise<string[]> {
 }
 
 /**
- * Assets a look refers to (logos, images): content-addressed files under `.nodecine/assets`, served
+ * Assets a scene refers to (logos, images): content-addressed files under `.nodecine/assets`, served
  * as `/api/assets/<hash>.<ext>`, never cleaned up (a workflow may point at them for years).
  */
 export function assetsDir(): string {

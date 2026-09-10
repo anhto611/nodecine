@@ -17,7 +17,7 @@ describe('sceneSchemaFor / outputSchemaFor', () => {
   it('accepts the content vocabulary, drops unknown keys and never asks for a bound key', () => {
     const [scene] = expandBeats([beat({ factBindings: { number: 'stars' } })]);
     const schema = sceneSchemaFor(scene!);
-    const parsed = schema.parse({ narration: 'Say this.', title: 'A', body: 'B', number: '4,321', block: 'hook' });
+    const parsed = schema.parse({ narration: 'Say this.', title: 'A', body: 'B', number: '4,321', legacyLayout: 'hook' });
     expect(parsed).toEqual({ narration: 'Say this.', title: 'A', body: 'B' });
     expect(schema.safeParse({ narration: 'n', points: ['a', 'b'] }).success).toBe(true);
     expect(schema.safeParse({ narration: 'n', points: 'not a list' }).success).toBe(false);

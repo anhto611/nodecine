@@ -1,6 +1,7 @@
 import { contentHash } from '../hash';
 import type { NodeServices } from '../engine/services';
 import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover } from '../types/payloads';
+import { illustratorAnswers } from './scene-fixtures';
 
 /** Deterministic fake services for executor tests. Records every call. */
 export function makeFakeServices(overrides: Partial<{
@@ -22,7 +23,8 @@ export function makeFakeServices(overrides: Partial<{
     renderReady: true,
     claudeAuthenticated: true,
     secondsPerChar: 0.07,
-    complete: (async () => { throw new Error('not used in core tests'); }) as (prompt: string) => Promise<unknown>,
+    // The Illustrator asks a model on every run, so even a core test that only wants a plan needs one: the fake draws a default style.
+    complete: illustratorAnswers() as (prompt: string) => Promise<unknown>,
     ...overrides,
   };
   const calls: { name: string; args: unknown[] }[] = [];
@@ -112,20 +114,12 @@ export function makeFakeServices(overrides: Partial<{
       const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
       return { audioUrl: `/api/media/${contentHash({ parts: parts.map((p) => p.audioUrl), gapSeconds })}.mp3`, durationSeconds: Math.round(start * 100) / 100, segments };
     },
-    async stillFromVideo(clipUrl, atSeconds) {
-      calls.push({ name: 'stillFromVideo', args: [clipUrl, atSeconds] });
-      return `/api/assets/${contentHash({ clipUrl, atSeconds })}.jpg`;
-    },
     async alignWords(audioUrl, text, language, options) {
       calls.push({ name: 'alignWords', args: [audioUrl, text, language, options] });
       // Evenly spaced over a fixed span: deterministic, and enough to lay cues out.
       const words = text.trim().split(/\s+/).filter(Boolean);
       const step = 0.3;
       return words.map((w, i) => ({ text: w, start: Math.round(i * step * 1000) / 1000, end: Math.round((i * step + 0.25) * 1000) / 1000 }));
-    },
-    async capture(_ref, ir, settings) {
-      calls.push({ name: 'capture', args: [settings] });
-      return { outputUrl: `/api/media/${contentHash({ ir, settings })}.png`, bytes: 148_000 };
     },
     async render(_ref, ir, settings, onProgress, signal) {
       calls.push({ name: 'render', args: [settings] });

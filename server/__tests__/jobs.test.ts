@@ -5,7 +5,7 @@ import path from 'node:path';
 import { JobHub, type HubEvent, type Job } from '../jobs';
 import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
-import { _resetCodeRenderers, registerCodeRenderer } from '@/core/look/renderers';
+import { _resetCodeRenderers, registerCodeRenderer } from '@/core/visual/renderers';
 import { makeFakeServices } from '@/core/__tests__/fakes';
 import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';

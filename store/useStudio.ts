@@ -64,8 +64,8 @@ export interface StudioState {
   /** Bumps whenever a workflow file changes, so lists re-read the directory. */
   workflowsTick: number;
   settingsOpen: boolean;
-  /** The stage of a Art Director node, or one of its blocks, open in the code editor. */
-  codeEditor: { nodeId: string; blockIndex?: number; coverIndex?: number } | null;
+  /** One scene of a Static Script node, open in the scene editor. */
+  sceneEditor: { nodeId: string; index: number } | null;
   selectedNodeId: string | null;
   canUndo: boolean;
   canRedo: boolean;
@@ -118,7 +118,7 @@ export interface StudioState {
   toggleLogs(): void;
   setTemplatesOpen(open: boolean): void;
   setSettingsOpen(open: boolean): void;
-  setCodeEditor(target: { nodeId: string; blockIndex?: number; coverIndex?: number } | null): void;
+  setSceneEditor(target: { nodeId: string; index: number } | null): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
 }
@@ -201,7 +201,7 @@ export const useStudio = create<StudioState>((set, get) => {
     templatesOpen: false,
     workflowsTick: 0,
     settingsOpen: false,
-    codeEditor: null,
+    sceneEditor: null,
     selectedNodeId: null,
     canUndo: false,
     canRedo: false,
@@ -546,8 +546,8 @@ export const useStudio = create<StudioState>((set, get) => {
     setTemplatesOpen(open) {
       set({ templatesOpen: open });
     },
-    setCodeEditor(target) {
-      set({ codeEditor: target });
+    setSceneEditor(target) {
+      set({ sceneEditor: target });
     },
 
     setSettingsOpen(open) {

@@ -35,7 +35,7 @@ export interface RunOptions {
  * Graph executor (EXECUTION_ENGINE §2–§4). Runs on the server behind the job queue (server/jobs.ts); sequential topological order;
  * signature cache with resource nodes always re-probed; bypass; blocked propagation; single-node runs.
  */
-type Gathered = { inputs: Record<string, Packet>; lists: Record<string, Packet[]>; block?: BlockReason; missing?: string };
+type Gathered = { inputs: Record<string, Packet>; lists: Record<string, Packet[]>; blockedBy?: BlockReason; missing?: string };
 
 export class Executor {
   readonly logs: LogBuffer;
@@ -219,7 +219,7 @@ export class Executor {
   private gatherInputs(nodeId: string, def: AnyNodeDefinition, single: boolean): Gathered {
     const inputs: Record<string, Packet> = {};
     const lists: Record<string, Packet[]> = {};
-    const fail = (block: BlockReason): Gathered => ({ inputs, lists, block });
+    const fail = (blockedBy: BlockReason): Gathered => ({ inputs, lists, blockedBy });
     for (const port of def.inputs) {
       const edges = incomingEdges(this.graph, nodeId).filter((e) => e.targetPort === port.name);
       if (port.multiple) lists[port.name] = [];
@@ -288,9 +288,9 @@ export class Executor {
       this.setState(nodeId, { state: 'blocked', blockedBy: { kind: 'upstream', code: ErrorCode.GRAPH_PORT_UNCONNECTED, message: `input "${gathered.missing}" has no packet` } });
       return 'blocked';
     }
-    if (gathered.block) {
-      this.log(nodeId, 'warn', gathered.block.message, gathered.block.code);
-      this.setState(nodeId, { state: 'blocked', blockedBy: gathered.block });
+    if (gathered.blockedBy) {
+      this.log(nodeId, 'warn', gathered.blockedBy.message, gathered.blockedBy.code);
+      this.setState(nodeId, { state: 'blocked', blockedBy: gathered.blockedBy });
       return 'blocked';
     }
     const preflight = def.preflight?.(gathered.inputs, params, gathered.lists);

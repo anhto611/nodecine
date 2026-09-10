@@ -12,7 +12,7 @@ export type VideoProps = {
 };
 
 /**
- * Generic composition. Remotion has no renderer for the `html-gsap` block format yet, so every scene
+ * Generic composition. Remotion has no renderer for the `html-gsap` scene format yet, so every scene
  * draws the honest placeholder; the output nodes block before this is ever shown (CORE_CONTRACTS §4).
  */
 export const NodeCineVideo: React.FC<VideoProps> = ({ ir, mediaBaseUrl }) => {
@@ -29,16 +29,16 @@ export const NodeCineVideo: React.FC<VideoProps> = ({ ir, mediaBaseUrl }) => {
     <AbsoluteFill style={{ background: '#000' }}>
       <Audio src={`${mediaBaseUrl}${ir.audioTrack.voiceoverUrl}`} />
       {ir.timeline.map((scene) => (
-        <Sequence key={scene.id} from={scene.startFrame} durationInFrames={scene.durationInFrames} name={scene.blockId}>
-          <MissingScene blockId={scene.blockId} />
+        <Sequence key={scene.id} from={scene.startFrame} durationInFrames={scene.durationInFrames} name={scene.id}>
+          <MissingScene sceneId={scene.id} />
         </Sequence>
       ))}
     </AbsoluteFill>
   );
 };
 
-const MissingScene: React.FC<{ blockId: string }> = ({ blockId }) => (
+const MissingScene: React.FC<{ sceneId: string }> = ({ sceneId }) => (
   <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', color: '#f85149', fontFamily: 'monospace', fontSize: 40 }}>
-    no renderer: {blockId}
+    no renderer: {sceneId}
   </AbsoluteFill>
 );

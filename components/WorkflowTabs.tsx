@@ -48,8 +48,8 @@ export const WorkflowTabs: React.FC = () => {
   // Ctrl/Cmd+S saves the active tab, Shift for Save as; Ctrl/Cmd+B bypasses the selected node.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // The code editor owns Ctrl+S / Ctrl+Z while it is open; saving the workflow from inside it was a surprise.
-      if (useStudio.getState().codeEditor) return;
+      // A dialog owns Ctrl+S / Ctrl+Z while it is open; saving the workflow from inside one was a surprise.
+      if (useStudio.getState().sceneEditor) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         if (e.shiftKey) setNaming(useStudio.getState().projectName);

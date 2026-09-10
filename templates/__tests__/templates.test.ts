@@ -7,11 +7,10 @@ import { registerTemplates } from '..';
 import { shapeOfTemplate } from '@/components/panels/TemplatePlayer';
 import { SCREENWRITER } from '@/nodes/screenwriter/node';
 import type { Beat } from '@/nodes/screenwriter/beats';
-import type { BlockDef } from '@/core/types/payloads';
 
 /**
  * The one promise a shipped template makes: a user could have built it from a blank canvas. That
- * means every node type is one the Library offers, every block the Art Director casts is one it carries, and every parameter is one the node's own schema accepts. If a
+ * means every node type is one the Library offers and every parameter is one the node's own schema accepts. If a
  * template needs anything a user cannot reach, it is not a template — it is code in disguise.
  */
 
@@ -22,19 +21,15 @@ beforeEach(() => {
   registerTemplates();
 });
 
-/**
- * The Art Director downstream of a script node, following `scenes` however many hops it takes: a
- * node that passes the script along on its way — Stock Images putting a picture on every scene —
- * sits between them without changing who casts.
- */
-function lookAfter(t: ReturnType<typeof listTemplates>[number], nodeId: string) {
+/** The Illustrator downstream of a script node, following `scenes` however many hops it takes (Stock Media may sit between). */
+function illustratorAfter(t: ReturnType<typeof listTemplates>[number], nodeId: string) {
   const seen = new Set<string>();
   for (let at = nodeId; !seen.has(at); ) {
     seen.add(at);
     const edge = t.graph.edges.find((e) => e.source === at && e.sourcePort === 'scenes');
     const next = t.graph.nodes.find((n) => n.id === edge?.target);
     if (!next) return undefined;
-    if (next.type === 'core/art-director') return next;
+    if (next.type === 'core/illustrator') return next;
     at = next.id;
   }
   return undefined;
@@ -61,28 +56,13 @@ describe('shipped templates', () => {
     }
   });
 
-  it('send every screenwriter and script into an Art Director whose casting names only blocks it has, for roles it will get', () => {
+  it('send every screenwriter and script into an Illustrator that has a brief and a model', () => {
     for (const t of listTemplates()) {
       for (const n of t.graph.nodes.filter((n) => n.type === SCREENWRITER || n.type === 'core/static-script')) {
-        const look = lookAfter(t, n.id);
-        expect(look, `${t.id}/${n.id}: look`).toBeDefined();
-        const blocks = (look!.params.blocks as BlockDef[]).map((b) => b.id);
-        const roles = n.type === SCREENWRITER ? (n.params.beats as Beat[]).map((b) => b.role) : (n.params.scenes as { role: string }[]).map((s) => s.role);
-        for (const c of look!.params.casting as { role: string; block?: string; tone?: string }[]) {
-          expect(roles, `${t.id}: cast role ${c.role}`).toContain(c.role);
-          if (c.block) expect(blocks, `${t.id}: cast block ${c.block}`).toContain(c.block);
-          if (c.tone) expect(Object.keys(look!.params.tones as Record<string, unknown>), `${t.id}: cast tone ${c.tone}`).toContain(c.tone);
-        }
-      }
-    }
-  });
-
-  it('bind facts to content keys some block of the Art Director actually shows', () => {
-    for (const t of listTemplates()) {
-      for (const n of t.graph.nodes.filter((n) => n.type === SCREENWRITER)) {
-        const blocks = lookAfter(t, n.id)!.params.blocks as BlockDef[];
-        const shown = new Set(blocks.flatMap((b) => Object.entries(b.props).map(([name, f]) => f.content ?? name)));
-        for (const beat of n.params.beats as Beat[]) for (const key of Object.keys(beat.factBindings)) expect(shown.has(key), `${t.id}: ${beat.role}.${key}`).toBe(true);
+        const ill = illustratorAfter(t, n.id);
+        expect(ill, `${t.id}/${n.id}: illustrator`).toBeDefined();
+        expect(String(ill!.params.brief).length, `${t.id}: brief`).toBeGreaterThan(20);
+        expect(t.graph.edges.some((e) => e.target === ill!.id && e.targetPort === 'llm'), `${t.id}: llm wired into the illustrator`).toBe(true);
       }
     }
   });
@@ -99,14 +79,12 @@ describe('shipped templates', () => {
 
   // The card is what a person picks a template by, so what it says about the frame must come from
   // the template. A hardcoded "9:16" was right for four templates and a lie about the fifth.
-  it('say on the card the shape their own stage renders', () => {
+  it('say on the card the shape their own illustrator draws', () => {
     for (const t of listTemplates()) {
       const shape = shapeOfTemplate(t.graph);
-      const stage = t.graph.nodes.find((n) => n.type === 'core/art-director')?.params as { frame?: { width: number; height: number } } | undefined;
-      if (!stage?.frame) { expect(shape).toBeNull(); continue; }
-      const { width, height } = stage.frame;
-      const [w, h] = shape!.ratio.split(':').map(Number) as [number, number];
-      expect(w / h).toBeCloseTo(width / height, 5);
+      const preset = t.graph.nodes.find((n) => n.type === 'core/illustrator')?.params.frame;
+      if (!preset) { expect(shape).toBeNull(); continue; }
+      expect(shape!.ratio).toBe(preset);
       expect(shape!.fps).toBe(t.graph.nodes.find((n) => n.type === 'core/timeline-assembler')?.params.fps ?? 30);
     }
     expect(shapeOfTemplate(listTemplates().find((t) => t.id === 'still-wide')!.graph)).toEqual({ ratio: '16:9', fps: 30 });

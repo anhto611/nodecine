@@ -41,7 +41,7 @@ export const STOCK_STYLE_IDS = STOCK_STYLES.map((s) => s.id) as unknown as [Stoc
  * The named groups, written out from the table itself.
  *
  * This list used to be typed by hand in three places — the `auto` prompt, the `mixed` prompt and the
- * block's documentation. Adding a style and forgetting one of them threw no error: "mixed" simply
+ * node's documentation. Adding a style and forgetting one of them threw no error: "mixed" simply
  * kept rotating through the old groups, and the catalogue kept telling the model a table that was
  * short one row.
  */

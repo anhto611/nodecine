@@ -1,7 +1,7 @@
 /**
  * Cutting a pasted script into scenes (CORE_CONTRACTS §5.2).
  *
- * Typing a scene at a time is the wrong shape for how people write: a script arrives as one block
+ * Typing a scene at a time is the wrong shape for how people write: a script arrives as one passage
  * of prose, and the app should take it that way. Mechanical, and deliberately so — no model is
  * consulted and not a character is changed, so what comes out is what was pasted, only divided.
  *

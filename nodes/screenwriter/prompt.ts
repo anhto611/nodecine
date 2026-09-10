@@ -5,7 +5,7 @@ import { wordBudget, type ExpandedBeat } from '@/nodes/screenwriter/beats';
 /**
  * The prompt a screenwriter sends. The user's brief carries the intent; the beats carry the structure;
  * the content vocabulary carries the shape; the facts carry what is true. Nothing here is about a
- * block, a stage or any particular kind of video: the look comes after the script.
+ * drawing instructions or any particular kind of video: the Illustrator comes after the script.
  */
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : Array.isArray(v) ? v.join(', ') : v == null ? '' : String(v));

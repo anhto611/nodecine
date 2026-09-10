@@ -24,9 +24,9 @@ export const DEFAULT_STATIC_SCRIPT: z.infer<typeof Params> = {
 };
 
 /**
- * Hand-written scenes (CORE_CONTRACTS §5.2): the script stage of the pipeline without a model.
+ * Hand-written scenes (CORE_CONTRACTS §5.2): the script step of the pipeline without a model.
  * Each scene carries its own narration and its content in the vocabulary, the same as the screenwriter
- * writes them; the Art Director casts blocks afterwards, so this node needs no look and no network.
+ * writes them; the Illustrator draws them afterwards, so this node needs no visual definition and no network.
  */
 export const staticScript: NodeDefinition<typeof Params> = {
   type: 'core/static-script',

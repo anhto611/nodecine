@@ -1,5 +1,4 @@
 import { VideoIRSchema, type VideoIR } from './ir';
-import { propsSchemaFor } from '../look/props';
 
 /**
  * The five IR invariants (CORE_CONTRACTS §3.1). Runs before an IR leaves the assembler
@@ -40,18 +39,10 @@ export function validateIR(ir: unknown): IRValidation {
     if (s.durationInFrames <= 0) violations.push(`4: scene ${i} has 0 frames`);
   });
 
-  // 5: an IR is self-contained — every scene names a block it carries, fits that block's props, and
-  // wears a tone the stage has.
-  const blocks = new Map(v.blocks.map((b) => [b.id, b]));
+  // 5: an IR is self-contained — every scene carries a drawing, a fragment and not a page.
   v.timeline.forEach((s, i) => {
-    const block = blocks.get(s.blockId);
-    if (!block) {
-      violations.push(`5: scene ${i} uses block "${s.blockId}", which the IR does not carry`);
-      return;
-    }
-    const parsed = propsSchemaFor(block).safeParse(s.props);
-    if (!parsed.success) violations.push(`5: scene ${i} (${s.blockId}) props: ${parsed.error.issues.map((x) => `${x.path.join('.')} ${x.message}`).join(', ')}`);
-    if (s.tone !== undefined && !(s.tone in v.stage.tones)) violations.push(`5: scene ${i} asks for tone "${s.tone}", which the stage does not have`);
+    if (!s.source.trim()) violations.push(`5: scene ${i} has no drawing`);
+    if (/<(html|head|body)\b/i.test(s.source)) violations.push(`5: scene ${i} is a whole page, not a fragment`);
   });
 
   const ids = new Set<string>();

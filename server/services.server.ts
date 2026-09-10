@@ -15,7 +15,6 @@ import { mixAudioOnServer } from '@/nodes/audio/mix.server';
 import { importAudioOnServer } from '@/nodes/audio/import.server';
 import { fetchStockMediaOnServer } from '@/nodes/stock/search.server';
 import { concatMp3, measureDurationSeconds } from '@/server/audio';
-import { stillFromVideo } from '@/server/video-still';
 import { contentHash } from '@/core/hash';
 import fs from 'node:fs/promises';
 
@@ -88,9 +87,6 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
     readPage: readPageOnServer,
     mixAudio: mixAudioOnServer,
     importAudio: importAudioOnServer,
-    async stillFromVideo(clipUrl, atSeconds, signal) {
-      return stillFromVideo(fileNameFromAssetUrl(clipUrl), atSeconds, signal);
-    },
     fetchStockMedia: fetchStockMediaOnServer,
     async concatAudio(parts, gapSeconds, signal) {
       const files = parts.map((p) => mediaPath(fileNameFromMediaUrl(p.audioUrl)));
@@ -103,13 +99,6 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       let start = 0;
       const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
       return { audioUrl: mediaUrl(name), durationSeconds, segments };
-    },
-    async capture(ref, ir, settings, signal) {
-      const f = getEngineFactory(ref.engineId);
-      if (!f) throw Object.assign(new Error(`unknown engine ${ref.engineId}`), { code: 'ENGINE_NOT_READY' });
-      const adapter = f(ref.settings);
-      if (!adapter.capture) throw Object.assign(new Error(`${adapter.displayName} cannot take a still`), { code: 'ENGINE_SCENE_UNSUPPORTED' });
-      return adapter.capture(ir, settings, signal);
     },
     async render(ref, ir, settings, onProgress, signal) {
       const f = getEngineFactory(ref.engineId);

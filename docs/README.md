@@ -1,6 +1,6 @@
 # Tài liệu NodeCine
 
-Docs chia theo mã nguồn: **lõi** (mọi node, hai engine, các nhà cung cấp) và **bản mẫu** (đồ thị JSON dựng lại được từ canvas trống, mang theo giao diện của chính nó trong node Đạo Diễn Mỹ Thuật). Đọc lõi trước; phần kia chỉ có nghĩa khi đã hiểu lõi.
+Docs chia theo mã nguồn: **lõi** (mọi node, hai engine, các nhà cung cấp) và **bản mẫu** (đồ thị JSON dựng lại được từ canvas trống, mang theo giao diện dưới dạng một câu mô tả trong node Họa Sĩ). Đọc lõi trước; phần kia chỉ có nghĩa khi đã hiểu lõi.
 
 Một quy ước xuyên suốt: **`STATUS.md` nói cái gì đã dựng xong, mọi tài liệu khác nói luật.** Thêm một provider hay một engine chỉ sửa `STATUS.md`; sửa tài liệu luật nghĩa là hợp đồng đổi.
 
@@ -18,8 +18,8 @@ Một quy ước xuyên suốt: **`STATUS.md` nói cái gì đã dựng xong, m�
 
 ## Bản mẫu
 
-6. [`templates/github-showcase.md`](templates/github-showcase.md) — GitHub Repo Showcase. Node Truy Xuất Repo và dữ kiện, stage `developer-dark` và ba block, đồ thị mười bốn node dùng Biên Kịch, Kịch bản 1 đến 3b, lỗi và tiêu chí nghiệm thu.
-7. [`templates/quote-cards.md`](templates/quote-cards.md) — Thẻ Trích Dẫn. Stage `ink` và hai block, đồ thị mười một node không mạng; bốn điểm khác về cấu trúc so với bản trên.
+6. [`templates/github-showcase.md`](templates/github-showcase.md) — GitHub Repo Showcase. Node Truy Xuất Repo và dữ kiện, đồ thị dùng Biên Kịch và Họa Sĩ, Kịch bản 1 đến 3b, lỗi và tiêu chí nghiệm thu.
+7. [`templates/quote-cards.md`](templates/quote-cards.md) — Thẻ Trích Dẫn. Đồ thị không mạng ngoài mô hình; bốn điểm khác về cấu trúc so với bản trên.
 
 ## Thuật ngữ
 
@@ -28,24 +28,21 @@ Thuật ngữ chuyên ngành giữ nguyên tiếng Anh trong cả code lẫn tà
 | Khái niệm | Trong code | Trong tài liệu và giao diện |
 |---|---|---|
 | node của đồ thị | `node` | node — không dịch |
-| vỏ giao diện cố định mà mọi cảnh của một workflow diễn ra trên đó: nền, vùng an toàn, chỗ phụ đề, bộ xương cảnh, bảng màu, font, hệ tone | phần stage của `LookDef`, `plan.stage` | stage *(sân khấu)* |
-| archetype cảnh cắm vào stage: lược đồ props, `doc`, code HTML/GSAP | `blocks[]` của `LookDef`, kiểu `BlockDef` | block *(khối)* |
-| node giữ giao diện và khoác nó lên kịch bản: stage cộng danh mục block cộng bảng dàn cảnh; chặng đứng sau kịch bản, nhận phân cảnh (và tùy chọn một mô hình để chọn block) và phát kế hoạch dựng | node `core/art-director`, cổng vào `SceneScript` + `llm`, cổng ra `ScenePlan` | Đạo Diễn Mỹ Thuật *(Art Director)* |
-| bộ giao diện mà Đạo Diễn Mỹ Thuật giữ: stage cộng block — dữ liệu, không phải node | `LookDef`, `core/look/`, modal sửa giao diện | look |
-| node viết lời đọc và nội dung từng cảnh từ đề bài và beat, không biết block | node `core/screenwriter`, phát `SceneScript` + `AudioScript` | Biên Kịch *(Screenwriter)* |
+| tờ CSS chung của mọi cảnh trong một lần chạy: biến màu và font trên `.nc-scene`, bộ class dùng chung, chỗ phụ đề mặc định | `plan.style` (`{ name, css }`), `StyleSchema` | phong cách *(style)* |
+| node vẽ giao diện cho kịch bản mỗi lần chạy bằng mô hình: một phong cách chung rồi từng cảnh, mỗi cảnh một bức; không lưu gì; thân node là storyboard chỉ để xem | node `core/illustrator`, cổng vào `SceneScript` + `llm`, cổng ra `ScenePlan`; tham số `brief`, `frame`, `character` | Họa Sĩ *(Illustrator)* |
+| node viết lời đọc và nội dung từng cảnh từ đề bài và beat, không biết giao diện | node `core/screenwriter`, phát `SceneScript` + `AudioScript` | Biên Kịch *(Screenwriter)* |
 | video đã chia cảnh với nội dung theo từ vựng cố định, chưa có giao diện | cổng `SceneScript`, `CONTENT_KEYS` | phân cảnh |
 | một mục trong danh sách của Biên Kịch: vai trò, brief, số cảnh, ràng buộc dữ kiện | `beat` | beat *(nhịp)* |
-| một ô thời gian trong timeline = một block + props + tone | `scene` | cảnh |
-| biến thể màu theo cảnh, đổi nền lẫn màu nhấn cùng lúc | `tone` | tone |
+| một ô thời gian trong timeline = một bức vẽ trọn khung (`source`) | `scene` | cảnh |
 | khung hình video — **chỉ** nghĩa này | `frame`, `fps`, `totalDurationInFrames` | khung hình |
 | nút bấm — **chỉ** nghĩa này | — | nút |
 
-Vì sao không phải các từ khác: *khối/nút* cho node đều va (khối với block, nút với nút bấm); *khung/frame* cho stage va ba đường (khung hình, khung lõi, vỏ); *theme* va với theme của Studio và với nghĩa *đề tài* trong tiếng Anh — chính là thứ người dùng gõ vào Nhập Liệu. *Stage* đi cùng bộ từ sân khấu đã có sẵn (scene, props) và tone đọc ra là ánh sáng sân khấu. Phương án dự phòng nếu Stage nghe lạ: **Layout**.
+Các tên tránh dùng từ đồng nghĩa dễ va với node, nút bấm, đoạn văn bản hay theme của Studio. Một cảnh là một bức vẽ hoàn chỉnh; phần dùng chung của video là một tờ CSS.
 
 ## Bất biến cốt lõi
 
 Ba điều dưới đây xuyên suốt mọi tài liệu. Nếu một thay đổi làm vỡ một trong ba, đó là thay đổi mức kiến trúc chứ không phải sửa lặt vặt:
 
-1. Bản Đặc Tả Video Trung Gian là ranh giới duy nhất giữa phần dựng nội dung và phần kết xuất, và **tự chứa**: nó mang theo stage và block của chính nó, không tra bảng nào. Tầng lõi không biết Remotion hay HyperFrames: nó chỉ giữ giao diện và các registry rỗng, engine và nhà cung cấp nằm ngoài lõi và tự đăng ký.
-2. Dữ kiện kiểm chứng được không đi xuyên qua mô hình ngôn ngữ. Chúng chảy qua cổng Dữ kiện thẳng tới Node Đóng Gói Timeline và được đè lên props theo `factBindings`, bằng cấu trúc chứ không bằng quy ước.
+1. Bản Đặc Tả Video Trung Gian là ranh giới duy nhất giữa phần dựng nội dung và phần kết xuất, và **tự chứa**: mỗi cảnh mang bức vẽ của nó và IR mang phong cách chung, không tra bảng nào. Tầng lõi không biết Remotion hay HyperFrames: nó chỉ giữ giao diện và các registry rỗng, engine và nhà cung cấp nằm ngoài lõi và tự đăng ký.
+2. Dữ kiện kiểm chứng được không đi xuyên qua mô hình ngôn ngữ. Chúng chảy qua cổng Dữ kiện thẳng tới Node Đóng Gói Timeline và được đổ vào phần tử `data-fact` của cảnh theo `factBindings`, bằng cấu trúc chứ không bằng quy ước.
 3. Tổng thời lượng các phân cảnh luôn bằng đúng tổng số khung hình khai báo, không lệch dù chỉ một khung, và được hàm kiểm định IR của lõi bảo vệ trước khi bản đặc tả ra khỏi node.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { expandBeats, listBeats, toPackets, type Beat } from '../beats';
-import { applyFactBindings } from '@/nodes/assembler/build-ir';
+import { resolveFacts } from '@/nodes/assembler/build-ir';
 import { readFactPath, factListAt } from '@/core/types/payloads';
 
 const beat = (over: Partial<Beat> = {}): Beat => ({ role: 'item', brief: '', weight: 1, count: 5, factBindings: {}, ...over });
@@ -37,10 +37,10 @@ describe('a beat that runs over a list', () => {
     const scenes = expandBeats([b], facts);
     const { scenes: script } = toPackets({ language: 'vi', scenes: scenes.map((_, i) => ({ narration: `n${i}`, body: `b${i}` })) }, scenes);
     expect(script.scenes[1]!.factBindings).toEqual({ title: 'items.1.title', source: 'items.1.source', image: 'items.1.image' });
-    // What the assembler does with them: the props of scene 2 come from item 2, not from the model.
-    expect(applyFactBindings({ headline: 'written by the model' }, { headline: 'items.1.title' }, facts)).toEqual({ headline: 'Two' });
-    // A path that leads nowhere leaves the prop as it was.
-    expect(applyFactBindings({ headline: 'kept' }, { headline: 'items.9.title' }, facts)).toEqual({ headline: 'kept' });
+    // What the assembler does with them: the title of scene 2 comes from item 2, not from the model.
+    expect(resolveFacts({ title: 'items.1.title' }, facts)).toEqual({ title: 'Two' });
+    // A path that leads nowhere leaves the drawing as it was.
+    expect(resolveFacts({ title: 'items.9.title' }, facts)).toBeUndefined();
   });
 });
 

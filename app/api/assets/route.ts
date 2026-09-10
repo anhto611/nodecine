@@ -12,7 +12,7 @@ const Body = z.object({
 });
 
 /**
- * Upload an image for a look. The file is named by its content hash, so the same logo uploaded
+ * Upload an image for a scene. The file is named by its content hash, so the same logo uploaded
  * twice is one file, and the code can refer to it by a name the server can validate.
  */
 export async function POST(req: Request) {

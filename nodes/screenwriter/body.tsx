@@ -11,9 +11,9 @@ import type { BodyProps } from '@/nodes/kit';
 type Params = { prompt: string; outputLanguage: string; beats: Beat[] };
 
 /**
- * Body of the one director: the brief, the language, then the beats — each a role, a line on what
+ * Body of the Screenwriter: the brief, the language, then the beats — each a role, a line on what
  * it does, a weight, a count, and which content keys come from a fact instead of the model. No
- * block and no look are here: the Art Director casts them from the scenes this node writes.
+ * visual definition is here: the Illustrator draws the scenes this node writes.
  */
 export const ScreenwriterBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
@@ -53,7 +53,7 @@ export const ScreenwriterBody: React.FC<BodyProps> = ({ nodeId }) => {
         const bound = Object.entries(b.factBindings) as [ContentKey, string][];
         const unbound = CONTENT_KEYS.filter((k) => !(k in b.factBindings));
         const isOpen = open === i;
-        // One line per beat, the way the Art Director node lists its blocks; only the beat being edited unfolds.
+        // One line per beat; only the beat being edited unfolds.
         return (
           <div key={i} style={{ border: `1px solid ${isOpen ? 'var(--line-3)' : 'var(--line)'}`, borderRadius: 3, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div className="nc-scene-row" style={{ cursor: 'pointer' }} onClick={() => setOpen(isOpen ? null : i)}>

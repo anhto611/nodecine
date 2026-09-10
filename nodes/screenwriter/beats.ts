@@ -13,12 +13,12 @@ const SpokenSceneSchema = SceneContentSchema.omit({ image: true, clip: true })
 /**
  * A director's beat list is configuration, not code (CORE_CONTRACTS §5.8). Each beat says what a
  * stretch of the video is for, how many scenes it takes, and which content comes from verified
- * facts rather than the model. The model writes each scene in the content vocabulary; which block
- * shows it is the Art Director's decision, later.
+ * facts rather than the model. The model writes each scene in the content vocabulary; how it is
+ * drawn is the Illustrator's, later.
  */
 
 export const BeatSchema = z.object({
-  /** A short name for the stretch: hook, quote, cta. Shown to the model, and what the Art Director casts by. */
+  /** A short name for the stretch: hook, quote, cta. Shown to the model and later to the Illustrator. */
   role: z.string().min(1).max(40),
   /** What this stretch should do, in the user's words. May be empty. */
   brief: z.string().max(600).default(''),

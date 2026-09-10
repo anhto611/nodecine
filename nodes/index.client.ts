@@ -6,7 +6,7 @@ import { InputTriggerBody } from './input/body';
 import { GithubFetcherBody } from './github/body';
 import { WebFetcherBody } from './web/body';
 import { StaticScriptBody } from './script/body';
-import { ArtDirectorBody } from './art-director/body';
+import { IllustratorBody } from './illustrator/body';
 import { ScreenwriterBody } from './screenwriter/body';
 import { StockMediaBody } from './stock/body';
 import { SceneBreakdownBody } from './breakdown/body';
@@ -19,7 +19,6 @@ import { CaptionsBody } from './captions/body';
 import { CaptionExportBody } from './captions/export-body';
 import { AssemblerBody } from './assembler/body';
 import { ExportBody } from './output/export-body';
-import { CoverBody } from './output/cover-body';
 import { VideoOutputBody } from './output/video-output-body';
 
 /** The Studio side of every node family: the body each node type draws, and its icon and library group. */
@@ -30,7 +29,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/static-script': StaticScriptBody,
   'core/stock-media': StockMediaBody,
   'core/scene-breakdown': SceneBreakdownBody,
-  'core/art-director': ArtDirectorBody,
+  'core/illustrator': IllustratorBody,
   'core/screenwriter': ScreenwriterBody,
   'core/llm-provider': LlmProviderBody,
   'core/tts-provider': TtsProviderBody,
@@ -45,7 +44,6 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/timeline-assembler': AssemblerBody,
   'core/video-output': VideoOutputBody,
   'core/mp4-export': ExportBody,
-  'core/cover-export': CoverBody,
 };
 
 export const NODE_META: Record<string, NodeMeta> = {
@@ -55,8 +53,8 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/static-script': { icon: 'doc', group: 'script' },
   'core/screenwriter': { icon: 'bot', group: 'script' },
   'core/scene-breakdown': { icon: 'bot', group: 'script' },
-  'core/stock-media': { icon: 'screen', group: 'look' },
-  'core/art-director': { icon: 'screen', group: 'look' },
+  'core/stock-media': { icon: 'screen', group: 'visual' },
+  'core/illustrator': { icon: 'bot', group: 'visual' },
   'core/audio-input': { icon: 'mic', group: 'audio' },
   'core/tts-engine': { icon: 'wave', group: 'audio' },
   'core/transcribe': { icon: 'wave', group: 'audio' },
@@ -66,7 +64,6 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/timeline-assembler': { icon: 'layers', group: 'output' },
   'core/video-output': { icon: 'screen', group: 'output' },
   'core/mp4-export': { icon: 'down', group: 'output' },
-  'core/cover-export': { icon: 'screen', group: 'output' },
   'core/llm-provider': { icon: 'term', group: 'resource' },
   'core/tts-provider': { icon: 'mic', group: 'resource' },
   'core/remotion-engine': { icon: 'chip', group: 'resource' },

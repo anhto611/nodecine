@@ -7,7 +7,7 @@ export interface ExportSettings {
   codec: 'h264' | 'h265';
   quality: 'high' | 'medium' | 'low';
   fileName: string;
-  /** Output resolution by short side; the design coordinates stay the stage's and are scaled at render (CORE_CONTRACTS §5.6). */
+  /** Output resolution by short side; the design coordinates stay the plan's and are scaled at render (CORE_CONTRACTS §5.6). */
   resolution?: '1080p' | '1440p' | '2160p';
 }
 
@@ -17,18 +17,6 @@ export interface RenderProgress {
 }
 
 export interface RenderResult {
-  outputUrl: string;
-  bytes: number;
-}
-
-/** One still of the composition, for a cover image (CORE_CONTRACTS §5.18). */
-export interface CaptureSettings {
-  /** Where in the film to take it. Clamped into the film and quantised to a real frame. */
-  atSeconds: number;
-  resolution?: ExportSettings['resolution'];
-}
-
-export interface CaptureResult {
   outputUrl: string;
   bytes: number;
 }
@@ -57,11 +45,6 @@ export interface EngineAdapter {
     onProgress: (p: RenderProgress) => void,
     signal: AbortSignal,
   ): Promise<RenderResult>;
-  /**
-   * Server-side only, and optional: an engine that cannot take a still simply leaves it out, and the
-   * Cover Image node blocks with a reason instead of the contract growing a capability nobody reports.
-   */
-  capture?(ir: VideoIR, settings: CaptureSettings, signal: AbortSignal): Promise<CaptureResult>;
 }
 
 export type EngineAdapterFactory = (settings: Record<string, unknown>) => EngineAdapter;

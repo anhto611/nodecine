@@ -5,10 +5,10 @@ import type { Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
 import { registerNodes } from '@/nodes';
 import { makeFakeServices } from './fakes';
-import { STAGE, TEXT_CARD } from './look-fixtures';
+import { FACT_SOURCE, STYLE } from './scene-fixtures';
 
 /**
- * A stand-in director: emits a plan that binds facts, which the core's own
+ * A stand-in illustrator: emits a plan that binds facts, which the core's own
  * Static Script cannot do (its params schema has no factBindings).
  */
 const Params = z.object({ bindFacts: z.boolean().default(true) });
@@ -26,9 +26,11 @@ const fakeDirector: NodeDefinition<typeof Params> = {
   run: async ({ params }) => ({
     plan: {
       language: 'en',
-      stage: STAGE,
-      blocks: [TEXT_CARD],
-      scenes: [{ blockId: TEXT_CARD.id, weight: 1, props: { headline: 'ONE' }, ...(params.bindFacts ? { factBindings: { headline: 'name' } } : {}) }],
+      frame: { width: 1080, height: 1920 },
+      style: STYLE,
+      transition: { type: 'cut', seconds: 0.1 },
+      vars: {},
+      scenes: [{ weight: 1, source: FACT_SOURCE, ...(params.bindFacts ? { factBindings: { title: 'name' } } : {}) }],
     },
     script: { text: 'A short script for the test, long enough to synthesize.', language: 'en' },
   }),

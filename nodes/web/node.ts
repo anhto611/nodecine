@@ -18,7 +18,7 @@ export const WEB_FETCHER = 'core/web-fetcher';
 
 /**
  * CORE_CONTRACTS §5.14 — a link becomes facts: what the page calls itself, who published it, and
- * its picture kept as a look asset so a scene may show it. Optionally a photograph of the page.
+ * its picture kept as a scene asset so a scene may show it. Optionally a photograph of the page.
  * Anything that is not a public web address passes through as text, the way the GitHub fetcher does,
  * so this node never breaks a graph that is fed a topic instead of a link.
  */

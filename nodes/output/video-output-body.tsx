@@ -9,7 +9,7 @@ import { useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
-import { useFrame } from '@/nodes/art-director/body';
+import { useFrame } from '@/nodes/kit';
 
 /**
  * The player node (USER_FLOWS §1.4). Mounts the engine's player via the adapter registry; never imports Remotion.
@@ -102,7 +102,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
                   style={{ minWidth: 0, textAlign: 'left', padding: '4px 6px', lineHeight: 1.4 }}
                   // Land a few frames in: scenes fade in from black, so the exact first frame previews as empty.
                   onClick={() => handle.current?.seekTo(s.startFrame + Math.min(12, Math.max(0, s.durationInFrames - 1)))}
-                  title={s.blockId}
+                  title={s.id}
                 >
                   <div style={{ color: active ? 'var(--accent-2)' : 'var(--tx)', textTransform: 'uppercase', letterSpacing: '.05em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('node.scene')} {i + 1}</div>
                   <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>{s.startFrame}–{s.startFrame + s.durationInFrames}</div>

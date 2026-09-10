@@ -1,35 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { buildHyperframesDocument, fillSlot, splitCode, tokenVars, COMPOSITION_ID } from './document';
+import { buildHyperframesDocument, splitCode, COMPOSITION_ID } from './document';
 import type { VideoIR } from '@/core/types/ir';
-import { DEFAULT_STAGE } from '@/nodes/art-director/node';
-import { DEFAULT_BLOCK } from '@/nodes/art-director/blocks';
+import { FACT_SOURCE, SCENE_SOURCE, STYLE } from '@/core/__tests__/scene-fixtures';
 
 const ir: VideoIR = {
-  irVersion: 1,
+  irVersion: 2,
   meta: { title: 'T', language: 'en', fps: 30, width: 1080, height: 1920, totalDurationInFrames: 300 },
-  stage: DEFAULT_STAGE,
-  blocks: [DEFAULT_BLOCK],
+  style: STYLE,
+  transition: { type: 'fade', seconds: 0.4 },
+  vars: { channel: 'AIDev' },
   audioTrack: { voiceoverUrl: '/api/media/0123456789abcdef.mp3', durationSeconds: 9.5, padTailFrames: 15 },
   timeline: [
-    { id: 'scene-1-text-card', blockId: 'text-card', startFrame: 0, durationInFrames: 90, props: { headline: 'One <b>', body: 'First' }, fields: { kicker: 'HI' } },
-    { id: 'scene-2-text-card', blockId: 'text-card', startFrame: 90, durationInFrames: 210, props: { headline: 'Two' }, tone: 'warm' },
+    { id: 'scene-1', startFrame: 0, durationInFrames: 90, source: SCENE_SOURCE },
+    { id: 'scene-2', startFrame: 90, durationInFrames: 210, source: FACT_SOURCE, facts: { stars: 1284 } },
   ],
 };
 const count = (hay: string, needle: string) => hay.split(needle).length - 1;
 const opts = { gsapSource: '/*gsap*/', runtimeSource: '/*runtime*/', voiceoverSrc: '/api/media/0123456789abcdef.mp3', fontBase: '/fonts' };
+const dataOf = (html: string) => JSON.parse(/<script type="application\/json" id="nodecine-data">([\s\S]*?)<\/script>/.exec(html)![1]!);
 
-describe('splitCode / fillSlot / tokenVars', () => {
+describe('splitCode', () => {
   it('separates markup, style and script', () => {
     const r = splitCode('<style>.a{}</style><div class="a"></div><script>nodecine.timeline(1)</script>');
     expect(r).toEqual({ markup: '<div class="a"></div>', styles: ['.a{}'], scripts: ['nodecine.timeline(1)'] });
-  });
-  it('drops the block into the stage slot', () => {
-    expect(fillSlot('<div><p data-slot="content"></p></div>', '<b>x</b>')).toBe('<div><p data-slot="content"><b>x</b></p></div>');
-  });
-  it('turns tokens into CSS variables and lets a tone override the palette', () => {
-    expect(tokenVars(DEFAULT_STAGE)).toContain('--accent: #7c5cff');
-    expect(tokenVars(DEFAULT_STAGE)).toContain("--font-display: 'JetBrains Mono'");
-    expect(tokenVars(DEFAULT_STAGE, 'warm')).toContain('--accent: #e3b341');
   });
 });
 
@@ -41,12 +34,12 @@ describe('buildHyperframesDocument', () => {
   it('is one self-contained composition with one timed clip per scene and the voice-over', () => {
     expect(html).toContain(`data-composition-id="${COMPOSITION_ID}" data-start="0" data-duration="10" data-width="1080" data-height="1920" data-fps="30"`);
     expect(html).toContain('<html lang="en" data-resolution="portrait">');
-    // The default stage fades scenes over 0.4 s: every scene but the last stays mounted that much longer, the next one is drawn on top at the cut.
-    expect(html).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3.4" data-track-index="0" data-stage');
-    expect(html).toContain('<div id="scene-2-text-card" class="clip nc-scene" data-start="3" data-duration="7" data-track-index="0" data-stage data-tone="warm"');
+    // A fade of 0.4 s: every scene but the last stays mounted that much longer, the next one is drawn on top at the cut.
+    expect(html).toContain('<div id="scene-1" class="clip nc-scene" data-scene="scene-1" data-start="0" data-duration="3.4" data-track-index="0">');
+    expect(html).toContain('<div id="scene-2" class="clip nc-scene" data-scene="scene-2" data-start="3" data-duration="7" data-track-index="0">');
     expect(html).toContain('<audio id="voiceover" data-start="0" data-duration="9.5" data-track-index="1" src="/api/media/0123456789abcdef.mp3">');
-    expect(count(markup, 'data-slot="content"')).toBe(2);
-    expect(count(markup, 'class="nc-block" data-block="text-card"')).toBe(2);
+    expect(count(markup, 'class="card"')).toBe(2);
+    expect(markup).toContain('<h1 class="title">Hello</h1>');
   });
 
   it('inlines gsap then the runtime in the head, before anything registers a timeline, and marks the runtime so the player and producer do not add another', () => {
@@ -58,39 +51,29 @@ describe('buildHyperframesDocument', () => {
     expect(html).not.toContain('cdn.jsdelivr');
   });
 
-  it('scopes the stage and block styles and puts tokens on the root and tones on the clip', () => {
-    expect(html).toContain('@scope ([data-stage])');
-    expect(html).toContain('@scope ([data-block="text-card"])');
-    expect(html).toContain('[data-composition-id] { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--bg, #000); --bg: #0b0c10');
-    expect(html).toMatch(/id="scene-2-text-card"[^>]*style="[^"]*--accent: #e3b341/);
+  it("layers the cascade — engine defaults, then the film's style sheet scoped to the frame, then each scene's own styles unlayered and scoped to that scene", () => {
+    expect(html).toContain('@layer nc-base, nc-style;');
+    expect(html).toContain('@layer nc-style {\n@scope ([data-composition-id]) {\n.nc-scene { --bg: #0b0c10;');
+    expect(html).toContain('@scope ([data-scene="scene-1"]) {\n.captions { position: absolute;');
+    expect(html).not.toContain('@scope ([data-scene="scene-2"])');
+    expect(html.indexOf('@layer nc-style {')).toBeLessThan(html.indexOf('@scope ([data-scene="scene-1"])'));
   });
 
-  it('cuts clean when the stage says cut, and carries the transition and the reveal helpers for the others', () => {
-    const cut = buildHyperframesDocument({ ...ir, stage: { ...ir.stage, transition: { type: 'cut', seconds: 0.4 } } }, opts);
-    expect(cut).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3" data-track-index="0"');
-    const data = JSON.parse(/<script type="application\/json" id="nodecine-data">([\s\S]*?)<\/script>/.exec(html)![1]!);
+  it('cuts clean on a cut, and carries the transition and the scene helpers for the others', () => {
+    const cut = buildHyperframesDocument({ ...ir, transition: { type: 'cut', seconds: 0.4 } }, opts);
+    expect(cut).toContain('<div id="scene-1" class="clip nc-scene" data-scene="scene-1" data-start="0" data-duration="3" data-track-index="0"');
+    const data = dataOf(html);
     expect(data.transition).toEqual({ type: 'fade', seconds: 0.4 });
     expect(data.scenes[0].duration).toBe(3);
-    expect(html).toContain('nodecine.stagger = function');
+    expect(html).toContain('nodecine.when = function');
     expect(html).toContain('nodecine.count = function');
     expect(html).toContain("tr.type === 'fade'");
   });
 
-  it('keeps the outgoing scene up for the length of a fade, so there is something to fade from', () => {
-    // A transition needs two scenes on screen at once. Without the overlap the outgoing scene ends
-    // exactly where the incoming one begins and the fade has nothing under it — which reads as a cut,
-    // and so does a fade short enough to be a few frames.
-    const fade = buildHyperframesDocument({ ...ir, stage: { ...ir.stage, transition: { type: 'fade', seconds: 0.4 } } }, opts);
-    expect(fade).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3.4"');
-    const cut = buildHyperframesDocument({ ...ir, stage: { ...ir.stage, transition: { type: 'cut', seconds: 0.4 } } }, opts);
-    expect(cut).toContain('<div id="scene-1-text-card" class="clip nc-scene" data-start="0" data-duration="3"');
-  });
-
-  it('sends the pictures a scene names to the project, not only the ones in the code', () => {
+  it('sends the pictures a scene names to the project, wherever they are named', () => {
     const shot = '/api/assets/0123456789abcdef0123456789abcdef01234567.png';
     const withShot = buildHyperframesDocument(
-      { ...ir, blocks: [{ ...DEFAULT_BLOCK, props: { ...DEFAULT_BLOCK.props, shot: { type: 'image', content: 'image', required: false } } }],
-        timeline: [{ ...ir.timeline[0]!, props: { headline: 'One', shot } }, ir.timeline[1]!] },
+      { ...ir, timeline: [{ ...ir.timeline[0]!, source: `<img src="${shot}">` }, ir.timeline[1]!], vars: { character: shot } },
       { ...opts, assetBase: 'assets' },
     );
     // Rewritten to the copy the producer puts beside the page; the app path would not resolve there.
@@ -98,17 +81,19 @@ describe('buildHyperframesDocument', () => {
     expect(withShot).not.toContain('/api/assets/');
   });
 
-  it('carries props, fields and the scene scripts as data, with no script from the block left in the markup', () => {
-    const data = JSON.parse(/<script type="application\/json" id="nodecine-data">([\s\S]*?)<\/script>/.exec(html)![1]!);
+  it('carries the values, the facts and the scene scripts as data, with no script left inline in the markup', () => {
+    const data = dataOf(html);
     expect(data.compositionId).toBe(COMPOSITION_ID);
     expect(data.duration).toBe(10);
+    expect(data.vars).toEqual({ channel: 'AIDev' });
     expect(data.scenes).toHaveLength(2);
-    expect(data.scenes[0].props).toEqual({ headline: 'One <b>', body: 'First' });
-    expect(data.scenes[0].fields).toEqual({ kicker: 'HI' });
+    expect(data.scenes[0].facts).toEqual({});
+    expect(data.scenes[1].facts).toEqual({ stars: 1284 });
     expect(data.scenes[0].scripts.join('\n')).toContain('nodecine.timeline');
-    // The block's <script> is not left inline where the browser would run it out of scope.
+    expect(data.scenes[1].scripts).toEqual([]);
+    // The scene's <script> is not left inline where the browser would run it out of scope.
     expect(markup).not.toContain('nodecine.timeline(');
-    expect(html).not.toContain('One <b>');
+    expect(html).toContain('window.__nodecineBind.facts(root, scene.facts');
   });
 
   it('locks the page down with a CSP that allows inline code, media and fonts, and nothing else', () => {
@@ -124,7 +109,7 @@ describe('buildHyperframesDocument', () => {
     expect(html).toContain('html, body, [data-composition-id] { width: 2160px; height: 3840px; }');
     expect(html).toContain('.nc-frame { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform: scale(2); transform-origin: 0 0;');
     // The scenes sit inside the design-sized frame, not directly in the root.
-    expect(html).toMatch(/<div class="nc-frame">\s*<div id="scene-1-text-card" class="clip nc-scene"/);
+    expect(html).toMatch(/<div class="nc-frame">\s*<div id="scene-1" class="clip nc-scene"/);
     expect(buildHyperframesDocument(ir, opts)).not.toContain('nc-frame');
   });
 });

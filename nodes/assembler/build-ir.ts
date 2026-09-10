@@ -1,6 +1,6 @@
 import type { CaptionTrack, ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
 import { readFactPath } from '@/core/types/payloads';
-import { videoVars } from '@/core/look/vars';
+import { videoVars } from '@/core/visual/vars';
 import { IR_VERSION, type IRCaptions, type VideoIR, type TimelineEntry } from '@/core/types/ir';
 import { allocateFrames, computeTotalFrames, framesFromSegments } from './allocate';
 import { assertValidIR } from '@/core/types/validate-ir';
@@ -28,21 +28,20 @@ export interface BuildIRInput {
   now?: number;
 }
 
-/** Overlay facts onto props via factBindings; facts always win; missing keys leave props untouched. */
-export function applyFactBindings(
-  props: Record<string, unknown>,
-  bindings: Record<string, string> | undefined,
-  facts: FactSheet['facts'] | undefined,
-): Record<string, unknown> {
-  if (!bindings || !facts) return { ...props };
-  const out: Record<string, unknown> = { ...props };
-  for (const [propName, factKey] of Object.entries(bindings)) {
+/**
+ * The verified values a scene's `data-fact` elements take (CORE_CONTRACTS §5.4): one per binding
+ * whose fact is present and says something. An empty string is a fact that says nothing (a page
+ * with no description); it leaves the element as drawn rather than blanking it.
+ */
+export function resolveFacts(bindings: Record<string, string> | undefined, facts: FactSheet['facts'] | undefined): Record<string, unknown> | undefined {
+  if (!bindings || !facts) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const [name, factKey] of Object.entries(bindings)) {
     // A plain key, or `items.2.title` when the beat ran over a list (CORE_CONTRACTS §2.2).
     const value = readFactPath(facts, factKey);
-    // An empty string is a fact that says nothing (a page with no description); it must not blank the prop.
-    if (value !== undefined && value !== '') out[propName] = value;
+    if (value !== undefined && value !== null && value !== '') out[name] = value;
   }
-  return out;
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** Seconds on the voice-over's clock → frames on the video's; a word never gets fewer than one frame. */
@@ -73,14 +72,13 @@ export function buildIR(input: BuildIRInput): VideoIR {
 
   let cursor = 0;
   const timeline: TimelineEntry[] = plan.scenes.map((scene, i) => {
+    const resolved = resolveFacts(scene.factBindings, facts?.facts);
     const entry: TimelineEntry = {
-      id: `scene-${i + 1}-${scene.blockId}`,
-      blockId: scene.blockId,
+      id: `scene-${i + 1}`,
       startFrame: cursor,
       durationInFrames: frames[i] as number,
-      props: applyFactBindings(scene.props, scene.factBindings, facts?.facts),
-      ...(scene.tone !== undefined ? { tone: scene.tone } : {}),
-      ...(scene.fields && Object.keys(scene.fields).length ? { fields: scene.fields } : {}),
+      source: scene.source,
+      ...(resolved ? { facts: resolved } : {}),
     };
     cursor += frames[i] as number;
     return entry;
@@ -92,14 +90,13 @@ export function buildIR(input: BuildIRInput): VideoIR {
       title: p.title,
       language: plan.language,
       fps: p.fps,
-      width: plan.stage.frame.width,
-      height: plan.stage.frame.height,
+      width: plan.frame.width,
+      height: plan.frame.height,
       totalDurationInFrames: total,
     },
-    stage: plan.stage,
-    blocks: plan.blocks,
-    ...(plan.covers?.length ? { covers: plan.covers } : {}),
-    vars: videoVars(plan.stage, plan.language, input.now ?? Date.now()),
+    style: plan.style,
+    transition: plan.transition,
+    vars: videoVars(plan.vars, plan.language, input.now ?? Date.now()),
     audioTrack: {
       voiceoverUrl: voiceover.audioUrl,
       durationSeconds: voiceover.durationSeconds,

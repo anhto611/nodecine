@@ -9,7 +9,7 @@ import { assetPath, assetUrl, ensureAssetsDir, isLibrary, libraryPath } from '@/
 const Body = z.object({ library: z.string(), file: z.string().max(120) });
 
 /**
- * Take a file the user dropped in one of their own folders into the look's asset store
+ * Take a file the user dropped in one of their own folders into the scene asset store
  * (CORE_CONTRACTS §2.7). A clip is far too big to travel as a base64 data URL the way a logo does,
  * so nothing crosses the wire but the name: the server reads the file where it lies, hashes it, and
  * copies it in under that hash. Uploading the same clip twice is one file.

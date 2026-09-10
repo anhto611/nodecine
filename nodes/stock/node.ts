@@ -34,7 +34,7 @@ export const STOCK_MEDIA = 'core/stock-media';
  *
  * A scene may only show a file this machine holds (§2.7), so this does not hand out a link: it
  * searches, picks the first candidate that fills the frame, downloads it and puts the asset it
- * became into the scene's `image`. From there the Art Director and the assembler cannot tell a
+ * became into the scene's `image`. From there the Director and the assembler cannot tell a
  * stock photograph from one the person chose by hand.
  *
  * The `llm` port is optional and it is what makes the node useful in a language the libraries do
@@ -86,8 +86,7 @@ export const stockMedia: NodeDefinition<typeof Params> = {
         continue;
       }
       used.push(found.page);
-      // A clip and a photograph are different content keys, and the block that fits follows from
-      // which one is there: nothing needs to be cast by hand.
+      // A clip and a photograph are different content keys; the Illustrator draws whichever is there.
       const key = found.kind === 'clip' ? 'clip' : 'image';
       scenes[i] = { ...scenes[i]!, content: { ...scenes[i]!.content, [key]: found.assetUrl } };
       log('info', `scene ${i + 1}: ${found.kind} ${found.width}×${found.height}${found.durationSec ? ` · ${found.durationSec}s` : ''} by ${found.author}`);

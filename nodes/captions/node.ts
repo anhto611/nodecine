@@ -8,7 +8,7 @@ import { SUBTITLE_FORMATS, toSubtitles } from '@/nodes/captions/subtitles';
 import type { CaptionTrack } from '@/core/types/payloads';
 
 const Params = z.object({
-  /** Characters a line may hold: a measurement of the caption slot the stage draws, so it lives here, not there. */
+  /** Characters a line may hold: a measurement of the caption band the scenes draw, so it lives here, not there. */
   maxChars: z.number().int().min(8).max(80).default(26),
 });
 
@@ -16,7 +16,7 @@ const Params = z.object({
  * CORE_CONTRACTS §5.13 — Voiceover with words → CaptionTrack. Pure.
  *
  * Only what is said and when. Where the lines sit, in which font, which colour the spoken word
- * turns: that is the stage's, declared on its `data-slot="captions"` element.
+ * turns: that is the scene's, declared on its `data-slot="captions"` element, or the style sheet's default band.
  */
 export const captions: NodeDefinition<typeof Params> = {
   type: 'core/captions',

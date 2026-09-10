@@ -3,7 +3,7 @@ import { Executor } from '../engine/executor';
 import { validateGraph, GraphInvalidError, type Graph } from '../engine/graph';
 import { _resetNodeRegistry } from '../nodes/definition';
 import { registerNodes } from '@/nodes';
-import { _resetCodeRenderers, registerCodeRenderer } from '../look/renderers';
+import { _resetCodeRenderers, registerCodeRenderer } from '../visual/renderers';
 import staticScriptJson from '@/lib/first-run.json';
 const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
 import { validateIR } from '../types/validate-ir';
@@ -102,8 +102,8 @@ describe('Phase A run', () => {
     expect(executor.runtime('tts').reused).toBe(true);
     expect(executor.runtime('assembler').reused).toBe(true);
     expect(synths()).toBe(3);
-    // resource nodes always re-probe (EXECUTION_ENGINE §1.1) but their unchanged hash lets downstream reuse
-    expect(probes()).toBe(4);
+    // resource nodes always re-probe (EXECUTION_ENGINE §1.1) but their unchanged hash lets downstream reuse: three of them, twice
+    expect(probes()).toBe(6);
     expect(executor.runtime('tts-provider').reused).toBe(false);
 
     graph.nodes.find((n) => n.id === 'tts')!.params.speed = 1.15;

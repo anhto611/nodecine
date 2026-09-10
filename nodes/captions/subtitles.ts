@@ -19,13 +19,13 @@ export function timecode(seconds: number, format: SubtitleFormat): string {
 }
 
 export function toSubtitles(track: CaptionTrack, format: SubtitleFormat): string {
-  const blocks = track.cues.map((cue, i) => {
+  const sections = track.cues.map((cue, i) => {
     const line = cue.words.map((w) => w.text).join(' ');
     // A cue that ends before it starts would make a player drop it silently; give it a visible instant.
     const end = Math.max(cue.end, cue.start + 0.04);
     const times = `${timecode(cue.start, format)} --> ${timecode(end, format)}`;
     return format === 'srt' ? `${i + 1}\n${times}\n${line}` : `${times}\n${line}`;
   });
-  const body = `${blocks.join('\n\n')}\n`;
+  const body = `${sections.join('\n\n')}\n`;
   return format === 'vtt' ? `WEBVTT\n\n${body}` : body;
 }

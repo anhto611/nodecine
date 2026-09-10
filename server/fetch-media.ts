@@ -57,7 +57,7 @@ export async function readCapped(res: Response, max: number, what: string): Prom
   return Buffer.concat(parts);
 }
 
-/** Store bytes as a look asset, named by their content so the same picture is one file. */
+/** Store bytes as a scene asset, named by their content so the same picture is one file. */
 export async function saveAsset(bytes: Buffer, mime: string, max = MAX_IMAGE_BYTES): Promise<string | undefined> {
   const ext = Object.entries(ASSET_TYPES).find(([, m]) => m === mime.split(';')[0]!.trim())?.[0];
   if (!ext || bytes.length === 0 || bytes.length > max) return undefined;

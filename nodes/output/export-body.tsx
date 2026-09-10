@@ -8,8 +8,8 @@ import { Icon } from '@/components/icons';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { FormBody } from '@/nodes/form-body';
-import { RESOLUTIONS, outputSizeFor } from '@/core/look/frame';
-import { useFrame } from '@/nodes/art-director/body';
+import { RESOLUTIONS, outputSizeFor } from '@/core/visual/frame';
+import { useFrame } from '@/nodes/kit';
 
 export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
