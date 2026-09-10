@@ -1,8 +1,8 @@
 import { NodeError } from '@/core/errors';
 import { downloadImageAsset, getVetted, readCapped, saveAsset } from '@/server/fetch-media';
-import { parsePageUrl } from '@/nodes/web/parse-url';
+import { parsePageUrl } from '@/core/network/public-url';
 import type { StockRequest, StockResult } from '@/core/engine/services';
-import { clipSearchUrl, parseClips, parseStock, pick, pickClip, searchUrl, STOCK_KEY_ENV } from './providers';
+import { clipSearchUrl, parseClips, parseStock, pick, pickClip, searchUrl, STOCK_KEY_ENV } from './stock-providers';
 
 export const StockErrorCode = {
   KEY_MISSING: 'STOCK_KEY_MISSING',

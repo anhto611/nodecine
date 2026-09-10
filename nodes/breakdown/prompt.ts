@@ -1,7 +1,7 @@
 import { z, type ZodTypeAny } from 'zod';
 import { languageName } from '@/core/text/languages';
 import { EntryContentSchema, SceneContentSchema, WRITTEN_KEYS, type SceneContent, type SceneScript } from '@/core/types/payloads';
-import { CONTENT_GUIDE } from '@/nodes/screenwriter/prompt';
+import { CONTENT_GUIDE } from '@/core/content-guide';
 
 /**
  * The prompt a scene breakdown sends (CORE_CONTRACTS §5.20). The narration is finished and is not

@@ -3,7 +3,7 @@ import { makeFakeServices } from '@/core/__tests__/fakes';
 import type { RunContext } from '@/core/nodes/definition';
 import type { Voiceover } from '@/core/types/payloads';
 import { audioMix } from '../node';
-import { mixFilter } from '../mix.server';
+import { mixFilter } from '@/server/audio-mix.server';
 
 const voiceover: Voiceover = {
   audioUrl: '/api/media/aaaaaaaaaaaaaaaa.mp3',

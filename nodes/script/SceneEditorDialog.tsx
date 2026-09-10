@@ -4,7 +4,7 @@ import type { SceneContent } from '@/core/types/payloads';
 import { Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useNode, useStudio } from '@/store/useStudio';
-import { ContentEditor } from './content-editor';
+import { ContentEditor } from '@/components/node-runtime/content-editor';
 
 type SceneRow = { role: string; weight: number; narration: string; content: SceneContent };
 

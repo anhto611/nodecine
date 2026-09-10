@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { LLMRef, SceneScript } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import { STOCK_PROVIDERS } from './providers';
+import { STOCK_PROVIDERS } from '@/server/stock-providers';
 import { STOCK_STYLE_IDS } from './styles';
 import { buildStockPrompt, StockQueriesSchema } from './prompt';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { runScreenwriter, type ScreenwriterContext } from '@/nodes/screenwriter/loop';
+import { runScreenwriter, type ScreenwriterContext } from '@/core/ai/structured-completion';
 import { ErrorCode, NodeError } from '@/core/errors';
 import type { LLMRef } from '@/core/types/payloads';
 

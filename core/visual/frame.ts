@@ -40,8 +40,8 @@ export function outputSizeFor(frame: FrameSize, resolution: Resolution = '1080p'
 }
 
 export function frameOf(graph: Pick<Graph, 'nodes'>): FrameSize {
-  const node = graph.nodes.find((n) => n.type === 'core/illustrator');
-  const id = (node?.params as { frame?: unknown } | undefined)?.frame;
+  const id = graph.nodes.map((node) => (node.params as { frame?: unknown }).frame)
+    .find((frame) => FRAME_PRESETS.some((preset) => preset.id === frame));
   const preset = FRAME_PRESETS.find((p) => p.id === id);
   return preset ? { width: preset.width, height: preset.height } : DEFAULT_FRAME;
 }

@@ -5,7 +5,7 @@ import { Kv, useT } from '@/components/ui';
 import { useInputPayload, useRuntime } from '@/store/useStudio';
 import { FormBody } from '@/nodes/form-body';
 import type { BodyProps } from '@/nodes/kit';
-import { parsePageUrls } from './parse-url';
+import { parsePageUrls } from '@/core/network/public-url';
 
 /** Body of the Web Fetcher: what it will read, then what the page said and the picture it kept. */
 export const WebFetcherBody: React.FC<BodyProps> = ({ nodeId }) => {

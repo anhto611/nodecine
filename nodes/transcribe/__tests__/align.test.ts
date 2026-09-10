@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAlignerOutput } from '../align.server';
+import { parseAlignerOutput } from '@/server/audio-align.server';
 
 describe('parseAlignerOutput', () => {
   it('keeps well-formed words, clamps negatives and inverted spans, drops junk', () => {

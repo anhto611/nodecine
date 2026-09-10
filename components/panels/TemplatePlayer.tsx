@@ -8,9 +8,10 @@ import { FRAME_PRESETS } from '@/core/visual/frame';
  * lie about the fifth.
  */
 export function shapeOfTemplate(graph: Graph): { ratio: string; fps: number } | null {
-  const node = graph.nodes.find((n) => n.type === 'core/illustrator');
-  const preset = FRAME_PRESETS.find((p) => p.id === (node?.params as { frame?: unknown } | undefined)?.frame);
+  const frame = graph.nodes.map((node) => (node.params as { frame?: unknown }).frame)
+    .find((value) => FRAME_PRESETS.some((preset) => preset.id === value));
+  const preset = FRAME_PRESETS.find((candidate) => candidate.id === frame);
   if (!preset) return null;
-  const fps = graph.nodes.find((n) => n.type === 'core/timeline-assembler')?.params.fps;
+  const fps = graph.nodes.map((node) => node.params.fps).find((value) => typeof value === 'number');
   return { ratio: preset.id, fps: typeof fps === 'number' ? fps : 30 };
 }

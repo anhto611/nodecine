@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCaptionTrack, retime, toCues } from '../cues';
+import { buildCaptionTrack, retime, toCues } from '@/core/captions/cues';
 import type { Word } from '@/core/types/payloads';
 
 /** Evenly spaced words for a sentence, 0.3 s apart. */

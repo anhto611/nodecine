@@ -12,7 +12,7 @@ import { HistoryPanel } from './panels/HistoryPanel';
 import { LogsPanel } from './panels/LogsPanel';
 import { TemplateBrowser } from './panels/TemplateBrowser';
 import { SettingsDialog } from './panels/SettingsDialog';
-import { SceneEditorDialog } from '@/nodes/script/SceneEditorDialog';
+import { NODE_OVERLAYS } from '@/nodes/index.client';
 
 /** Studio shell: header, rail, optional left panel, canvas, optional bottom logs, modals. */
 export const Studio: React.FC = () => {
@@ -73,7 +73,7 @@ export const Studio: React.FC = () => {
       </div>
       {templatesOpen && <TemplateBrowser />}
       {settingsOpen && <SettingsDialog />}
-      {sceneEditor && <SceneEditorDialog />}
+      {sceneEditor && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
     </div>
   );
 };

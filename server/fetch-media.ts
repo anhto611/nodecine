@@ -3,7 +3,7 @@ import path from 'node:path';
 import { rename, writeFile } from 'node:fs/promises';
 import { NodeError } from '@/core/errors';
 import { ASSET_TYPES, assetUrl, ensureAssetsDir } from '@/server/paths';
-import { parsePageUrl } from '@/nodes/web/parse-url';
+import { parsePageUrl } from '@/core/network/public-url';
 
 /**
  * Bringing a file in from the open internet, safely (CORE_CONTRACTS §9.2). Shared by every node

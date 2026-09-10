@@ -5,7 +5,7 @@ import { Kv, useT } from '@/components/ui';
 import { ScenePreview } from '@/components/ScenePreview';
 import { FormBody } from '@/nodes/form-body';
 import { useParams, type BodyProps } from '@/nodes/kit';
-import { ImagePick } from '@/nodes/script/content-editor';
+import { ImagePick } from '@/components/node-runtime/content-editor';
 import { useRuntime } from '@/store/useStudio';
 import type { IllustratorParams } from './node';
 

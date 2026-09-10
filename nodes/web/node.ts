@@ -2,8 +2,8 @@ import { z } from 'zod';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import type { FactItem, FactSheet, SourceRef } from '@/core/types/payloads';
 import { NodeError, toNodeError } from '@/core/errors';
-import { parsePageUrls } from './parse-url';
-import { RETRYABLE, WebErrorCode } from './errors';
+import { parsePageUrls } from '@/core/network/public-url';
+import { RETRYABLE, WebErrorCode } from '@/core/network/page-errors';
 
 const Params = z.object({
   /** Open the page in a browser and keep a picture of it. Off by default: it costs a browser launch. */

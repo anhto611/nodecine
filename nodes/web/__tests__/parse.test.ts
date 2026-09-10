@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isPrivateHost, parsePageUrl, parsePageUrls } from '../parse-url';
-import { parsePageMeta } from '../parse-meta';
+import { isPrivateHost, parsePageUrl, parsePageUrls } from '@/core/network/public-url';
+import { parsePageMeta } from '@/server/page-parse-meta';
 
 describe('parsePageUrl', () => {
   it('takes a public web address, adds the scheme to a bare domain, and rebuilds it without the fragment', () => {

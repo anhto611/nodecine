@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { AudioScript, Voiceover } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import { retime } from '@/nodes/captions/cues';
+import { retime } from '@/core/captions/cues';
 
 export const ALIGN_MODELS = ['small', 'medium', 'large-v3'] as const;
 

@@ -71,7 +71,6 @@ nodecine/
 │  ├─ types/                      Kiểu cổng, lược đồ dữ liệu, Bản đặc tả IR
 │  ├─ nodes/definition.ts         Hợp đồng node (NodeDefinition, PortDef, RunContext) và registry node rỗng; các node ở nodes/
 │  ├─ engine/                     Bộ máy thực thi đồ thị, chữ ký node, bộ nhớ đệm
-│  ├─ illustrator/               Họa Sĩ (chặng hình sau kịch bản): node.ts (một phong cách rồi từng cảnh), style.ts (vẽ phong cách), scene.ts (vẽ một cảnh), rules.ts (luật và lint), body.tsx (storyboard)
 │  ├─ templates/registry.ts       Registry bản mẫu: kiểm định JSON, trả bản sao đồ thị; rỗng ở lõi
 │  ├─ text/                       Nhận diện ngôn ngữ theo hệ chữ; chính sách ngôn ngữ đầu ra
 │  ├─ adapters/                   CHỈ giao diện Adapter và registry rỗng; không có lớp cài đặt nào ở đây
@@ -105,25 +104,24 @@ nodecine/
 │  ├─ video-meta.ts               Thẻ nodecine_workflow trong MP4: ghi bằng ffmpeg stream copy, đọc bằng ffprobe
 │  ├─ paths.ts                    Thư mục tệp tạm và tên tệp media băm
 ├─ templates/                     Bản mẫu = đồ thị JSON, cùng hình dạng tệp dự án; index.ts đăng ký cả ba
-├─ nodes/                         Mọi node của app, một họ một thư mục: định nghĩa, ruột, thân node, test ở cạnh nhau (như comfy_extras/nodes_*.py)
-│  ├─ index.ts                    Danh sách mọi node, đẳng hình; registerNodes() — nơi duy nhất nêu tên một họ
-│  ├─ index.client.ts             Thân node và icon/nhóm Thư viện của từng loại node (React); nhóm là trục phân loại duy nhất
+├─ nodes/                         Mỗi node là một capsule tự chứa, đúng một thư mục cho đúng một node
+│  ├─ .generated/                 Registry server/client sinh tự động; không sửa tay
+│  ├─ index.ts                    Chỉ re-export registry server đã sinh
+│  ├─ index.client.ts             Chỉ re-export body, metadata và overlay đã sinh
 │  ├─ kit.tsx                     BodyProps và useParams dùng chung cho thân node
 │  ├─ form.ts                     Đọc paramsSchema (Zod) thành danh sách trường: enum, chuỗi, số có biên, boolean; thuần, có test
 │  ├─ form-body.tsx               FormBody: form tham số sinh từ schema (nhãn `node.<tên trường>`, nhãn giá trị `node.<trường>.<giá trị>` nếu có); body chỉ viết tay phần đặc thù
-│  ├─ input/                      Nhập Liệu
-│  ├─ web/                        Truy Xuất Trang: dựng lại địa chỉ (parse-url), đọc thẻ meta (parse-meta), tải ảnh và chụp trang (page.server.ts)
-│  ├─ github/                     Truy Xuất Repo: node, đọc link, gọi GitHub API, dựng dữ kiện, mã lỗi, thân node, test
-│  ├─ script/                     Kịch Bản Tĩnh
-│  ├─ screenwriter/               Biên Kịch: node, beat → lược đồ đầu ra, prompt, vòng gọi mô hình, thân node, test
-│  ├─ illustrator/               Họa Sĩ (chặng hình sau kịch bản): node.ts (một phong cách rồi từng cảnh), style.ts (vẽ phong cách), scene.ts (vẽ một cảnh), rules.ts (luật và lint), body.tsx (storyboard)
-│  ├─ resources/                  Mô Hình Ngôn Ngữ, Giọng Đọc Nguồn, hai node Động Cơ
-│  ├─ tts/                        Giọng Đọc
-│  ├─ transcribe/                 Căn Mốc Từ: node, align.server.ts + align/stable_ts_align.py (căn chỉnh cưỡng bức)
-│  ├─ captions/                   Phụ Đề và Xuất Phụ Đề: node, cues.ts (gom từ thành dòng), subtitles.ts (srt/vtt)
-│  ├─ audio/                      Nhạc Nền và Nhập Âm Thanh: node, mix.server.ts (lặp nhạc, hạ nhạc khi có tiếng nói), import.server.ts, picker.tsx
-│  ├─ assembler/                  Đóng Gói Timeline: phân bổ khung hình theo trọng số, đè dữ kiện, dựng IR (kiểm định IR ở core/types/validate-ir.ts)
-│  └─ output/                     Xuất Bản Video, Xuất MP4, Ảnh Bìa
+│  ├─ illustrator/               Ví dụ capsule: node.manifest.json, node.ts, body.tsx và các helper/test chỉ node này dùng
+│  ├─ audio-input/                Một node, không ghép chung với audio-mix
+│  ├─ audio-mix/                  Một node, không ghép chung với audio-input
+│  ├─ captions/                   Một node tạo CaptionTrack
+│  ├─ caption-export/             Một node xuất tệp phụ đề
+│  ├─ video-output/               Một node xem trước video
+│  ├─ mp4-export/                 Một node kết xuất MP4
+│  └─ …/                          Mọi thư mục còn lại giữ cùng contract một-capsule
+├─ scripts/
+│  ├─ discover-nodes.mjs          Quét manifest và sinh static imports cho Next.js
+│  └─ check-node-boundaries.mjs   Chặn core→node và node→node trong mã production
 ├─ components/                    Thành phần giao diện Studio (canvas, dải, panel, thẻ node); thân node nằm ở nodes/
 ├─ locales/                       Từ điển chuỗi hiển thị
 └─ docs/
@@ -135,7 +133,8 @@ Quy tắc phụ thuộc bắt buộc, kiểm tra được bằng công cụ phâ
 
 - `core/` không được phép nhập bất cứ thứ gì từ `nodes/`, `engines/`, `providers/`, `server/`, `templates/`, `app/` hay `components/`. Nó chỉ chứa giao diện Adapter, Provider cùng các registry rỗng (engine, nhà cung cấp, renderer theo định dạng, bản mẫu); các lớp cài đặt cụ thể nằm ngoài lõi và tự đăng ký vào registry ở thời điểm khởi động ứng dụng. Nếu quy tắc này bị vi phạm, tuyên bố độc lập engine trở thành lời nói suông và Hyperframes Adapter sẽ không bao giờ cài đặt được.
 - `engines/*`, `providers/*` và `server/*` được nhập giao diện và kiểu từ `core/`, và được nhập thư viện của riêng chúng như Remotion hay React; `core/` không bao giờ nhập ngược lại. Một engine đăng ký renderer cho định dạng code nó chạy được; không gì nhập Adapter của engine khác. `templates/` chỉ chứa JSON và một tệp đăng ký; nó không import node nào.
-- `nodes/*` nhập hợp đồng và khung từ `core/`, được nhập React, `components/ui` và store để dựng thân node; `core/` không bao giờ nhập `nodes/`. `nodes/index.ts` là danh sách duy nhất; `server/register.ts` và `lib/bootstrap.client.ts` gọi `registerNodes()` từ đó.
+- Mỗi `nodes/<tên>/` bắt buộc có đúng một `node.manifest.json`, một `node.ts` và một `body.tsx`; manifest khai ID, export định nghĩa, export body, icon/nhóm và extension UI tùy chọn. `scripts/discover-nodes.mjs` sinh registry trước dev, test, typecheck và build; không còn danh sách node viết tay.
+- Một capsule không được import capsule khác. Logic dùng chung phải chuyển vào `core/`, `server/` hoặc `components/node-runtime/` theo môi trường chạy. `npm run nodes:check` thực thi ranh giới này và cũng cấm `core/` import `nodes/`.
 - **Thân node sinh từ schema** như `INPUT_TYPES` của ComfyUI và `properties[]` của n8n: một node khai tham số một lần bằng Zod, `FormBody` (`nodes/form-body.tsx`) đọc schema đó và vẽ select cho enum, ô số có biên cho số, ô chữ cho chuỗi, checkbox cho boolean; nhãn theo tên trường trong từ điển. Thân node chỉ viết tay phần schema không nói được (xem trước, danh sách beat, trình phát, dòng trạng thái) và nhúng `FormBody` cho phần còn lại, có thể chọn tập trường, thay widget hay tự vẽ một trường tại đúng vị trí của nó. Nhập Liệu, Phụ Đề, Căn Mốc Từ, Đóng Gói Timeline, tốc độ Giọng Đọc, Xuất MP4, Remotion Engine dùng cách này; Họa Sĩ, Biên Kịch, Kịch Bản Tĩnh, Xuất Bản Video, Provider (form riêng theo nhà cung cấp) viết tay.
 - `components/` được nhập từ `core/` và `nodes/index.client`, nhưng `core/` không bao giờ nhập ngược lại. Trình phát Remotion là một component do `engines/remotion/` cung cấp qua `mountPlayer()`, tầng giao diện chỉ gọi hàm đó chứ không nhập Remotion trực tiếp.
 - Lệnh gọi mạng ra ngoài chỉ nằm trong `nodes/*`, `providers/*` và `engines/*`, tức là trong executor ở máy chủ; `core/` và `components/` không gọi mạng.

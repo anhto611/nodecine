@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { WRITTEN_KEYS, type LLMRef, type SceneContent, type SceneScript } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import { runScreenwriter } from '@/nodes/screenwriter/loop';
+import { runScreenwriter } from '@/core/ai/structured-completion';
 import { DENSITIES, buildBreakdownPrompt, hasWritten, outputSchemaFor, type WrittenScene } from './prompt';
 
 const Params = z.object({

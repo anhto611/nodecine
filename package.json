@@ -4,10 +4,17 @@
   "private": true,
   "description": "The open-source node-based agentic video studio",
   "scripts": {
+    "nodes:discover": "node scripts/discover-nodes.mjs",
+    "nodes:check": "node scripts/check-node-boundaries.mjs",
+    "nodes:prepare": "npm run nodes:discover && npm run nodes:check",
+    "predev": "npm run nodes:prepare",
     "dev": "next dev",
+    "prebuild": "npm run nodes:prepare",
     "build": "next build",
     "start": "next start",
+    "pretypecheck": "npm run nodes:prepare",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run nodes:prepare",
     "test": "vitest run",
     "test:watch": "vitest",
     "setup:align": "bash scripts/setup-align.sh"

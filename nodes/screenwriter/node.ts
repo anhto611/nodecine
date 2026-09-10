@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ErrorCode, NodeError } from '@/core/errors';
-import { runScreenwriter } from '@/nodes/screenwriter/loop';
+import { runScreenwriter } from '@/core/ai/structured-completion';
 import { buildScreenwriterPrompt } from '@/nodes/screenwriter/prompt';
 import { BeatSchema, boundFactKeys, expandBeats, listBeats, outputSchemaFor, toPackets } from '@/nodes/screenwriter/beats';
 import { resolveOutputLanguage } from '@/core/text/languages';

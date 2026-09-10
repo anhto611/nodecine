@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stat } from 'node:fs/promises';
 import { createServerServices } from '../services.server';
-import { buildCaptionTrack, retime } from '@/nodes/captions/cues';
+import { buildCaptionTrack, retime } from '@/core/captions/cues';
 import { buildIR } from '@/nodes/assembler/build-ir';
 import { mediaUrl } from '../paths';
 import { SCENE_SOURCE, STYLE } from '@/core/__tests__/scene-fixtures';

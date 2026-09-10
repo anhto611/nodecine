@@ -128,7 +128,7 @@ Mỗi cảnh là một đoạn HTML (`source`, tối đa 200 000 ký tự) theo 
 
 ### 2.10. `CaptionTrack`
 
-Các dòng phụ đề trên đồng hồ của voice-over: `cues` (danh sách `{start, end, words}` giây, mỗi `words` là các từ có mốc). Chỉ có **nói gì, lúc nào**; nằm ở đâu, font gì, màu tô ra sao là của cảnh hay của tờ CSS phong cách (mục 2.6, 2.8). Một dòng không bao giờ sống quá lúc dòng sau bắt đầu, nên không có hai dòng chồng nhau. Cách gom từ thành dòng ở `nodes/captions/cues.ts`: theo câu trước, rồi tối ưu tổng chi phí ngắt dòng (dấu câu miễn phí, ngắt sau từ nối hay giữa một con số viết bằng chữ bị phạt nặng); mang từ cutdown, nơi các luật này đã đo trên lời thoại tiếng Việt thật.
+Các dòng phụ đề trên đồng hồ của voice-over: `cues` (danh sách `{start, end, words}` giây, mỗi `words` là các từ có mốc). Chỉ có **nói gì, lúc nào**; nằm ở đâu, font gì, màu tô ra sao là của cảnh hay của tờ CSS phong cách (mục 2.6, 2.8). Một dòng không bao giờ sống quá lúc dòng sau bắt đầu, nên không có hai dòng chồng nhau. Cách gom từ thành dòng ở `core/captions/cues.ts`: theo câu trước, rồi tối ưu tổng chi phí ngắt dòng (dấu câu miễn phí, ngắt sau từ nối hay giữa một con số viết bằng chữ bị phạt nặng); mang từ cutdown, nơi các luật này đã đo trên lời thoại tiếng Việt thật.
 
 ### 2.11. `SceneScript` và từ vựng nội dung
 
@@ -267,7 +267,7 @@ Ba bất biến do node này giữ:
 2. Prompt được dựng từ các nguồn tách bạch: đề bài mang ý đồ, beat mang cấu trúc, từ vựng nội dung mang hình dạng, dữ kiện mang sự thật. Không có gì trong prompt nói về một loại video hay một giao diện cụ thể.
 3. Đổi giao diện không chạy lại Biên Kịch: Họa Sĩ không nằm trong chữ ký của node này, nên sửa mô tả phong cách chỉ chạy lại Họa Sĩ và Đóng Gói Timeline.
 
-Vòng gọi mô hình (`nodes/screenwriter/loop.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `nodes/screenwriter/beats.ts`, prompt ở `nodes/screenwriter/prompt.ts`.
+Vòng gọi mô hình (`core/ai/structured-completion.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `nodes/screenwriter/beats.ts`, prompt ở `nodes/screenwriter/prompt.ts`.
 
 Hệ quả: một video GitHub showcase là *node này* với bảy beat và ba ràng buộc dữ kiện, rồi một Họa Sĩ với mô tả "phong cách lập trình viên nền tối"; một video trích dẫn là *node này* với beat `title ×1, quote ×4`, rồi một Họa Sĩ với mô tả "thẻ trích dẫn trên nền mực". Người dùng dựng cả hai từ canvas trống; sự khác nhau nằm trọn trong chữ, và một bản mẫu chia sẻ mang theo giao diện dưới dạng một câu mô tả.
 
@@ -337,7 +337,7 @@ Không chọn bản nhạc nào **không phải lỗi**: giọng đọc đi qua 
 
 Tham số: `track` (rỗng = không nhạc), `volume` (0..1, mặc định 0.16), `duck` (0..1, mặc định 0.7), `fadeInSeconds` (1), `fadeOutSeconds` (2).
 
-Trộn qua `services.mixAudio` → `nodes/audio/mix.server.ts`: bản nhạc được lặp (`aloop`) rồi cắt đúng độ dài giọng, hạ về `volume`, mờ vào và mờ ra; `sidechaincompress` lấy chính giọng làm tín hiệu điều khiển nên nhạc tự nhỏ lại mỗi khi có người nói và tự đầy lại ở khoảng lặng — đúng cách một bàn trộn phát thanh làm. `amix=duration=first:normalize=0` giữ mix kết thúc cùng giọng và không tự hạ đôi bên. `duck: 0` bỏ hẳn nhánh sidechain, nhạc chạy đều. Công thức nằm ở hàm thuần `mixFilter` để test đọc được mà không cần ffmpeg trên máy. Tệp ra đặt tên băm theo giọng và tham số nên đổi mức nhạc rồi đổi lại là dùng lại tệp cũ.
+Trộn qua `services.mixAudio` → `server/audio-mix.server.ts`: bản nhạc được lặp (`aloop`) rồi cắt đúng độ dài giọng, hạ về `volume`, mờ vào và mờ ra; `sidechaincompress` lấy chính giọng làm tín hiệu điều khiển nên nhạc tự nhỏ lại mỗi khi có người nói và tự đầy lại ở khoảng lặng — đúng cách một bàn trộn phát thanh làm. `amix=duration=first:normalize=0` giữ mix kết thúc cùng giọng và không tự hạ đôi bên. `duck: 0` bỏ hẳn nhánh sidechain, nhạc chạy đều. Công thức nằm ở hàm thuần `mixFilter` để test đọc được mà không cần ffmpeg trên máy. Tệp ra đặt tên băm theo giọng và tham số nên đổi mức nhạc rồi đổi lại là dùng lại tệp cũ.
 
 Trong bản mẫu **Tin AI**, node nằm giữa Giọng Đọc và Đóng Gói Timeline, còn Căn Mốc Từ vẫn lấy giọng **sạch** thẳng từ Giọng Đọc: bộ căn nghe nhạc sẽ căn kém hơn.
 
