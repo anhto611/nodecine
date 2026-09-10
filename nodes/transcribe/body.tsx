@@ -3,13 +3,12 @@ import React from 'react';
 import type { Voiceover } from '@/core/types/payloads';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
-import { useRuntime } from '@/store/useStudio';
+import { useOutputPayload } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
 
 export const TranscribeBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const rt = useRuntime(nodeId);
-  const vo = rt?.outputs.voiceover?.payload as Voiceover | undefined;
+  const vo = useOutputPayload<Voiceover>(nodeId, 'voiceover');
   const words = vo?.words ?? [];
   return (
     <>

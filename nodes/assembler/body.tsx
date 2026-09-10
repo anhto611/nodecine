@@ -4,14 +4,13 @@ import type { ScenePlan } from '@/core/types/payloads';
 import type { VideoIR } from '@/core/types/ir';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
-import { useInputPayload, useRuntime } from '@/store/useStudio';
+import { useInputPayload, useOutputPayload } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
 
 export const AssemblerBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const rt = useRuntime(nodeId);
   const plan = useInputPayload<ScenePlan>(nodeId, 'plan');
-  const ir = rt?.outputs.ir?.payload as VideoIR | undefined;
+  const ir = useOutputPayload<VideoIR>(nodeId, 'ir');
   const colors = ['var(--accent)', 'var(--accent-2)', 'var(--ok)', 'var(--run)', 'var(--warn)'];
   return (
     <>

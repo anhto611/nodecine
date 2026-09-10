@@ -3,6 +3,8 @@ import { SCENE_SOURCE_MAX, isAssetUrl, type LLMRef, type SceneScript, type Style
 import type { NodeServices } from '@/core/engine/services';
 import type { FrameSize } from '@/core/visual/frame';
 import { SCENE_RULES, codeRules, lintSceneSource } from './rules';
+import { NodeError } from '@/core/errors';
+import { IllustratorErrorCode } from './errors';
 
 /**
  * One scene, drawn by a model (CORE_CONTRACTS §5.9): from what the scene says and shows, in the
@@ -109,5 +111,5 @@ export async function drawScene(services: Pick<NodeServices, 'complete'>, ref: L
     if (lint.hard.length === 0) return { source, attempts: attempt, warnings: lint.soft };
     feedback = lint.hard.join('; ');
   }
-  throw Object.assign(new Error(`the model could not draw scene ${b.index + 1}: ${feedback}`), { code: 'SCENE_DRAW_FAILED', fix: 'simplify that scene, or try again' });
+  throw new NodeError(IllustratorErrorCode.SCENE_DRAW_FAILED, `the model could not draw scene ${b.index + 1}: ${feedback}`, true).withFix('simplify that scene, or try again');
 }

@@ -3,6 +3,8 @@ import { SCENE_SOURCE_MAX, type LLMRef, type Style } from '@/core/types/payloads
 import type { NodeServices } from '@/core/engine/services';
 import { describeFrame, type FrameSize } from '@/core/visual/frame';
 import { STYLE_RULES, lintStyleCss } from './rules';
+import { NodeError } from '@/core/errors';
+import { IllustratorErrorCode } from './errors';
 
 /**
  * The style, drawn by a model from a brief (CORE_CONTRACTS §5.9): one sheet of CSS every scene of
@@ -59,5 +61,5 @@ export async function drawStyle(services: Pick<NodeServices, 'complete'>, ref: L
     if (lint.hard.length === 0) return { style: { name: a.name, css }, guide: a.guide, attempts: attempt, warnings: lint.soft };
     feedback = lint.hard.join('; ');
   }
-  throw Object.assign(new Error(`the model could not draw a style: ${feedback}`), { code: 'STYLE_DRAW_FAILED', fix: 'say less in the brief, or try again' });
+  throw new NodeError(IllustratorErrorCode.STYLE_DRAW_FAILED, `the model could not draw a style: ${feedback}`, true).withFix('say less in the brief, or try again');
 }

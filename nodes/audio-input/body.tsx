@@ -5,15 +5,14 @@ import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
 import { useParams } from '@/nodes/kit';
 import type { BodyProps } from '@/nodes/kit';
-import { useRuntime } from '@/store/useStudio';
+import { useOutputPayload } from '@/store/useStudio';
 import { LibraryPicker, useLibrary } from '@/nodes/library-picker';
 
 export const AudioInputBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const [p, set] = useParams<{ file: string }>(nodeId);
   const { files, folder, loading } = useLibrary('voice');
-  const rt = useRuntime(nodeId);
-  const vo = rt?.outputs.voiceover?.payload as Voiceover | undefined;
+  const vo = useOutputPayload<Voiceover>(nodeId, 'voiceover');
   return (
     <>
       <Kv k={t('node.file')} v={<LibraryPicker files={files} value={p.file ?? ''} empty={t('node.noFile')} onChange={(file) => set({ file })} />} />

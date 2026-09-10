@@ -2,15 +2,14 @@
 import React from 'react';
 import type { FactSheet, SourceRef } from '@/core/types/payloads';
 import { Kv, useT } from '@/components/ui';
-import { useInputPayload, useRuntime } from '@/store/useStudio';
+import { useInputPayload, useOutputPayload } from '@/store/useStudio';
 import { parseGithubSource, repoUrl } from '@/nodes/github/parse-source';
 
 /** Body of the GitHub Fetcher node: what it will do with the current input, and the facts it produced. */
 export const GithubFetcherBody: React.FC<{ nodeId: string }> = ({ nodeId }) => {
   const t = useT();
   const source = useInputPayload<SourceRef>(nodeId, 'source');
-  const rt = useRuntime(nodeId);
-  const sheet = rt?.outputs.facts?.payload as FactSheet | undefined;
+  const sheet = useOutputPayload<FactSheet>(nodeId, 'facts');
   const coords = source ? parseGithubSource(source.value) : null;
 
   const facts = sheet?.facts;

@@ -2,7 +2,7 @@
 import React from 'react';
 import type { AudioScript, TTSRef, Voiceover } from '@/core/types/payloads';
 import { Kv, useT, stopFlow } from '@/components/ui';
-import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
+import { useInputPayload, useOutputPayload, useStudio } from '@/store/useStudio';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { FormBody } from '@/nodes/form-body';
 import { pickVoice, voiceSpeaks } from './node';
@@ -31,8 +31,7 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
   const [p, set] = useParams<{ voice?: string }>(nodeId);
   const script = useInputPayload<AudioScript>(nodeId, 'script');
   const ref = useInputPayload<TTSRef>(nodeId, 'tts');
-  const rt = useRuntime(nodeId);
-  const vo = rt?.outputs.voiceover?.payload as Voiceover | undefined;
+  const vo = useOutputPayload<Voiceover>(nodeId, 'voiceover');
   const { lang, source } = useScriptLanguage(nodeId, script);
   const all = ref?.voices ?? [];
   const matching = all.filter((v) => voiceSpeaks(v, lang));

@@ -596,6 +596,15 @@ export function useNode(nodeId: string) {
 export function useRuntime(nodeId: string) {
   return useStudio((s) => s.runtimes[nodeId]);
 }
+/**
+ * The payload this node put on one of its own output ports, from its last successful run. Most node
+ * bodies show what the node produced, and each of them was walking `runtimes[id].outputs[port]` by
+ * hand; when that walk has to change — showing a run from the history, say — it changes here.
+ */
+export function useOutputPayload<T = unknown>(nodeId: string, port: string): T | undefined {
+  return useStudio((s) => s.runtimes[nodeId]?.outputs[port]?.payload as T | undefined);
+}
+
 /** The packet currently sitting on an input port, following the wire upstream. */
 export function useInputPayload<T = unknown>(nodeId: string, port: string): T | undefined {
   return useStudio((s) => {

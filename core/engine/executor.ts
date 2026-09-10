@@ -393,7 +393,7 @@ export class Executor {
         this.log(nodeId, 'warn', 'cancelled', ErrorCode.RUN_CANCELLED);
         return 'cancelled';
       }
-      this.setState(nodeId, { state: 'error', error: { code: e.code, message: e.message, retryable: e.retryable, details: e.details }, progress: undefined });
+      this.setState(nodeId, { state: 'error', error: { code: e.code, message: e.message, retryable: e.retryable, details: e.details, ...(e.fix ? { fix: e.fix } : {}) }, progress: undefined });
       this.log(nodeId, 'error', e.message, e.code);
       return 'error';
     }

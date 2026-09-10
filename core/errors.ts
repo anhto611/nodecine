@@ -41,6 +41,12 @@ export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 /** A node-level failure carrying a stable code. */
 export class NodeError extends Error {
+  /**
+   * What the person can do about it: a command to run, a wire to connect. The message says what
+   * happened, this says what to do, and the two are shown apart.
+   */
+  fix?: string;
+
   constructor(
     public readonly code: string,
     message: string,
@@ -50,13 +56,22 @@ export class NodeError extends Error {
     super(message);
     this.name = 'NodeError';
   }
+
+  /** Fluent, because the remedy is optional and is never the fourth thing worth saying. */
+  withFix(fix: string): this {
+    this.fix = fix;
+    return this;
+  }
 }
 
 export function toNodeError(err: unknown, fallbackCode: string): NodeError {
   if (err instanceof NodeError) return err;
   if (err && typeof err === 'object' && 'code' in err && typeof (err as { code: unknown }).code === 'string') {
-    const e = err as { code: string; message?: string; violations?: unknown };
-    return new NodeError(e.code, e.message ?? e.code, false, e.violations);
+    const e = err as { code: string; message?: string; violations?: unknown; fix?: unknown };
+    const wrapped = new NodeError(e.code, e.message ?? e.code, false, e.violations);
+    // A provider or a subprocess attaches its remedy to a plain object; carry it rather than drop it.
+    if (typeof e.fix === 'string') wrapped.withFix(e.fix);
+    return wrapped;
   }
   return new NodeError(fallbackCode, err instanceof Error ? err.message : String(err), true);
 }

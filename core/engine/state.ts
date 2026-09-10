@@ -22,7 +22,7 @@ export interface NodeRuntime {
   /** True when the last pass reused the cached result instead of running. */
   reused: boolean;
   durationMs?: number;
-  error?: { code: string; message: string; retryable: boolean; details?: unknown };
+  error?: { code: string; message: string; retryable: boolean; details?: unknown; fix?: string };
   /** Warnings the node raised during its last run: it produced a result, but a degraded one. */
   warnings?: { code?: string; message: string }[];
   blockedBy?: BlockReason;

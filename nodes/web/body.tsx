@@ -2,7 +2,7 @@
 import React from 'react';
 import type { FactSheet, SourceRef } from '@/core/types/payloads';
 import { Kv, useT } from '@/components/ui';
-import { useInputPayload, useRuntime } from '@/store/useStudio';
+import { useInputPayload, useOutputPayload } from '@/store/useStudio';
 import { FormBody } from '@/nodes/form-body';
 import type { BodyProps } from '@/nodes/kit';
 import { parsePageUrls } from '@/core/network/public-url';
@@ -11,8 +11,7 @@ import { parsePageUrls } from '@/core/network/public-url';
 export const WebFetcherBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const source = useInputPayload<SourceRef>(nodeId, 'source');
-  const rt = useRuntime(nodeId);
-  const sheet = rt?.outputs.facts?.payload as FactSheet | undefined;
+  const sheet = useOutputPayload<FactSheet>(nodeId, 'facts');
   const targets = source ? parsePageUrls(source.value) : [];
   const facts = sheet?.facts;
   const image = typeof facts?.image === 'string' ? facts.image : null;

@@ -3,7 +3,7 @@ import React from 'react';
 import type { EngineRef, LLMRef, TTSRef } from '@/core/types/payloads';
 import { readCapability } from '@/core/nodes/definition';
 import { Kv, Dot, useT, stopFlow } from '@/components/ui';
-import { useRuntime, useStudio } from '@/store/useStudio';
+import { useOutputPayload, useRuntime, useStudio } from '@/store/useStudio';
 import { findProvider, providersOfKind } from '@/providers/installed';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { FormBody, SchemaControl } from '@/nodes/form-body';
@@ -100,8 +100,7 @@ export const ProviderBody: React.FC<BodyProps & { kind: 'tts' | 'llm' }> = ({ no
 
 export const EngineStatusBody: React.FC<BodyProps & { settings?: boolean }> = ({ nodeId, settings }) => {
   const t = useT();
-  const rt = useRuntime(nodeId);
-  const ref = rt?.outputs.engine?.payload as EngineRef | undefined;
+  const ref = useOutputPayload<EngineRef>(nodeId, 'engine');
   return (
     <>
       <Kv k={t('node.adapter')} v={ref ? `${ref.engineId} ${ref.adapterVersion}` : '—'} />

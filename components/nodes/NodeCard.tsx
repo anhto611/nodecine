@@ -127,6 +127,8 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data, selected }) => {
           <div className="nc-hint" style={{ color: 'var(--err)' }}>
             {t(`error.${rt.error.code}`)}
             <div style={{ color: 'var(--tx-3)', whiteSpace: 'pre-wrap' }}>{rt.error.message.slice(0, 160)}</div>
+            {/* Drawn like the one on a blocked node, because it is the same thing: what to do next. */}
+            {rt.error.fix ? <div style={{ color: 'var(--tx-2)' }}>$ {rt.error.fix}</div> : null}
           </div>
         )}
         {hasRetry && def.kind !== 'ondemand' && (

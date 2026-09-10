@@ -3,13 +3,12 @@ import React from 'react';
 import type { CaptionTrack } from '@/core/types/payloads';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
-import { useRuntime } from '@/store/useStudio';
+import { useOutputPayload } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
 
 export const CaptionsBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const rt = useRuntime(nodeId);
-  const track = rt?.outputs.captions?.payload as CaptionTrack | undefined;
+  const track = useOutputPayload<CaptionTrack>(nodeId, 'captions');
   return (
     <>
       <FormBody nodeId={nodeId} />

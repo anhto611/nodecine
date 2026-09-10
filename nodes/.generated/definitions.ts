@@ -26,6 +26,7 @@ import { AssemblerErrorCode } from '../assembler/errors';
 import { CaptionExportErrorCode } from '../caption-export/errors';
 import { CaptionsErrorCode } from '../captions/errors';
 import { GithubErrorCode } from '../github/errors';
+import { IllustratorErrorCode } from '../illustrator/errors';
 import { Mp4ExportErrorCode } from '../mp4-export/errors';
 import { TranscribeErrorCode } from '../transcribe/errors';
 import { TtsErrorCode } from '../tts/errors';
@@ -138,6 +139,7 @@ export const NODE_ERROR_CODES: Record<string, string[]> = {
   "core/caption-export": [],
   "core/captions": [],
   "core/github-fetcher": [],
+  "core/illustrator": [],
   "core/mp4-export": [],
   "core/transcribe": [],
   "core/tts-engine": [],
@@ -147,6 +149,7 @@ NODE_ERROR_CODES['core/timeline-assembler'] = Object.values(AssemblerErrorCode);
 NODE_ERROR_CODES['core/caption-export'] = Object.values(CaptionExportErrorCode);
 NODE_ERROR_CODES['core/captions'] = Object.values(CaptionsErrorCode);
 NODE_ERROR_CODES['core/github-fetcher'] = Object.values(GithubErrorCode);
+NODE_ERROR_CODES['core/illustrator'] = Object.values(IllustratorErrorCode);
 NODE_ERROR_CODES['core/mp4-export'] = Object.values(Mp4ExportErrorCode);
 NODE_ERROR_CODES['core/transcribe'] = Object.values(TranscribeErrorCode);
 NODE_ERROR_CODES['core/tts-engine'] = Object.values(TtsErrorCode);

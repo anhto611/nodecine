@@ -3,14 +3,13 @@ import React from 'react';
 import type { SceneScript } from '@/core/types/payloads';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
-import { useInputPayload, useRuntime } from '@/store/useStudio';
+import { useInputPayload, useOutputPayload } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
 
 export const StockMediaBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const rt = useRuntime(nodeId);
   const llm = useInputPayload(nodeId, 'llm');
-  const out = rt?.outputs.scenes?.payload as SceneScript | undefined;
+  const out = useOutputPayload<SceneScript>(nodeId, 'scenes');
   const found = out?.scenes.filter((s) => s.content.image || s.content.clip).length ?? 0;
   return (
     <>

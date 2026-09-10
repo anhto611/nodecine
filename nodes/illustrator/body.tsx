@@ -6,7 +6,7 @@ import { ScenePreview } from '@/components/ScenePreview';
 import { FormBody } from '@/nodes/form-body';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { ImagePick } from '@/components/node-runtime/content-editor';
-import { useRuntime } from '@/store/useStudio';
+import { useOutputPayload } from '@/store/useStudio';
 import type { IllustratorParams } from './node';
 
 /**
@@ -17,8 +17,7 @@ import type { IllustratorParams } from './node';
 export const IllustratorBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const [p, set] = useParams<IllustratorParams>(nodeId);
-  const rt = useRuntime(nodeId);
-  const plan = rt?.outputs.plan?.payload as ScenePlan | undefined;
+  const plan = useOutputPayload<ScenePlan>(nodeId, 'plan');
   return (
     <>
       <FormBody nodeId={nodeId} fields={['brief', 'frame']} widgets={{ brief: { widget: 'textarea', placeholder: t('illustrator.briefPlaceholder') } }} />

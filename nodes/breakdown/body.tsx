@@ -3,14 +3,13 @@ import React from 'react';
 import type { SceneScript } from '@/core/types/payloads';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
-import { useRuntime } from '@/store/useStudio';
+import { useOutputPayload } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
 import { hasWritten } from './prompt';
 
 export const SceneBreakdownBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const rt = useRuntime(nodeId);
-  const out = rt?.outputs.scenes?.payload as SceneScript | undefined;
+  const out = useOutputPayload<SceneScript>(nodeId, 'scenes');
   const written = out?.scenes.filter((s) => hasWritten(s.content)).length ?? 0;
   return (
     <>

@@ -4,6 +4,7 @@ import { Executor } from '../engine/executor';
 import { validateGraph, GraphInvalidError, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition } from '../nodes/definition';
 import { canTransition } from '../engine/state';
+import { NodeError } from '../errors';
 import { registerNodes } from '@/nodes';
 import { _resetCodeRenderers, registerCodeRenderer } from '../visual/renderers';
 import staticScriptJson from '@/lib/first-run.json';
@@ -323,5 +324,39 @@ describe('the node state machine', () => {
     // `setState` is private on purpose; this reaches it the way a new code path would.
     const setState = (executor as unknown as { setState: (id: string, patch: { state: string }) => void }).setState.bind(executor);
     expect(() => setState('script', { state: 'success' })).toThrow(/illegal state change on script: idle → success/);
+  });
+});
+
+describe('the way out of a failure', () => {
+  const boom = (build: () => Error) => {
+    const { services } = setup();
+    registerNodeType({
+      type: 'test/fails', version: 1, kind: 'source', inputs: [], outputs: [],
+      paramsSchema: z.object({}), defaultParams: {},
+      run: async () => { throw build(); },
+    } as unknown as AnyNodeDefinition);
+    const graph: Graph = { nodes: [{ id: 'f', type: 'test/fails', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] };
+    return new Executor(graph, services);
+  };
+
+  it('reaches the node from a NodeError', async () => {
+    const executor = boom(() => new NodeError('ALIGN_FAILED', 'the aligner is not installed').withFix('npm run setup:align'));
+    await executor.runNode('f');
+    // It used to stop at the throw: NodeError had no `fix`, the runtime had no room for one, and
+    // five capsules were writing a sentence for a person that nobody ever saw.
+    expect(executor.runtime('f').error).toMatchObject({ code: 'ALIGN_FAILED', fix: 'npm run setup:align' });
+  });
+
+  it('reaches the node from a plain object a provider threw', async () => {
+    const executor = boom(() => Object.assign(new Error('ffmpeg is missing'), { code: 'PROVIDER_NOT_INSTALLED', fix: 'brew install ffmpeg' }));
+    await executor.runNode('f');
+    expect(executor.runtime('f').error?.fix).toBe('brew install ffmpeg');
+  });
+
+  it('is simply absent when the failure has no remedy to offer', async () => {
+    const executor = boom(() => new NodeError('LLM_UPSTREAM', 'the model refused'));
+    await executor.runNode('f');
+    expect(executor.runtime('f').error).toMatchObject({ code: 'LLM_UPSTREAM' });
+    expect(executor.runtime('f').error?.fix).toBeUndefined();
   });
 });
