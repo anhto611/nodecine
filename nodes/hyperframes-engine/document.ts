@@ -1,7 +1,7 @@
 import type { VideoIR } from '@/core/types/ir';
-import { BIND_SCRIPT, SCENE_HELPERS, SCOPED_GSAP, baseLayer, baseStyles, captionLine, captionStyleOf, captionStyles, esc, sceneMarkup, scopedCss, styleCss } from '@/core/visual/markup';
+import { BIND_SCRIPT, SCENE_HELPERS, SCOPED_GSAP, baseLayer, baseStyles, captionLine, captionStyleOf, captionStyles, esc, sceneMarkup, scopedCss, styleCss } from './markup';
 
-export { splitCode, captionStyleOf, captionStyles } from '@/core/visual/markup';
+export { splitCode, captionStyleOf, captionStyles } from './markup';
 
 /**
  * One self-contained HyperFrames composition per IR (CORE_CONTRACTS §2.8, §6.3).

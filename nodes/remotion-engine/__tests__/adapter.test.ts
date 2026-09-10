@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRemotionAdapter } from './adapter';
+import { createRemotionAdapter } from '../adapter';
 
 describe('Remotion adapter', () => {
   it('reports preview in the browser half and render only where a renderer is injected', async () => {

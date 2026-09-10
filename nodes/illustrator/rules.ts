@@ -1,14 +1,14 @@
 import { describeSafeZones, safeZonesFor } from '@/core/visual/safe-zones';
 import { describeFrame, type FrameSize } from '@/core/visual/frame';
+import { ASSET_TOKEN_PREFIX, STYLE_VARS } from '@/core/visual/contract';
+
+export { STYLE_VARS };
 
 /**
  * The rules a drawn scene must follow (CORE_CONTRACTS §2.8), spelled out for the model, and the
  * lint that checks its answer against them. One list for the prompt and one function for the
  * check, so the two can never disagree about what a scene is.
  */
-
-/** The variables a style sheet defines on `.nc-scene`, and a scene relies on. */
-export const STYLE_VARS = ['bg', 'fg', 'accent', 'muted', 'line', 'font-display', 'font-body'] as const;
 
 /** What the style sheet is and how it is written. */
 export const STYLE_RULES = [
@@ -50,8 +50,8 @@ export function lintSceneSource(source: string, o: { facts?: string[]; assets?: 
   if (/<(html|body|head)\b/i.test(source)) hard.push('contains <html>/<head>/<body>; only a fragment belongs here');
   if (markup.length < 10) hard.push('has no markup');
   for (const f of o.facts ?? []) if (!new RegExp(`data-fact=["']${f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`).test(source)) hard.push(`no element carries data-fact="${f}"`);
-  const left = [...new Set([...source.matchAll(/asset:([a-z]+(?:\.\d+\.[a-z]+)?)/g)].map((m) => m[1]!))];
-  if (left.length) hard.push(`names ${left.map((t) => `asset:${t}`).join(', ')}, which the scene does not have`);
+  const left = [...new Set([...source.matchAll(new RegExp(`${ASSET_TOKEN_PREFIX}([a-z]+(?:\\.\\d+\\.[a-z]+)?)`, 'g'))].map((m) => m[1]!))];
+  if (left.length) hard.push(`names ${left.map((t) => `${ASSET_TOKEN_PREFIX}${t}`).join(', ')}, which the scene does not have`);
   // The tokens have been swapped for the files by now: a picture the scene was given and does not show is content dropped.
   for (const [path, url] of Object.entries(o.assets ?? {})) if (!source.includes(url)) soft.push(`the ${path.endsWith('clip') ? 'clip' : 'picture'} ${path} is not shown`);
   if (/\.from\(/.test(source)) soft.push('uses gsap .from(); use fromTo so seeking stays in sync');

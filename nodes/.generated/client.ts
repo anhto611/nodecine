@@ -25,6 +25,8 @@ import { TtsProviderBody } from '../tts-provider/body';
 import { VideoOutputBody } from '../video-output/body';
 import { WebFetcherBody } from '../web/body';
 import { SceneEditorDialog } from '../script/SceneEditorDialog';
+import { registerHyperframesClient } from '../hyperframes-engine/register.client';
+import { registerRemotionClient } from '../remotion-engine/register.client';
 
 export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/timeline-assembler': AssemblerBody,
@@ -70,10 +72,16 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/transcribe': { icon: 'wave', group: 'audio' },
   'core/tts-engine': { icon: 'wave', group: 'audio' },
   'core/tts-provider': { icon: 'mic', group: 'resource' },
-  'core/video-output': { icon: 'screen', group: 'output' },
+  'core/video-output': { icon: 'screen', group: 'output', layout: 'wide' },
   'core/web-fetcher': { icon: 'doc', group: 'source' },
 };
 
 export const NODE_OVERLAYS: React.FC[] = [
   SceneEditorDialog,
+];
+
+/** What a capsule registers in the browser beyond its body: an engine's player and preview. */
+export const NODE_CLIENT_REGISTRATIONS: (() => void)[] = [
+  registerHyperframesClient,
+  registerRemotionClient,
 ];

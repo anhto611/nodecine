@@ -3,7 +3,7 @@ import React from 'react';
 import { listTemplates, localized } from '@/core/templates/registry';
 import { useStudio, type TemplateId } from '@/store/useStudio';
 import { Icon } from '../icons';
-import { Btn, useT } from '../ui';
+import { Btn, Dialog, useT } from '../ui';
 import { shapeOfTemplate } from './TemplatePlayer';
 
 type Card = { id: string; name: string; description: string; nodes: number; category: string; shape: { ratio: string; fps: number } | null };
@@ -57,18 +57,17 @@ export const TemplateBrowser: React.FC = () => {
   const canOpen = !!selected;
   const open = () => { if (selected) load(selected.id as TemplateId); };
   return (
-    <div className="nc-modal-bg" onClick={() => close(false)}>
-      {/* Grows with the window and stays inside it. The app's floor is a 1280×800 screen; the
-          card row adapts to whatever width this lands on. */}
-      <div className="nc-modal" style={{ width: 'min(1400px, 94vw)', height: 'min(820px, 90vh)' }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ height: 52, display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px', borderBottom: '1px solid var(--line)' }}>
-          <button className="nc-chip nc-tpl-sidebtn" style={{ border: 0, padding: '5px 7px' }} onClick={() => setSideOpen((v) => !v)} title={t('templates.categories')}><Icon.layers size={13} /></button>
-          <span style={{ color: 'var(--accent-2)' }}><Icon.tpl size={15} /></span>
-          <span style={{ fontWeight: 700, fontSize: 'var(--fs-title)' }}>{t('templates.title')}</span>
-          <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('templates.subtitle')}</span>
-          <div style={{ marginLeft: 'auto' }} />
-          <button className="nc-chip" style={{ border: 0 }} onClick={() => close(false)}><Icon.x /></button>
-        </div>
+    // Grows with the window and stays inside it. The app's floor is a 1280×800 screen; the card row adapts to whatever width this lands on.
+    <Dialog
+      width="min(1400px, 94vw)"
+      height="min(820px, 90vh)"
+      lead={<button className="nc-chip nc-tpl-sidebtn" style={{ border: 0, padding: '5px 7px' }} onClick={() => setSideOpen((v) => !v)} title={t('templates.categories')}><Icon.layers size={13} /></button>}
+      icon={<Icon.tpl size={15} />}
+      title={t('templates.title')}
+      titleExtra={<span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('templates.subtitle')}</span>}
+      onClose={() => close(false)}
+      footer={<><span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('templates.warning')}</span><div style={{ flex: 1 }} /><Btn onClick={() => close(false)}>{t('templates.cancel')}</Btn><Btn primary disabled={!canOpen} onClick={open}>{selected ? t('templates.open', { name: selected.name }) : t('templates.pickOne')}</Btn></>}
+    >
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           <div className={`nc-tpl-side ${sideOpen ? 'open' : ''}`}>
             {[['all', 'templates.all'] as const, ...cats].map(([id, key]) => (
@@ -112,13 +111,6 @@ export const TemplateBrowser: React.FC = () => {
             {SPACERS.map((_, i) => <div key={`spacer-${i}`} style={{ ...CARD, height: 0 }} aria-hidden />)}
           </div>
         </div>
-        <div style={{ borderTop: '1px solid var(--line)', padding: '12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('templates.warning')}</span>
-          <div style={{ flex: 1 }} />
-          <Btn onClick={() => close(false)}>{t('templates.cancel')}</Btn>
-          <Btn primary disabled={!canOpen} onClick={open}>{selected ? t('templates.open', { name: selected.name }) : t('templates.pickOne')}</Btn>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 };

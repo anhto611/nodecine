@@ -1,4 +1,4 @@
-import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult } from '@/core/adapters/types';
+import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult, ScenePreviewOptions } from '@/core/adapters/types';
 import type { VideoIR } from '@/core/types/ir';
 import type { Capability } from '@/core/types/payloads';
 import { assertValidIR } from '@/core/types/validate-ir';
@@ -6,6 +6,7 @@ import { HYPERFRAMES_ADAPTER_VERSION, HYPERFRAMES_ENGINE_ID } from './constants'
 
 export type MountPlayer = (element: HTMLElement, ir: VideoIR) => PlayerHandle;
 export type ServerRender = (ir: VideoIR, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal) => Promise<RenderResult>;
+export type PreviewScene = (options: ScenePreviewOptions) => string;
 
 /**
  * HyperFrames: the engine for `html-gsap` (CORE_CONTRACTS §6.3). Every scene is its own HTML and
@@ -13,7 +14,7 @@ export type ServerRender = (ir: VideoIR, settings: ExportSettings, onProgress: (
  * HyperFrames player in the browser and to the HyperFrames producer on the server. Isomorphic like
  * the Remotion adapter: the two environment-specific halves are injected by the registrations.
  */
-export function createHyperframesAdapter(impl: { mountPlayer?: MountPlayer; render?: ServerRender } = {}): EngineAdapter {
+export function createHyperframesAdapter(impl: { mountPlayer?: MountPlayer; previewScene?: PreviewScene; render?: ServerRender } = {}): EngineAdapter {
   const ready: Capability = { status: 'ready' };
   return {
     engineId: HYPERFRAMES_ENGINE_ID,
@@ -32,6 +33,8 @@ export function createHyperframesAdapter(impl: { mountPlayer?: MountPlayer; rend
       assertValidIR(ir);
       return impl.mountPlayer(element, ir);
     },
+
+    ...(impl.previewScene ? { previewScene: impl.previewScene } : {}),
 
     async render(ir, settings, onProgress, signal) {
       if (!impl.render) throw Object.assign(new Error('render is only available on the server'), { code: 'ENGINE_NOT_READY' });

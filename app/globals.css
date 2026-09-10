@@ -180,6 +180,10 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-tag { font-size: var(--fs-hint); letter-spacing: .06em; color: var(--tx-3); border: 1px solid var(--line-2); border-radius: 3px; padding: 1px 5px; }
 .nc-modal-bg { position: fixed; inset: 0; background: rgba(6,6,8,.66); display: flex; align-items: center; justify-content: center; z-index: 50; }
 .nc-modal { background: var(--bg-panel); border: 1px solid var(--line-3); border-radius: 9px; box-shadow: 0 30px 80px rgba(0,0,0,.8); overflow: hidden; position: relative; display: flex; flex-direction: column; }
+.nc-modal-head { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid var(--line); }
+.nc-modal-icon { color: var(--accent-2); display: inline-flex; }
+.nc-modal-title { font-weight: 700; font-size: var(--fs-title); }
+.nc-modal-foot { border-top: 1px solid var(--line); padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
 /* The category list keeps a column of its own while there is room for one. Under 1100px that width
    is worth more to the cards, so it folds into a drawer opened from a button in the header. */
 .nc-tpl-side { width: 200px; flex-shrink: 0; border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 2px; }

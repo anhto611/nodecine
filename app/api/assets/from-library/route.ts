@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ensureServerRegistrations } from '@/server/register';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { createReadStream } from 'node:fs';
@@ -15,6 +16,7 @@ const Body = z.object({ library: z.string(), file: z.string().max(120) });
  * copies it in under that hash. Uploading the same clip twice is one file.
  */
 export async function POST(req: Request) {
+  ensureServerRegistrations();
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success || !isLibrary(parsed.data.library)) return NextResponse.json({ error: 'bad request' }, { status: 400 });
   let source: string;

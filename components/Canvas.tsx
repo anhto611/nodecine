@@ -76,7 +76,7 @@ function CanvasInner() {
   const graph = useStudio((s) => s.graph);
   const runtimes = useStudio((s) => s.runtimes);
   const setNodePositions = useStudio((s) => s.setNodePositions);
-  const modalOpen = useStudio((s) => !!s.sceneEditor);
+  const modalOpen = useStudio((s) => !!s.overlay);
   const undo = useStudio((s) => s.undo);
   const redo = useStudio((s) => s.redo);
   const canUndo = useStudio((s) => s.canUndo);

@@ -11,7 +11,7 @@ Một quy ước xuyên suốt: **`STATUS.md` nói cái gì đã dựng xong, m�
 ## Tầng lõi
 
 1. [`PRD.md`](PRD.md) — Yêu cầu Sản phẩm. Sản phẩm giải quyết vấn đề gì, cho ai; khung lõi và gói; bộ node lõi; trình tự Pha A rồi Pha B; tiêu chí nghiệm thu; những gì cố ý không làm.
-2. [`ARCHITECTURE.md`](ARCHITECTURE.md) — Kiến trúc Hệ thống. Mã nguồn chạy ở đâu, ranh giới máy khách và máy chủ, cây thư mục với `core/`, `nodes/`, `engines/`, `providers/`, `templates/`, quy tắc phụ thuộc, thông tin đăng nhập, vòng đời tệp tạm.
+2. [`ARCHITECTURE.md`](ARCHITECTURE.md) — Kiến trúc Hệ thống. Mã nguồn chạy ở đâu, ranh giới máy khách và máy chủ, cây thư mục với `core/`, `nodes/` (kể cả engine), `providers/`, `templates/`, quy tắc phụ thuộc, thông tin đăng nhập, vòng đời tệp tạm.
 3. [`CORE_CONTRACTS.md`](CORE_CONTRACTS.md) — Hợp đồng Lõi. Mười một kiểu cổng, gói dữ liệu, Bản Đặc Tả Video Trung Gian generic tự chứa và năm bất biến, renderer theo định dạng code, bộ node lõi (gồm Kịch Bản Tĩnh và Đóng Gói Timeline), Adapter và Provider, gọi ra ngoài và an toàn tiến trình con, bản mẫu.
 4. [`EXECUTION_ENGINE.md`](EXECUTION_ENGINE.md) — Bộ Máy Thực Thi. Chín trạng thái node và node tài nguyên, thứ tự chạy, chữ ký và chạy lại từng phần, thời gian chờ, bảng mã lỗi lõi, lưu trữ cục bộ, lịch sử và nhật ký, kiểm thử bắt buộc.
 5. [`USER_FLOWS_AND_WIREFRAMES.md`](USER_FLOWS_AND_WIREFRAMES.md) — Trải nghiệm Người dùng của khung. Bố cục, dải trái và các panel, giải phẫu node lõi, Kịch bản A (Kịch Bản Tĩnh), Kịch bản 4 và 5, phím tắt.

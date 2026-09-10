@@ -3,7 +3,7 @@ import React from 'react';
 import type { EngineRef, LLMRef, TTSRef } from '@/core/types/payloads';
 import { readCapability } from '@/core/nodes/definition';
 import { Kv, Dot, useT, stopFlow } from '@/components/ui';
-import { useNode, useRuntime, useStudio } from '@/store/useStudio';
+import { useRuntime, useStudio } from '@/store/useStudio';
 import { findProvider, providersOfKind } from '@/providers/installed';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { FormBody } from '@/nodes/form-body';
@@ -44,7 +44,7 @@ function capIssues(payload: unknown, keys: string[]): { reason?: string; fix?: s
  * One body for both provider nodes: pick the provider, then whatever fields that provider declares.
  * The picker and the fields come from `providers/installed.ts`, so a new provider needs no UI work.
  */
-const ProviderBody: React.FC<BodyProps & { kind: 'tts' | 'llm' }> = ({ nodeId, kind }) => {
+export const ProviderBody: React.FC<BodyProps & { kind: 'tts' | 'llm' }> = ({ nodeId, kind }) => {
   const t = useT();
   const rt = useRuntime(nodeId);
   const runNode = useStudio((s) => s.runNode);
@@ -107,19 +107,15 @@ const ProviderBody: React.FC<BodyProps & { kind: 'tts' | 'llm' }> = ({ nodeId, k
   );
 };
 
-export const LlmProviderBody: React.FC<BodyProps> = ({ nodeId }) => <ProviderBody nodeId={nodeId} kind="llm" />;
-export const TtsProviderBody: React.FC<BodyProps> = ({ nodeId }) => <ProviderBody nodeId={nodeId} kind="tts" />;
-
-export const EngineBody: React.FC<BodyProps> = ({ nodeId }) => {
+export const EngineStatusBody: React.FC<BodyProps & { settings?: boolean }> = ({ nodeId, settings }) => {
   const t = useT();
   const rt = useRuntime(nodeId);
-  const node = useNode(nodeId);
   const ref = rt?.outputs.engine?.payload as EngineRef | undefined;
   return (
     <>
       <Kv k={t('node.adapter')} v={ref ? `${ref.engineId} ${ref.adapterVersion}` : '—'} />
       {ref ? ['preview', 'render'].map((k) => capRow(ref, k, t)) : null}
-      {node?.type === 'core/remotion-engine' && <FormBody nodeId={nodeId} widgets={{ concurrency: { placeholder: 'auto' } }} />}
+      {settings && <FormBody nodeId={nodeId} widgets={{ concurrency: { placeholder: 'auto' } }} />}
     </>
   );
 };

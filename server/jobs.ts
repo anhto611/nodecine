@@ -9,6 +9,9 @@ import { LogBuffer, type LogEntry } from '@/core/engine/log';
 import type { NodeRuntime } from '@/core/engine/state';
 import type { NodeServices } from '@/core/engine/services';
 import { createServerServices } from './services.server';
+import { NODE_FEATURES } from '@/nodes';
+
+const hasNodeFeature = (type: string, feature: string): boolean => NODE_FEATURES[type]?.includes(feature) ?? false;
 
 /**
  * The graph executor lives on the server, behind a queue, the way ComfyUI's prompt queue does
@@ -318,10 +321,10 @@ export class JobHub {
   /** A run that reached an IR goes into the history, with the engine the player used. */
   private recordRun(job: Job, slot: Slot): void {
     const graph = slot.executor.getGraph();
-    const asm = graph.nodes.find((n) => n.type === 'core/timeline-assembler');
+    const asm = graph.nodes.find((n) => hasNodeFeature(n.type, 'history-ir'));
     const ir = asm ? (slot.executor.runtime(asm.id).outputs.ir?.payload as VideoIR | undefined) : undefined;
     if (!ir) return;
-    const out = graph.nodes.find((n) => n.type === 'core/video-output' && slot.executor.runtime(n.id).state === 'success');
+    const out = graph.nodes.find((n) => hasNodeFeature(n.type, 'history-preview') && slot.executor.runtime(n.id).state === 'success');
     const engineEdge = out ? graph.edges.find((e) => e.target === out.id && e.targetPort === 'engine') : undefined;
     const engine = engineEdge ? (slot.executor.runtime(engineEdge.source).outputs[engineEdge.sourcePort]?.payload as EngineRef | undefined) : undefined;
     job.result = { ir, engineId: engine?.engineId, durationMs: Date.now() - (job.startedAt ?? job.createdAt), exports: [] };
@@ -333,7 +336,7 @@ export class JobHub {
   private recordExport(job: Job, slot: Slot): void {
     if (!job.ok || !job.nodeId) return;
     const node = slot.executor.getGraph().nodes.find((n) => n.id === job.nodeId);
-    if (node?.type !== 'core/mp4-export') return;
+    if (!node || !hasNodeFeature(node.type, 'history-file-export')) return;
     const result = slot.executor.runtime(job.nodeId).result as { fileName?: string; bytes?: number; outputUrl?: string } | undefined;
     const runId = this.lastRun.get(job.key);
     const run = runId ? this.jobs.get(runId) : undefined;

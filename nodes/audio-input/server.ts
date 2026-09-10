@@ -37,3 +37,5 @@ async function hashFile(file: string): Promise<string> {
   for await (const chunk of createReadStream(file)) hash.update(chunk as Buffer);
   return hash.digest('hex').slice(0, 16);
 }
+
+export const audioInputServices = { 'audio-input/import': importAudioOnServer };

@@ -34,7 +34,7 @@ export const transcribe: NodeDefinition<typeof Params> = {
       log('info', `${voiceover.words.length} words already timed by the provider`);
       return { voiceover };
     }
-    const heard = await services.alignWords(voiceover.audioUrl, script.text, voiceover.language, { model: params.model }, signal);
+    const heard = await services.invoke<import('@/core/types/payloads').Word[]>('transcribe/align', [voiceover.audioUrl, script.text, voiceover.language, { model: params.model }, signal]);
     // The narration's own words on the aligner's clock: the text can never come back misspelled.
     const words = retime(script.text, heard);
     log('info', `${words.length} words aligned with ${params.model}${heard.length !== words.length ? ` (aligner heard ${heard.length}, retimed by position)` : ''}`);

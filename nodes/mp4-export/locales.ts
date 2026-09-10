@@ -1,0 +1,4 @@
+export const mp4ExportTranslations = {
+  en: { 'node.core/mp4-export': 'MP4 Export', 'node.desc.core/mp4-export': 'On-demand render, bypassed by default.', 'node.render': 'Render', 'node.cancel': 'Cancel', 'node.codec': 'codec', 'node.resolution': 'resolution', 'node.quality': 'quality', 'node.quality.high': 'high · crf 18', 'node.quality.medium': 'medium · crf 23', 'node.quality.low': 'low · crf 28', 'node.waiting': 'waiting for {port}' },
+  vi: { 'node.core/mp4-export': 'Xuất MP4', 'node.desc.core/mp4-export': 'Kết xuất theo yêu cầu, bỏ qua mặc định.', 'node.render': 'Kết xuất', 'node.cancel': 'Hủy', 'node.codec': 'codec', 'node.resolution': 'độ phân giải', 'node.quality': 'chất lượng', 'node.quality.high': 'cao · crf 18', 'node.quality.medium': 'vừa · crf 23', 'node.quality.low': 'thấp · crf 28', 'node.waiting': 'chờ {port}' },
+};

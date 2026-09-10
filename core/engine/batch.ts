@@ -13,8 +13,6 @@ import type { Graph } from './graph';
  * What moves along here is an Input Trigger marked `perRun`: each of its lines becomes a run. Pure,
  * so what a batch will do can be read without submitting anything.
  */
-export const BATCH_NODE_TYPE = 'core/input-trigger';
-
 /** The lines of a marked Input Trigger, blank ones dropped. */
 export function batchLines(params: Record<string, unknown>): string[] {
   if (params.perRun !== true) return [];
@@ -26,7 +24,7 @@ export function batchLines(params: Record<string, unknown>): string[] {
 
 /** How many runs pressing Run will queue, and which nodes decide that. */
 export function batchPlan(graph: Graph): { runs: number; nodeIds: string[]; counts: number[] } {
-  const marked = graph.nodes.filter((n) => n.type === BATCH_NODE_TYPE && batchLines(n.params).length > 0);
+  const marked = graph.nodes.filter((n) => batchLines(n.params).length > 0);
   const counts = marked.map((n) => batchLines(n.params).length);
   return { runs: counts.length ? Math.max(...counts) : 1, nodeIds: marked.map((n) => n.id), counts };
 }

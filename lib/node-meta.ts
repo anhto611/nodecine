@@ -5,7 +5,7 @@
 export type IconKey = 'bolt' | 'doc' | 'term' | 'mic' | 'wave' | 'layers' | 'chip' | 'screen' | 'down' | 'branch' | 'bot';
 export type LibraryGroup = 'source' | 'script' | 'visual' | 'audio' | 'output' | 'resource' | 'other';
 
-export type NodeMeta = { icon: IconKey; group: LibraryGroup };
+export type NodeMeta = { icon: IconKey; group: LibraryGroup; layout?: 'wide' };
 
 /**
  * Every group there is, in the order the Library shows them: the five steps of the pipeline in the

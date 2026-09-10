@@ -35,30 +35,38 @@ export function fileNameFromMediaUrl(url: string): string {
 }
 
 /**
- * Big files the user brings themselves: music beds under `.nodecine/music`, their own recordings
- * under `.nodecine/voice`, video clips under `.nodecine/clips`. None of them is uploaded through the
- * app — somebody's licensed track, their own voice or a 200 MB clip stays where they put it, and
- * only the file name travels in a graph they may share.
+ * Big files the user brings themselves: music beds, their own recordings, video clips. None of them
+ * is uploaded through the app — somebody's licensed track, their own voice or a 200 MB clip stays
+ * where they put it, and only the file name travels in a graph they may share. Empty registry: the
+ * node that reads a kind of file declares its folder in its manifest (`libraries`), and server
+ * registration fills this in at startup.
  */
-export const LIBRARIES = {
-  music: { env: 'NODECINE_MUSIC_DIR', extensions: ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'] },
-  voice: { env: 'NODECINE_VOICE_DIR', extensions: ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'] },
-  clips: { env: 'NODECINE_CLIPS_DIR', extensions: ['mp4', 'webm', 'mov', 'm4v'] },
-} as const;
-export type Library = keyof typeof LIBRARIES;
-export const isLibrary = (v: string): v is Library => v in LIBRARIES;
+export interface LibrarySpec { env: string; extensions: readonly string[] }
+const LIBRARIES = new Map<string, LibrarySpec>();
+export type Library = string;
+
+export function registerLibrary(name: Library, spec: LibrarySpec): void {
+  if (!/^[a-z][a-z0-9-]{0,30}$/.test(name)) throw new Error(`Invalid library name: ${name}`);
+  LIBRARIES.set(name, spec);
+}
+export const isLibrary = (v: string): v is Library => LIBRARIES.has(v);
+const specOf = (library: Library): LibrarySpec => {
+  const spec = LIBRARIES.get(library);
+  if (!spec) throw new Error(`Unknown library: ${library}`);
+  return spec;
+};
 
 /** Letters, digits and the punctuation a person actually types in a file name — nothing that could be a path. */
 const STEM = /^[A-Za-z0-9][A-Za-z0-9 ._'()-]{0,80}$/;
 
 export function libraryDir(library: Library): string {
-  return path.resolve(process.cwd(), process.env[LIBRARIES[library].env] ?? `.nodecine/${library}`);
+  return path.resolve(process.cwd(), process.env[specOf(library).env] ?? `.nodecine/${library}`);
 }
 
 const namedForLibrary = (library: Library, fileName: string): boolean => {
   const dot = fileName.lastIndexOf('.');
   if (dot <= 0) return false;
-  return STEM.test(fileName.slice(0, dot)) && (LIBRARIES[library].extensions as readonly string[]).includes(fileName.slice(dot + 1).toLowerCase());
+  return STEM.test(fileName.slice(0, dot)) && specOf(library).extensions.includes(fileName.slice(dot + 1).toLowerCase());
 };
 
 /** Resolve a file name to a path inside one of those folders; anything that could leave it is refused. */

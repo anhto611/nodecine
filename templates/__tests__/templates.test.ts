@@ -5,8 +5,6 @@ import { _resetTemplates, listTemplates, templateGraph } from '@/core/templates/
 import { topoSort, validateGraph } from '@/core/engine/graph';
 import { registerTemplates } from '..';
 import { shapeOfTemplate } from '@/components/panels/TemplatePlayer';
-import { SCREENWRITER } from '@/nodes/screenwriter/node';
-import type { Beat } from '@/nodes/screenwriter/beats';
 
 /**
  * The one promise a shipped template makes: a user could have built it from a blank canvas. That
@@ -58,7 +56,7 @@ describe('shipped templates', () => {
 
   it('send every screenwriter and script into an Illustrator that has a brief and a model', () => {
     for (const t of listTemplates()) {
-      for (const n of t.graph.nodes.filter((n) => n.type === SCREENWRITER || n.type === 'core/static-script')) {
+      for (const n of t.graph.nodes.filter((n) => n.type === 'core/screenwriter' || n.type === 'core/static-script')) {
         const ill = illustratorAfter(t, n.id);
         expect(ill, `${t.id}/${n.id}: illustrator`).toBeDefined();
         expect(String(ill!.params.brief).length, `${t.id}: brief`).toBeGreaterThan(20);
@@ -101,8 +99,8 @@ describe('shipped templates', () => {
 describe('the GitHub showcase, as data', () => {
   it('routes stars, the install command and the url around the model, not through it', () => {
     const t = listTemplates().find((x) => x.id === 'github-showcase')!;
-    const writer = t.graph.nodes.find((n) => n.type === SCREENWRITER)!;
-    const bound = (writer.params.beats as Beat[]).flatMap((s) => Object.values(s.factBindings));
+    const writer = t.graph.nodes.find((n) => n.type === 'core/screenwriter')!;
+    const bound = (writer.params.beats as { count: number; factBindings: Record<string, string> }[]).flatMap((s) => Object.values(s.factBindings));
     expect([...new Set(bound)].sort()).toEqual(['installCommand', 'name', 'stars', 'url']);
     // The same fact sheet also feeds the assembler directly, which is where those bindings resolve.
     expect(t.graph.edges.some((e) => e.source === 'fetcher' && e.target === 'assembler' && e.targetPort === 'facts')).toBe(true);
@@ -115,7 +113,7 @@ describe('the quote reel, as data', () => {
     expect(t.graph.nodes.some((n) => n.type.endsWith('/github-fetcher'))).toBe(false);
     expect(t.graph.edges.some((e) => e.targetPort === 'facts')).toBe(false);
     expect(t.graph.edges.some((e) => e.source === 'input' && e.targetPort === 'source')).toBe(true);
-    const writer = t.graph.nodes.find((n) => n.type === SCREENWRITER)!;
-    expect((writer.params.beats as Beat[]).reduce((n, s) => n + s.count, 0)).toBe(5);
+    const writer = t.graph.nodes.find((n) => n.type === 'core/screenwriter')!;
+    expect((writer.params.beats as { count: number; factBindings: Record<string, string> }[]).reduce((n, s) => n + s.count, 0)).toBe(5);
   });
 });

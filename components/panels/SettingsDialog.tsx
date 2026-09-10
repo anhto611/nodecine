@@ -3,7 +3,7 @@ import React from 'react';
 import { useStudio } from '@/store/useStudio';
 import { LOCALES, type Locale } from '@/lib/i18n';
 import { Icon } from '../icons';
-import { Btn, useT } from '../ui';
+import { Btn, Dialog, useT } from '../ui';
 
 /** Settings (USER_FLOWS §1.6): no API keys in v0.1 — locale plus read-only tool information. */
 export const SettingsDialog: React.FC = () => {
@@ -20,12 +20,7 @@ export const SettingsDialog: React.FC = () => {
     </div>
   );
   return (
-    <div className="nc-modal-bg" onClick={() => close(false)}>
-      <div className="nc-modal" style={{ width: 620 }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 11, padding: '0 12px', borderBottom: '1px solid var(--line)' }}>
-          <span style={{ color: 'var(--tx-2)' }}><Icon.gear /></span><span style={{ fontWeight: 700, fontSize: 'var(--fs-title)' }}>{t('settings.title')}</span>
-          <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => close(false)}><Icon.x /></button>
-        </div>
+    <Dialog width={620} icon={<Icon.gear />} title={t('settings.title')} onClose={() => close(false)} footer={<><span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('settings.footer')}</span><div style={{ flex: 1 }} /><Btn onClick={() => close(false)}>{t('settings.close')}</Btn></>}>
         <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ background: 'var(--bg-sunk)', border: '1px solid var(--line)', borderRadius: 5, padding: '12px', display: 'flex', gap: 11, fontSize: 'var(--fs-label)', color: 'var(--tx-2)', lineHeight: 1.65 }}>
             <span style={{ color: 'var(--ok)', flex: '0 0 auto', marginTop: 2 }}><Icon.check size={14} /></span>
@@ -40,12 +35,6 @@ export const SettingsDialog: React.FC = () => {
           {field(t('settings.ffmpegBin'), <code style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)' }}>NODECINE_FFMPEG_BIN · PATH</code>)}
           {field(t('settings.tmpDir'), <code style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-2)' }}>NODECINE_TMP_DIR · .nodecine/tmp</code>, t('settings.envHint'))}
         </div>
-        <div style={{ borderTop: '1px solid var(--line)', padding: '12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 'var(--fs-body)', color: 'var(--tx-3)' }}>{t('settings.footer')}</span>
-          <div style={{ flex: 1 }} />
-          <Btn onClick={() => close(false)}>{t('settings.close')}</Btn>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 };

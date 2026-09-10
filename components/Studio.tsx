@@ -22,7 +22,7 @@ export const Studio: React.FC = () => {
   const logsOpen = useStudio((s) => s.logsOpen);
   const templatesOpen = useStudio((s) => s.templatesOpen);
   const settingsOpen = useStudio((s) => s.settingsOpen);
-  const sceneEditor = useStudio((s) => s.sceneEditor);
+  const overlay = useStudio((s) => s.overlay);
 
   React.useEffect(() => {
     init();
@@ -44,7 +44,7 @@ export const Studio: React.FC = () => {
       if (mod && e.key.toLowerCase() === 'j') { e.preventDefault(); s.toggleLogs(); return; }
       if (mod && e.key === ',') { e.preventDefault(); s.setSettingsOpen(true); return; }
       if (mod && e.key.toLowerCase() === 'b' && s.selectedNodeId) { e.preventDefault(); s.toggleBypass(s.selectedNodeId); return; }
-      if (e.key === 'Escape') { s.setTemplatesOpen(false); s.setSettingsOpen(false); s.setSceneEditor(null); if (s.panel) s.setPanel(s.panel); return; }
+      if (e.key === 'Escape') { s.setTemplatesOpen(false); s.setSettingsOpen(false); s.setOverlay(null); if (s.panel) s.setPanel(s.panel); return; }
       if (inField || mod) return;
       if (e.key.toLowerCase() === 'w') s.setPanel('workflows');
       if (e.key.toLowerCase() === 'n') s.setPanel('library');
@@ -73,7 +73,7 @@ export const Studio: React.FC = () => {
       </div>
       {templatesOpen && <TemplateBrowser />}
       {settingsOpen && <SettingsDialog />}
-      {sceneEditor && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
+      {overlay && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
     </div>
   );
 };

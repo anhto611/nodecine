@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Voiceover } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
+import type { MixResult } from './types';
 
 const Params = z.object({
   /** A file name in this machine's music folder; empty means no music. */
@@ -35,7 +36,7 @@ export const audioMix: NodeDefinition<typeof Params> = {
       log('info', 'no music chosen; the voice passes through');
       return { voiceover };
     }
-    const mixed = await services.mixAudio(voiceover.audioUrl, { ...params, track: params.track.trim() }, signal);
+    const mixed = await services.invoke<MixResult>('audio-mix/mix', [voiceover.audioUrl, { ...params, track: params.track.trim() }, signal]);
     log('info', `${params.track} under the voice at ${Math.round(params.volume * 100)}%, ducking ${Math.round(params.duck * 100)}%`);
     // Only the file changes: the words and the scene segments are still on the voice's own clock.
     return { voiceover: { ...voiceover, audioUrl: mixed.audioUrl, durationSeconds: mixed.durationSeconds } };

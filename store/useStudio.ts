@@ -65,7 +65,8 @@ export interface StudioState {
   workflowsTick: number;
   settingsOpen: boolean;
   /** One scene of a Static Script node, open in the scene editor. */
-  sceneEditor: { nodeId: string; index: number } | null;
+  /** The node whose overlay (a dialog the node's capsule registers) is open, and what it opened on. Null when none. */
+  overlay: { nodeId: string; data?: unknown } | null;
   selectedNodeId: string | null;
   canUndo: boolean;
   canRedo: boolean;
@@ -118,7 +119,7 @@ export interface StudioState {
   toggleLogs(): void;
   setTemplatesOpen(open: boolean): void;
   setSettingsOpen(open: boolean): void;
-  setSceneEditor(target: { nodeId: string; index: number } | null): void;
+  setOverlay(target: { nodeId: string; data?: unknown } | null): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
 }
@@ -201,7 +202,7 @@ export const useStudio = create<StudioState>((set, get) => {
     templatesOpen: false,
     workflowsTick: 0,
     settingsOpen: false,
-    sceneEditor: null,
+    overlay: null,
     selectedNodeId: null,
     canUndo: false,
     canRedo: false,
@@ -546,8 +547,8 @@ export const useStudio = create<StudioState>((set, get) => {
     setTemplatesOpen(open) {
       set({ templatesOpen: open });
     },
-    setSceneEditor(target) {
-      set({ sceneEditor: target });
+    setOverlay(target) {
+      set({ overlay: target });
     },
 
     setSettingsOpen(open) {

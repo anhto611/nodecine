@@ -1,4 +1,6 @@
-import { CAPTION_STYLES, type CaptionStyle, type Style } from '../types/payloads';
+import { CAPTION_STYLES, type CaptionStyle, type Style } from '@/core/types/payloads';
+import type { ScenePreviewOptions } from '@/core/adapters/types';
+import { CAPTION_SLOT, DEFAULT_CAPTION_BAND_CLASS, EMPH_CLASS, FACT_ATTR, SCENE_ROOT_CLASS, VAR_ATTR } from '@/core/visual/contract';
 
 /**
  * The markup side of a scene (CORE_CONTRACTS §2.8), shared by every engine and by the Studio's
@@ -90,8 +92,8 @@ export function baseStyles(width: number, height: number, fontBase: string): str
       `* { margin: 0; padding: 0; box-sizing: border-box; }`,
       `html, body { width: ${width}px; height: ${height}px; overflow: hidden; background: #000; }`,
       `[data-composition-id] { position: relative; width: ${width}px; height: ${height}px; overflow: hidden; background: #000; }`,
-      `.nc-scene { position: absolute; inset: 0; overflow: hidden; }`,
-      `.nc-emph { font-style: inherit; color: var(--accent); }`,
+      `.${SCENE_ROOT_CLASS} { position: absolute; inset: 0; overflow: hidden; }`,
+      `.${EMPH_CLASS} { font-style: inherit; color: var(--accent); }`,
     ].join('\n')),
   ].join('\n');
 }
@@ -138,10 +140,10 @@ window.__nodecineBind = {
       el.textContent = Array.isArray(v) ? v.join(', ') : typeof v === 'object' ? JSON.stringify(v) : String(v);
     });
   },
-  vars: function (root, vars) { window.__nodecineBind.fill(root, 'data-var', vars || {}); },
-  facts: function (root, facts) { window.__nodecineBind.fill(root, 'data-fact', facts || {}); }
+  vars: function (root, vars) { window.__nodecineBind.fill(root, '__VAR_ATTR__', vars || {}); },
+  facts: function (root, facts) { window.__nodecineBind.fill(root, '__FACT_ATTR__', facts || {}); }
 };
-`;
+`.replace('__VAR_ATTR__', VAR_ATTR).replace('__FACT_ATTR__', FACT_ATTR);
 
 /**
  * The helpers a scene's script gets on `nodecine` besides `timeline`, `root`, `index` and
@@ -266,26 +268,17 @@ export function captionLine(id: string | null, words: { id?: string; text: strin
  */
 export function sceneMarkup(source: string, o: { captionsHtml?: string; withCaptions: boolean; start: number; duration: number }): { html: string; styles: string[]; scripts: string[]; captionSlot: { tag: string } | null } {
   const code = splitCode(source);
-  const captionSlot = findSlot(code.markup, 'captions');
-  const withBand = o.withCaptions && !captionSlot ? `${code.markup}<div class="nc-captions-default" data-slot="captions"></div>` : code.markup;
-  const withCaps = o.captionsHtml ? fillNamedSlot(withBand, 'captions', o.captionsHtml) : withBand;
+  const captionSlot = findSlot(code.markup, CAPTION_SLOT);
+  const withBand = o.withCaptions && !captionSlot ? `${code.markup}<div class="${DEFAULT_CAPTION_BAND_CLASS}" data-slot="${CAPTION_SLOT}"></div>` : code.markup;
+  const withCaps = o.captionsHtml ? fillNamedSlot(withBand, CAPTION_SLOT, o.captionsHtml) : withBand;
   return { html: timeVideos(withCaps, o.start, o.duration), styles: code.styles, scripts: code.scripts, captionSlot };
 }
 
-export interface PreviewOptions {
-  style: Style;
-  source: string;
-  width?: number;
-  height?: number;
+/** What HyperFrames needs beyond the contract's options: where the fonts are, and whether to run the script on a loop. */
+export interface PreviewOptions extends ScenePreviewOptions {
   fontBase?: string;
-  /** Values of the whole video, bound into `data-var`; a picture shows as a picture. */
-  vars?: Record<string, string>;
-  /** Sample values for the scene's `data-fact` elements. */
-  facts?: Record<string, unknown>;
   /** Run the scene's script on a looping timeline; needs gsap's source inlined. */
   animate?: { gsapSource: string; loopSeconds?: number };
-  /** A sample caption line, shown in the scene's caption slot and read word by word over the loop. */
-  captions?: string;
 }
 
 /**

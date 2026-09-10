@@ -3,7 +3,7 @@ import { ErrorCode } from '@/core/errors';
 import { safeFileName } from '@/core/file-name';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import type { CaptionTrack } from '@/core/types/payloads';
-import { SUBTITLE_FORMATS, toSubtitles } from '@/core/captions/subtitles';
+import { SUBTITLE_FORMATS, toSubtitles } from './subtitles';
 
 const Params = z.object({ format: z.enum(SUBTITLE_FORMATS).default('srt'), fileName: z.string().min(1).max(80).default('nodecine') });
 export const captionExport: NodeDefinition<typeof Params> = {

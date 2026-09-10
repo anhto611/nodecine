@@ -1,12 +1,16 @@
 'use client';
 import { en, type DictKey } from '@/locales/en';
 import { vi } from '@/locales/vi';
+import { NODE_TRANSLATIONS } from '@/nodes/.generated/locales';
 
 export type Locale = 'en' | 'vi';
 export const LOCALES: Locale[] = ['en', 'vi'];
 
 /** The two dictionaries. */
-const DICTS: Record<Locale, Record<string, string>> = { en: { ...en }, vi: { ...vi } };
+const DICTS: Record<Locale, Record<string, string>> = {
+  en: { ...en, ...NODE_TRANSLATIONS.en },
+  vi: { ...vi, ...NODE_TRANSLATIONS.vi },
+};
 
 
 /** Whether either dictionary carries the key: a body that labels enum values asks before it falls back to the raw value. */

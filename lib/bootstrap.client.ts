@@ -1,11 +1,11 @@
 'use client';
 import { registerNodes } from '@/nodes';
-import { registerRemotionClient } from '@/engines/remotion/register.client';
-import { registerHyperframesClient } from '@/engines/hyperframes/register.client';
+import { NODE_CLIENT_REGISTRATIONS } from '@/nodes/index.client';
 import { registerTemplates } from '@/templates';
 
 /**
- * Browser-side registrations: core nodes, the two engines, the shipped templates. The user's own
+ * Browser-side registrations: every node, whatever a capsule registers of its own (an engine's player
+ * and preview), the shipped templates. The user's own
  * workflows are files on the server and arrive through the store.
  *
  * No "already done" flag, for the reason spelled out in `server/register.ts`: every registration is
@@ -13,7 +13,6 @@ import { registerTemplates } from '@/templates';
  */
 export function bootstrapClient(): void {
   registerNodes();
-  registerRemotionClient();
-  registerHyperframesClient();
+  for (const register of NODE_CLIENT_REGISTRATIONS) register();
   registerTemplates();
 }

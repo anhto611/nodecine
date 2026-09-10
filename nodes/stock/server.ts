@@ -1,8 +1,8 @@
 import { NodeError } from '@/core/errors';
 import { downloadImageAsset, getVetted, readCapped, saveAsset } from '@/server/fetch-media';
 import { parsePageUrl } from '@/core/network/public-url';
-import type { StockRequest, StockResult } from '@/core/engine/services';
-import { clipSearchUrl, parseClips, parseStock, pick, pickClip, searchUrl, STOCK_KEY_ENV } from './stock-providers';
+import type { StockRequest, StockResult } from './types';
+import { clipSearchUrl, parseClips, parseStock, pick, pickClip, searchUrl, STOCK_KEY_ENV } from './providers';
 
 export const StockErrorCode = {
   KEY_MISSING: 'STOCK_KEY_MISSING',
@@ -86,3 +86,5 @@ async function downloadClip(url: string, signal: AbortSignal): Promise<string | 
   if (!mime.startsWith('video/')) return undefined;
   return saveAsset(await readCapped(res, MAX_CLIP_BYTES, 'the clip'), mime, MAX_CLIP_BYTES);
 }
+
+export const stockMediaServices = { 'stock-media/fetch': fetchStockMediaOnServer };

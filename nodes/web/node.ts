@@ -3,7 +3,8 @@ import type { NodeDefinition } from '@/core/nodes/definition';
 import type { FactItem, FactSheet, SourceRef } from '@/core/types/payloads';
 import { NodeError, toNodeError } from '@/core/errors';
 import { parsePageUrls } from '@/core/network/public-url';
-import { RETRYABLE, WebErrorCode } from '@/core/network/page-errors';
+import { RETRYABLE, WebErrorCode } from './errors';
+import type { PageRead } from './types';
 
 const Params = z.object({
   /** Open the page in a browser and keep a picture of it. Off by default: it costs a browser launch. */
@@ -47,7 +48,7 @@ export const webFetcher: NodeDefinition<typeof Params> = {
     for (const [i, target] of targets.entries()) {
       progress(i / targets.length, `${i + 1}/${targets.length} ${target.domain}`);
       try {
-        const page = await services.readPage(target.url, { screenshot: params.screenshot, width: params.width, height: params.height }, signal);
+        const page = await services.invoke<PageRead>('web-fetcher/read', [target.url, { screenshot: params.screenshot, width: params.width, height: params.height }, signal]);
         if (params.screenshot && !page.screenshotAsset) log('warn', `${page.domain}: no photograph${page.shotProblem ? ` (${page.shotProblem})` : ''}; the page's own picture is used instead`, WebErrorCode.SHOT_FAILED);
         // Fact fields are named after the content vocabulary where they line up, so a beat binds by name.
         items.push({

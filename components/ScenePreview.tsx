@@ -1,25 +1,28 @@
 'use client';
 import React from 'react';
-import { buildScenePreview, type PreviewOptions } from '@/core/visual/markup';
+import { previewEngine } from '@/core/adapters/registry';
+import type { ScenePreviewOptions } from '@/core/adapters/types';
 import { safeZonesFor } from '@/core/visual/safe-zones';
 
 /**
- * A still of one scene, drawn by the same markup the engine uses, in a sandboxed iframe with no
- * origin and no network beyond the app's fonts. By default it fills the width it is given and takes
+ * A still of one scene, drawn by the engine that can (`previewScene` on its adapter), in a
+ * sandboxed iframe with no origin and no network beyond the app's fonts. No engine registered
+ * that draws stills: an empty frame. By default it fills the width it is given and takes
  * the height the aspect ratio dictates (a node card). With `fit` it takes the box it is given, both
  * ways, and draws the largest frame of the scene's ratio that fits inside it, centred (a modal). The
  * document is rebuilt when the scene changes and not otherwise.
  */
-export const ScenePreview: React.FC<{ options: PreviewOptions; className?: string; style?: React.CSSProperties; onClick?: () => void; delayMs?: number; fit?: boolean; guides?: boolean }> = ({ options, className, style, onClick, delayMs, fit, guides }) => {
+export const ScenePreview: React.FC<{ options: ScenePreviewOptions; className?: string; style?: React.CSSProperties; onClick?: () => void; delayMs?: number; fit?: boolean; guides?: boolean }> = ({ options, className, style, onClick, delayMs, fit, guides }) => {
   const width = options.width ?? 1080;
   const height = options.height ?? 1920;
   const ref = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = React.useState(0.1);
   const key = JSON.stringify(options);
-  const [html, setHtml] = React.useState(() => buildScenePreview(options));
+  const build = (o: ScenePreviewOptions) => previewEngine()?.previewScene?.(o) ?? '';
+  const [html, setHtml] = React.useState(() => build(options));
   React.useEffect(() => {
-    if (!delayMs) { setHtml(buildScenePreview(options)); return; }
-    const t = setTimeout(() => setHtml(buildScenePreview(options)), delayMs);
+    if (!delayMs) { setHtml(build(options)); return; }
+    const t = setTimeout(() => setHtml(build(options)), delayMs);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, delayMs]);

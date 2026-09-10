@@ -4,7 +4,7 @@ import { exec, ExecError } from '@/server/exec';
 import { ffmpegBin, measureDurationSeconds } from '@/server/audio';
 import { contentHash } from '@/core/hash';
 import { libraryPath, ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
-import type { MixAudioOptions, MixResult } from '@/core/engine/services';
+import type { MixAudioOptions, MixResult } from './types';
 
 /**
  * A music bed under the voice (CORE_CONTRACTS §5.15).
@@ -55,3 +55,5 @@ export function mixFilter(seconds: number, opts: MixAudioOptions): string {
 }
 
 const exists = (p: string) => stat(p).then(() => true, () => false);
+
+export const audioMixServices = { 'audio-mix/mix': mixAudioOnServer };

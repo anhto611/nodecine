@@ -18,7 +18,8 @@ type SceneRow = { role: string; weight: number; narration: string; content: Scen
 export const StaticScriptBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const [p, set] = useParams<{ scenes: SceneRow[] }>(nodeId);
-  const openScene = useStudio((s) => s.setSceneEditor);
+  const setOverlay = useStudio((s) => s.setOverlay);
+  const openScene = (target: { nodeId: string; index: number } | null) => setOverlay(target ? { nodeId: target.nodeId, data: { index: target.index } } : null);
   const scenes = p.scenes ?? [];
   const remove = (i: number) => set({ scenes: scenes.filter((_, j) => j !== i) });
   const move = (i: number, to: number) => set({ scenes: moveScene(scenes, i, to) });

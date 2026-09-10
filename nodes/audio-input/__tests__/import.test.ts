@@ -17,7 +17,7 @@ describe('the Audio Input node', () => {
   it('emits the same payload shape the TTS Engine does, named after the recording', async () => {
     const { c, services } = ctx('take 3.wav');
     const vo = (await audioInput.run(c)).voiceover as Voiceover;
-    expect(services.calls.find((x) => x.name === 'importAudio')!.args[0]).toBe('take 3.wav');
+    expect(services.calls.find((x) => x.name === 'audio-input/import')!.args[0]).toBe('take 3.wav');
     expect(vo).toEqual({ audioUrl: expect.stringMatching(/^\/api\/media\/[a-f0-9]{16}\.mp3$/), durationSeconds: 42.5, voiceName: 'take 3.wav', language: 'vi', speed: 1 });
   });
 

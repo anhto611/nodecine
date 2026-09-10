@@ -9,11 +9,7 @@ import { fileNameFromAssetUrl, mediaUrl } from '@/server/paths';
 import { ensureServerRegistrations } from '@/server/register';
 import { embedWorkflow } from '@/server/video-meta';
 import { ensureTmpDir, fileNameFromMediaUrl, mediaPath } from '@/server/paths';
-import { alignWordsOnServer } from '@/server/audio-align.server';
-import { readPageOnServer } from '@/server/page-read.server';
-import { mixAudioOnServer } from '@/server/audio-mix.server';
-import { importAudioOnServer } from '@/server/audio-import.server';
-import { fetchStockMediaOnServer } from '@/server/stock-search.server';
+import { NODE_SERVICE_EXTENSIONS } from '@/nodes/.generated/server';
 import { concatMp3, measureDurationSeconds } from '@/server/audio';
 import { contentHash } from '@/core/hash';
 import fs from 'node:fs/promises';
@@ -29,7 +25,13 @@ export function llmCacheDir(): string {
 
 export function createServerServices(opts: { workflow?: () => { name: string; graph: unknown } | null } = {}): NodeServices {
   ensureServerRegistrations();
-  return {
+  const extensions = Object.assign({}, ...NODE_SERVICE_EXTENSIONS) as Record<string, (...args: unknown[]) => Promise<unknown>>;
+  const services: Partial<NodeServices> = {
+    async invoke<T>(serviceId: string, args: unknown[]): Promise<T> {
+      const service = extensions[serviceId];
+      if (!service) throw new Error(`unknown node service ${serviceId}`);
+      return await service(...args) as T;
+    },
     now: () => Date.now(),
     async probeLLM(providerId, settings) {
       const f = getLLMProviderFactory(providerId);
@@ -83,11 +85,6 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       await fs.rename(`${file}.part`, file);
       return { url: mediaUrl(name), bytes };
     },
-    alignWords: alignWordsOnServer,
-    readPage: readPageOnServer,
-    mixAudio: mixAudioOnServer,
-    importAudio: importAudioOnServer,
-    fetchStockMedia: fetchStockMediaOnServer,
     async concatAudio(parts, gapSeconds, signal) {
       const files = parts.map((p) => mediaPath(fileNameFromMediaUrl(p.audioUrl)));
       // Named by what went in, so the same parts joined twice are one file.
@@ -112,4 +109,5 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       return result;
     },
   };
+  return services as NodeServices;
 }

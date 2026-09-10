@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildHyperframesDocument, splitCode, COMPOSITION_ID } from './document';
+import { buildHyperframesDocument, splitCode, COMPOSITION_ID } from '../document';
 import type { VideoIR } from '@/core/types/ir';
 import { FACT_SOURCE, SCENE_SOURCE, STYLE } from '@/core/__tests__/scene-fixtures';
 

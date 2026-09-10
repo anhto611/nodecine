@@ -3,7 +3,7 @@ import { makeFakeServices } from '@/core/__tests__/fakes';
 import type { RunContext } from '@/core/nodes/definition';
 import type { Voiceover } from '@/core/types/payloads';
 import { audioMix } from '../node';
-import { mixFilter } from '@/server/audio-mix.server';
+import { mixFilter } from '../server';
 
 const voiceover: Voiceover = {
   audioUrl: '/api/media/aaaaaaaaaaaaaaaa.mp3',
@@ -37,13 +37,13 @@ describe('the Music Bed node', () => {
     const { c, services } = ctx({ track: '' });
     const out = await audioMix.run(c);
     expect(out.voiceover).toBe(voiceover);
-    expect(services.calls.some((x) => x.name === 'mixAudio')).toBe(false);
+    expect(services.calls.some((x) => x.name === 'audio-mix/mix')).toBe(false);
   });
 
   it('keeps the words and the scene segments, and takes the mix its own measured length', async () => {
     const { c, services } = ctx({ track: 'bed.mp3', volume: 0.2 });
     const out = (await audioMix.run(c)).voiceover as Voiceover;
-    expect(services.calls.find((x) => x.name === 'mixAudio')!.args[1]).toMatchObject({ track: 'bed.mp3', volume: 0.2 });
+    expect(services.calls.find((x) => x.name === 'audio-mix/mix')!.args[1]).toMatchObject({ track: 'bed.mp3', volume: 0.2 });
     expect(out.audioUrl).not.toBe(voiceover.audioUrl);
     expect(out.durationSeconds).toBe(63.18);
     expect(out.words).toEqual(voiceover.words);

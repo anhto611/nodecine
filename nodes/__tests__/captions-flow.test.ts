@@ -6,7 +6,7 @@ import { registerNodes } from '@/nodes';
 import { makeFakeServices } from '@/core/__tests__/fakes';
 import { SCENE_SOURCE, STYLE, illustratorAnswers } from '@/core/__tests__/scene-fixtures';
 import { captionsToFrames } from '@/nodes/assembler/build-ir';
-import { buildHyperframesDocument } from '@/engines/hyperframes/document';
+import { buildHyperframesDocument } from '@/nodes/hyperframes-engine/document';
 import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
 import type { VideoIR } from '@/core/types/ir';
@@ -46,7 +46,7 @@ describe('captions on the Static Script template', () => {
     const ex = new Executor(on(graph(), 'transcribe', 'captions'), services);
     const { ok } = await ex.run();
     expect(ok).toBe(true);
-    const align = services.calls.find((c) => c.name === 'alignWords')!;
+    const align = services.calls.find((c) => c.name === 'transcribe/align')!;
     expect(align.args[0]).toMatch(/^\/api\/media\//);
     expect(align.args[3]).toEqual({ model: 'small' });
     const vo = ex.runtime('transcribe').outputs.voiceover!.payload as Voiceover;

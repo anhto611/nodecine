@@ -1,10 +1,11 @@
-import { registerNodes } from '@/nodes';
+import { NODE_LIBRARIES, registerNodes } from '@/nodes';
+import { registerLibrary } from '@/server/paths';
 import { installProviders } from '@/providers/installed.server';
-import { registerRemotionServer } from '@/engines/remotion/register.server';
-import { registerHyperframesServer } from '@/engines/hyperframes/register.server';
+import { NODE_SERVER_REGISTRATIONS } from '@/nodes/.generated/server';
 
 /**
- * Server-side registration of every node, engine and provider (ARCHITECTURE §2). Import this module
+ * Server-side registration of every node, provider, and whatever a capsule registers of its own — an
+ * engine, a renderer (ARCHITECTURE §2). Import this module
  * once from each API route; core registries start empty.
  *
  * Called on every request, with no "already done" flag. Every registration underneath is a `Map.set`
@@ -16,7 +17,7 @@ import { registerHyperframesServer } from '@/engines/hyperframes/register.server
  */
 export function ensureServerRegistrations(): void {
   registerNodes();
+  for (const [name, spec] of Object.entries(NODE_LIBRARIES)) registerLibrary(name, spec);
   installProviders();
-  registerRemotionServer();
-  registerHyperframesServer();
+  for (const register of NODE_SERVER_REGISTRATIONS) register();
 }

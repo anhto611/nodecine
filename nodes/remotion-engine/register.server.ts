@@ -24,7 +24,7 @@ let bundleKey = '';
  */
 async function sourceKey(): Promise<string> {
   if (process.env.NODE_ENV === 'production') return 'production';
-  const roots = ['engines/remotion'];
+  const roots = ['nodes/remotion-engine'];
   const stamps: string[] = [];
   const walk = async (dir: string): Promise<void> => {
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
@@ -54,7 +54,7 @@ async function getBundle(): Promise<string> {
       const outDir = path.join(await ensureTmpDir(), 'remotion-bundle');
       // The Remotion bundle is a separate webpack graph: teach it the `@/` alias from tsconfig.
       return bundle({
-        entryPoint: path.resolve(process.cwd(), 'engines/remotion/entry.ts'),
+        entryPoint: path.resolve(process.cwd(), 'nodes/remotion-engine/entry.ts'),
         outDir,
         webpackOverride: (config) => ({
           ...config,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitsFrame, parseStock, pick, searchUrl } from '@/server/stock-providers';
+import { fitsFrame, parseStock, pick, searchUrl } from '../providers';
 
 describe('fitsFrame', () => {
   it('takes a picture the right way up and big enough', () => {

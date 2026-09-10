@@ -59,3 +59,5 @@ export async function alignWordsOnServer(audioUrl: string, text: string, languag
   if (!words.length) throw Object.assign(new Error('aligner returned no words'), { code: ErrorCode.ALIGN_FAILED });
   return words;
 }
+
+export const transcribeServices = { 'transcribe/align': alignWordsOnServer };

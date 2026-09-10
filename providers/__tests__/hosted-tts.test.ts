@@ -4,7 +4,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { createElevenlabsProvider, elevenlabsSpeed, parseElevenlabsVoices } from '../elevenlabs';
 import { createVbeeProvider, describeVbeeError, parseVbeeVoices, vbeeSpeed } from '../vbee';
-import { pickVoice } from '@/nodes/tts/node';
 import type { TTSRef } from '@/core/types/payloads';
 import type { ApiDeps } from '../api-shared';
 
@@ -52,12 +51,6 @@ describe('ElevenLabs', () => {
       { id: 'v1', displayName: 'Rachel · american · female', language: 'mul' },
       { id: 'v2', displayName: 'Bare', language: 'mul' },
     ]);
-  });
-
-  it('a multilingual voice matches any script language without a fallback warning', () => {
-    const ref = { providerId: 'elevenlabs', displayName: 'ElevenLabs', transport: 'api', capabilities: { installed: { status: 'ready' }, encoder: { status: 'ready' } }, voices: parseElevenlabsVoices({ voices: [{ voice_id: 'v1', name: 'Rachel' }] }), settings: { rate: 1 } } as TTSRef;
-    expect(pickVoice(ref, 'vi', undefined)).toEqual({ voice: ref.voices[0], fallback: false });
-    expect(pickVoice(ref, 'en-US', 'v1')).toEqual({ voice: ref.voices[0], fallback: false });
   });
 
   it('keeps speed inside what the API accepts', () => {

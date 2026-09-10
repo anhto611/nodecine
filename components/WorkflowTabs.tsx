@@ -49,7 +49,7 @@ export const WorkflowTabs: React.FC = () => {
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // A dialog owns Ctrl+S / Ctrl+Z while it is open; saving the workflow from inside one was a surprise.
-      if (useStudio.getState().sceneEditor) return;
+      if (useStudio.getState().overlay) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         if (e.shiftKey) setNaming(useStudio.getState().projectName);

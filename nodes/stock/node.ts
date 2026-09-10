@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import type { LLMRef, SceneScript } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import { STOCK_PROVIDERS } from '@/server/stock-providers';
+import { STOCK_PROVIDERS } from './providers';
 import { STOCK_STYLE_IDS } from './styles';
 import { buildStockPrompt, StockQueriesSchema } from './prompt';
+import type { StockResult } from './types';
 
 const Params = z.object({
   provider: z.enum(STOCK_PROVIDERS).default('pexels'),
@@ -79,7 +80,7 @@ export const stockMedia: NodeDefinition<typeof Params> = {
     const scenes = [...script.scenes];
     for (const [n, i] of wanted.entries()) {
       progress(n / wanted.length, `${n + 1}/${wanted.length}`);
-      const found = await services.fetchStockMedia({ provider: params.provider, query: queries[i]!, orientation: params.orientation, longEdge: params.longEdge, want: params.media, used }, signal);
+      const found = await services.invoke<StockResult | null>('stock-media/fetch', [{ provider: params.provider, query: queries[i]!, orientation: params.orientation, longEdge: params.longEdge, want: params.media, used }, signal]);
       if (!found) {
         const only = params.media === 'clip' ? ' clip' : params.media === 'still' ? ' still' : '';
         log('warn', `no${only} in the library fits the frame for "${queries[i]}" — scene ${i + 1} keeps no footage`);

@@ -16,7 +16,7 @@ export const audioInput: NodeDefinition<typeof Params> = {
   validate: (params) => params.file.trim() ? [] : [{ code: ErrorCode.INPUT_EMPTY, message: 'choose a recording' }],
   run: async ({ params, services, signal, log }) => {
     const file = params.file.trim();
-    const { audioUrl, durationSeconds } = await services.importAudio(file, signal);
+    const { audioUrl, durationSeconds } = await services.invoke<{ audioUrl: string; durationSeconds: number }>('audio-input/import', [file, signal]);
     log('info', `${file} · ${durationSeconds.toFixed(2)}s · ${params.language}`);
     return { voiceover: { audioUrl, durationSeconds, voiceName: file, language: params.language, speed: 1 } };
   },

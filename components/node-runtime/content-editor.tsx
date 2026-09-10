@@ -53,7 +53,7 @@ export const ImagePick: React.FC<{ url?: string; onPick: (url: string | undefine
     <span style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
       <input ref={ref} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pick(f); }} />
       {url ? <img src={url} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 3, border: '1px solid var(--line-2)', flex: 'none' }} /> : null}
-      <button className={`nc-chip ${stopFlow}`} onClick={() => ref.current?.click()} disabled={busy}>{busy ? '…' : t(url ? 'script.imageSwap' : 'script.imagePick')}</button>
+      <button className={`nc-chip ${stopFlow}`} onClick={() => ref.current?.click()} disabled={busy}>{busy ? '…' : t(url ? 'content.imageSwap' : 'content.imagePick')}</button>
       {err ? <span className="nc-hint" style={{ color: 'var(--err)' }} title={err}>!</span> : null}
     </span>
   );
@@ -79,8 +79,8 @@ const ClipPick: React.FC<{ url?: string; onPick: (url: string | undefined) => vo
   return (
     <span style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
       {url ? <video src={url} muted playsInline style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 3, border: '1px solid var(--line-2)', flex: 'none' }} /> : null}
-      <LibraryPicker files={files} value={name} empty={busy ? '…' : t('script.clipPick')} onChange={(f) => void take(f)} />
-      {!loading && !files.length && folder ? <span className="nc-hint one-line" title={folder}>{t('script.clipsEmpty')}</span> : null}
+      <LibraryPicker files={files} value={name} empty={busy ? '…' : t('content.clipPick')} onChange={(f) => void take(f)} />
+      {!loading && !files.length && folder ? <span className="nc-hint one-line" title={folder}>{t('content.clipsEmpty')}</span> : null}
       {err ? <span className="nc-hint" style={{ color: 'var(--err)' }} title={err}>!</span> : null}
     </span>
   );
@@ -109,7 +109,7 @@ export const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: Scen
             ) : k === 'entries' ? (
               <EntriesEditor entries={content.entries ?? []} onChange={(entries) => setKey('entries', entries.length ? entries : undefined)} />
             ) : k === 'points' ? (
-              <textarea className={`nc-textarea ${stopFlow}`} rows={3} placeholder={t('script.pointsHint')} value={(content.points ?? []).join('\n')} onChange={(e) => setKey('points', e.target.value.split('\n').map((x) => x.trimEnd()))} />
+              <textarea className={`nc-textarea ${stopFlow}`} rows={3} placeholder={t('content.pointsHint')} value={(content.points ?? []).join('\n')} onChange={(e) => setKey('points', e.target.value.split('\n').map((x) => x.trimEnd()))} />
             ) : k === 'body' || k === 'quote' ? (
               <textarea className={`nc-textarea ${stopFlow}`} rows={2} value={content[k] ?? ''} onChange={(e) => setKey(k, e.target.value)} />
             ) : (
@@ -121,7 +121,7 @@ export const ContentEditor: React.FC<{ content: SceneContent; onChange: (c: Scen
       ))}
       {unused.length > 0 && (
         <select className={`nc-select ${stopFlow}`} value="" onChange={(e) => { const k = e.target.value as ContentKey; if (k) setKey(k, k === 'points' ? [] : k === 'entries' ? [{}, {}] : k === 'image' || k === 'clip' ? undefined : ''); }}>
-          <option value="">{t('script.addKey')}</option>
+          <option value="">{t('content.addKey')}</option>
           {unused.map((k) => <option key={k} value={k}>{t(`content.${k}`)}</option>)}
         </select>
       )}

@@ -10,9 +10,10 @@ import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/serve
 import { createHyperframesAdapter } from './adapter';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { buildHyperframesDocument } from './document';
-import { vendorSource } from './vendor.server';
+import { registerVendorSources, vendorSource } from './vendor.server';
+import { registerVendorSource } from '@/server/vendor';
 import { renderScaleFor } from '@/core/visual/frame';
-import { FONT_FILES } from '@/core/visual/markup';
+import { FONT_FILES } from './markup';
 import { assetNamesIn, assetPath } from '@/server/paths';
 
 /**
@@ -69,6 +70,7 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
 }
 
 export function registerHyperframesServer(): void {
+  registerVendorSources(registerVendorSource);
   registerCodeRenderer('html-gsap', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
   registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer }));
 }

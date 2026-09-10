@@ -1,1 +1,1 @@
-{"id":"core/scene-breakdown","definition":"sceneBreakdown","body":"SceneBreakdownBody","icon":"bot","group":"script"}
+{"id": "core/scene-breakdown", "definition": "sceneBreakdown", "body": "SceneBreakdownBody", "icon": "bot", "group": "script", "translations": "sceneBreakdownTranslations"}

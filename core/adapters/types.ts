@@ -1,4 +1,4 @@
-import type { Capability, EngineRef } from '../types/payloads';
+import type { Capability, Style, EngineRef } from '../types/payloads';
 import type { VideoIR } from '../types/ir';
 
 /** Engine adapter interface (CORE_CONTRACTS §6.1). Implementations live outside core/ and self-register. */
@@ -31,6 +31,18 @@ export interface PlayerHandle {
   onFrame(listener: (frame: number) => void): () => void;
 }
 
+/** One scene to look at outside a film (CORE_CONTRACTS §2.8): the style, the drawing, the video's values, optional sample facts and caption. */
+export interface ScenePreviewOptions {
+  style: Style;
+  source: string;
+  width?: number;
+  height?: number;
+  vars?: Record<string, string>;
+  facts?: Record<string, unknown>;
+  /** A sample caption line, to judge where the scene puts captions. */
+  captions?: string;
+}
+
 export interface EngineAdapter {
   readonly engineId: string;
   readonly displayName: string;
@@ -38,6 +50,11 @@ export interface EngineAdapter {
   probe(): Promise<{ preview: Capability; render: Capability }>;
   /** Client-side only. */
   mountPlayer(element: HTMLElement, ir: VideoIR): PlayerHandle;
+  /**
+   * Client-side, optional: one scene as a self-contained page the Studio shows in a sandboxed
+   * iframe (the storyboard, a modal). An engine that cannot draw a still leaves it out.
+   */
+  previewScene?(options: ScenePreviewOptions): string;
   /** Server-side only. */
   render(
     ir: VideoIR,

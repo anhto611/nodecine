@@ -1,1 +1,1 @@
-{"id":"core/static-script","definition":"staticScript","body":"StaticScriptBody","icon":"doc","group":"script","overlay":"SceneEditorDialog","overlayModule":"SceneEditorDialog"}
+{"id": "core/static-script", "definition": "staticScript", "body": "StaticScriptBody", "icon": "doc", "group": "script", "translations": "staticScriptTranslations", "libraries": {"clips": {"env": "NODECINE_CLIPS_DIR", "extensions": ["mp4", "webm", "mov", "m4v"]}}, "overlay": "SceneEditorDialog", "overlayModule": "SceneEditorDialog"}

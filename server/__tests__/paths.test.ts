@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { libraryDir, libraryPath } from '../paths';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { libraryDir, libraryPath, registerLibrary } from '../paths';
+import { NODE_LIBRARIES } from '@/nodes';
+
+// The folders come from the capsules that read them; the server registers them at startup, a test here.
+beforeAll(() => { for (const [name, spec] of Object.entries(NODE_LIBRARIES)) registerLibrary(name, spec); });
 
 describe('libraryPath', () => {
   it('resolves a plain file name inside the folder it belongs to', () => {
@@ -11,6 +15,7 @@ describe('libraryPath', () => {
   it('keeps the folders apart, and each to its own kinds of file', () => {
     expect(libraryDir('music')).not.toBe(libraryDir('clips'));
     expect(() => libraryPath('music', 'clip.mp4')).toThrow(/Invalid music/);
+    expect(() => libraryPath('photos', 'a.jpg')).toThrow(/Unknown library/);
     expect(() => libraryPath('clips', 'bed.mp3')).toThrow(/Invalid clips/);
   });
 

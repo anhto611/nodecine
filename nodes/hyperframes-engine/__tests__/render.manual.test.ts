@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stat } from 'node:fs/promises';
-import { renderWithProducer } from './register.server';
+import { renderWithProducer } from '../register.server';
 import type { VideoIR } from '@/core/types/ir';
 import { SCENE_SOURCE, STYLE } from '@/core/__tests__/scene-fixtures';
 

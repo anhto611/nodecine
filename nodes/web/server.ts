@@ -1,9 +1,9 @@
 import { NodeError } from '@/core/errors';
 import { downloadImageAsset, getVetted, MEDIA_UA, readCapped, saveAsset } from '@/server/fetch-media';
 import { parsePageUrl, isPrivateHost } from '@/core/network/public-url';
-import { parsePageMeta } from './page-parse-meta';
-import { WebErrorCode } from '@/core/network/page-errors';
-import type { PageRead, ReadPageOptions } from '@/core/engine/services';
+import { parsePageMeta } from './parse-meta';
+import { WebErrorCode } from './errors';
+import type { PageRead, ReadPageOptions } from './types';
 
 /**
  * Reading a public page, on the server (ARCHITECTURE §5). Every address is vetted and rebuilt by
@@ -93,3 +93,5 @@ export async function readPageOnServer(rawUrl: string, opts: ReadPageOptions, si
     ...(shotProblem ? { shotProblem } : {}),
   };
 }
+
+export const webFetcherServices = { 'web-fetcher/read': readPageOnServer };
