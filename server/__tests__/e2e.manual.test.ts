@@ -5,7 +5,7 @@ import { Executor } from '@/core/engine/executor';
 import type { Graph } from '@/core/engine/graph';
 import { registerNodes } from '@/nodes';
 import type { ScenePlan, AudioScript } from '@/core/types/payloads';
-import type { VideoIR } from '@/core/types/ir';
+import { voiceTrackOf, type VideoIR } from '@/core/types/ir';
 import { mediaPath, fileNameFromMediaUrl } from '@/server/paths';
 import { createServerServices } from '@/server/services.server';
 import githubShowcase from '@/templates/github-showcase.json';
@@ -34,7 +34,7 @@ describe.skipIf(!enabled)('github-showcase, end to end', () => {
     if (plan) console.log('scenes:', plan.scenes.length, 'in', plan.style.name);
     expect(ok).toBe(true);
     const ir = ex.runtime('assembler').outputs.ir!.payload as VideoIR;
-    console.log(`video: ${(ir.meta.totalDurationInFrames / ir.meta.fps).toFixed(1)}s, ${ir.timeline.length} scenes, voice ${ir.audioTrack.durationSeconds}s`);
+    console.log(`video: ${(ir.meta.totalDurationInFrames / ir.meta.fps).toFixed(1)}s, ${ir.beats.length} scenes, voice ${((voiceTrackOf(ir)?.durationInFrames ?? 0) / ir.meta.fps).toFixed(2)}s`);
     const state = await ex.runNode('export');
     expect(state).toBe('success');
     const result = ex.runtime('export').result as { outputUrl: string; bytes: number };

@@ -2,6 +2,7 @@
 import { registerNodeType, registerRetiredNodeType, type AnyNodeDefinition, type RetiredNodeType } from '@/core/nodes/definition';
 import { registerDocMigrations } from '../migrations';
 import { timelineAssembler } from '../assembler/node';
+import { audioAnalysis } from '../audio-analysis/node';
 import { audioInput } from '../audio-input/node';
 import { audioMix } from '../audio-mix/node';
 import { sceneBreakdown } from '../breakdown/node';
@@ -11,6 +12,7 @@ import { githubFetcher } from '../github/node';
 import { hyperframesEngine } from '../hyperframes-engine/node';
 import { illustrator } from '../illustrator/node';
 import { inputTrigger } from '../input/node';
+import { layer } from '../layer/node';
 import { llmProvider } from '../llm-provider/node';
 import { mp4Export } from '../mp4-export/node';
 import { remotionEngine } from '../remotion-engine/node';
@@ -34,6 +36,7 @@ import { WebErrorCode } from '../web/errors';
 
 export const ALL_NODES: AnyNodeDefinition[] = [
   timelineAssembler,
+  audioAnalysis,
   audioInput,
   audioMix,
   sceneBreakdown,
@@ -43,6 +46,7 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   hyperframesEngine,
   illustrator,
   inputTrigger,
+  layer,
   llmProvider,
   mp4Export,
   remotionEngine,
@@ -56,7 +60,7 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   webFetcher,
 ] as unknown as AnyNodeDefinition[];
 
-const expectedIds = ["core/timeline-assembler","core/audio-input","core/audio-mix","core/scene-breakdown","core/caption-export","core/captions","core/github-fetcher","core/hyperframes-engine","core/illustrator","core/input-trigger","core/llm-provider","core/mp4-export","core/remotion-engine","core/screenwriter","core/static-script","core/stock-media","core/transcribe","core/tts-engine","core/tts-provider","core/video-output","core/web-fetcher"];
+const expectedIds = ["core/timeline-assembler","core/audio-analysis","core/audio-input","core/audio-mix","core/scene-breakdown","core/caption-export","core/captions","core/github-fetcher","core/hyperframes-engine","core/illustrator","core/input-trigger","core/layer","core/llm-provider","core/mp4-export","core/remotion-engine","core/screenwriter","core/static-script","core/stock-media","core/transcribe","core/tts-engine","core/tts-provider","core/video-output","core/web-fetcher"];
 ALL_NODES.forEach((definition, index) => {
   if (definition.type !== expectedIds[index]) throw new Error('node manifest id "' + expectedIds[index] + '" does not match definition type "' + definition.type + '"');
 });
@@ -101,6 +105,7 @@ export const NODE_FEATURES: Record<string, string[]> = {
   "core/timeline-assembler": [
     "history-ir"
   ],
+  "core/audio-analysis": [],
   "core/audio-input": [],
   "core/audio-mix": [],
   "core/scene-breakdown": [],
@@ -112,6 +117,7 @@ export const NODE_FEATURES: Record<string, string[]> = {
   "core/input-trigger": [
     "batch-source"
   ],
+  "core/layer": [],
   "core/llm-provider": [],
   "core/mp4-export": [
     "history-file-export"

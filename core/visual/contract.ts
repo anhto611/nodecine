@@ -20,4 +20,4 @@ export const EMPH_CLASS = 'nc-emph';
 /** The variables every style sheet defines on the scene root, and every scene may use. */
 export const STYLE_VARS = ['bg', 'fg', 'accent', 'muted', 'line', 'font-display', 'font-body'] as const;
 /** What a scene's script finds on `nodecine`. */
-export const SCENE_SCRIPT_API = ['timeline', 'root', 'index', 'duration', 'words', 'when', 'count'] as const;
+export const SCENE_SCRIPT_API = ['timeline', 'root', 'index', 'duration', 'words', 'when', 'count', 'beats', 'beat', 'audio'] as const;

@@ -3,6 +3,7 @@ import React from 'react';
 import { useStudio } from '@/store/useStudio';
 import { Icon } from '../icons';
 import { useT } from '../ui';
+import { voiceTrackOf } from '@/core/types/ir';
 
 /** In-session run history (USER_FLOWS §1.6): click an entry to load its IR into the player nodes without re-running. */
 export const HistoryPanel: React.FC = () => {
@@ -25,7 +26,7 @@ export const HistoryPanel: React.FC = () => {
                 <div style={{ fontSize: 'var(--fs-body)' }}>{t('history.run', { n: r.seq })}{on && <span className="nc-tag" style={{ marginLeft: 6, color: 'var(--accent-2)', borderColor: 'var(--accent-sunk)' }}>{t('history.viewing')}</span>}</div>
                 <div style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)', lineHeight: 1.6, marginTop: 3 }}>
                   <span style={{ color: 'var(--tx-2)' }}>{new Date(r.startedAt).toLocaleTimeString()}</span> · {r.engineId ?? '—'}<br />
-                  {r.ir.audioTrack.durationSeconds.toFixed(2)}s · {r.ir.meta.totalDurationInFrames}f · {(r.durationMs / 1000).toFixed(1)}s
+                  {(() => { const v = voiceTrackOf(r.ir); return v ? `${(v.durationInFrames / r.ir.meta.fps).toFixed(2)}s` : '—'; })()} · {r.ir.meta.totalDurationInFrames}f · {(r.durationMs / 1000).toFixed(1)}s
                   {r.exports.map((x) => <div key={x.outputUrl} style={{ color: 'var(--ok)' }}>{x.fileName} · {(x.bytes / 1024 / 1024).toFixed(1)} MB</div>)}
                 </div>
               </div>

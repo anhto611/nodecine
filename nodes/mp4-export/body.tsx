@@ -6,6 +6,7 @@ import { readCapability } from '@/core/nodes/definition';
 import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
+import { readIR } from '@/core/types/migrate-ir';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { FormBody } from '@/nodes/form-body';
 import { RESOLUTIONS, outputSizeFor } from '@/core/visual/frame';
@@ -19,7 +20,7 @@ export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
   const running = useStudio((s) => s.running);
   const runNode = useStudio((s) => s.runNode);
   const cancel = useStudio((s) => s.cancel);
-  const ir = useInputPayload<VideoIR>(nodeId, 'ir');
+  const ir: VideoIR | undefined = readIR(useInputPayload(nodeId, 'ir'));
   const engine = useInputPayload<EngineRef>(nodeId, 'engine');
   const canRender = !!ir && !!engine && readCapability(engine, 'render')?.status === 'ready' && !running;
   const result = rt?.result as { outputUrl?: string; bytes?: number; fileName?: string } | undefined;

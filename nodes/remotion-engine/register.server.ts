@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { readdir, stat } from 'node:fs/promises';
 import { registerEngine } from '@/core/adapters/registry';
+import { registerCodeRenderer } from '@/core/visual/renderers';
+import { registerRemotionTransitions } from './transitions';
 import type { ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
 import type { VideoIR } from '@/core/types/ir';
 import { contentHash } from '@/core/hash';
@@ -24,7 +26,8 @@ let bundleKey = '';
  */
 async function sourceKey(): Promise<string> {
   if (process.env.NODE_ENV === 'production') return 'production';
-  const roots = ['nodes/remotion-engine'];
+  // The bundle is built from this capsule and the core it imports; a core edit must rebuild it too.
+  const roots = ['nodes/remotion-engine', 'core'];
   const stamps: string[] = [];
   const walk = async (dir: string): Promise<void> => {
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
@@ -96,5 +99,8 @@ async function serverRender(ir: VideoIR, settings: ExportSettings, onProgress: (
 }
 
 export function registerRemotionServer(): void {
+  // `html-gsap` through the core's scene machinery (scene-runtime.ts), and the catalogue drawn as styles per frame.
+  registerCodeRenderer('html-gsap', REMOTION_ENGINE_ID, 'html-gsap-clip');
+  registerRemotionTransitions();
   registerEngine(REMOTION_ENGINE_ID, (settings) => createRemotionAdapter(settings, { render: serverRender }));
 }

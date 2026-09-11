@@ -28,6 +28,7 @@ export const AudioMixBody: React.FC<BodyProps> = ({ nodeId }) => {
         <div className="nc-hint">{loading ? t('node.audioLoading') : files.length ? t('node.musicHint') : t('node.musicEmpty')}</div>
       )}
       {!loading && !files.length && folder && <div className="nc-hint one-line" title={folder}>{folder}</div>}
+      {p.track ? <div className="nc-hint">{t('node.musicOutputs')}</div> : null}
     </>
   );
 };

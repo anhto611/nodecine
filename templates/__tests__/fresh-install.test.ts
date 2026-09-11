@@ -18,6 +18,7 @@ beforeEach(() => {
 describe('a fresh install', () => {
   it('offers these node types in the Library, and no fewer', () => {
     expect(listNodeTypes().map((d) => d.type).sort()).toEqual([
+      'core/audio-analysis',
       'core/audio-input',
       'core/audio-mix',
       'core/caption-export',
@@ -26,6 +27,7 @@ describe('a fresh install', () => {
       'core/hyperframes-engine',
       'core/illustrator',
       'core/input-trigger',
+      'core/layer',
       'core/llm-provider',
       'core/mp4-export',
       'core/remotion-engine',

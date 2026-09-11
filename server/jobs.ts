@@ -9,6 +9,7 @@ import { LogBuffer, type LogEntry } from '@/core/engine/log';
 import type { NodeRuntime } from '@/core/engine/state';
 import type { NodeServices } from '@/core/engine/services';
 import { createServerServices } from './services.server';
+import { migrateIR } from '@/core/types/migrate-ir';
 import { ensureServerRegistrations } from './register';
 import { NODE_FEATURES } from '@/nodes';
 
@@ -128,6 +129,12 @@ export class JobHub {
           job.finishedAt = job.finishedAt ?? Date.now();
           job.error = { code: 'RUN_CANCELLED', message: 'the server restarted while this job was in flight' };
           this.write(job);
+        }
+        // A run recorded by an older build carries its film in that build's shape. Brought forward
+        // here, once, as it comes off disk; a film no version of this app can read is dropped from
+        // the history rather than left to break the panel that lists it.
+        if (job.result) {
+          try { job.result = { ...job.result, ir: migrateIR(job.result.ir) }; } catch { delete job.result; }
         }
         this.jobs.set(job.id, job);
         if (job.kind === 'run' && job.result) {

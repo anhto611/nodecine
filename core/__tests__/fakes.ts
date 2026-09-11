@@ -1,3 +1,6 @@
+import { REQUIRED_TRANSITIONS } from '../types/ir';
+import { _resetCodeRenderers, registerCodeRenderer } from '../visual/renderers';
+import { _resetTransitions, registerTransition } from '../visual/transitions';
 import { contentHash } from '../hash';
 import type { NodeServices } from '../engine/services';
 import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover } from '../types/payloads';
@@ -91,6 +94,14 @@ export function makeFakeServices(overrides: Partial<{
         const [voiceoverUrl, opts] = args;
         return { audioUrl: `/api/media/${contentHash({ voiceoverUrl, opts })}.mp3`, durationSeconds: 63.18 } as T;
       }
+      if (serviceId === 'audio-analysis/analyze') {
+        const [url, fps] = args;
+        return { analysisUrl: `/api/media/${contentHash({ analysis: url, fps })}.json`, frames: 900 } as T;
+      }
+      if (serviceId === 'audio-mix/import') {
+        const [fileName] = args;
+        return { audioUrl: `/api/media/${contentHash({ music: fileName })}.mp3`, durationSeconds: 184.2 } as T;
+      }
       if (serviceId === 'audio-input/import') {
         const [fileName] = args;
         return { audioUrl: `/api/media/${contentHash({ fileName })}.mp3`, durationSeconds: 42.5 } as T;
@@ -136,4 +147,18 @@ export function makeFakeServices(overrides: Partial<{
     },
   };
   return services;
+}
+
+/**
+ * What a test's stand-in engine promises: the one scene format and the four required transitions,
+ * which is what the output nodes ask before they let a film through.
+ */
+export function registerFakeEngineSupport(engineId = 'hyperframes'): void {
+  registerCodeRenderer('html-gsap', engineId, () => null);
+  for (const name of REQUIRED_TRANSITIONS) registerTransition(name, engineId, name);
+}
+
+export function resetEngineSupport(): void {
+  _resetCodeRenderers();
+  _resetTransitions();
 }

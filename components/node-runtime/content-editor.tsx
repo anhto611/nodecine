@@ -63,7 +63,7 @@ export const ImagePick: React.FC<{ url?: string; onPick: (url: string | undefine
  * The scene's clip: chosen by name from this machine's clips folder, then taken into the asset store
  * so the scene carries a hash the server can validate — never a path from the user's disk.
  */
-const ClipPick: React.FC<{ url?: string; onPick: (url: string | undefined) => void }> = ({ url, onPick }) => {
+export const ClipPick: React.FC<{ url?: string; onPick: (url: string | undefined) => void }> = ({ url, onPick }) => {
   const t = useT();
   const { files, folder, loading } = useLibrary('clips');
   const [busy, setBusy] = React.useState(false);

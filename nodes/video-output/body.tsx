@@ -2,12 +2,13 @@
 import React from 'react';
 import { getEngineFactory } from '@/core/adapters/registry';
 import type { PlayerHandle } from '@/core/adapters/types';
-import type { VideoIR } from '@/core/types/ir';
+import { padTailFramesOf, voiceTrackOf, type VideoIR } from '@/core/types/ir';
 import type { EngineRef } from '@/core/types/payloads';
 import { readCapability } from '@/core/nodes/definition';
 import { useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
+import { readIR } from '@/core/types/migrate-ir';
 import type { BodyProps } from '@/nodes/kit';
 import { useFrame } from '@/nodes/kit';
 
@@ -19,7 +20,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const videoFrame = useFrame();
   const rt = useRuntime(nodeId);
-  const wiredIr = useInputPayload<VideoIR>(nodeId, 'ir');
+  const wiredIr: VideoIR | undefined = readIR(useInputPayload(nodeId, 'ir'));
   const engine = useInputPayload<EngineRef>(nodeId, 'engine');
   const viewingRun = useStudio((s) => s.viewingRun);
   const history = useStudio((s) => s.history);
@@ -34,7 +35,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
   const ref = React.useRef<HTMLDivElement>(null);
   const handle = React.useRef<PlayerHandle | null>(null);
   const [frame, setFrame] = React.useState(0);
-  const irKey = ir ? `${engine?.engineId}:${ir.meta.totalDurationInFrames}:${ir.audioTrack.voiceoverUrl}:${ir.timeline.map((s) => s.id + s.durationInFrames).join(',')}` : '';
+  const irKey = ir ? `${engine?.engineId}:${ir.meta.totalDurationInFrames}:${voiceTrackOf(ir)?.url ?? ''}:${ir.beats.map((b) => b.clipId + b.durationInFrames).join(',')}` : '';
 
   React.useEffect(() => {
     if (!showPlayer || !ref.current || !ir || !engine) return;
@@ -58,7 +59,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
 
   const total = ir?.meta.totalDurationInFrames ?? 0;
   const fps = ir?.meta.fps ?? 30;
-  const audioEndFrame = ir ? Math.ceil(ir.audioTrack.durationSeconds * fps) : 0;
+  const voice = ir ? voiceTrackOf(ir) : undefined;
 
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -93,16 +94,16 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
         <>
           {/* One chip per scene; ten of them do not fit one row, so they wrap instead of spilling past the card. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 3 }}>
-            {ir.timeline.map((s, i) => {
+            {ir.beats.map((s, i) => {
               const active = frame >= s.startFrame && frame < s.startFrame + s.durationInFrames;
               return (
                 <button
-                  key={s.id}
+                  key={s.clipId}
                   className={`nc-chip ${active ? 'on' : ''}`}
                   style={{ minWidth: 0, textAlign: 'left', padding: '4px 6px', lineHeight: 1.4 }}
                   // Land a few frames in: scenes fade in from black, so the exact first frame previews as empty.
                   onClick={() => handle.current?.seekTo(s.startFrame + Math.min(12, Math.max(0, s.durationInFrames - 1)))}
-                  title={s.id}
+                  title={s.clipId}
                 >
                   <div style={{ color: active ? 'var(--accent-2)' : 'var(--tx)', textTransform: 'uppercase', letterSpacing: '.05em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('node.scene')} {i + 1}</div>
                   <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>{s.startFrame}–{s.startFrame + s.durationInFrames}</div>
@@ -111,7 +112,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
             })}
           </div>
           <div className="nc-kv" style={{ borderTop: '1px solid var(--line)', paddingTop: 5 }}>
-            <span className="nc-k">{total} {t('node.frames')} · {fps}fps · {t('node.padTail')} {ir.audioTrack.padTailFrames}f{audioEndFrame < total ? '' : ''}</span>
+            <span className="nc-k">{total} {t('node.frames')} · {fps}fps · {voice ? `${t('node.padTail')} ${padTailFramesOf(ir)}f` : t('node.silent')}</span>
             <span className="nc-k">{ir.meta.width}×{ir.meta.height}</span>
           </div>
         </>

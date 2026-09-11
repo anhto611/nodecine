@@ -1,3 +1,4 @@
+import { secondsToFrames } from '@/core/types/ir-v3';
 /**
  * Weight-based frame allocation (CORE_CONTRACTS §5.4).
  * Deterministic: every scene except the last gets floor(total × w / Σw); the last takes the remainder.
@@ -10,7 +11,7 @@ export function computeTotalFrames(
 ): { total: number; audioFrames: number; padTailFrames: number } {
   if (!(durationSeconds > 0)) throw new Error('durationSeconds must be positive');
   if (!Number.isInteger(fps) || fps <= 0) throw new Error('fps must be a positive integer');
-  const audioFrames = Math.ceil(durationSeconds * fps);
+  const audioFrames = secondsToFrames(durationSeconds, fps);
   const total = Math.max(audioFrames, minTotalFrames);
   return { total, audioFrames, padTailFrames: total - audioFrames };
 }

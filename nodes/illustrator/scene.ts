@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SCENE_SOURCE_MAX, isAssetUrl, type LLMRef, type SceneScript, type Style } from '@/core/types/payloads';
+import { SCENE_SOURCE_MAX, StageSchema, isAssetUrl, type LLMRef, type SceneScript, type Stage, type Style } from '@/core/types/payloads';
 import type { NodeServices } from '@/core/engine/services';
 import type { FrameSize } from '@/core/visual/frame';
 import { SCENE_RULES, codeRules, lintSceneSource } from './rules';
@@ -13,7 +13,8 @@ import { IllustratorErrorCode } from './errors';
  * more with the reason when it fails, then used for this run and kept nowhere.
  */
 
-const DrawnSceneSchema = z.object({ source: z.string().min(1).max(SCENE_SOURCE_MAX) }).strip();
+/** The drawing, and — when the guide names a thing that spans the film — where this scene wants it. */
+const DrawnSceneSchema = z.object({ source: z.string().min(1).max(SCENE_SOURCE_MAX), stage: StageSchema.optional() }).strip();
 
 export interface SceneBrief {
   style: Style;
@@ -94,12 +95,14 @@ export function buildScenePrompt(b: SceneBrief, feedback?: string): string {
     ...SCENE_RULES.map((r) => `- ${r}`),
     ...(feedback ? [``, `Your previous attempt was rejected: ${feedback}. Fix that.`] : []),
     ``,
-    `Return ONLY a JSON object, no prose, no markdown fence: { "source": "<the fragment>" }`,
+    `If the guide names a thing that spans the whole film and is drawn by a layer, not by the scenes (a device, a mascot, a caption bar), say where this scene wants it under "stage" — a small map such as { "device": { "x": 40, "y": 400, "scale": 1, "rot": -6 } } in frame px — and leave room for it in the drawing. Otherwise omit "stage".`,
+    ``,
+    `Return ONLY a JSON object, no prose, no markdown fence: { "source": "<the fragment>", "stage": { … } }`,
   ].join('\n');
 }
 
 /** Ask for the scene, check it, ask once more with the reason if it fails, else throw. */
-export async function drawScene(services: Pick<NodeServices, 'complete'>, ref: LLMRef, b: SceneBrief, signal: AbortSignal): Promise<{ source: string; attempts: number; warnings: string[] }> {
+export async function drawScene(services: Pick<NodeServices, 'complete'>, ref: LLMRef, b: SceneBrief, signal: AbortSignal): Promise<{ source: string; stage?: Stage; attempts: number; warnings: string[] }> {
   const facts = [...new Set(Object.values(b.scene.factBindings ?? {}))];
   const assets = sceneAssets(b.scene);
   let feedback: string | undefined;
@@ -108,7 +111,7 @@ export async function drawScene(services: Pick<NodeServices, 'complete'>, ref: L
     // A fenced answer is still an answer.
     const source = resolveAssets(a.source.replace(/^```(?:html)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim(), assets);
     const lint = lintSceneSource(source, { facts, assets });
-    if (lint.hard.length === 0) return { source, attempts: attempt, warnings: lint.soft };
+    if (lint.hard.length === 0) return { source, ...(a.stage && Object.keys(a.stage).length ? { stage: a.stage } : {}), attempts: attempt, warnings: lint.soft };
     feedback = lint.hard.join('; ');
   }
   throw new NodeError(IllustratorErrorCode.SCENE_DRAW_FAILED, `the model could not draw scene ${b.index + 1}: ${feedback}`, true).withFix('simplify that scene, or try again');

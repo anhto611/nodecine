@@ -75,3 +75,29 @@ describe('the ffmpeg recipe', () => {
     expect(f).toContain('afade=t=out:st=0.750:d=0.75');
   });
 });
+
+describe('the music as a track of its own', () => {
+  it('goes out beside the mix, at the bed\'s level, looping, faded, ducking to where the voice would push it', async () => {
+    const { c, services } = ctx({ track: 'calm.mp3', volume: 0.2, duck: 0.5 });
+    const out = await audioMix.run(c);
+    expect(services.calls.map((x) => x.name)).toEqual(['audio-mix/import', 'audio-mix/mix']);
+    expect(out.track).toEqual({ url: expect.stringMatching(/^\/api\/media\/[a-f0-9]{16}\.mp3$/), durationSeconds: 184.2, role: 'music', gain: 0.2, startSeconds: 0, loop: true, fadeInSeconds: 1, fadeOutSeconds: 2, duckTo: 0.1 });
+    expect((out.voiceover as Voiceover).durationSeconds).toBe(63.18);
+  });
+
+  it('is the only output when no voice is wired in, and ducks nowhere when duck is off', async () => {
+    const { c, services } = ctx({ track: 'calm.mp3', duck: 0 });
+    c.inputs = {};
+    const out = await audioMix.run(c);
+    expect(out.voiceover).toBeUndefined();
+    expect(out.track).toMatchObject({ role: 'music', gain: 0.16 });
+    expect((out.track as { duckTo?: number }).duckTo).toBeUndefined();
+    expect(services.calls.map((x) => x.name)).toEqual(['audio-mix/import']);
+  });
+
+  it('emits nothing at all with no track and no voice', async () => {
+    const { c } = ctx();
+    c.inputs = {};
+    expect(await audioMix.run(c)).toEqual({});
+  });
+});

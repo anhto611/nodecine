@@ -1,12 +1,13 @@
 'use client';
 import React from 'react';
-import type { SceneContent } from '@/core/types/payloads';
+import type { SceneContent, Stage, Transition } from '@/core/types/payloads';
+import { listTransitions } from '@/core/visual/transitions';
 import { Btn, Dialog, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useNode, useStudio } from '@/store/useStudio';
 import { ContentEditor } from '@/components/node-runtime/content-editor';
 
-type SceneRow = { role: string; weight: number; narration: string; content: SceneContent };
+type SceneRow = { role: string; weight: number; narration: string; content: SceneContent; stage?: Stage; transitionAfter?: Transition };
 
 /**
  * One scene of a Static Script, with room to edit it (USER_FLOWS §1.9): the narration on the left,
@@ -69,8 +70,51 @@ export const SceneEditorDialog: React.FC = () => {
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, padding: 12, overflowY: 'auto' }}>
             <div className="nc-k">{t('script.onScreen')}</div>
             <ContentEditor content={scene.content ?? {}} onChange={(content) => update({ content })} />
+            <div className="nc-k" style={{ marginTop: 8 }}>{t('script.transitionAfter')}</div>
+            <TransitionAfter value={scene.transitionAfter} last={index >= scenes.length - 1} onChange={(transitionAfter) => update({ transitionAfter })} />
+            <div className="nc-k" style={{ marginTop: 8 }}>{t('script.stage')}</div>
+            <StageField value={scene.stage} onChange={(stage) => update({ stage })} />
           </div>
         </div>
     </Dialog>
+  );
+};
+
+/** How this scene gives way to the next: the film's default, or a name from the registry with its length. Meaningless on the last scene. */
+const TransitionAfter: React.FC<{ value?: Transition; last: boolean; onChange: (v: Transition | undefined) => void }> = ({ value, last, onChange }) => {
+  const t = useT();
+  const names = listTransitions();
+  const options = value && !names.includes(value.type) ? [value.type, ...names] : names;
+  return (
+    <span style={{ display: 'flex', gap: 6, alignItems: 'center', opacity: last ? 0.5 : 1 }}>
+      <select className={`nc-select ${stopFlow}`} value={value?.type ?? ''} disabled={last} onChange={(e) => onChange(e.target.value ? { type: e.target.value, seconds: value?.seconds ?? 0.4 } : undefined)}>
+        <option value="">{t('script.transitionDefault')}</option>
+        {options.map((n) => <option key={n} value={n}>{n}</option>)}
+      </select>
+      {value ? <input className={`nc-input ${stopFlow}`} type="number" min={0.1} max={2} step={0.1} style={{ width: 56 }} value={value.seconds} onChange={(e) => onChange({ type: value.type, seconds: Math.min(2, Math.max(0.1, Number(e.target.value) || 0.4)) })} /> : null}
+      {value ? <span className="nc-k">s</span> : null}
+    </span>
+  );
+};
+
+/** The free map a spanning layer reads (docs/IR_V3.md §5.2), typed as JSON; saved only while it parses to an object. */
+const StageField: React.FC<{ value?: Stage; onChange: (v: Stage | undefined) => void }> = ({ value, onChange }) => {
+  const t = useT();
+  const [draft, setDraft] = React.useState<string | null>(null);
+  const shown = draft ?? (value ? JSON.stringify(value) : '');
+  let invalid = false;
+  if (draft !== null && draft.trim()) {
+    try { const parsed: unknown = JSON.parse(draft); invalid = !parsed || typeof parsed !== 'object' || Array.isArray(parsed); } catch { invalid = true; }
+  }
+  const commit = (text: string) => {
+    setDraft(text);
+    if (!text.trim()) { onChange(undefined); return; }
+    try { const parsed: unknown = JSON.parse(text); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) onChange(parsed as Stage); } catch { /* kept as typed until it parses */ }
+  };
+  return (
+    <>
+      <textarea className={`nc-textarea ${stopFlow}`} style={{ minHeight: 44, fontSize: 'var(--fs-hint)', fontFamily: 'var(--font-mono, monospace)', borderColor: invalid ? 'var(--err)' : undefined }} placeholder="{ }" value={shown} onChange={(e) => commit(e.target.value)} onBlur={() => { if (!invalid) setDraft(null); }} />
+      <div className="nc-hint" style={{ color: invalid ? 'var(--err)' : undefined }}>{invalid ? t('script.stageInvalid') : t('script.stageHint')}</div>
+    </>
   );
 };

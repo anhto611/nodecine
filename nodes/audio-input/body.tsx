@@ -25,6 +25,7 @@ export const AudioInputBody: React.FC<BodyProps> = ({ nodeId }) => {
         </>
       )}
       <div className="nc-hint">{t('node.audioInputHint')}</div>
+      <div className="nc-hint">{t('node.audioInputTrack')}</div>
     </>
   );
 };

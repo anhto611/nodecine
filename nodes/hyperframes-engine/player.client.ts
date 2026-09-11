@@ -2,6 +2,7 @@
 import type { VideoIR } from '@/core/types/ir';
 import type { PlayerHandle } from '@/core/adapters/types';
 import { buildHyperframesDocument } from './document';
+import { analysisOf } from './analysis';
 import type { MountPlayer } from './adapter';
 
 /**
@@ -82,10 +83,10 @@ export const mountHyperframesPlayer: MountPlayer = (element: HTMLElement, ir: Vi
     raf = requestAnimationFrame(tick);
   };
 
-  void Promise.all([vendorSources(), defineElement()])
-    .then(([sources]) => {
+  void Promise.all([vendorSources(), defineElement(), analysisOf(ir, (url) => fetch(url).then((r) => (r.ok ? r.json() : null)))])
+    .then(([sources, , analysis]) => {
       if (disposed) return;
-      const html = buildHyperframesDocument(ir, { ...sources, voiceoverSrc: ir.audioTrack.voiceoverUrl, fontBase: '/fonts' });
+      const html = buildHyperframesDocument(ir, { ...sources, fontBase: '/fonts', analysis });
       const el = document.createElement('hyperframes-player') as HyperframesPlayerElement;
       el.setAttribute('width', String(ir.meta.width));
       el.setAttribute('height', String(ir.meta.height));

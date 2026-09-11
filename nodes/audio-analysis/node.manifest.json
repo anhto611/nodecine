@@ -1,0 +1,1 @@
+{"id": "core/audio-analysis", "definition": "audioAnalysis", "body": "AudioAnalysisBody", "icon": "wave", "group": "audio", "translations": "audioAnalysisTranslations", "services": "audioAnalysisServices"}

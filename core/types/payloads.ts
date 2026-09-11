@@ -99,8 +99,12 @@ export const StyleSchema = z.object({
 });
 export type Style = z.infer<typeof StyleSchema>;
 
-/** How one scene gives way to the next (CORE_CONTRACTS §2.6): one kind for the whole film. */
-export const TransitionSchema = z.object({ type: z.enum(['cut', 'fade', 'slide', 'zoom']), seconds: z.number().min(0.1).max(2) });
+/**
+ * How one scene gives way to the next (CORE_CONTRACTS §2.6): a name in the transition registry, which
+ * the engine wired in must have. `cut`, `fade`, `slide` and `zoom` every engine has; the rest is the
+ * engine's own catalogue, and the output node blocks with ENGINE_TRANSITION_UNSUPPORTED otherwise.
+ */
+export const TransitionSchema = z.object({ type: z.string().min(1).max(60), seconds: z.number().min(0.1).max(2) });
 export type Transition = z.infer<typeof TransitionSchema>;
 
 /**
@@ -109,6 +113,14 @@ export type Transition = z.infer<typeof TransitionSchema>;
  */
 export const VarsSchema = z.record(z.string().regex(IDENT), z.union([z.string().max(200), AssetUrlSchema]));
 
+/**
+ * What a scene tells the layers that span the film (docs/IR_V3.md §5.2): a free map, written by
+ * whoever writes the scene and read by whoever draws the layer — `{ device: { x, y, scale, rot } }`
+ * for a phone that glides between scenes. The core carries it and never reads it.
+ */
+export const StageSchema = z.record(z.string().regex(IDENT), z.unknown());
+export type Stage = z.infer<typeof StageSchema>;
+
 /** One scene of a plan (CORE_CONTRACTS §2.3): its own drawing, complete. */
 export const SceneSpecSchema = z.object({
   weight: z.number().positive(),
@@ -116,6 +128,12 @@ export const SceneSpecSchema = z.object({
   source: z.string().min(1).max(SCENE_SOURCE_MAX),
   /** fact key → element: `data-fact="<key>"` in the source takes `facts[key]` at assembly; facts always win. */
   factBindings: z.record(z.string(), z.string()).optional(),
+  /** Where this scene wants the spanning layers; becomes the beat's `stage`. */
+  stage: StageSchema.optional(),
+  /** The scene-code format of `source`; `html-gsap` when absent (2.8). */
+  format: z.string().min(1).max(40).optional(),
+  /** How this scene gives way to the next, when not the film's default; ignored on the last scene. */
+  transitionAfter: TransitionSchema.optional(),
 });
 export type SceneSpec = z.infer<typeof SceneSpecSchema>;
 
@@ -200,6 +218,10 @@ export const SceneScriptSchema = z.object({
         content: SceneContentSchema,
         /** content key → fact key: filled from verified data at assembly, never written by the model. */
         factBindings: z.record(z.enum(CONTENT_KEYS), z.string()).optional(),
+        /** Where this scene wants the spanning layers (docs/IR_V3.md §5.2); copied to the plan and then to the beat. */
+        stage: StageSchema.optional(),
+        /** How this scene gives way to the next, when not the film's default; copied to the plan. */
+        transitionAfter: TransitionSchema.optional(),
       }),
     )
     .min(1),
@@ -283,6 +305,69 @@ export const TTSRefSchema = z.object({
 });
 export type TTSRef = z.infer<typeof TTSRefSchema>;
 
+/**
+ * A layer of the film (CORE_CONTRACTS §2.12, docs/IR_V3.md §10 step 4): one thing that runs beside
+ * the scenes on a track of its own, under them or over them. A file — gameplay looping under a
+ * story, a screen recording the scenes annotate, a logo held in a corner — or a drawing that spans
+ * the film, reading `nodecine.beats` to move with the cut. The Layer node emits one; the assembler
+ * takes any number and makes a track of each.
+ */
+export const LayerSpecSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('media'),
+    /** A file this machine holds (§2.7): a clip taken from the clips folder or a picture uploaded. */
+    url: AssetUrlSchema,
+    placement: z.enum(['under', 'over']),
+    /** Seconds into the film the layer appears; the whole film when 0 and `durationSeconds` is absent. */
+    startSeconds: z.number().nonnegative(),
+    durationSeconds: z.number().positive().optional(),
+    /** Seconds into the file to start from. */
+    offsetSeconds: z.number().nonnegative(),
+    fit: z.enum(['cover', 'contain']),
+    /** Start over when the file runs out; a short gameplay loop under a long story. */
+    loop: z.boolean(),
+    /** The file's own sound, 0 for a silent picture under the voice. */
+    gain: z.number().min(0).max(1),
+  }),
+  z.object({
+    kind: z.literal('code'),
+    /** An HTML fragment like a scene's (§2.8); its script sees `nodecine.beats`. */
+    source: z.string().min(1).max(SCENE_SOURCE_MAX),
+    placement: z.enum(['under', 'over']),
+    startSeconds: z.number().nonnegative(),
+    durationSeconds: z.number().positive().optional(),
+  }),
+]);
+export type LayerSpec = z.infer<typeof LayerSpecSchema>;
+
+/**
+ * A sound beside the voice (CORE_CONTRACTS §2.15, docs/IR_V3.md §5.3): music or ambience on an audio
+ * track of its own. The Music Bed and Audio Input emit one; the assembler takes any number, clamps
+ * each to the film, and names the voice as what it ducks under. Fades and ducking are data here and
+ * behaviour in the engines, or in the Music Bed's pre-mixed path, whichever the graph uses.
+ */
+export const AudioTrackSpecSchema = z.object({
+  url: MediaUrlSchema,
+  /** The file's own length, measured; what the film is when nothing else sets its clock. */
+  durationSeconds: z.number().positive(),
+  role: z.enum(['music', 'ambient']),
+  gain: z.number().min(0).max(1),
+  /** Seconds into the film the sound starts; how long it plays, the rest of the film when absent. */
+  startSeconds: z.number().nonnegative(),
+  playSeconds: z.number().positive().optional(),
+  /** Seconds into the file to start from. */
+  offsetSeconds: z.number().nonnegative().optional(),
+  /** Start over when the file runs out. */
+  loop: z.boolean().optional(),
+  fadeInSeconds: z.number().nonnegative().optional(),
+  fadeOutSeconds: z.number().nonnegative().optional(),
+  /** The level to drop to while the voice speaks; nothing when the track keeps its level. */
+  duckTo: z.number().min(0).max(1).optional(),
+  /** Per-frame loudness and bands, written by the Audio Analysis node; becomes the IR track's `analysisUrl`. */
+  analysisUrl: MediaUrlSchema.optional(),
+});
+export type AudioTrackSpec = z.infer<typeof AudioTrackSpecSchema>;
+
 export const PAYLOAD_SCHEMAS = {
   SourceRef: SourceRefSchema,
   FactSheet: FactSheetSchema,
@@ -294,4 +379,6 @@ export const PAYLOAD_SCHEMAS = {
   TTSRef: TTSRefSchema,
   CaptionTrack: CaptionTrackSchema,
   SceneScript: SceneScriptSchema,
+  LayerSpec: LayerSpecSchema,
+  AudioTrackSpec: AudioTrackSpecSchema,
 } as const;

@@ -31,3 +31,12 @@ describe('the Audio Input node', () => {
     expect(audioInput.validate!({ file: 'a.mp3', language: 'en' })).toEqual([]);
   });
 });
+
+describe('the recording as an ambient track', () => {
+  it('goes out on the track port too, the same file at full level, one shot from the start of the film', async () => {
+    const { c } = ctx('rain.wav');
+    const out = await audioInput.run(c);
+    const vo = out.voiceover as Voiceover;
+    expect(out.track).toEqual({ url: vo.audioUrl, durationSeconds: 42.5, role: 'ambient', gain: 1, startSeconds: 0 });
+  });
+});

@@ -25,19 +25,20 @@ function sampleIR(): VideoIR {
   const weights = [1, 2, 1];
   const weightSum = weights.reduce((n, w) => n + w, 0);
   let cursor = 0;
-  const timeline = SCENES.map((source, i) => {
+  const clips = SCENES.map((source, i) => {
     const frames = i === SCENES.length - 1 ? total - cursor : Math.round((total * weights[i]!) / weightSum);
-    const entry = { id: `scene-${i + 1}`, startFrame: cursor, durationInFrames: frames, source };
+    const clip = { id: `scene-${i + 1}`, kind: 'code' as const, startFrame: cursor, durationInFrames: frames, format: 'html-gsap', source };
     cursor += frames;
-    return entry;
+    return clip;
   });
   return {
-    irVersion: 2,
+    irVersion: 3,
     meta: { title: 'sample', language: 'en', fps, width: 1080, height: 1920, totalDurationInFrames: total },
     style: STYLE,
-    transition: { type: 'fade', seconds: 0.4 },
-    audioTrack: { voiceoverUrl: '/api/media/0123456789abcdef0123456789abcdef.mp3', durationSeconds: duration, padTailFrames: 0 },
-    timeline,
+    tracks: [{ id: 'scenes', clips }],
+    beats: clips.map((c, index) => ({ index, startFrame: c.startFrame, durationInFrames: c.durationInFrames, clipId: c.id })),
+    audio: [{ id: 'voice', role: 'voice', url: '/api/media/0123456789abcdef0123456789abcdef.mp3', startFrame: 0, durationInFrames: total, gain: 1 }],
+    transitions: { default: { name: 'fade', seconds: 0.4 } },
   };
 }
 
@@ -77,8 +78,9 @@ describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
       {
         ...ir,
         meta: { ...ir.meta, totalDurationInFrames: 2 * fps },
-        audioTrack: { ...ir.audioTrack, durationSeconds: 2 },
-        timeline: [{ id: 'scene-1', startFrame: 0, durationInFrames: 2 * fps, source: brollScene(process.env.NODECINE_MANUAL_CLIP!) }],
+        audio: [{ ...ir.audio[0]!, durationInFrames: 2 * fps }],
+        tracks: [{ id: 'scenes', clips: [{ id: 'scene-1', kind: 'code', startFrame: 0, durationInFrames: 2 * fps, format: 'html-gsap', source: brollScene(process.env.NODECINE_MANUAL_CLIP!) }] }],
+        beats: [{ index: 0, startFrame: 0, durationInFrames: 2 * fps, clipId: 'scene-1' }],
       },
       { codec: 'h264', quality: 'medium', fileName: 'broll.mp4' },
       () => {},

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
 import { exec, ExecError } from '@/server/exec';
-import { ffmpegBin, measureDurationSeconds } from '@/server/audio';
+import { ffmpegBin, importLibraryAudio, measureDurationSeconds } from '@/server/audio';
 import { contentHash } from '@/core/hash';
 import { libraryPath, ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
 import type { MixAudioOptions, MixResult } from './types';
@@ -56,4 +56,7 @@ export function mixFilter(seconds: number, opts: MixAudioOptions): string {
 
 const exists = (p: string) => stat(p).then(() => true, () => false);
 
-export const audioMixServices = { 'audio-mix/mix': mixAudioOnServer };
+/** The bed as a file of its own, for the track output. */
+export const importMusicOnServer = (fileName: string, signal: AbortSignal) => importLibraryAudio('music', fileName, signal);
+
+export const audioMixServices = { 'audio-mix/mix': mixAudioOnServer, 'audio-mix/import': importMusicOnServer };

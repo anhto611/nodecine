@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { z, type ZodTypeAny } from 'zod';
 import { claudeCodeSettings } from './settings';
 import { registerLLMProvider } from '@/core/providers/registry';
-import { ErrorCode } from '@/core/errors';
+import { ErrorCode, NodeError } from '@/core/errors';
 import { extractJson } from '@/core/ai/structured-completion';
 import type { LLMProvider } from '@/core/providers/types';
 import type { Capability, LLMRef } from '@/core/types/payloads';
@@ -17,6 +17,16 @@ import { exec, findBinary } from '@/server/exec';
  */
 
 export const CLAUDE_CODE_ID = 'claude-code';
+
+export const CLAUDE_TIMEOUT_ENV = 'NODECINE_CLAUDE_TIMEOUT_MS';
+
+/**
+ * How long one call may take. Two minutes was the first guess and it was wrong: writing a script
+ * fits inside it, but drawing a whole scene as HTML does not, and the fourth scene of a five-scene
+ * film was being killed mid-answer. Ten minutes is long enough for the longest thing this app asks
+ * for, and the run is cancellable anyway, so a person is never actually stuck waiting it out.
+ */
+export const CLAUDE_TIMEOUT_MS = Number(process.env[CLAUDE_TIMEOUT_ENV]) || 600_000;
 const ready: Capability = { status: 'ready' };
 
 async function claudeBin(): Promise<string | null> {
@@ -72,8 +82,14 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
         const args = ['-p', '--output-format', 'json', '--max-turns', '1', '--tools', ''];
         const model = settings.model as string | undefined;
         if (model) args.push('--model', model);
-        const r = await exec(bin, { args, stdin: prompt, cwd, timeoutMs: 120_000, signal, maxOutput: 256 * 1024 });
-        if (r.code !== 0) throw Object.assign(new Error(`claude exited ${r.code}: ${r.stderr.trim()}`), { code: 'LLM_UPSTREAM' });
+        const r = await exec(bin, { args, stdin: prompt, cwd, timeoutMs: CLAUDE_TIMEOUT_MS, signal, maxOutput: 256 * 1024 });
+        if (r.timedOut) {
+          // A killed process exits with a null code and an empty stderr, so without this the failure
+          // read as "claude exited null:" — true, useless, and impossible to act on.
+          throw new NodeError('LLM_UPSTREAM', `claude did not answer within ${Math.round(CLAUDE_TIMEOUT_MS / 1000)}s`, true)
+            .withFix(`give it longer with ${CLAUDE_TIMEOUT_ENV}, or ask for less in one go`);
+        }
+        if (r.code !== 0) throw new NodeError('LLM_UPSTREAM', `claude exited ${r.code}: ${r.stderr.trim() || 'no output'}`, true);
         const envelope = JSON.parse(r.stdout) as { result?: string; is_error?: boolean };
         if (envelope.is_error || typeof envelope.result !== 'string') throw Object.assign(new Error('claude returned an error envelope'), { code: 'LLM_UPSTREAM' });
         const text = extractJson(envelope.result);

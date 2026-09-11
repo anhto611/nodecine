@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ErrorCode } from '@/core/errors';
 import { Mp4ExportErrorCode } from './errors';
 import { safeFileName } from '@/core/file-name';
-import { unsupportedSceneBlock } from '@/core/visual/renderers';
+import { unsupportedFilmBlock } from '@/core/visual/transitions';
 import type { EngineRef } from '@/core/types/payloads';
 import type { VideoIR } from '@/core/types/ir';
 import type { NodeDefinition } from '@/core/nodes/definition';
@@ -13,7 +13,7 @@ export const mp4Export: NodeDefinition<typeof Params> = {
   type: 'core/mp4-export', version: 1, kind: 'ondemand', defaultBypassed: true,
   inputs: [{ name: 'ir', type: 'VideoIR' }, { name: 'engine', type: 'EngineRef', requires: ['render'] }], outputs: [],
   paramsSchema: Params, defaultParams: { codec: 'h264', quality: 'high', fileName: 'nodecine.mp4', resolution: '1080p' },
-  preflight: (inputs) => unsupportedSceneBlock(inputs.engine?.payload as EngineRef | undefined, !!inputs.ir),
+  preflight: (inputs) => unsupportedFilmBlock(inputs.engine?.payload as EngineRef | undefined, inputs.ir?.payload as VideoIR | undefined),
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const ir = inputs.ir!.payload as VideoIR;
     const engine = inputs.engine!.payload as EngineRef;

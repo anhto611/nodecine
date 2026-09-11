@@ -5,7 +5,7 @@ import path from 'node:path';
 import { JobHub, type HubEvent, type Job } from '../jobs';
 import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
-import { _resetCodeRenderers, registerCodeRenderer } from '@/core/visual/renderers';
+import { registerFakeEngineSupport, resetEngineSupport } from '@/core/__tests__/fakes';
 import { makeFakeServices } from '@/core/__tests__/fakes';
 import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
@@ -25,9 +25,9 @@ describe('JobHub', () => {
     dir = await mkdtemp(path.join(os.tmpdir(), 'nodecine-jobs-'));
     process.env.NODECINE_JOBS_DIR = dir;
     _resetNodeRegistry();
-    _resetCodeRenderers();
+    resetEngineSupport();
     registerNodes();
-    registerCodeRenderer('html-gsap', 'hyperframes', () => null);
+    registerFakeEngineSupport();
   });
   afterEach(async () => {
     delete process.env.NODECINE_JOBS_DIR;
@@ -97,7 +97,7 @@ describe('JobHub', () => {
     await until(() => hub.get(job.id)?.status === 'done');
     const onDisk = JSON.parse(await readFile(path.join(dir, `${job.id}.json`), 'utf8')) as Job;
     expect(onDisk.status).toBe('done');
-    expect(onDisk.result?.ir.timeline.length).toBeGreaterThan(0);
+    expect(onDisk.result?.ir.beats.length).toBeGreaterThan(0);
     expect(onDisk.result?.engineId).toBe('hyperframes');
     expect(events.some((e) => e.type === 'history' && e.history.length === 1)).toBe(true);
     expect(hub.snapshot('tab-1')!.history[0]!.seq).toBe(1);
@@ -139,7 +139,7 @@ describe('JobHub on a cold process', () => {
     process.env.NODECINE_JOBS_DIR = dir;
     // Nothing registered: exactly what a freshly started server looks like before a request lands.
     _resetNodeRegistry();
-    _resetCodeRenderers();
+    resetEngineSupport();
   });
   afterEach(async () => {
     delete process.env.NODECINE_JOBS_DIR;

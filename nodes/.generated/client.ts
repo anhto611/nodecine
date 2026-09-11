@@ -4,6 +4,7 @@ import type React from 'react';
 import type { BodyProps } from '../kit';
 import type { NodeMeta } from '@/lib/node-meta';
 import { AssemblerBody } from '../assembler/body';
+import { AudioAnalysisBody } from '../audio-analysis/body';
 import { AudioInputBody } from '../audio-input/body';
 import { AudioMixBody } from '../audio-mix/body';
 import { SceneBreakdownBody } from '../breakdown/body';
@@ -13,6 +14,7 @@ import { GithubFetcherBody } from '../github/body';
 import { HyperframesEngineBody } from '../hyperframes-engine/body';
 import { IllustratorBody } from '../illustrator/body';
 import { InputTriggerBody } from '../input/body';
+import { LayerBody } from '../layer/body';
 import { LlmProviderBody } from '../llm-provider/body';
 import { ExportBody } from '../mp4-export/body';
 import { RemotionEngineBody } from '../remotion-engine/body';
@@ -30,6 +32,7 @@ import { registerRemotionClient } from '../remotion-engine/register.client';
 
 export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/timeline-assembler': AssemblerBody,
+  'core/audio-analysis': AudioAnalysisBody,
   'core/audio-input': AudioInputBody,
   'core/audio-mix': AudioMixBody,
   'core/scene-breakdown': SceneBreakdownBody,
@@ -39,6 +42,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/hyperframes-engine': HyperframesEngineBody,
   'core/illustrator': IllustratorBody,
   'core/input-trigger': InputTriggerBody,
+  'core/layer': LayerBody,
   'core/llm-provider': LlmProviderBody,
   'core/mp4-export': ExportBody,
   'core/remotion-engine': RemotionEngineBody,
@@ -54,6 +58,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
 
 export const NODE_META: Record<string, NodeMeta> = {
   'core/timeline-assembler': { icon: 'layers', group: 'output' },
+  'core/audio-analysis': { icon: 'wave', group: 'audio' },
   'core/audio-input': { icon: 'mic', group: 'audio' },
   'core/audio-mix': { icon: 'wave', group: 'audio' },
   'core/scene-breakdown': { icon: 'bot', group: 'script' },
@@ -63,6 +68,7 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/hyperframes-engine': { icon: 'chip', group: 'resource' },
   'core/illustrator': { icon: 'bot', group: 'visual' },
   'core/input-trigger': { icon: 'bolt', group: 'source' },
+  'core/layer': { icon: 'layers', group: 'visual' },
   'core/llm-provider': { icon: 'term', group: 'resource' },
   'core/mp4-export': { icon: 'down', group: 'output' },
   'core/remotion-engine': { icon: 'chip', group: 'resource' },

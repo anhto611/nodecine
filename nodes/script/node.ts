@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { detectLanguage } from '@/core/text/detect-language';
-import { SceneContentSchema } from '@/core/types/payloads';
+import { SceneContentSchema, StageSchema, TransitionSchema } from '@/core/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 
 const SceneRow = z.object({
@@ -9,6 +9,10 @@ const SceneRow = z.object({
   /** What the voice says over this scene; the scene lasts as long as it. */
   narration: z.string().min(1).max(600),
   content: SceneContentSchema,
+  /** Where this scene wants the film's spanning layers (docs/IR_V3.md §5.2); set in the graph, no editor field yet. */
+  stage: StageSchema.optional(),
+  /** How this scene gives way to the next, when not the film's default; set in the graph, no editor field yet. */
+  transitionAfter: TransitionSchema.optional(),
 });
 
 const Params = z.object({
@@ -48,7 +52,7 @@ export const staticScript: NodeDefinition<typeof Params> = {
     const language = detectLanguage(text);
     log('info', `language detected: ${language}`);
     return {
-      scenes: { language, scenes: params.scenes.map((s, i) => ({ role: s.role, weight: s.weight, narration: narrations[i]!, content: s.content })) },
+      scenes: { language, scenes: params.scenes.map((s, i) => ({ role: s.role, weight: s.weight, narration: narrations[i]!, content: s.content, ...(s.stage ? { stage: s.stage } : {}), ...(s.transitionAfter ? { transitionAfter: s.transitionAfter } : {}) })) },
       script: { text, language, segments: narrations },
     };
   },

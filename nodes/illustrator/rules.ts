@@ -31,6 +31,8 @@ export const codeRules = (frame: FrameSize): string[] => [
   'A point the voice mentions should appear when it is said: position its tween at nodecine.when("the words of that point"). Without word timings the engine spreads the points over the scene in the order asked, so call it once per point, in order.',
   'A number that should count up: tl.add(nodecine.count("<selector of the number element>", { duration: 1.2 }), <time>) counts it from zero to the value shown, keeping its grouping.',
   'A phrase to emphasise goes in <em class="nc-emph">: the accent colour, upright.',
+  'When the film carries an analysed sound, nodecine.audio("<track id>") returns { at(t), bands(frame) }: at(t) gives { level, bass, mid, high } in 0..1 at t seconds into this scene, so tl.call or a per-frame tween can breathe with the music; it returns null when there is no analysis, so guard it.',
+  'The script also sees the whole film: nodecine.beats is the list of scenes ({ index, start, duration, clipId, stage }) in seconds, and nodecine.beat is this scene\'s own entry. A drawing that spans the film (a layer, not a scene) reads nodecine.beats to move between scenes; a scene uses nodecine.beat.stage only to agree with such a layer about where it is.',
   'No network, no external files: fonts come from the style sheet, pictures only from the src values given below.',
 ];
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { unsupportedSceneBlock } from '@/core/visual/renderers';
+import { unsupportedFilmBlock } from '@/core/visual/transitions';
 import type { EngineRef } from '@/core/types/payloads';
 import type { VideoIR } from '@/core/types/ir';
 import type { NodeDefinition } from '@/core/nodes/definition';
@@ -9,7 +9,7 @@ export const videoOutput: NodeDefinition<typeof Params> = {
   type: 'core/video-output', version: 1, kind: 'sink',
   inputs: [{ name: 'ir', type: 'VideoIR' }, { name: 'engine', type: 'EngineRef', requires: ['preview'] }],
   outputs: [], paramsSchema: Params, defaultParams: {},
-  preflight: (inputs) => unsupportedSceneBlock(inputs.engine?.payload as EngineRef | undefined, !!inputs.ir),
+  preflight: (inputs) => unsupportedFilmBlock(inputs.engine?.payload as EngineRef | undefined, inputs.ir?.payload as VideoIR | undefined),
   run: async ({ inputs, log }) => {
     const ir = inputs.ir!.payload as VideoIR;
     const engine = inputs.engine!.payload as EngineRef;

@@ -1,15 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Executor } from '@/core/engine/executor';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
-import { _resetCodeRenderers, registerCodeRenderer } from '@/core/visual/renderers';
 import { registerNodes } from '@/nodes';
-import { makeFakeServices } from '@/core/__tests__/fakes';
+import { makeFakeServices, registerFakeEngineSupport, resetEngineSupport } from '@/core/__tests__/fakes';
 import { SCENE_SOURCE, STYLE, illustratorAnswers } from '@/core/__tests__/scene-fixtures';
 import { captionsToFrames } from '@/nodes/assembler/build-ir';
 import { buildHyperframesDocument } from '@/nodes/hyperframes-engine/document';
 import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
-import type { VideoIR } from '@/core/types/ir';
+import { beatClipsOf, type VideoIR } from '@/core/types/ir';
 import type { Voiceover } from '@/core/types/payloads';
 
 /**
@@ -22,9 +21,9 @@ const off = (g: Graph, ...ids: string[]) => { for (const n of g.nodes) if (ids.i
 
 beforeEach(() => {
   _resetNodeRegistry();
-  _resetCodeRenderers();
+  resetEngineSupport();
   registerNodes();
-  registerCodeRenderer('html-gsap', 'hyperframes', () => null);
+  registerFakeEngineSupport();
 });
 
 describe('captions on the Static Script template', () => {
@@ -99,17 +98,18 @@ describe('the HyperFrames document with captions', () => {
     await ex.run();
     const ir = ex.runtime('assembler').outputs.ir!.payload as VideoIR;
     // The fake illustrator draws no caption slot, so every scene gets the default band; give the first its own slot.
-    ir.timeline[0]!.source = `${ir.timeline[0]!.source}<div class="captions" data-slot="captions"></div>`;
-    const html = buildHyperframesDocument(ir, { gsapSource: '/*gsap*/', runtimeSource: '/*rt*/', voiceoverSrc: 'vo.mp3', fontBase: '/fonts' });
+    const first = beatClipsOf(ir)[0]!;
+    first.source = `${first.source}<div class="captions" data-slot="captions"></div>`;
+    const html = buildHyperframesDocument(ir, { gsapSource: '/*gsap*/', runtimeSource: '/*rt*/', fontBase: '/fonts' });
     const cues = ir.captions!.cues;
-    const perScene = ir.timeline.map((s) => cues.filter((c) => c.startFrame < s.startFrame + s.durationInFrames && c.startFrame + c.durationInFrames > s.startFrame));
+    const perScene = ir.beats.map((s) => cues.filter((c) => c.startFrame < s.startFrame + s.durationInFrames && c.startFrame + c.durationInFrames > s.startFrame));
     const expectedLines = perScene.reduce((n, cs) => n + cs.length, 0);
     expect(expectedLines).toBeGreaterThan(0);
     expect(html.split('class="nc-cap-line"').length - 1).toBe(expectedLines);
     expect(html.split('class="nc-cap-w"').length - 1).toBe(perScene.flat().reduce((n, c) => n + c.words.length, 0));
     // The first scene declares its own slot, so its lines sit inside it; the others get the default band.
     expect(html).toMatch(/<div class="captions" data-slot="captions"><div id="nc-cap-0-0" class="nc-cap-line">/);
-    expect(html.split('class="nc-captions-default" data-slot="captions"').length - 1).toBe(ir.timeline.length - 1);
+    expect(html.split('class="nc-captions-default" data-slot="captions"').length - 1).toBe(ir.beats.length - 1);
     expect(html).toContain('.nc-captions-default { position: absolute; left: 72px; right: 168px; bottom: 720px;');
     expect(html).toMatch(/@layer nc-base \{\n\.nc-cap-line/);
     const data = JSON.parse(/<script type="application\/json" id="nodecine-data">([\s\S]*?)<\/script>/.exec(html)![1]!) as { scenes: { captions: { id: string; show: number; hide: number; style: string; words: { id: string; at: number }[] }[] }[] };
@@ -123,15 +123,23 @@ describe('the HyperFrames document with captions', () => {
     const ex = new Executor(on(graph(), 'transcribe', 'captions'), services);
     await ex.run();
     const ir = ex.runtime('assembler').outputs.ir!.payload as VideoIR;
-    const reveal = { ...ir, timeline: ir.timeline.map((s) => ({ ...s, source: `${s.source}<div data-slot="captions" data-caption-style="reveal"></div>` })) };
-    const html2 = buildHyperframesDocument(reveal, { gsapSource: '', runtimeSource: '', voiceoverSrc: 'vo.mp3', fontBase: '/fonts' });
+    const reveal: VideoIR = { ...ir, tracks: ir.tracks.map((t) => ({ ...t, clips: t.clips.map((c) => (c.kind === 'code' ? { ...c, source: `${c.source}<div data-slot="captions" data-caption-style="reveal"></div>` } : c)) })) };
+    const html2 = buildHyperframesDocument(reveal, { gsapSource: '', runtimeSource: '', fontBase: '/fonts' });
     expect(html2).not.toContain('nc-captions-default');
     expect(html2).toContain('class="nc-cap-w" style="opacity:0"');
   });
 
   it('draws nothing extra when the IR has no captions', () => {
-    const ir: VideoIR = { irVersion: 2, meta: { title: 't', language: 'en', fps: 30, width: 1080, height: 1920, totalDurationInFrames: 30 }, style: STYLE, transition: { type: 'cut', seconds: 0.1 }, audioTrack: { voiceoverUrl: '/api/media/0123456789abcdef.mp3', durationSeconds: 1, padTailFrames: 0 }, timeline: [{ id: 's1', startFrame: 0, durationInFrames: 30, source: SCENE_SOURCE }] };
-    const html = buildHyperframesDocument(ir, { gsapSource: '', runtimeSource: '', voiceoverSrc: 'vo.mp3', fontBase: '/fonts' });
+    const ir: VideoIR = {
+      irVersion: 3,
+      meta: { title: 't', language: 'en', fps: 30, width: 1080, height: 1920, totalDurationInFrames: 30 },
+      style: STYLE,
+      tracks: [{ id: 'scenes', clips: [{ id: 's1', kind: 'code', startFrame: 0, durationInFrames: 30, format: 'html-gsap', source: SCENE_SOURCE }] }],
+      beats: [{ index: 0, startFrame: 0, durationInFrames: 30, clipId: 's1' }],
+      audio: [{ id: 'voice', role: 'voice', url: '/api/media/0123456789abcdef.mp3', startFrame: 0, durationInFrames: 30, gain: 1 }],
+      transitions: { default: { name: 'cut', seconds: 0.1 } },
+    };
+    const html = buildHyperframesDocument(ir, { gsapSource: '', runtimeSource: '', fontBase: '/fonts' });
     expect(html).not.toContain('nc-cap-line');
     expect(html).not.toContain('nc-captions-default');
   });

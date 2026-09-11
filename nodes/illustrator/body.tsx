@@ -6,7 +6,10 @@ import { ScenePreview } from '@/components/ScenePreview';
 import { FormBody } from '@/nodes/form-body';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { ImagePick } from '@/components/node-runtime/content-editor';
-import { useOutputPayload } from '@/store/useStudio';
+import { useInputPayload, useOutputPayload } from '@/store/useStudio';
+import { listTransitions } from '@/core/visual/transitions';
+import { stopFlow } from '@/components/ui';
+import type { EngineRef } from '@/core/types/payloads';
 import type { IllustratorParams } from './node';
 
 /**
@@ -18,10 +21,27 @@ export const IllustratorBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
   const [p, set] = useParams<IllustratorParams>(nodeId);
   const plan = useOutputPayload<ScenePlan>(nodeId, 'plan');
+  const engine = useInputPayload<EngineRef>(nodeId, 'engine');
+  // The names the wired engine has, or every name any engine registered; a name set on another machine stays selectable.
+  const names = listTransitions(engine?.engineId);
+  const current = p.transition ?? 'fade';
+  const options = names.includes(current) ? names : [current, ...names];
   return (
     <>
       <FormBody nodeId={nodeId} fields={['brief', 'frame']} widgets={{ brief: { widget: 'textarea', placeholder: t('illustrator.briefPlaceholder') } }} />
       <Kv k={t('illustrator.character')} v={<ImagePick url={p.character || undefined} onPick={(url) => set({ character: url ?? '' })} />} />
+      <Kv
+        k={t('node.transition')}
+        v={
+          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <select className={`nc-select ${stopFlow}`} value={current} onChange={(e) => set({ transition: e.target.value })}>
+              {options.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <input className={`nc-input ${stopFlow}`} type="number" min={0.1} max={2} step={0.1} value={p.transitionSeconds ?? 0.4} onChange={(e) => set({ transitionSeconds: Math.min(2, Math.max(0.1, Number(e.target.value) || 0.4)) })} style={{ width: 52 }} />
+            <span className="nc-k">s</span>
+          </span>
+        }
+      />
       {plan ? (
         <>
           <div className="nc-k" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}><span>storyboard</span><span>{plan.style.name} · {t('illustrator.scenes', { n: plan.scenes.length })}</span></div>

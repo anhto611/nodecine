@@ -1,4 +1,4 @@
-/** The eleven core port types (CORE_CONTRACTS §1.1). Nothing outside the core may add a port type. */
+/** The thirteen core port types (CORE_CONTRACTS §1.1). Nothing outside the core may add a port type. */
 export const PORT_TYPES = [
   'SourceRef',
   'FactSheet',
@@ -11,6 +11,8 @@ export const PORT_TYPES = [
   'TTSRef',
   'SceneScript',
   'CaptionTrack',
+  'LayerSpec',
+  'AudioTrackSpec',
 ] as const;
 
 export type PortType = (typeof PORT_TYPES)[number];
@@ -28,6 +30,8 @@ export const PORT_LABEL_KEYS: Record<PortType, string> = {
   TTSRef: 'port.ttsRef',
   SceneScript: 'port.sceneScript',
   CaptionTrack: 'port.captionTrack',
+  LayerSpec: 'port.layerSpec',
+  AudioTrackSpec: 'port.audioTrackSpec',
 };
 
 /**
@@ -36,7 +40,7 @@ export const PORT_LABEL_KEYS: Record<PortType, string> = {
  * as dependencies; the canvas draws them apart (resources enter from the top, dashed).
  */
 export const PORT_KIND: Record<PortType, 'flow' | 'resource'> = {
-  SourceRef: 'flow', FactSheet: 'flow', SceneScript: 'flow', ScenePlan: 'flow', AudioScript: 'flow', Voiceover: 'flow', VideoIR: 'flow', CaptionTrack: 'flow',
+  SourceRef: 'flow', FactSheet: 'flow', SceneScript: 'flow', ScenePlan: 'flow', AudioScript: 'flow', Voiceover: 'flow', VideoIR: 'flow', CaptionTrack: 'flow', LayerSpec: 'flow', AudioTrackSpec: 'flow',
   EngineRef: 'resource', LLMRef: 'resource', TTSRef: 'resource',
 };
 export const isResourcePort = (type: PortType): boolean => PORT_KIND[type] === 'resource';

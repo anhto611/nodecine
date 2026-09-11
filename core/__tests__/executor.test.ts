@@ -6,18 +6,17 @@ import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition } from '..
 import { canTransition } from '../engine/state';
 import { NodeError } from '../errors';
 import { registerNodes } from '@/nodes';
-import { _resetCodeRenderers, registerCodeRenderer } from '../visual/renderers';
 import staticScriptJson from '@/lib/first-run.json';
 const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
 import { validateIR } from '../types/validate-ir';
 import type { VideoIR } from '../types/ir';
-import { makeFakeServices } from './fakes';
+import { makeFakeServices, registerFakeEngineSupport, resetEngineSupport } from './fakes';
 
 function setup(opts: Parameters<typeof makeFakeServices>[0] = {}, withRenderer = true) {
   _resetNodeRegistry();
-  _resetCodeRenderers();
+  resetEngineSupport();
   registerNodes();
-  if (withRenderer) registerCodeRenderer('html-gsap', 'hyperframes', () => null);
+  if (withRenderer) registerFakeEngineSupport();
   const services = makeFakeServices(opts);
   const graph = staticScriptTemplate();
   const states: string[] = [];
@@ -68,10 +67,31 @@ describe('Phase A run', () => {
     for (const id of ['script', 'tts-provider', 'tts', 'assembler', 'engine', 'output']) expect(executor.runtime(id).state).toBe('success');
     expect(executor.runtime('export').state).toBe('bypassed');
     const ir = executor.runtime('assembler').outputs.ir!.payload as VideoIR;
-    expect(validateIR(ir)).toEqual({ ok: true });
-    expect(ir.timeline).toHaveLength(3);
-    expect(ir.timeline.reduce((a, s) => a + s.durationInFrames, 0)).toBe(ir.meta.totalDurationInFrames);
+    expect(validateIR(ir)).toEqual({ ok: true, warnings: [] });
+    expect(ir.beats).toHaveLength(3);
+    expect(ir.beats.reduce((a, b) => a + b.durationInFrames, 0)).toBe(ir.meta.totalDurationInFrames);
     expect(services.calls.filter((c) => c.name === 'render')).toHaveLength(0);
+  });
+
+  it('gathers Layer nodes on the assembler\'s layers port, in wire order, into tracks around the scenes', async () => {
+    const { executor, graph } = setup();
+    const clip = '/api/assets/' + 'c'.repeat(16) + '.mp4';
+    graph.nodes.push(
+      { id: 'bg', type: 'core/layer', params: { kind: 'media', url: clip, placement: 'under', fit: 'cover', loop: true, offsetSeconds: 0, gain: 0, startSeconds: 0, source: '' }, bypassed: false, position: { x: 0, y: 0 } },
+      { id: 'phone', type: 'core/layer', params: { kind: 'code', source: '<div class="phone"></div>', placement: 'over', fit: 'cover', loop: true, offsetSeconds: 0, gain: 0, startSeconds: 0, url: '' }, bypassed: false, position: { x: 0, y: 0 } },
+    );
+    graph.edges.push(
+      { id: 'l1', source: 'bg', sourcePort: 'layer', target: 'assembler', targetPort: 'layers' },
+      { id: 'l2', source: 'phone', sourcePort: 'layer', target: 'assembler', targetPort: 'layers' },
+    );
+    expect(validateGraph(graph).filter((i) => i.severity === 'error')).toEqual([]);
+    executor.setGraph(graph);
+    const { ok } = await executor.run();
+    expect(ok).toBe(true);
+    const ir = executor.runtime('assembler').outputs.ir!.payload as VideoIR;
+    expect(ir.tracks.map((t) => t.id)).toEqual(['layer-1', 'scenes', 'layer-2']);
+    expect(ir.tracks[0]!.clips[0]).toMatchObject({ kind: 'media', url: clip, durationInFrames: ir.meta.totalDurationInFrames });
+    expect(validateIR(ir)).toEqual({ ok: true, warnings: [] });
   });
 
   it('keeps what an on-demand node produced when the canvas pushes a graph', async () => {

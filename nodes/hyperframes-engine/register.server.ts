@@ -1,16 +1,18 @@
-import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { keepWebGlobals } from '@/server/web-globals';
 import path from 'node:path';
 import { registerEngine } from '@/core/adapters/registry';
 import { registerCodeRenderer } from '@/core/visual/renderers';
 import type { ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
-import type { VideoIR } from '@/core/types/ir';
+import { allClips, type VideoIR } from '@/core/types/ir';
 import { contentHash } from '@/core/hash';
 import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
 import { createHyperframesAdapter } from './adapter';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { buildHyperframesDocument } from './document';
+import { analysisOf } from './analysis';
 import { registerVendorSources, vendorSource } from './vendor.server';
+import { registerHyperframesTransitions } from './transitions';
 import { registerVendorSource } from '@/server/vendor';
 import { renderScaleFor } from '@/core/visual/frame';
 import { FONT_FILES } from './markup';
@@ -35,17 +37,29 @@ async function buildProjectDir(ir: VideoIR, settings: Pick<ExportSettings, 'reso
   const projectDir = path.join(tmp, `hf-${key}`);
   await mkdir(path.join(projectDir, 'fonts'), { recursive: true });
 
-  await copyFile(mediaPath(fileNameFromMediaUrl(ir.audioTrack.voiceoverUrl)), path.join(projectDir, 'voiceover.mp3'));
+  // Every sound and every media clip that lives in the temp dir comes along under its own name, and
+  // the page is told the new name for each; assets keep their hashed names and are copied below.
+  const local = new Map<string, string>();
+  const bring = async (url: string, stem: string) => {
+    if (!url.startsWith('/api/media/')) return;
+    const name = fileNameFromMediaUrl(url);
+    const target = `${stem}${path.extname(name)}`;
+    await copyFile(mediaPath(name), path.join(projectDir, target));
+    local.set(url, target);
+  };
+  for (const a of ir.audio) await bring(a.url, `audio-${a.id}`);
+  for (const c of allClips(ir)) if (c.kind === 'media') await bring(c.url, `media-${c.id}`);
   for (const f of FONT_FILES) await copyFile(path.resolve(process.cwd(), 'public/fonts', f), path.join(projectDir, 'fonts', f));
   // Images the scenes, the style sheet or the video's values refer to come along, by their hashed names:
   // an asset named anywhere in the IR and left behind is a hole in the MP4.
-  const assets = assetNamesIn(JSON.stringify([ir.style.css, ir.timeline, ir.vars ?? {}]));
+  const assets = assetNamesIn(JSON.stringify([ir.style.css, ir.tracks, ir.vars ?? {}]));
   if (assets.length) await mkdir(path.join(projectDir, 'assets'), { recursive: true });
   for (const a of assets) await copyFile(assetPath(a), path.join(projectDir, 'assets', a)).catch(() => undefined);
 
   const [gsapSource, runtimeSource] = await Promise.all([vendorSource('gsap.js'), vendorSource('hyperframes-runtime.js')]);
   const scale = renderScaleFor({ width: ir.meta.width, height: ir.meta.height }, settings.resolution ?? '1080p');
-  const html = buildHyperframesDocument(ir, { gsapSource, runtimeSource, voiceoverSrc: 'voiceover.mp3', fontBase: 'fonts', scale, assetBase: 'assets' });
+  const analysis = await analysisOf(ir, (url) => readFile(mediaPath(fileNameFromMediaUrl(url)), 'utf8').then((s) => JSON.parse(s) as unknown));
+  const html = buildHyperframesDocument(ir, { gsapSource, runtimeSource, mediaSrc: (url) => local.get(url) ?? url, fontBase: 'fonts', scale, assetBase: 'assets', analysis });
   await writeFile(path.join(projectDir, 'index.html'), html, 'utf8');
   return { projectDir, scale };
 }
@@ -72,5 +86,6 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
 export function registerHyperframesServer(): void {
   registerVendorSources(registerVendorSource);
   registerCodeRenderer('html-gsap', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
+  registerHyperframesTransitions();
   registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer }));
 }
