@@ -1,6 +1,6 @@
 import type { ZodTypeAny, z } from 'zod';
 import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover } from './types/payloads';
-import type { VideoIR } from './types/ir';
+import type { Composition } from './types/composition';
 import type { ExportSettings, RenderProgress, RenderResult } from './adapters/types';
 
 /**
@@ -19,13 +19,10 @@ declare module '@/core/engine/services' {
      * free and identical; `fresh` skips that and asks again (a forced run, a retry).
      */
     complete<S extends ZodTypeAny>(ref: LLMRef, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean }): Promise<z.infer<S>>;
-    render(
-      ref: EngineRef,
-      ir: VideoIR,
-      settings: ExportSettings,
-      onProgress: (p: RenderProgress) => void,
-      signal: AbortSignal,
-    ): Promise<RenderResult>;
+    /** A page the engine's player loads for this composition, filled with its values. */
+    preview(ref: EngineRef, composition: Composition, signal: AbortSignal): Promise<{ url: string }>;
+    /** The composition, filled with its values, rendered by the engine it names. */
+    render(ref: EngineRef, composition: Composition, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal): Promise<RenderResult>;
     /**
      * Text kept as a file the browser can download, named by its own content.
      * `extension` is the kind of file it is — `srt`, `vtt` — and never a path.

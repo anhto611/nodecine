@@ -23,7 +23,7 @@ const studioHost: NodeHost = {
     const cancel = useStudio((s) => s.cancel);
     return React.useMemo(() => ({ running, step, runNode: (id: string) => void runNode(id), cancel: () => void cancel() }), [running, step, runNode, cancel]);
   },
-  useViewedFilm: () => useStudio((s) => (s.viewingRun != null ? s.history.find((r) => r.seq === s.viewingRun)?.ir ?? null : null)),
+  useViewedRun: () => useStudio((s) => (s.viewingRun != null ? s.history.find((r) => r.seq === s.viewingRun) ?? null : null)),
   useLocale: () => useStudio((s) => s.locale),
   translate: (locale, key, vars) => translate(locale as Locale, key, vars),
   hasTranslation,

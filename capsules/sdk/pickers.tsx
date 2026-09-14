@@ -2,10 +2,9 @@
 import React from 'react';
 import { Kv, useT, stopFlow } from './ui';
 import { useHost, useParams } from './host';
-import { listEngineIds } from '@/contracts/adapters/registry';
 
 /**
- * The part a node needs, chosen on the node itself: a model, a voice, an engine.
+ * The part a node needs, chosen on the node itself: a model or a voice.
  *
  * These were nodes of their own until 2026-09-12, wired in on a second kind of port, and the reason a
  * node could not run was reported on a different node from the one that failed. What is left of that
@@ -32,26 +31,6 @@ export const ProviderPick: React.FC<{ nodeId: string; kind: 'llm' | 'tts'; optio
       }}>
         {(optional || !current) && <option value="">—</option>}
         {options.map((o) => <option key={o.id} value={o.id}>{t(o.nameKey)}</option>)}
-      </select>
-    } />
-  );
-};
-
-/** The engine an output node draws with. */
-export const EnginePick: React.FC<{ nodeId: string }> = ({ nodeId }) => {
-  const t = useT();
-  const { hasTranslation } = useHost();
-  const [p, set] = useParams<Record<string, unknown>>(nodeId);
-  const options = listEngineIds();
-  const current = String(p.engineId ?? '');
-  React.useEffect(() => {
-    if (!current && options[0]) set({ engineId: options[0] });
-  }, [current, options, set]);
-  return (
-    <Kv k={t('node.engineId')} v={
-      <select className={`nc-select ${stopFlow}`} value={current} onChange={(e) => set({ engineId: e.target.value, engineSettings: {} })}>
-        {!current && <option value="">—</option>}
-        {options.map((o) => <option key={o} value={o}>{hasTranslation(`engine.${o}`) ? t(`engine.${o}`) : o}</option>)}
       </select>
     } />
   );

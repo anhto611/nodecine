@@ -2,8 +2,7 @@
 import React from 'react';
 import type { Graph, NodeInstance } from '@/core/engine/graph';
 import type { NodeRuntime } from '@/core/engine/state';
-import type { VideoIR } from '@/contracts/types/ir';
-import { frameOf } from '@/contracts/visual/frame';
+import type { RunRecord } from '@/contracts/history';
 
 /**
  * Everything a node body may ask of the Studio, and nothing more.
@@ -26,8 +25,8 @@ export interface NodeHost {
   useSetParams(): (nodeId: string, patch: Record<string, unknown>) => void;
   /** Whether a run is going, which step it is on, and the two things a body may start or stop. */
   useRun(): { running: boolean; step: { nodeId: string; step: number; total: number } | null; runNode(nodeId: string): void; cancel(): void };
-  /** A film from the run history the person is looking at instead of the live one, or null. */
-  useViewedFilm(): VideoIR | null;
+  /** A run from the history the person is looking at instead of the live one, or null. */
+  useViewedRun(): RunRecord | null;
   useLocale(): string;
   translate(locale: string, key: string, vars?: Record<string, string | number>): string;
   hasTranslation(key: string): boolean;
@@ -53,7 +52,7 @@ export const useRuntime = (nodeId: string): NodeRuntime | undefined => useHost()
 export const useOutputPayload = <T = unknown,>(nodeId: string, port: string): T | undefined => useHost().useOutputPayload<T>(nodeId, port);
 export const useInputPayload = <T = unknown,>(nodeId: string, port: string): T | undefined => useHost().useInputPayload<T>(nodeId, port);
 export const useRun = () => useHost().useRun();
-export const useViewedFilm = (): VideoIR | null => useHost().useViewedFilm();
+export const useViewedRun = (): RunRecord | null => useHost().useViewedRun();
 export const useLocale = (): string => useHost().useLocale();
 
 /** A node's params, and a setter that patches them. */
@@ -62,12 +61,6 @@ export function useParams<T extends Record<string, unknown>>(nodeId: string): [T
   const node = host.useNode(nodeId);
   const setParams = host.useSetParams();
   return [(node?.params ?? {}) as T, (patch) => setParams(nodeId, patch as Record<string, unknown>)];
-}
-
-/** The frame the workflow renders at, for every preview. */
-export function useFrame(): { width: number; height: number } {
-  const nodes = useHost().useGraph().nodes;
-  return React.useMemo(() => frameOf({ nodes }), [nodes]);
 }
 
 /** `t()` bound to the current locale. */

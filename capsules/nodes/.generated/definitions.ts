@@ -3,24 +3,30 @@ import { registerNodeType, registerRetiredNodeType, type AnyNodeDefinition, type
 import { registerContracts } from '@/contracts';
 import { registerDocMigrations } from '../../migrations';
 import { captionExport } from '../caption-export/node';
+import { composition } from '../composition/node';
+import { fill } from '../fill/node';
 import { mp4Export } from '../mp4-export/node';
 import { transcribe } from '../transcribe/node';
 import { ttsEngine } from '../tts/node';
 import { videoOutput } from '../video-output/node';
 import { CaptionExportErrorCode } from '../caption-export/errors';
+import { CompositionErrorCode } from '../composition/errors';
+import { FillErrorCode } from '../fill/errors';
 import { Mp4ExportErrorCode } from '../mp4-export/errors';
 import { TranscribeErrorCode } from '../transcribe/errors';
 import { TtsErrorCode } from '../tts/errors';
 
 export const ALL_NODES: AnyNodeDefinition[] = [
   captionExport,
+  composition,
+  fill,
   mp4Export,
   transcribe,
   ttsEngine,
   videoOutput,
 ] as unknown as AnyNodeDefinition[];
 
-const expectedIds = ["caption-export","mp4-export","transcribe","tts","video-output"];
+const expectedIds = ["caption-export","composition","fill","mp4-export","transcribe","tts","video-output"];
 ALL_NODES.forEach((definition, index) => {
   if (definition.type !== expectedIds[index]) throw new Error('node manifest id "' + expectedIds[index] + '" does not match definition type "' + definition.type + '"');
 });
@@ -28,6 +34,8 @@ ALL_NODES.forEach((definition, index) => {
 /** What a node declares about itself beyond its ports, for the hub: which node carries the IR, the preview, the file export. */
 export const NODE_FEATURES: Record<string, string[]> = {
   "caption-export": [],
+  "composition": [],
+  "fill": [],
   "mp4-export": [
     "history-file-export"
   ],
@@ -45,11 +53,15 @@ export const NODE_FEATURES: Record<string, string[]> = {
  */
 export const NODE_ERROR_CODES: Record<string, string[]> = {
   "caption-export": [],
+  "composition": [],
+  "fill": [],
   "mp4-export": [],
   "transcribe": [],
   "tts": []
 };
 NODE_ERROR_CODES['caption-export'] = Object.values(CaptionExportErrorCode);
+NODE_ERROR_CODES['composition'] = Object.values(CompositionErrorCode);
+NODE_ERROR_CODES['fill'] = Object.values(FillErrorCode);
 NODE_ERROR_CODES['mp4-export'] = Object.values(Mp4ExportErrorCode);
 NODE_ERROR_CODES['transcribe'] = Object.values(TranscribeErrorCode);
 NODE_ERROR_CODES['tts'] = Object.values(TtsErrorCode);

@@ -35,6 +35,33 @@ export function fileNameFromMediaUrl(url: string): string {
 }
 
 /**
+ * An engine's project, written out to be served or rendered: a directory under the temp dir named by
+ * the hash of what is in it. Only this module turns a key and a relative path into a location on disk.
+ */
+const PROJECT_KEY = /^[a-f0-9]{16,64}$/;
+
+export function projectDir(key: string): string {
+  if (!PROJECT_KEY.test(key)) throw new Error(`Invalid project key: ${key}`);
+  return path.join(tmpDir(), 'projects', key);
+}
+
+/** A file inside a project; anything that would land outside it is refused. */
+export function projectFilePath(key: string, relative: string): string {
+  const root = projectDir(key);
+  if (!relative || relative.startsWith('/') || relative.includes('\\') || relative.split('/').some((part) => part === '..' || part === '' || part.startsWith('.'))) {
+    throw new Error(`Invalid project path: ${relative}`);
+  }
+  const p = path.join(root, relative);
+  if (!p.startsWith(root + path.sep)) throw new Error('Path escapes the project dir');
+  return p;
+}
+
+export function projectUrl(key: string, relative: string): string {
+  projectFilePath(key, relative);
+  return `/api/projects/${key}/${relative}`;
+}
+
+/**
  * Assets a scene refers to (logos, images): content-addressed files under `.nodecine/assets`, served
  * as `/api/assets/<hash>.<ext>`, never cleaned up (a workflow may point at them for years).
  */

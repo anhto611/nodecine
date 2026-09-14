@@ -25,7 +25,8 @@ const PROVIDER_NODES_V2: Record<string, { type: string; providerId: string }> = 
 function registerResourceFolds(): void {
   registerResourceFold('core/llm-provider', (p) => ({ llmProvider: p.providerId ?? '', llmSettings: p.settings ?? {} }));
   registerResourceFold('core/tts-provider', (p) => ({ ttsProvider: p.providerId ?? '', ttsSettings: p.settings ?? {} }));
-  registerResourceFold('core/hyperframes-engine', (p) => ({ engineId: 'hyperframes', engineSettings: p ?? {} }));
+  // The engine is named by the composition now, so the node it folded into keeps nothing of it.
+  registerResourceFold('core/hyperframes-engine', () => ({}));
 }
 
 /**

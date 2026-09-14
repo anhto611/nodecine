@@ -1,92 +1,54 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
-import { stat } from 'node:fs/promises';
-import { renderWithProducer } from '../register.server';
-import type { VideoIR } from '@/contracts/types/ir';
-import { SCENE_SOURCE, STYLE } from '@/contracts/__tests__/scene-fixtures';
+import { previewWithBundler, renderWithProducer } from '../register.server';
+import type { Composition } from '@/contracts/types/composition';
+import { mediaPath, fileNameFromMediaUrl, projectFilePath } from '@/server/paths';
+import { measureDurationSeconds } from '@/server/contracts/audio';
 
 /**
- * Manual: runs the real producer on a small hand-drawn film. Enabled with NODECINE_MANUAL_RENDER=1;
- * needs a voice-over mp3 in NODECINE_TMP_DIR named 0123456789abcdef0123456789abcdef.mp3 and its
- * length in NODECINE_MANUAL_DURATION (seconds).
+ * Manual, with the real bundler and producer: the starter composition, filled with a value, previewed
+ * and rendered the way HyperFrames does it. Enabled with NODECINE_MANUAL_RENDER=1; it drives a browser.
  */
 const enabled = process.env.NODECINE_MANUAL_RENDER === '1';
 
-const SCENES = [
-  SCENE_SOURCE.replace('Hello', 'Ship video from a graph').replace('First', 'NodeCine v0.1'),
-  '<div class="card"><h1 class="title">Nodes, not timelines</h1></div>\n<script>\n  nodecine.timeline(gsap.timeline().fromTo(".card", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 }));\n</script>',
-  '<div class="card"><h1 class="title">Star on GitHub</h1></div>',
-];
-
-/** The IR the cases below render: the test style with three drawn scenes. */
-function sampleIR(): VideoIR {
-  const duration = Number(process.env.NODECINE_MANUAL_DURATION ?? '9');
-  const fps = 30;
-  const total = Math.ceil(duration * fps);
-  const weights = [1, 2, 1];
-  const weightSum = weights.reduce((n, w) => n + w, 0);
-  let cursor = 0;
-  const clips = SCENES.map((source, i) => {
-    const frames = i === SCENES.length - 1 ? total - cursor : Math.round((total * weights[i]!) / weightSum);
-    const clip = { id: `scene-${i + 1}`, kind: 'code' as const, startFrame: cursor, durationInFrames: frames, format: 'html-gsap', source };
-    cursor += frames;
-    return clip;
+describe.skipIf(!enabled)('a HyperFrames composition, for real', () => {
+  // A capsule imports no other capsule, so the project is written out here rather than borrowed from the Composition node.
+  const INDEX = `<!doctype html>
+<html data-composition-variables='[{"id":"title","type":"string","label":"Title","default":"Hello"}]'>
+<head><style>body{margin:0;background:#0b0b0f}.title{position:absolute;left:96px;top:800px;font:700 120px sans-serif;color:#fff}</style></head>
+<body>
+<div id="stage" data-composition-id="spike" data-start="0" data-width="1080" data-height="1920">
+  <div class="title" data-var-text="title">Hello</div>
+</div>
+<script src="gsap.min.js"></script>
+<script>
+  const tl = gsap.timeline({ paused: true });
+  tl.from('.title', { opacity: 0, y: 40, duration: 0.6 }).to({}, { duration: 4.4 });
+  window.__timelines = window.__timelines || {};
+  window.__timelines['spike'] = tl;
+</script>
+</body>
+</html>`;
+  const starter = async (): Promise<Composition> => ({
+    engine: 'hyperframes', width: 1080, height: 1920, fps: 30, files: { 'index.html': INDEX }, media: {},
+    variables: [{ id: 'title', type: 'string', label: 'Title', default: 'Hello' }], values: { title: 'Filled by NodeCine' },
   });
-  return {
-    irVersion: 3,
-    meta: { title: 'sample', language: 'en', fps, width: 1080, height: 1920, totalDurationInFrames: total },
-    style: STYLE,
-    tracks: [{ id: 'scenes', clips }],
-    beats: clips.map((c, index) => ({ index, startFrame: c.startFrame, durationInFrames: c.durationInFrames, clipId: c.id })),
-    audio: [{ id: 'voice', role: 'voice', url: '/api/media/0123456789abcdef0123456789abcdef.mp3', startFrame: 0, durationInFrames: total, gain: 1 }],
-    transitions: { default: { name: 'fade', seconds: 0.4 } },
-  };
-}
 
-/** A scene that plays a clip behind a headline, for the b-roll case below. */
-const brollScene = (clip: string) => [
-  '<div class="wrap">',
-  `  <video class="shot" src="${clip}"></video>`,
-  '  <h1 class="hl">B-roll behind the words</h1>',
-  '</div>',
-  '<style>',
-  '.wrap { position: absolute; inset: 0; }',
-  '.shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }',
-  '.hl { position: absolute; left: 6%; right: 6%; bottom: 14%; margin: 0; font: 700 84px var(--font-display); color: var(--fg); text-shadow: 0 2px 24px rgba(0,0,0,.8); }',
-  '</style>',
-].join('\n');
+  it('bundles a preview page with the values set ahead of every script', async () => {
+    const { url } = await previewWithBundler(await starter(), new AbortController().signal);
+    const [, , , key, name] = url.split('/');
+    const html = await readFile(projectFilePath(key!, name!), 'utf8');
+    expect(html).toContain('window.__hfVariables = {"title":"Filled by NodeCine"}');
+    expect(html.indexOf('__hfVariables')).toBeLessThan(html.indexOf('__timelines'));
+  }, 120_000);
 
-describe.skipIf(!enabled)('Hyperframes producer, for real', () => {
-  it('renders a small film to an MP4', async () => {
-    const ir = sampleIR();
-    const t0 = Date.now();
-    const out = await renderWithProducer(ir, { codec: 'h264', quality: 'medium', fileName: 'sample.mp4' }, () => {}, new AbortController().signal);
-    console.log('rendered', out, 'in', Date.now() - t0, 'ms');
-    expect(out.outputUrl).toMatch(/^\/api\/media\/[a-f0-9]+\.mp4$/);
-    const s = await stat(`${process.env.NODECINE_TMP_DIR}/${out.outputUrl.split('/').pop()}`);
-    expect(s.size).toBeGreaterThan(50_000);
-  }, 600_000);
-
-  /**
-   * B-roll: the producer's media pipeline extracts the clip's frames and injects them at capture,
-   * so all this side has to do is put a `<video>` in the page with the scene's timing on it.
-   * Needs a clip asset in NODECINE_ASSETS_DIR named by NODECINE_MANUAL_CLIP (a `/api/assets/...` url).
-   */
-  it.skipIf(!process.env.NODECINE_MANUAL_CLIP)('plays a clip inside a scene', async () => {
-    const ir = sampleIR();
-    const fps = ir.meta.fps;
-    const out = await renderWithProducer(
-      {
-        ...ir,
-        meta: { ...ir.meta, totalDurationInFrames: 2 * fps },
-        audio: [{ ...ir.audio[0]!, durationInFrames: 2 * fps }],
-        tracks: [{ id: 'scenes', clips: [{ id: 'scene-1', kind: 'code', startFrame: 0, durationInFrames: 2 * fps, format: 'html-gsap', source: brollScene(process.env.NODECINE_MANUAL_CLIP!) }] }],
-        beats: [{ index: 0, startFrame: 0, durationInFrames: 2 * fps, clipId: 'scene-1' }],
-      },
-      { codec: 'h264', quality: 'medium', fileName: 'broll.mp4' },
-      () => {},
-      new AbortController().signal,
-    );
-    console.log('rendered b-roll', out);
-    expect((await stat(`${process.env.NODECINE_TMP_DIR}/${out.outputUrl.split('/').pop()}`)).size).toBeGreaterThan(20_000);
+  it('renders it to an MP4 as long as its timeline', async () => {
+    const fractions: number[] = [];
+    const result = await renderWithProducer(await starter(), { quality: 'low', fileName: 'starter.mp4' }, (p) => fractions.push(p.fraction), new AbortController().signal);
+    console.log(`RENDERED ${result.bytes} bytes · ${result.outputUrl} · ${fractions.length} progress reports`);
+    expect(result.bytes).toBeGreaterThan(10_000);
+    const seconds = await measureDurationSeconds(mediaPath(fileNameFromMediaUrl(result.outputUrl)), new AbortController().signal);
+    expect(seconds).toBeGreaterThan(4.5);
+    expect(seconds).toBeLessThan(5.5);
   }, 600_000);
 });

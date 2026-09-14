@@ -1,4 +1,4 @@
 export const hyperframesEngineTranslations = {
-  en: { 'engine.hyperframes': 'Hyperframes Engine', 'engine.desc.hyperframes': 'Preview and rendering engine for HTML/GSAP scenes.' },
-  vi: { 'engine.hyperframes': 'Hyperframes Engine', 'engine.desc.hyperframes': 'Động cơ xem trước và kết xuất cảnh HTML/GSAP.' },
+  en: { 'engine.hyperframes': 'HyperFrames', 'engine.desc.hyperframes': 'Previews and renders HyperFrames compositions: HTML, CSS and GSAP, filled with their variables.' },
+  vi: { 'engine.hyperframes': 'HyperFrames', 'engine.desc.hyperframes': 'Xem trước và kết xuất composition HyperFrames: HTML, CSS và GSAP, đổ vào bằng variables.' },
 };

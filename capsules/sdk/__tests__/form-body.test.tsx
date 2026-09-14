@@ -16,7 +16,7 @@ import type { Graph } from '@/core/engine/graph';
  */
 
 const Params = z.object({
-  codec: z.enum(['h264', 'h265']).default('h264'),
+  quality: z.enum(['high', 'ultra']).default('high'),
   title: z.string().max(20).default('Untitled'),
   fps: z.number().int().min(1).max(60).default(30),
   burn: z.boolean().default(false),
@@ -31,10 +31,10 @@ beforeEach(() => {
   _resetNodeRegistry();
   registerNodeType({
     type: 'test/form', version: 1, kind: 'source', inputs: [], outputs: [],
-    paramsSchema: Params, defaultParams: { codec: 'h264', title: 'Untitled', fps: 30, burn: false },
+    paramsSchema: Params, defaultParams: { quality: 'high', title: 'Untitled', fps: 30, burn: false },
     run: async () => ({}),
   } as unknown as AnyNodeDefinition);
-  useStudio.setState({ graph: graphWith({ codec: 'h264', title: 'Untitled', fps: 30, burn: false }), tabs: [], activeTab: 'form-test', executor: null, locale: 'en' });
+  useStudio.setState({ graph: graphWith({ quality: 'high', title: 'Untitled', fps: 30, burn: false }), tabs: [], activeTab: 'form-test', executor: null, locale: 'en' });
 });
 
 const paramsNow = () => useStudio.getState().graph.nodes[0]!.params;
@@ -42,24 +42,24 @@ const paramsNow = () => useStudio.getState().graph.nodes[0]!.params;
 describe('a form read off a schema', () => {
   it('draws one control per field, of the kind the schema says', () => {
     render(<FormBody nodeId="n" />, { wrapper });
-    expect(screen.getByRole('combobox')).toHaveProperty('value', 'h264');
+    expect(screen.getByRole('combobox')).toHaveProperty('value', 'high');
     expect(screen.getByRole('spinbutton')).toHaveProperty('value', '30');
     expect(screen.getByRole('checkbox')).toHaveProperty('checked', false);
     expect(screen.getByDisplayValue('Untitled')).toBeDefined();
   });
 
   it('shows only the fields asked for, in the order given', () => {
-    render(<FormBody nodeId="n" fields={['fps', 'codec']} />, { wrapper });
+    render(<FormBody nodeId="n" fields={['fps', 'quality']} />, { wrapper });
     expect(screen.queryByRole('checkbox')).toBeNull();
     const labels = [...document.querySelectorAll('.nc-k')].map((e) => e.textContent);
-    // `node.codec` has a string in a dictionary; `node.fps` has none, so its key shows.
-    expect(labels).toEqual(['node.fps', 'codec']);
+    // `node.quality` has a string in a dictionary; `node.fps` has none, so its key shows.
+    expect(labels).toEqual(['node.fps', 'quality']);
   });
 
   it('writes a choice back to the node', async () => {
     render(<FormBody nodeId="n" />, { wrapper });
-    await userEvent.selectOptions(screen.getByRole('combobox'), 'h265');
-    expect(paramsNow().codec).toBe('h265');
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'ultra');
+    expect(paramsNow().quality).toBe('ultra');
     await userEvent.click(screen.getByRole('checkbox'));
     expect(paramsNow().burn).toBe(true);
   });
@@ -76,10 +76,10 @@ describe('a form read off a schema', () => {
   });
 
   it('labels an enum value from the dictionary and falls back to the value itself', () => {
-    render(<FormBody nodeId="n" fields={['codec']} />, { wrapper });
+    render(<FormBody nodeId="n" fields={['quality']} />, { wrapper });
     const options = [...screen.getByRole('combobox').querySelectorAll('option')].map((o) => o.textContent);
-    // `node.codec.h264` is in the dictionary; a value with no key of its own shows raw.
-    expect(options).toEqual(['H.264', 'H.265']);
+    // `node.quality.high` is in the dictionary; a value with no key of its own shows raw.
+    expect(options).toEqual(['high · final', 'ultra']);
   });
 
   it('takes a widget in place of what the schema alone would draw', async () => {

@@ -1,5 +1,5 @@
 import { registerPortType, type PortType, type PortTypeInfo } from '@/core/types/ports';
-import type { VideoIR } from './types/ir';
+import { CompositionSchema, type Composition } from './types/composition';
 import {
   AudioScriptSchema,
   CaptionTrackSchema,
@@ -18,16 +18,16 @@ declare module '@/core/types/ports' {
   interface PortTypes {
     AudioScript: AudioScript;
     Voiceover: Voiceover;
-    VideoIR: VideoIR;
+    Composition: Composition;
     CaptionTrack: CaptionTrack;
   }
 }
 
-/** Every port type with its label and schema. The IR is validated by its own checks, not here. */
+/** Every port type with its label and schema. */
 const PORTS: Record<PortType, PortTypeInfo> = {
   AudioScript: { labelKey: 'port.audioScript', schema: AudioScriptSchema },
   Voiceover: { labelKey: 'port.voiceover', schema: VoiceoverSchema },
-  VideoIR: { labelKey: 'port.videoIR' },
+  Composition: { labelKey: 'port.composition', schema: CompositionSchema },
   CaptionTrack: { labelKey: 'port.captionTrack', schema: CaptionTrackSchema },
 };
 

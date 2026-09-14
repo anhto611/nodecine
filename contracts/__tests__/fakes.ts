@@ -1,6 +1,3 @@
-import { REQUIRED_TRANSITIONS } from '../types/ir';
-import { _resetCodeRenderers, registerCodeRenderer } from '../visual/renderers';
-import { _resetTransitions, registerTransition } from '../visual/transitions';
 import { contentHash } from '@/core/hash';
 import type { NodeServices } from '@/core/engine/services';
 import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover } from '../types/payloads';
@@ -107,28 +104,18 @@ export function makeFakeServices(overrides: Partial<{
       const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
       return { audioUrl: `/api/media/${contentHash({ parts: parts.map((p) => p.audioUrl), gapSeconds })}.mp3`, durationSeconds: Math.round(start * 100) / 100, segments };
     },
-    async render(_ref, ir, settings, onProgress, signal) {
+    async preview(ref, composition) {
+      calls.push({ name: 'preview', args: [ref.engineId] });
+      return { url: `/api/projects/${contentHash(composition)}/preview.html` };
+    },
+    async render(_ref, composition, settings, onProgress, signal) {
       calls.push({ name: 'render', args: [settings] });
-      for (let f = 0; f <= ir.meta.totalDurationInFrames; f += Math.ceil(ir.meta.totalDurationInFrames / 4)) {
+      for (const fraction of [0, 0.25, 0.5, 0.75, 1]) {
         if (signal.aborted) throw Object.assign(new Error('cancelled'), { code: 'RUN_CANCELLED' });
-        onProgress({ renderedFrames: Math.min(f, ir.meta.totalDurationInFrames), totalFrames: ir.meta.totalDurationInFrames });
+        onProgress({ fraction });
       }
-      return { outputUrl: `/api/media/${contentHash(ir)}.mp4`, bytes: 4_800_000 };
+      return { outputUrl: `/api/media/${contentHash(composition)}.mp4`, bytes: 4_800_000 };
     },
   };
   return services;
-}
-
-/**
- * What a test's stand-in engine promises: the one scene format and the four required transitions,
- * which is what the output nodes ask before they let a film through.
- */
-export function registerFakeEngineSupport(engineId = 'hyperframes'): void {
-  registerCodeRenderer('html-gsap', engineId, () => null);
-  for (const name of REQUIRED_TRANSITIONS) registerTransition(name, engineId, name);
-}
-
-export function resetEngineSupport(): void {
-  _resetCodeRenderers();
-  _resetTransitions();
 }

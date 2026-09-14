@@ -1,8 +1,7 @@
 import { JobHub, type Job, type JobRecorder } from '@/server/jobs';
 import type { Executor } from '@/core/engine/executor';
 import type { RunRecord } from '@/contracts/history';
-import type { VideoIR } from '@/contracts/types/ir';
-import { migrateIR } from '@/contracts/types/migrate-ir';
+import { CompositionSchema, type Composition } from '@/contracts/types/composition';
 import { NODE_FEATURES } from '@/capsules/nodes';
 import { NODE_SOURCES } from '@/capsules/nodes/.generated/server';
 import { fingerprintFor } from '@/server/fingerprints';
@@ -11,32 +10,32 @@ import { createServerServices } from './services.server';
 
 /**
  * The job hub as the contracts run it: the services that reach models, voices and engines, and a run
- * history made of films. The hub itself (`server/jobs.ts`) knows neither.
+ * history made of filled compositions. The hub itself (`server/jobs.ts`) knows neither.
  */
 
 const hasNodeFeature = (type: string, feature: string): boolean => NODE_FEATURES[type]?.includes(feature) ?? false;
 const HISTORY_PER_KEY = 20;
 
-/** What a run keeps: the film it made, the engine that played it, and every file exported from it. */
+/** What a run keeps: the composition the player played, the page it loaded, and every file rendered from it. */
 export interface FilmResult {
-  ir: VideoIR;
-  engineId?: string;
+  composition: Composition;
+  preview?: RunRecord['preview'];
   durationMs: number;
   exports: { fileName: string; bytes: number; outputUrl: string }[];
 }
 
 export const filmRecorder: JobRecorder = {
-  /** A run that reached an IR goes into the history, with the engine the player used. */
+  /** A run whose player played something goes into the history: what was wired into the player, and the page it loaded. */
   run(job: Job, executor: Executor): FilmResult | undefined {
     const graph = executor.getGraph();
-    const carrier = graph.nodes.find((n) => hasNodeFeature(n.type, 'history-ir'));
-    const ir = carrier ? (executor.runtime(carrier.id).outputs.ir?.payload as VideoIR | undefined) : undefined;
-    if (!ir) return undefined;
-    // The engine is the player node's own setting, so it is read off that node rather than
-    // followed back along a wire.
     const player = graph.nodes.find((n) => hasNodeFeature(n.type, 'history-preview') && executor.runtime(n.id).state === 'success');
-    const engineId = player ? String((player.params as { engineId?: string }).engineId ?? '') : '';
-    return { ir, ...(engineId ? { engineId } : {}), durationMs: Date.now() - (job.startedAt ?? job.createdAt), exports: [] };
+    if (!player) return undefined;
+    const wire = graph.edges.find((e) => e.target === player.id && e.targetPort === 'composition');
+    const composition = wire ? (executor.runtime(wire.source).outputs[wire.sourcePort]?.payload as Composition | undefined) : undefined;
+    if (!composition) return undefined;
+    const r = executor.runtime(player.id).result as { engineId?: string; url?: string; width?: number; height?: number } | undefined;
+    const preview = r?.engineId && r.url && r.width && r.height ? { engineId: r.engineId, url: r.url, width: r.width, height: r.height } : undefined;
+    return { composition, ...(preview ? { preview } : {}), durationMs: Date.now() - (job.startedAt ?? job.createdAt), exports: [] };
   },
 
   /** An MP4 export files its result under the run it came from. */
@@ -51,18 +50,18 @@ export const filmRecorder: JobRecorder = {
     return true;
   },
 
-  /** A film recorded by an older build carries that build's IR; brought forward, or dropped when no version reads it. */
+  /** A run recorded by an older build carries something this build cannot play; it is dropped. */
   load(result: unknown): FilmResult | undefined {
     const film = result as FilmResult | undefined;
-    if (!film?.ir) return undefined;
-    return { ...film, ir: migrateIR(film.ir) };
+    if (!film || !CompositionSchema.safeParse(film.composition).success) return undefined;
+    return film;
   },
 
-  /** History entries for a workflow, newest first, read off the runs that produced a film. */
+  /** History entries for a workflow, newest first, read off the runs that played something. */
   history(jobs: Job[], key: string): RunRecord[] {
     const runs = jobs.filter((j) => j.key === key && j.kind === 'run' && j.result).sort((a, b) => a.createdAt - b.createdAt);
     return runs
-      .map((j, i) => { const film = j.result as FilmResult; return { seq: i + 1, startedAt: j.startedAt ?? j.createdAt, durationMs: film.durationMs, ir: film.ir, engineId: film.engineId, exports: film.exports }; })
+      .map((j, i) => { const film = j.result as FilmResult; return { seq: i + 1, startedAt: j.startedAt ?? j.createdAt, durationMs: film.durationMs, composition: film.composition, preview: film.preview, exports: film.exports }; })
       .reverse()
       .slice(0, HISTORY_PER_KEY);
   },

@@ -5,8 +5,7 @@ import { ALL_NODES, NODE_FEATURES } from '@/capsules/nodes';
 import { NODE_SERVICE_EXTENSIONS } from '@/capsules/nodes/.generated/server';
 import { ENGINE_SERVER_REGISTRATIONS } from '@/capsules/engines/.generated/server';
 import { ENGINE_CLIENT_REGISTRATIONS } from '@/capsules/engines/.generated/client';
-import { _resetEngineRegistry, listEngineIds, previewEngine } from '@/contracts/adapters/registry';
-import { STYLE, SCENE_SOURCE } from '@/contracts/__tests__/scene-fixtures';
+import { _resetEngineRegistry, listEngineIds } from '@/contracts/adapters/registry';
 import { hasTranslation } from '@/lib/i18n';
 import { NODE_TRANSLATIONS } from '@/capsules/nodes/.generated/locales';
 import { makeFakeServices } from '@/contracts/__tests__/fakes';
@@ -33,10 +32,8 @@ describe('node capsules', () => {
     expect(server).not.toMatch(/\/node'/);
   });
 
-  it('the hub can find the one node that previews the film and the one that exports a file, and at most one carries the IR', () => {
+  it('the hub can find the one node that plays a composition and the one that exports a file', () => {
     const carriers = (feature: string) => Object.entries(NODE_FEATURES).filter(([, f]) => f.includes(feature)).map(([id]) => id);
-    // No node builds a film today; the one that does next declares `history-ir` and the run history picks it up.
-    expect(carriers('history-ir').length).toBeLessThanOrEqual(1);
     expect(carriers('history-preview')).toEqual(['video-output']);
     expect(carriers('history-file-export')).toEqual(['mp4-export']);
     expect(Object.keys(NODE_FEATURES).sort()).toEqual(ALL_NODES.map((n) => n.type).sort());
@@ -66,15 +63,12 @@ describe('node capsules', () => {
     expect(missing).toEqual([]);
   });
 
-  it('an engine registers itself from its capsule, on both sides, and the Studio finds one that draws a still', () => {
+  it('an engine registers itself from its capsule, on both sides', () => {
     expect(ENGINE_SERVER_REGISTRATIONS).toHaveLength(1);
     expect(ENGINE_CLIENT_REGISTRATIONS).toHaveLength(1);
     _resetEngineRegistry();
     for (const register of ENGINE_CLIENT_REGISTRATIONS) register();
     expect(listEngineIds()).toEqual(['hyperframes']);
-    const html = previewEngine()!.previewScene!({ style: STYLE, source: SCENE_SOURCE, vars: { channel: 'AIDev' } });
-    expect(html).toContain('<h1 class="title">Hello</h1>');
-    expect(html).toContain('@layer nc-style');
     _resetEngineRegistry();
   });
 });

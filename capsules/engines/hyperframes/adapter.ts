@@ -1,45 +1,52 @@
-import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult, ScenePreviewOptions } from '@/contracts/adapters/types';
-import type { VideoIR } from '@/contracts/types/ir';
+import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult } from '@/contracts/adapters/types';
+import type { Composition } from '@/contracts/types/composition';
 import type { Capability } from '@/contracts/types/payloads';
-import { assertValidIR } from '@/contracts/types/validate-ir';
 import { HYPERFRAMES_ADAPTER_VERSION, HYPERFRAMES_ENGINE_ID } from './constants';
 
-export type MountPlayer = (element: HTMLElement, ir: VideoIR) => PlayerHandle;
-export type ServerRender = (ir: VideoIR, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal) => Promise<RenderResult>;
-export type PreviewScene = (options: ScenePreviewOptions) => string;
+export type ServerPreview = (composition: Composition, signal: AbortSignal) => Promise<{ url: string }>;
+export type ServerRender = (composition: Composition, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal) => Promise<RenderResult>;
+export type MountPlayer = (element: HTMLElement, preview: { url: string; width: number; height: number }) => PlayerHandle;
+
+const notHere = (what: string, side: string) => Object.assign(new Error(`${what} is only available ${side}`), { code: 'ENGINE_NOT_READY' });
+
+/** A composition written for another engine is not this engine's to draw. */
+function mine(composition: Composition): void {
+  if (composition.engine !== HYPERFRAMES_ENGINE_ID) {
+    throw Object.assign(new Error(`this composition is written for "${composition.engine}", not HyperFrames`), { code: 'ENGINE_NOT_READY' });
+  }
+}
 
 /**
- * HyperFrames: the engine for `html-gsap`. Every scene is its own HTML and
- * GSAP timeline in the film's style; this engine builds one composition page per IR and hands it to the
- * HyperFrames player in the browser and to the HyperFrames producer on the server. Isomorphic like
- * any engine adapter: the two environment-specific halves are injected by the registrations.
+ * HyperFrames, used the way HyperFrames is used: a composition is an HTML project whose root
+ * declares its variables, previewed in `<hyperframes-player>` and rendered by `@hyperframes/producer`
+ * with values for those variables. Each side of the app registers the half it can run.
  */
-export function createHyperframesAdapter(impl: { mountPlayer?: MountPlayer; previewScene?: PreviewScene; render?: ServerRender } = {}): EngineAdapter {
+export function createHyperframesAdapter(impl: { preview?: ServerPreview; render?: ServerRender; mountPlayer?: MountPlayer } = {}): EngineAdapter {
   const ready: Capability = { status: 'ready' };
+  const unavailable = (reason: string): Capability => ({ status: 'unavailable', code: 'ENGINE_NOT_READY', reason });
   return {
     engineId: HYPERFRAMES_ENGINE_ID,
-    displayName: 'Hyperframes',
+    displayName: 'HyperFrames',
     adapterVersion: HYPERFRAMES_ADAPTER_VERSION,
-
     async probe() {
       return {
-        preview: ready,
-        render: impl.render ? ready : { status: 'unavailable', code: 'ENGINE_NOT_READY', reason: 'render is only available on the server' },
+        preview: impl.preview || impl.mountPlayer ? ready : unavailable('preview is not available here'),
+        render: impl.render ? ready : unavailable('render is only available on the server'),
       };
     },
-
-    mountPlayer(element, ir) {
-      if (!impl.mountPlayer) throw Object.assign(new Error('the player is only available in the browser'), { code: 'ENGINE_NOT_READY' });
-      assertValidIR(ir);
-      return impl.mountPlayer(element, ir);
+    async preview(composition, signal) {
+      if (!impl.preview) throw notHere('preparing a preview', 'on the server');
+      mine(composition);
+      return impl.preview(composition, signal);
     },
-
-    ...(impl.previewScene ? { previewScene: impl.previewScene } : {}),
-
-    async render(ir, settings, onProgress, signal) {
-      if (!impl.render) throw Object.assign(new Error('render is only available on the server'), { code: 'ENGINE_NOT_READY' });
-      assertValidIR(ir);
-      return impl.render(ir, settings, onProgress, signal);
+    mountPlayer(element, preview) {
+      if (!impl.mountPlayer) throw notHere('the player', 'in the browser');
+      return impl.mountPlayer(element, preview);
+    },
+    async render(composition, settings, onProgress, signal) {
+      if (!impl.render) throw notHere('render', 'on the server');
+      mine(composition);
+      return impl.render(composition, settings, onProgress, signal);
     },
   };
 }

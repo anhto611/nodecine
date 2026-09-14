@@ -99,14 +99,19 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
       return { audioUrl: mediaUrl(name), durationSeconds, segments };
     },
-    async render(ref, ir, settings, onProgress, signal) {
+    async preview(ref, composition, signal) {
       const f = getEngineFactory(ref.engineId);
       if (!f) throw Object.assign(new Error(`unknown engine ${ref.engineId}`), { code: 'ENGINE_NOT_READY' });
-      const result = await f(ref.settings).render(ir, settings, onProgress, signal);
+      return f(ref.settings).preview(composition, signal);
+    },
+    async render(ref, composition, settings, onProgress, signal) {
+      const f = getEngineFactory(ref.engineId);
+      if (!f) throw Object.assign(new Error(`unknown engine ${ref.engineId}`), { code: 'ENGINE_NOT_READY' });
+      const result = await f(ref.settings).render(composition, settings, onProgress, signal);
       const workflow = opts.workflow?.();
       if (workflow) {
         // Best-effort, like a ComfyUI PNG carrying its workflow: a video without the tag is still a video.
-        await embedWorkflow(mediaPath(fileNameFromMediaUrl(result.outputUrl)), { ...workflow, ir }, signal).catch(() => undefined);
+        await embedWorkflow(mediaPath(fileNameFromMediaUrl(result.outputUrl)), workflow, signal).catch(() => undefined);
       }
       return result;
     },

@@ -45,10 +45,10 @@ export async function resolveTTS(services: Pick<NodeServices, 'probeTTS'>, param
   return ref;
 }
 
-/** The engine this node draws with: `preview` to show a film, `render` to write a file. */
-export async function resolveEngine(services: Pick<NodeServices, 'probeEngine'>, params: { engineId: string; engineSettings?: Record<string, unknown> }, requires: readonly string[]): Promise<EngineRef> {
-  if (!params.engineId.trim()) throw new NodeError(ErrorCode.INPUT_EMPTY, 'no engine chosen', false).withFix('choose an engine on this node');
-  const ref = await services.probeEngine(params.engineId, params.engineSettings ?? {});
+/** The engine a composition names: `preview` to play it, `render` to write a file. */
+export async function resolveEngine(services: Pick<NodeServices, 'probeEngine'>, engineId: string, requires: readonly string[], settings: Record<string, unknown> = {}): Promise<EngineRef> {
+  if (!engineId.trim()) throw new NodeError(ErrorCode.INPUT_EMPTY, 'the composition names no engine', false).withFix('open the composition and set its engine');
+  const ref = await services.probeEngine(engineId, settings);
   need(ref, requires, 'engine');
   return ref;
 }

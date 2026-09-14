@@ -3,6 +3,8 @@
 import type React from 'react';
 import type { BodyProps, NodeMeta } from '@/capsules/sdk/meta';
 import { CaptionExportBody } from '../caption-export/body';
+import { CompositionBody } from '../composition/body';
+import { FillBody } from '../fill/body';
 import { ExportBody } from '../mp4-export/body';
 import { TranscribeBody } from '../transcribe/body';
 import { TtsBody } from '../tts/body';
@@ -10,6 +12,8 @@ import { VideoOutputBody } from '../video-output/body';
 
 export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'caption-export': CaptionExportBody,
+  'composition': CompositionBody,
+  'fill': FillBody,
   'mp4-export': ExportBody,
   'transcribe': TranscribeBody,
   'tts': TtsBody,
@@ -22,6 +26,8 @@ export const NODE_OVERLAYS: React.FC[] = [
 
 export const NODE_META: Record<string, NodeMeta> = {
   'caption-export': { icon: 'down', group: 'output' },
+  'composition': { icon: 'layers', group: 'visual' },
+  'fill': { icon: 'layers', group: 'visual' },
   'mp4-export': { icon: 'down', group: 'output' },
   'transcribe': { icon: 'wave', group: 'audio' },
   'tts': { icon: 'wave', group: 'audio' },
