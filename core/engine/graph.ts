@@ -1,8 +1,32 @@
 import { ErrorCode } from '../errors';
 import { getNodeType, type AnyNodeDefinition, type NodeIssue } from '../nodes/definition';
-import { isResourcePort } from '../types/ports';
 
 /** Serializable graph document (EXECUTION_ENGINE §7.1). */
+/**
+ * Freeze a node's last outputs into the graph, and thaw them again (CORE_CONTRACTS §1.5).
+ *
+ * `outputs` is the node's runtime outputs, so a pin is always something that actually ran and was
+ * looked at. A port that produced nothing is not pinned, and a node that produced nothing at all is
+ * left alone rather than given a pin that holds air.
+ */
+export function pinNode(graph: Graph, nodeId: string, outputs: Record<string, { payload: unknown }>, at: string): Graph {
+  const entries = Object.entries(outputs).filter(([, p]) => p?.payload !== undefined).map(([port, p]) => [port, p.payload] as const);
+  if (!entries.length) return graph;
+  const pinned = { outputs: Object.fromEntries(entries), at };
+  return { ...graph, nodes: graph.nodes.map((n) => (n.id === nodeId ? { ...n, pinned } : n)) };
+}
+
+export function unpinNode(graph: Graph, nodeId: string): Graph {
+  return {
+    ...graph,
+    nodes: graph.nodes.map((n) => {
+      if (n.id !== nodeId || !n.pinned) return n;
+      const { pinned: _thawed, ...rest } = n;
+      return rest;
+    }),
+  };
+}
+
 export interface NodeInstance {
   id: string;
   type: string;
@@ -15,6 +39,15 @@ export interface NodeInstance {
    * a graph saved before the stamp existed.
    */
   version?: number;
+  /**
+   * Outputs frozen into the graph: the node hands these back and does not run (CORE_CONTRACTS §1.5).
+   *
+   * A workflow used to keep only instructions — a sentence describing the look — and derive the look
+   * again on every run. Two videos from one workflow were therefore two near-misses rather than one
+   * house style, and the expensive half of the pipeline was paid for again every time. A pin is how a
+   * result becomes part of the workflow: approve a style once, and every later run draws in it.
+   */
+  pinned?: { outputs: Record<string, unknown>; at: string };
 }
 
 export interface Edge {
@@ -28,17 +61,6 @@ export interface Edge {
 export interface Graph {
   nodes: NodeInstance[];
   edges: Edge[];
-}
-
-/**
- * The kind of a wire follows the port it leaves: content flowing step to step, or a resource (a
- * footage, a model, a voice, an engine) plugged into the node that uses it. Unknown node types count
- * as flow so an unregistered graph still lays out.
- */
-export function edgeKind(graph: Graph, e: Graph['edges'][number]): 'flow' | 'resource' {
-  const node = graph.nodes.find((n) => n.id === e.source);
-  const port = node ? getNodeType(node.type)?.outputs.find((o) => o.name === e.sourcePort) : undefined;
-  return port && isResourcePort(port.type) ? 'resource' : 'flow';
 }
 
 export interface GraphIssue extends NodeIssue {
@@ -108,6 +130,33 @@ export function topoSort(graph: Graph): { order: string[] } | { cycleEdges: stri
 }
 
 /**
+ * The flow: every node with a wire on it (CORE_CONTRACTS §1.4).
+ *
+ * A node with nothing in any port and nothing leaving it is not part of the film. Dropping one from
+ * the library and wiring it up takes several gestures, and in between it used to stop the whole
+ * workflow from running, then report a failure after a run it was never part of. It is drawn with
+ * its warning and otherwise left alone.
+ */
+export function flowNodes(graph: Graph): Set<string> {
+  const wired = new Set<string>();
+  for (const e of graph.edges) { wired.add(e.source); wired.add(e.target); }
+  return wired;
+}
+
+/**
+ * Whether there is anything to run: a node that takes no input at all — today the Input Trigger and
+ * the Static Script — with its result wired into something. Nothing else can begin a film, and a
+ * canvas of unwired cards has nothing to do.
+ */
+export function canRun(graph: Graph): boolean {
+  return graph.nodes.some((n) => {
+    const def = getNodeType(n.type);
+    if (!def || n.bypassed || def.inputs.length > 0) return false;
+    return graph.edges.some((e) => e.source === n.id);
+  });
+}
+
+/**
  * Continuous graph validation (EXECUTION_ENGINE §2). Errors disable Run; warnings do not.
  */
 export function validateGraph(graph: Graph): GraphIssue[] {
@@ -130,7 +179,7 @@ export function validateGraph(graph: Graph): GraphIssue[] {
         message: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
       });
     } else if (def.validate) {
-      for (const issue of def.validate(parsed.data)) issues.push({ severity: 'error', nodeId: n.id, ...issue });
+      for (const issue of def.validate(parsed.data)) issues.push({ severity: 'warning', nodeId: n.id, ...issue });
     }
   }
 
@@ -145,12 +194,19 @@ export function validateGraph(graph: Graph): GraphIssue[] {
     const incoming = incomingEdges(graph, n.id);
     for (const port of def.inputs) {
       const edges = incoming.filter((e) => e.targetPort === port.name);
-      if (edges.length === 0 && port.required !== false) {
+      // A pinned node hands back what the graph keeps and never runs, so it never reads this port.
+      // Warning about it is telling somebody to wire up an input nothing will ever look at — and on
+      // a pinned plate maker the only honest wire would close a cycle.
+      if (edges.length === 0 && port.required !== false && !n.pinned) {
         issues.push({
-          severity: 'error',
+          // Said on the node, not held against the run: a port with nothing in it stops that node
+          // when the run reaches it, and says so there. Dropping a node from the library and wiring
+          // it up takes several gestures, and in between it has required inputs with nothing in
+          // them — that used to disable Run for the whole workflow.
+          severity: 'warning',
           nodeId: n.id,
           port: port.name,
-          code: port.type === 'LLMRef' || port.type === 'TTSRef' || port.type === 'EngineRef' ? ErrorCode.PROVIDER_NOT_CONNECTED : ErrorCode.GRAPH_PORT_UNCONNECTED,
+          code: ErrorCode.GRAPH_PORT_UNCONNECTED,
           message: `Input "${port.name}" is not connected`,
         });
       }

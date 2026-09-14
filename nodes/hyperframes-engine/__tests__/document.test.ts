@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { buildHyperframesDocument, splitCode, COMPOSITION_ID } from '../document';
-import type { VideoIR } from '@/core/types/ir';
-import { migrateIR } from '@/core/types/migrate-ir';
-import { FACT_SOURCE, SCENE_SOURCE, STYLE } from '@/core/__tests__/scene-fixtures';
-import lumenV2 from '@/core/__tests__/fixtures/ir-v2-lumen.json';
+import type { VideoIR } from '@/contracts/types/ir';
+import { migrateIR } from '@/contracts/types/migrate-ir';
+import { FACT_SOURCE, SCENE_SOURCE, STYLE } from '@/contracts/__tests__/scene-fixtures';
+import lumenV2 from '@/contracts/__tests__/fixtures/ir-v2-lumen.json';
 
 const ir: VideoIR = {
   irVersion: 3,
@@ -169,11 +169,15 @@ describe('what version 3 draws that version 2 could not', () => {
     const trimmed = buildHyperframesDocument({ ...under, tracks: [{ id: 'background', clips: [{ ...under.tracks[0]!.clips[0]!, offsetSeconds: 12, gain: 0.5, loop: false } as VideoIR['tracks'][0]['clips'][0]] }, ...ir.tracks] }, opts);
     expect(trimmed).toContain('style="object-fit: cover" data-media-start="12" data-volume="0.5" playsinline></video>');
     // The scenes moved up a track, the voice above them all.
-    expect(html).toContain('data-scene="scene-1" data-start="0" data-duration="3.4" data-track-index="1"');
+    expect(html).toContain('data-scene="scene-1" data-beat="" data-start="0" data-duration="3.4" data-track-index="1"');
     expect(html).toContain('<audio id="voice" data-start="0" data-duration="9.5" data-track-index="2"');
     expect(html).toContain('.nc-media { width: 100%; height: 100%; display: block; }');
     // A media clip is not a scene: no captions, no script, not in the data island.
     expect(dataOf(html).scenes.map((s: { id: string }) => s.id)).toEqual(['scene-1', 'scene-2']);
+    // With something under them the scenes lose their ground, and only they: a beat clip is marked, a layer's drawing is not.
+    expect(html).toContain('[data-composition-id] .nc-scene[data-beat] { background: transparent; }');
+    expect(html).toContain('data-scene="scene-1" data-beat=""');
+    expect(buildHyperframesDocument(ir, opts)).not.toContain('background: transparent; }');
   });
 
   it('a second sound beside the voice, on a track of its own, at its level, looped, from inside the file, faded on the master timeline', () => {
@@ -188,6 +192,25 @@ describe('what version 3 draws that version 2 could not', () => {
     expect(dataOf(ducked).audio[0].duck).toEqual({ to: 0.05, windows: [[0, 9.5]] });
     expect(ducked).toContain("master.to(el, { volume: a.duck.to, duration: 0.25, ease: 'none' }, from)");
     expect(html).toContain("master.fromTo(el, { volume: 0 }, { volume: a.gain, duration: fadeIn, ease: 'none' }, a.start)");
+  });
+});
+
+describe('the other two formats', () => {
+  it('inline their library only when a clip asks, and turn a Lottie clip into a scene', () => {
+    const plain = buildHyperframesDocument(ir, { ...opts, libs: { lottie: '/*lottie*/', three: '/*three*/' } });
+    expect(plain).not.toContain('/*lottie*/');
+    expect(plain).not.toContain('/*three*/');
+    const json = JSON.stringify({ v: '5.7.4', fr: 30, ip: 0, op: 60, w: 100, h: 100, layers: [] });
+    const withLottie: VideoIR = { ...ir, tracks: [{ id: 'anim', clips: [{ id: 'logo', kind: 'code', startFrame: 0, durationInFrames: 300, format: 'lottie', source: json }] }, ...ir.tracks] };
+    const html = buildHyperframesDocument(withLottie, { ...opts, libs: { lottie: '/*lottie*/', three: '/*three*/' } });
+    expect(html).toContain('<script>/*lottie*/</script>');
+    expect(html).not.toContain('/*three*/');
+    expect(html.indexOf('/*gsap*/')).toBeLessThan(html.indexOf('/*lottie*/'));
+    expect(html).toContain('<div id="logo" class="clip nc-scene" data-scene="logo"');
+    expect(html).toContain('<div class="nc-lottie"></div>');
+    expect(dataOf(html).scenes.find((s: { id: string }) => s.id === 'logo').scripts[0]).toContain('lottie.loadAnimation');
+    const withThree: VideoIR = { ...ir, tracks: [{ id: 'gl', clips: [{ id: 'cube', kind: 'code', startFrame: 0, durationInFrames: 300, format: 'html-three', source: '<canvas id="c"></canvas><script>nodecine.frame(function(t){})</script>' }] }, ...ir.tracks] };
+    expect(buildHyperframesDocument(withThree, { ...opts, libs: { three: '/*three*/' } })).toContain('<script>/*three*/</script>');
   });
 });
 
@@ -210,6 +233,21 @@ describe('the transition catalogue', () => {
     expect(html).toContain('var draw = catalog[tr.name];');
     expect(html).not.toContain("tr.name === 'fade'");
     expect(dataOf(html).transitions.at).toEqual([{ afterClipId: 'scene-1', name: 'wipe-left', seconds: 0.5 }]);
+  });
+});
+
+describe('a layer\'s drawing beside the scenes', () => {
+  const withLayer: VideoIR = { ...ir, tracks: [...ir.tracks, { id: 'device', clips: [{ id: 'phone', kind: 'code', startFrame: 0, durationInFrames: 300, format: 'html-gsap', source: '<div class="phone"></div>' }] }] };
+
+  it('never paints the film\'s ground, so the scenes under it are seen', () => {
+    const html = buildHyperframesDocument(withLayer, opts);
+    expect(html).toContain('[data-composition-id] .nc-scene:not([data-beat]) { background: transparent; }');
+    // The beats are marked so the rule can tell them apart; the layer is not.
+    expect(html).toContain('data-scene="scene-1" data-beat=""');
+    expect(html).toContain('<div id="phone" class="clip nc-scene" data-scene="phone" data-start="0"');
+    // A film of scenes alone says nothing about grounds at all.
+    expect(buildHyperframesDocument(ir, opts)).not.toContain('background: transparent');
+    expect(buildHyperframesDocument(ir, opts)).not.toContain('data-beat');
   });
 });
 

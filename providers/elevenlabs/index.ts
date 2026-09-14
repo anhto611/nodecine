@@ -1,10 +1,10 @@
 import path from 'node:path';
 import { rename, writeFile } from 'node:fs/promises';
 import { elevenlabsSettings, ELEVENLABS_MODELS } from './settings';
-import { registerTTSProvider } from '@/core/providers/registry';
-import type { SynthesizeResult, TTSProvider } from '@/core/providers/types';
-import type { Capability, Voice } from '@/core/types/payloads';
-import { ErrorCode } from '@/core/errors';
+import { registerTTSProvider } from '@/contracts/providers/registry';
+import type { SynthesizeResult, TTSProvider } from '@/contracts/providers/types';
+import type { Capability, Voice } from '@/contracts/types/payloads';
+import { ErrorCode } from '@/contracts/errors';
 import { contentHash } from '@/core/hash';
 import { ensureTmpDir } from '@/server/paths';
 import { ffmpegBin } from '@/server/audio';

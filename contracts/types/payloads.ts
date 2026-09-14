@@ -1,0 +1,533 @@
+import { z } from 'zod';
+
+/** Payload schemas for the core port types (CORE_CONTRACTS §2, §6.2, §7.1, §8.1). */
+
+const bcp47 = z.string().min(2).max(35);
+
+export const SourceRefSchema = z.object({
+  value: z.string(),
+});
+export type SourceRef = z.infer<typeof SourceRefSchema>;
+
+const FactScalarSchema = z.union([z.string(), z.number(), z.null()]);
+/** One thing in a list of facts: a news item, a release, a review — its own fields (CORE_CONTRACTS §2.2). */
+export const FactItemSchema = z.record(z.string(), FactScalarSchema);
+export const FactValueSchema = z.union([FactScalarSchema, z.array(z.string()), z.array(FactItemSchema)]);
+export type FactItem = z.infer<typeof FactItemSchema>;
+
+/**
+ * Read `items.2.title` out of a fact sheet: a plain key, or a list name, an index and a field
+ * (CORE_CONTRACTS §2.2). A beat over a list binds one scene to one item this way.
+ */
+export function readFactPath(facts: Record<string, unknown>, path: string): unknown {
+  let cur: unknown = facts;
+  for (const step of path.split('.')) {
+    if (cur === null || cur === undefined) return undefined;
+    if (Array.isArray(cur)) {
+      const i = Number(step);
+      if (!Number.isInteger(i) || i < 0 || i >= cur.length) return undefined;
+      cur = cur[i];
+      continue;
+    }
+    if (typeof cur !== 'object') return undefined;
+    cur = (cur as Record<string, unknown>)[step];
+  }
+  return cur;
+}
+
+/** The list a fact key holds, or null when that key is not a list of things. */
+export function factListAt(facts: Record<string, unknown>, key: string): FactItem[] | null {
+  const v = facts[key];
+  return Array.isArray(v) && v.every((x) => x && typeof x === 'object' && !Array.isArray(x)) ? (v as FactItem[]) : null;
+}
+export const FactSheetSchema = z.object({
+  facts: z.record(z.string(), FactValueSchema),
+  sourceLabel: z.string(),
+  fetchedAt: z.string(),
+  mode: z.enum(['fetched', 'passthrough']),
+});
+export type FactSheet = z.infer<typeof FactSheetSchema>;
+
+/**
+ * The content vocabulary (CORE_CONTRACTS §2.11): the fixed set of things a scene can say, written by
+ * the screenwriter without knowing any drawing, and read by the Illustrator when it draws the scene.
+ */
+/** The keys a model writes. An image is not among them: a model cannot know an uploaded asset's name. */
+export const WRITTEN_KEYS = ['kicker', 'title', 'body', 'points', 'number', 'label', 'quote', 'attribution', 'code', 'source', 'entries'] as const;
+/** The two a model can never fill: only a person or a fact points at a file this machine holds. */
+export const CONTENT_KEYS = [...WRITTEN_KEYS, 'image', 'clip'] as const;
+export type WrittenKey = (typeof WRITTEN_KEYS)[number];
+export type ContentKey = (typeof CONTENT_KEYS)[number];
+export const isContentKey = (k: string): k is ContentKey => (CONTENT_KEYS as readonly string[]).includes(k);
+
+/**
+ * A file a scene carries: an image uploaded through `POST /api/assets`, or a clip taken in from the
+ * user's own folder through `POST /api/assets/from-library`. Either way it is addressed by its hash
+ * (ARCHITECTURE §6) — a scene may only show a file this machine is already holding.
+ */
+const HASHED_ASSET = /^\/api\/assets\/[a-f0-9]{16,64}\.[a-z0-9]+$/;
+/**
+ * The one other form: a small SVG carried inline. A template is a JSON file and cannot ship a file
+ * beside it, and a workflow shared with someone else loses every hashed asset it names — a drawing
+ * that travels inside the graph survives both. SVG only, and small, so a graph stays a graph and not
+ * a picture archive; a photograph is uploaded and hashed like before.
+ */
+const INLINE_SVG = /^data:image\/svg\+xml;base64,[A-Za-z0-9+/]+=*$/;
+export const INLINE_ASSET_MAX_CHARS = 64 * 1024;
+export const isInlineAsset = (url: string): boolean => url.length <= INLINE_ASSET_MAX_CHARS && INLINE_SVG.test(url);
+export const AssetUrlSchema = z.string().refine((s) => HASHED_ASSET.test(s) || isInlineAsset(s), 'must be an uploaded asset, or an inline SVG under 64 KB');
+/** Whether a string names a file a scene may show: hashed upload or inline SVG. A var that is one is drawn as a picture. */
+export const isAssetUrl = (s: string): boolean => HASHED_ASSET.test(s) || isInlineAsset(s);
+
+const IDENT = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+
+/** The frame a plan is drawn for: the design coordinates its code is written in (CORE_CONTRACTS §2.3). */
+export const FrameSchema = z.object({ width: z.number().int().min(16).max(8192), height: z.number().int().min(16).max(8192) });
+export type Frame = z.infer<typeof FrameSchema>;
+
+/** The one scene-code format there is: an HTML fragment with inline style and an optional GSAP timeline (CORE_CONTRACTS §2.8). */
+export const SCENE_FORMAT = 'html-gsap' as const;
+export const SCENE_SOURCE_MAX = 200_000;
+
+/**
+ * What every scene of a video shares (CORE_CONTRACTS §2.6): a name, and one sheet of CSS — the
+ * colours, the type, the classes the scenes' markup uses. Drawn by the Illustrator for the run.
+ */
+/**
+ * Where the spoken words are written, in pixels of the frame: the band's insets from the left, the
+ * right and the bottom, and the size of its type.
+ *
+ * It is data and not a CSS rule because three parties need the same number. The style sheet used to
+ * move the band itself, and on 2026-09-11 that left the film's own layer reserving a strip 500 px
+ * from where the words actually were: the device sat on the captions, and correcting it against the
+ * wrong strip put the device on the scene's own text instead. The sheet still chooses the face and
+ * the colour; where the band sits is agreed here.
+ */
+export const CaptionBandSchema = z.object({
+  left: z.number().int().min(0).max(8192),
+  right: z.number().int().min(0).max(8192),
+  bottom: z.number().int().min(0).max(8192),
+  size: z.number().int().min(12).max(240),
+});
+export type CaptionBand = z.infer<typeof CaptionBandSchema>;
+
+export const StyleSchema = z.object({
+  name: z.string().min(1).max(80),
+  css: z.string().max(SCENE_SOURCE_MAX),
+  /** Absent on a film drawn before the band was agreed; the engine falls back to its own default. */
+  captions: CaptionBandSchema.optional(),
+});
+export type Style = z.infer<typeof StyleSchema>;
+
+/**
+ * How one scene gives way to the next (CORE_CONTRACTS §2.6): a name in the transition registry, which
+ * the engine wired in must have. `cut`, `fade`, `slide` and `zoom` every engine has; the rest is the
+ * engine's own catalogue, and the output node blocks with ENGINE_TRANSITION_UNSUPPORTED otherwise.
+ */
+export const TransitionSchema = z.object({ type: z.string().min(1).max(60), seconds: z.number().min(0.1).max(2) });
+export type Transition = z.infer<typeof TransitionSchema>;
+
+/**
+ * Values of the whole video (CORE_CONTRACTS §2.6): a channel name, an episode number, and a
+ * character or a logo as a picture. The same in every scene; a scene draws one with `data-var`.
+ */
+export const VarsSchema = z.record(z.string().regex(IDENT), z.union([z.string().max(200), AssetUrlSchema]));
+
+/**
+ * What a scene tells the layers that span the film (docs/IR_V3.md §5.2): a free map, written by
+ * whoever writes the scene and read by whoever draws the layer — `{ device: { x, y, scale, rot } }`
+ * for a phone that glides between scenes. The core carries it and never reads it.
+ */
+export const StageSchema = z.record(z.string().regex(IDENT), z.unknown());
+export type Stage = z.infer<typeof StageSchema>;
+
+/** One scene of a plan (CORE_CONTRACTS §2.3): its own drawing, complete. */
+export const SceneSpecSchema = z.object({
+  weight: z.number().positive(),
+  /** The scene's HTML fragment: markup, `<style>`, optional `<script>` (CORE_CONTRACTS §2.8). */
+  source: z.string().min(1).max(SCENE_SOURCE_MAX),
+  /** fact key → element: `data-fact="<key>"` in the source takes `facts[key]` at assembly; facts always win. */
+  factBindings: z.record(z.string(), z.string()).optional(),
+  /** Where this scene wants the spanning layers; becomes the beat's `stage`. */
+  stage: StageSchema.optional(),
+  /** The scene-code format of `source`; `html-gsap` when absent (2.8). */
+  format: z.string().min(1).max(40).optional(),
+  /** How this scene gives way to the next, when not the film's default; ignored on the last scene. */
+  transitionAfter: TransitionSchema.optional(),
+});
+export type SceneSpec = z.infer<typeof SceneSpecSchema>;
+
+/**
+ * A plan is self-contained (CORE_CONTRACTS §2.3): every scene carries its own drawing and the
+ * style they share, so the assembler, the engines and a saved project need nothing registered.
+ */
+export const ScenePlanSchema = z.object({
+  language: bcp47,
+  frame: FrameSchema.default({ width: 1080, height: 1920 }),
+  style: StyleSchema,
+  transition: TransitionSchema.default({ type: 'fade', seconds: 0.4 }),
+  vars: VarsSchema.default({}),
+  scenes: z.array(SceneSpecSchema).min(1),
+});
+export type ScenePlan = z.infer<typeof ScenePlanSchema>;
+
+export const AudioScriptSchema = z.object({
+  /** The whole narration; with `segments`, their join. */
+  text: z.string().min(1),
+  language: bcp47,
+  /** The narration scene by scene, in scene order: the TTS Engine voices each one and the cut follows (CORE_CONTRACTS §2.4). */
+  segments: z.array(z.string().min(1)).min(1).optional(),
+});
+export type AudioScript = z.infer<typeof AudioScriptSchema>;
+
+/** The vocabulary itself, shared by a scene and by one entry inside it. */
+const contentShape = {
+  kicker: z.string().max(40),
+  title: z.string().max(120),
+  body: z.string().max(400),
+  points: z.array(z.string().min(1).max(120)).max(6),
+  number: z.string().max(24),
+  label: z.string().max(60),
+  quote: z.string().max(300),
+  attribution: z.string().max(80),
+  code: z.string().max(200),
+  source: z.string().max(80),
+  image: AssetUrlSchema,
+  clip: AssetUrlSchema,
+};
+
+/**
+ * One of several things a scene shows at once (CORE_CONTRACTS §2.11): the same vocabulary, one level
+ * down. Two of them are a comparison, five are a ranking, three are the steps of a how-to.
+ *
+ * The vocabulary does not grow a noun per genre — it grows one dimension, repetition, and the
+ * fifteen words it already has describe each entry. One level only: an entry holding entries is a
+ * layout engine in disguise.
+ */
+export const EntryContentSchema = z.object(contentShape).partial().strip();
+export type EntryContent = z.infer<typeof EntryContentSchema>;
+/** The keys an entry may carry. */
+export const ENTRY_KEYS = Object.keys(contentShape) as (keyof typeof contentShape)[];
+
+/** What one scene says, in the content vocabulary; every key optional, a scene writes what it needs. */
+export const SceneContentSchema = z
+  .object({
+    ...contentShape,
+    /** Several things shown at once: two to compare, five to rank, three steps. */
+    entries: z.array(EntryContentSchema).max(12),
+  })
+  .partial()
+  .strip();
+export type SceneContent = z.infer<typeof SceneContentSchema>;
+
+/**
+ * The scene script (CORE_CONTRACTS §2.11): the video broken into scenes with their content, before
+ * any drawing instructions. Written by the Screenwriter or typed into Static Script; the Illustrator draws each
+ * scene from it and emits the ScenePlan.
+ */
+export const SceneScriptSchema = z.object({
+  language: bcp47,
+  /** The film form this was written for (§6); the Illustrator draws to the same one unless told otherwise. */
+  form: z.string().max(40).optional(),
+  scenes: z
+    .array(
+      z.object({
+        /** The beat this scene belongs to: hook, quote, cta. */
+        role: z.string().min(1).max(40),
+        weight: z.number().positive(),
+        /** What is said over this scene. The scene lasts as long as its narration (CORE_CONTRACTS §5.4). */
+        narration: z.string().min(1).max(600),
+        content: SceneContentSchema,
+        /** The arrangement this scene is laid out in (§6.1); the form's poses are cycled when absent. */
+        pose: z.string().max(40).optional(),
+        /** content key → fact key: filled from verified data at assembly, never written by the model. */
+        factBindings: z.record(z.enum(CONTENT_KEYS), z.string()).optional(),
+        /** Where this scene wants the spanning layers (docs/IR_V3.md §5.2); copied to the plan and then to the beat. */
+        stage: StageSchema.optional(),
+        /** How this scene gives way to the next, when not the film's default; copied to the plan. */
+        transitionAfter: TransitionSchema.optional(),
+      }),
+    )
+    .min(1),
+});
+export type SceneScript = z.infer<typeof SceneScriptSchema>;
+
+/** Media URLs are always app-relative (ARCHITECTURE §6). Never a filesystem path. */
+export const MediaUrlSchema = z.string().regex(/^\/api\/media\/[a-f0-9]{16,64}\.[a-z0-9]+$/);
+
+/** One spoken word: seconds from the start of the voice-over. */
+export const WordSchema = z.object({ text: z.string().min(1), start: z.number().nonnegative(), end: z.number().nonnegative() });
+export type Word = z.infer<typeof WordSchema>;
+
+export const VoiceoverSchema = z.object({
+  audioUrl: MediaUrlSchema,
+  durationSeconds: z.number().positive(),
+  voiceName: z.string(),
+  language: bcp47,
+  speed: z.number().positive(),
+  /** Word timings, when a provider returned them or the Transcribe node aligned them. */
+  words: z.array(WordSchema).optional(),
+  /** One entry per narration segment, in order: where it starts and how long it lasts in the file, gap included. */
+  segments: z.array(z.object({ start: z.number().nonnegative(), durationSeconds: z.number().positive() })).min(1).optional(),
+});
+export type Voiceover = z.infer<typeof VoiceoverSchema>;
+
+/** How the spoken word is marked; read off the scene's caption slot, never carried by the track. */
+export const CAPTION_STYLES = ['karaoke', 'reveal'] as const;
+export type CaptionStyle = (typeof CAPTION_STYLES)[number];
+/** Caption lines on the voice-over's clock (CORE_CONTRACTS §2.10): what is said, when. Where and how is the scene's. */
+export const CaptionTrackSchema = z.object({
+  cues: z.array(z.object({ start: z.number().nonnegative(), end: z.number().nonnegative(), words: z.array(WordSchema).min(1) })),
+});
+export type CaptionTrack = z.infer<typeof CaptionTrackSchema>;
+
+/** One capability as reported by probe() (EXECUTION_ENGINE §1.1). */
+export const CapabilitySchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ready') }),
+  z.object({
+    status: z.literal('unavailable'),
+    reason: z.string(),
+    fix: z.string().optional(),
+    code: z.string().optional(),
+  }),
+]);
+export type Capability = z.infer<typeof CapabilitySchema>;
+
+export const EngineRefSchema = z.object({
+  engineId: z.string().min(1),
+  displayName: z.string(),
+  adapterVersion: z.string(),
+  capabilities: z.object({ preview: CapabilitySchema, render: CapabilitySchema }),
+  settings: z.record(z.string(), z.unknown()),
+});
+export type EngineRef = z.infer<typeof EngineRefSchema>;
+
+export const LLMRefSchema = z.object({
+  providerId: z.string().min(1),
+  displayName: z.string(),
+  transport: z.enum(['cli', 'api']),
+  capabilities: z.object({
+    installed: CapabilitySchema,
+    authenticated: CapabilitySchema,
+    structuredOutput: CapabilitySchema,
+    version: z.string().optional(),
+  }),
+  settings: z.record(z.string(), z.unknown()),
+});
+export type LLMRef = z.infer<typeof LLMRefSchema>;
+
+export const VoiceSchema = z.object({ id: z.string(), displayName: z.string(), language: bcp47 });
+export type Voice = z.infer<typeof VoiceSchema>;
+
+export const TTSRefSchema = z.object({
+  providerId: z.string().min(1),
+  displayName: z.string(),
+  transport: z.enum(['local', 'api']),
+  capabilities: z.object({ installed: CapabilitySchema, encoder: CapabilitySchema }),
+  voices: z.array(VoiceSchema),
+  settings: z.object({ defaultVoice: z.string().optional(), rate: z.number().positive().default(1) }),
+});
+export type TTSRef = z.infer<typeof TTSRefSchema>;
+
+/**
+ * A layer of the film (CORE_CONTRACTS §2.12, docs/IR_V3.md §10 step 4): one thing that runs beside
+ * the scenes on a track of its own, under them or over them. A file — gameplay looping under a
+ * story, a screen recording the scenes annotate, a logo held in a corner — or a drawing that spans
+ * the film, reading `nodecine.beats` to move with the cut. The Layer node emits one; the assembler
+ * takes any number and makes a track of each.
+ */
+/**
+ * What every layer may say about itself, whichever kind it is.
+ *
+ * These three came from `CastMember` when the cast and the layers became one on 2026-09-13. They
+ * are what makes a layer a thing the scenes can talk to rather than a picture lying on the film:
+ * `id` is the key a scene writes under `beats[].stage`, and `width`/`height` are what `scale: 1` in
+ * that entry means. Optional, because a gameplay clip under a story answers to nobody.
+ */
+const namedLayer = {
+  /** The stage key the scenes use and this layer's own script reads. Lowercase, no spaces. */
+  id: z.string().regex(IDENT).max(40).optional(),
+  /** What it is, in words: what the scenes are told they must leave room for. */
+  brief: z.string().max(600).optional(),
+  /** Its natural size in frame pixels: what `scale: 1` in a scene's stage entry means. */
+  width: z.number().int().positive().max(8192).optional(),
+  height: z.number().int().positive().max(8192).optional(),
+  /**
+   * Where in the frame this thing lives: the rectangle it may move within, in pixels from the
+   * top-left. Everything drawn per scene keeps out of it, and it keeps inside.
+   *
+   * Without one there is no answer to "where will it be", so a layout drawn in advance can only
+   * avoid everywhere it might go — which on a portrait frame is the whole safe area, leaving the
+   * words nowhere legal to sit. That is exactly how a headline ended up written across the captions.
+   */
+  home: z.object({
+    x: z.number().int().min(0).max(8192),
+    y: z.number().int().min(0).max(8192),
+    width: z.number().int().positive().max(8192),
+    height: z.number().int().positive().max(8192),
+  }).optional(),
+};
+
+export const LayerSpecSchema = z.discriminatedUnion('kind', [
+  z.object({
+    ...namedLayer,
+    kind: z.literal('media'),
+    /** A file this machine holds (§2.7): a clip taken from the clips folder or a picture uploaded. */
+    url: AssetUrlSchema,
+    placement: z.enum(['under', 'over']),
+    /** Seconds into the film the layer appears; the whole film when 0 and `durationSeconds` is absent. */
+    startSeconds: z.number().nonnegative(),
+    durationSeconds: z.number().positive().optional(),
+    /** Seconds into the file to start from. */
+    offsetSeconds: z.number().nonnegative(),
+    fit: z.enum(['cover', 'contain']),
+    /** The file's own length in seconds, measured by the node that chose the file. */
+    sourceSeconds: z.number().positive().optional(),
+    /** Start over when the file runs out; a short gameplay loop under a long story. */
+    loop: z.boolean(),
+    /** The file's own sound, 0 for a silent picture under the voice. */
+    gain: z.number().min(0).max(1),
+  }),
+  z.object({
+    ...namedLayer,
+    kind: z.literal('code'),
+    /**
+     * An HTML fragment like a scene's (§2.8); its script sees `nodecine.beats`. For `lottie`, the
+     * animation's JSON. Empty when somebody else owns the drawing — a Three.js world on its own
+     * node, a file — and this layer only announces itself so the scenes leave room for it.
+     */
+    source: z.string().max(SCENE_SOURCE_MAX),
+    /** The drawing's format (`SCENE_FORMATS`); `html-gsap` when absent. */
+    format: z.string().min(1).max(40).optional(),
+    /** Start it over when it runs out; only for a format with a length of its own, such as Lottie. */
+    loop: z.boolean().optional(),
+    placement: z.enum(['under', 'over']),
+    startSeconds: z.number().nonnegative(),
+    durationSeconds: z.number().positive().optional(),
+  }),
+]);
+export type LayerSpec = z.infer<typeof LayerSpecSchema>;
+
+/**
+ * Everything beside the scenes, in the order it is stacked (CORE_CONTRACTS §5.22).
+ *
+ * A sheet rather than one layer per wire, because the Set draws several at once and a port carries
+ * one payload. The Layer node emits a sheet of one; the assembler takes any number of sheets on one
+ * port and lays them all down. Until 2026-09-13 there were two payloads for this and two ports on
+ * the assembler, and it converted one into the other on the way in — two names for one idea.
+ */
+export const LayerSheetSchema = z.object({ layers: z.array(LayerSpecSchema).max(8) });
+export type LayerSheet = z.infer<typeof LayerSheetSchema>;
+
+/**
+ * A sound beside the voice (CORE_CONTRACTS §2.15, docs/IR_V3.md §5.3): music or ambience on an audio
+ * track of its own. The Music Bed and Audio Input emit one; the assembler takes any number, clamps
+ * each to the film, and names the voice as what it ducks under. Fades and ducking are data here and
+ * behaviour in the engines, or in the Music Bed's pre-mixed path, whichever the graph uses.
+ */
+export const AudioTrackSpecSchema = z.object({
+  url: MediaUrlSchema,
+  /** The file's own length, measured; what the film is when nothing else sets its clock. */
+  durationSeconds: z.number().positive(),
+  role: z.enum(['music', 'ambient']),
+  gain: z.number().min(0).max(1),
+  /** Seconds into the film the sound starts; how long it plays, the rest of the film when absent. */
+  startSeconds: z.number().nonnegative(),
+  playSeconds: z.number().positive().optional(),
+  /** Seconds into the file to start from. */
+  offsetSeconds: z.number().nonnegative().optional(),
+  /** Start over when the file runs out. */
+  loop: z.boolean().optional(),
+  fadeInSeconds: z.number().nonnegative().optional(),
+  fadeOutSeconds: z.number().nonnegative().optional(),
+  /** The level to drop to while the voice speaks; nothing when the track keeps its level. */
+  duckTo: z.number().min(0).max(1).optional(),
+  /** Per-frame loudness and bands, written by the Audio Analysis node; becomes the IR track's `analysisUrl`. */
+  analysisUrl: MediaUrlSchema.optional(),
+  /** Where the beat falls, in seconds from the file's start; the assembler can cut the scenes on these. */
+  beatSeconds: z.array(z.number().nonnegative()).max(4000).optional(),
+});
+export type AudioTrackSpec = z.infer<typeof AudioTrackSpecSchema>;
+
+/**
+ * A film's look, drawn once and handed on (CORE_CONTRACTS §5.18): the shared style sheet, the guide
+ * the scenes are drawn against, the frame it was designed for, and whether the scenes paint a ground.
+ *
+ * It is a payload rather than a step inside the Illustrator because a look is the thing a workflow
+ * keeps. Drawn on its own it can be looked at, approved and pinned (§1.4), and every later run of
+ * that workflow draws in the same style instead of deriving a near-miss from the same sentence.
+ */
+export const StyleSheetSchema = z.object({
+  style: StyleSchema,
+  guide: z.string().max(4000),
+  frame: z.object({ width: z.number().int().positive(), height: z.number().int().positive() }),
+  transparent: z.boolean(),
+  /** A picture fixed for the whole film — a character, a logo — that every scene makes room for. */
+  character: z.union([z.literal(''), AssetUrlSchema]).optional(),
+  /**
+   * The form this was drawn for (§6), when it was drawn for one.
+   *
+   * Carried so the mismatch can be seen. The form is one fact about the film that two nodes have to
+   * know for different reasons and no wire runs between them, so nothing stops them disagreeing —
+   * and a sheet drawn for one kind of film under a script written for another is a film that comes
+   * out wrong quietly. The layouts see both and say so.
+   */
+  form: z.string().max(40).optional(),
+});
+export type StyleSheet = z.infer<typeof StyleSheetSchema>;
+
+/**
+ * A drawing made once and used many times: the layout for one shape of content,
+ * drawn in the film's style, with a named hole for every key it carries.
+ *
+ * The unit is a whole scene, not a piece of one. A scene built from three pieces needs somebody to
+ * decide how the pieces are arranged, and that decision is the expensive half of drawing — either
+ * code re-learns layout, or the model is asked again and nothing was saved. A plate is a layout, so
+ * the question does not arise.
+ *
+ * `keys` is its signature: the content keys it draws, and the only ones a scene using it may carry.
+ * `budget` is how many characters each hole takes before the layout breaks; the script writes inside
+ * it. Cutdown learned that one the hard way — every field in its block schema carries a maximum.
+ */
+export const PlateSchema = z.object({
+  id: z.string().regex(IDENT).max(40),
+  keys: z.array(z.enum(CONTENT_KEYS)).min(1).max(8),
+  /**
+   * The rectangle this was drawn to fit, when the film has poses (§6.1).
+   *
+   * The box and not the pose's name: a layout is drawn to fit a rectangle, so two poses that give
+   * the same rectangle want the same drawing. Keyed by name instead, a form whose poses differ only
+   * in where the device stands asks the model for the same layout once per pose and gets three
+   * near-misses for the price of three calls.
+   */
+  box: z.object({
+    x: z.number().int().min(0).max(8192),
+    y: z.number().int().min(0).max(8192),
+    width: z.number().int().positive().max(8192),
+    height: z.number().int().positive().max(8192),
+  }).optional(),
+  /** An HTML fragment like a scene's, with `data-slot="<key>"` where the content goes. */
+  source: z.string().min(1).max(SCENE_SOURCE_MAX),
+  budget: z.record(z.string(), z.number().int().positive()).optional(),
+});
+export type Plate = z.infer<typeof PlateSchema>;
+
+export const PlateSheetSchema = z.object({ plates: z.array(PlateSchema).max(24) });
+export type PlateSheet = z.infer<typeof PlateSheetSchema>;
+
+export const PAYLOAD_SCHEMAS = {
+  SourceRef: SourceRefSchema,
+  FactSheet: FactSheetSchema,
+  ScenePlan: ScenePlanSchema,
+  AudioScript: AudioScriptSchema,
+  Voiceover: VoiceoverSchema,
+  EngineRef: EngineRefSchema,
+  LLMRef: LLMRefSchema,
+  TTSRef: TTSRefSchema,
+  CaptionTrack: CaptionTrackSchema,
+  SceneScript: SceneScriptSchema,
+  StyleSheet: StyleSheetSchema,
+  LayerSheet: LayerSheetSchema,
+  PlateSheet: PlateSheetSchema,
+  AudioTrackSpec: AudioTrackSpecSchema,
+} as const;

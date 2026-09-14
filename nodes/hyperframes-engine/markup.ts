@@ -1,18 +1,16 @@
-import type { ScenePreviewOptions } from '@/core/adapters/types';
-import { BIND_SCRIPT, SCENE_HELPERS, SCOPED_GSAP, baseLayer, baseStyles, captionLine, captionStyleOf, captionStyles, fillNamedSlot, sceneMarkup, scopedCss, styleCss } from '@/core/visual/scene-markup';
+import type { ScenePreviewOptions } from '@/contracts/adapters/types';
+import { BIND_SCRIPT, SCENE_HELPERS, SCOPED_GSAP, baseLayer, baseStyles, captionLine, captionStyleOf, captionStyles, fillNamedSlot, sceneMarkup, scopedCss, styleCss } from '@/contracts/visual/scene-markup';
 
 /**
- * The HyperFrames capsule's own view of a scene: the shared machinery lives in the core
- * (`core/visual/scene-markup.ts`, the `html-gsap` format is the core's); this file re-exports it for
+ * The HyperFrames capsule's own view of a scene: the shared machinery lives in the contracts
+ * (`contracts/visual/scene-markup.ts`, the `html-gsap` format is theirs); this file re-exports it for
  * the page builder and adds the one thing only this engine draws — the Studio's scene preview.
  */
-export * from '@/core/visual/scene-markup';
+export * from '@/contracts/visual/scene-markup';
 
 /** What HyperFrames needs beyond the contract's options: where the fonts are, and whether to run the script on a loop. */
 export interface PreviewOptions extends ScenePreviewOptions {
   fontBase?: string;
-  /** Run the scene's script on a looping timeline; needs gsap's source inlined. */
-  animate?: { gsapSource: string; loopSeconds?: number };
 }
 
 /**

@@ -1,6 +1,6 @@
-import { REQUIRED_TRANSITIONS } from '@/core/types/ir';
-import { GSAP_TRANSITION_CATALOG, gsapTransitionCatalogScript } from '@/core/visual/gsap-transitions';
-import { registerTransition } from '@/core/visual/transitions';
+import { REQUIRED_TRANSITIONS } from '@/contracts/types/ir';
+import { GSAP_TRANSITION_CATALOG, gsapTransitionCatalogScript } from '@/contracts/visual/gsap-transitions';
+import { registerTransition } from '@/contracts/visual/transitions';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 
 /** What HyperFrames draws: the core's gsap catalogue, whole, on the page's master timeline. */

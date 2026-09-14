@@ -1,5 +1,5 @@
 import type { Graph } from '@/core/engine/graph';
-import { FRAME_PRESETS } from '@/core/visual/frame';
+import { FRAME_PRESETS } from '@/contracts/visual/frame';
 
 /**
  * What the card says a template makes: the shape of its frame and how many frames a second, read

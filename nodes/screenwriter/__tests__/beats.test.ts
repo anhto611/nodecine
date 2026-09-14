@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { boundFactKeys, expandBeats, outputSchemaFor, sceneSchemaFor, toPackets, type Beat } from '@/nodes/screenwriter/beats';
-import { SceneScriptSchema } from '@/core/types/payloads';
+import { SceneScriptSchema } from '@/contracts/types/payloads';
 
 const beat = (over: Partial<Beat> = {}): Beat => ({ role: 'beat', brief: '', weight: 1, count: 1, factBindings: {}, ...over });
 

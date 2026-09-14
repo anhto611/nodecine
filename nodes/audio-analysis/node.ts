@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import type { AudioTrackSpec } from '@/core/types/payloads';
+import type { AudioTrackSpec } from '@/contracts/types/payloads';
 
 const Params = z.object({
   /** The film's frame rate: one row of the analysis per frame. The Assembler's `fps` should match. */
@@ -25,8 +25,8 @@ export const audioAnalysis: NodeDefinition<typeof Params> = {
   defaultParams: { fps: 30 },
   run: async ({ params, inputs, services, signal, log }) => {
     const track = inputs.track!.payload as AudioTrackSpec;
-    const { analysisUrl, frames } = await services.invoke<{ analysisUrl: string; frames: number }>('audio-analysis/analyze', [track.url, params.fps, signal]);
-    log('info', `${frames} frames at ${params.fps} fps · level, bass, mid, high`);
-    return { track: { ...track, analysisUrl } };
+    const { analysisUrl, frames, beatSeconds } = await services.invoke<{ analysisUrl: string; frames: number; beatSeconds: number[] }>('audio-analysis/analyze', [track.url, params.fps, signal]);
+    log('info', `${frames} frames at ${params.fps} fps · level, bass, mid, high · ${beatSeconds.length} beats`);
+    return { track: { ...track, analysisUrl, ...(beatSeconds.length ? { beatSeconds } : {}) } };
   },
 };

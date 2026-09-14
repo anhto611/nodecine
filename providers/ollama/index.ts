@@ -1,10 +1,10 @@
 import { z, type ZodTypeAny } from 'zod';
 import { ollamaSettings, OLLAMA_DEFAULT_MODEL } from './settings';
-import { registerLLMProvider } from '@/core/providers/registry';
-import type { LLMProvider } from '@/core/providers/types';
-import { ErrorCode } from '@/core/errors';
-import type { Capability, LLMRef } from '@/core/types/payloads';
-import { extractJson } from '@/core/ai/structured-completion';
+import { registerLLMProvider } from '@/contracts/providers/registry';
+import type { LLMProvider } from '@/contracts/providers/types';
+import { ErrorCode } from '@/contracts/errors';
+import type { Capability, LLMRef } from '@/contracts/types/payloads';
+import { extractJson } from '@/contracts/ai/structured-completion';
 
 /**
  * Ollama provider (CORE_CONTRACTS §7): a local model server, offline and without a key.

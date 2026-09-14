@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { runScreenwriter, type ScreenwriterContext } from '@/core/ai/structured-completion';
-import { ErrorCode, NodeError } from '@/core/errors';
-import type { LLMRef } from '@/core/types/payloads';
+import { runScreenwriter, type ScreenwriterContext } from '@/contracts/ai/structured-completion';
+import { ErrorCode, NodeError } from '@/contracts/errors';
+import type { LLMRef } from '@/contracts/types/payloads';
 
 const Output = z.object({ language: z.string(), headline: z.string() });
 

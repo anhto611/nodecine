@@ -28,14 +28,17 @@ export type FieldWidget = {
  * The parameter form of a node, generated from its `paramsSchema` (ARCHITECTURE §2). Enums become
  * selects, strings inputs, numbers bounded inputs, booleans checkboxes; labels come from the
  * dictionary by field name, and an enum value gets its own label when `node.<field>.<value>` exists.
- * `fields` picks a subset, in the order given; `widgets` adjusts or replaces single fields.
+ * `fields` picks a subset, in the order given; `omit` drops fields the body draws itself;
+ * `widgets` adjusts or replaces single fields.
  */
-export const FormBody: React.FC<{ nodeId: string; fields?: string[]; widgets?: Record<string, FieldWidget> }> = ({ nodeId, fields, widgets = {} }) => {
+export const FormBody: React.FC<{ nodeId: string; fields?: string[]; omit?: string[]; widgets?: Record<string, FieldWidget> }> = ({ nodeId, fields, omit, widgets = {} }) => {
   const t = useT();
   const node = useNode(nodeId);
   const [p, set] = useParams<Record<string, unknown>>(nodeId);
   const all = React.useMemo(() => (node ? schemaFields(getNodeType(node.type)?.paramsSchema ?? ({} as never)) : []), [node?.type]); // eslint-disable-line react-hooks/exhaustive-deps
-  const shown = fields ? fields.map((n) => all.find((f) => f.name === n)).filter((f): f is FormField => !!f) : all;
+  const picked = fields ? fields.map((n) => all.find((f) => f.name === n)).filter((f): f is FormField => !!f) : all;
+  // `omit` is for a field the body draws itself: the model picker is not a text box.
+  const shown = omit?.length ? picked.filter((f) => !omit.includes(f.name)) : picked;
   return (
     <>
       {shown.map((f) => {

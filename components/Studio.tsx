@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
+import { NODE_OVERLAYS } from '@/nodes/index.client';
 import { Header } from './Header';
 import { Rail } from './Rail';
 import { Canvas } from './Canvas';
@@ -12,17 +13,16 @@ import { HistoryPanel } from './panels/HistoryPanel';
 import { LogsPanel } from './panels/LogsPanel';
 import { TemplateBrowser } from './panels/TemplateBrowser';
 import { SettingsDialog } from './panels/SettingsDialog';
-import { NODE_OVERLAYS } from '@/nodes/index.client';
 
 /** Studio shell: header, rail, optional left panel, canvas, optional bottom logs, modals. */
 export const Studio: React.FC = () => {
   const ready = useStudio((s) => s.ready);
   const init = useStudio((s) => s.init);
   const panel = useStudio((s) => s.panel);
+  const overlay = useStudio((s) => s.overlay);
   const logsOpen = useStudio((s) => s.logsOpen);
   const templatesOpen = useStudio((s) => s.templatesOpen);
   const settingsOpen = useStudio((s) => s.settingsOpen);
-  const overlay = useStudio((s) => s.overlay);
 
   React.useEffect(() => {
     init();
@@ -71,9 +71,9 @@ export const Studio: React.FC = () => {
           {logsOpen && <LogsPanel />}
         </div>
       </div>
+      {overlay && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
       {templatesOpen && <TemplateBrowser />}
       {settingsOpen && <SettingsDialog />}
-      {overlay && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
     </div>
   );
 };

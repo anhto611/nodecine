@@ -1,9 +1,11 @@
 """
-Forced alignment with stable-ts: the narration text comes in on stdin, the audio path and language
-as arguments, and one JSON array of {text, start, end} (seconds) goes out on stdout.
+Word timings with stable-ts: the audio path and language come in as arguments, the narration text on
+stdin, and one JSON array of {text, start, end} (seconds) goes out on stdout.
 
-Alignment, not transcription: the words are ours, the model only has to say when each one is
-spoken, so a small model is enough and the text can never come back misspelled.
+Two modes, decided by whether there is text on stdin. With text it **aligns**: the words are ours and
+the model only says when each is spoken, so a small model is enough and nothing can come back
+misspelled. With no text it **transcribes**: nobody knows what was said — a recording somebody made
+outside this app — so the model has to hear the words as well as time them.
 """
 import argparse
 import json
@@ -18,9 +20,6 @@ def main() -> int:
     ap.add_argument("--model", default="small")
     args = ap.parse_args()
     text = sys.stdin.read().strip()
-    if not text:
-        print("no text on stdin", file=sys.stderr)
-        return 2
 
     # Imported late so a missing install fails fast with a clear message. The module lives in the
     # project venv (npm run setup:align), which an editor's default interpreter cannot see.
@@ -30,7 +29,11 @@ def main() -> int:
     language = args.language.split("-")[0].lower()
     # stable-ts patches its methods onto whisper's model at runtime, so the static type is not useful.
     model: Any = stable_whisper.load_model(args.model)
-    result: Any = model.align(args.audio, text, language=language, verbose=None)
+    result: Any = (
+        model.align(args.audio, text, language=language, verbose=None)
+        if text
+        else model.transcribe(args.audio, language=language, verbose=None, word_timestamps=True)
+    )
     words = []
     for segment in result.segments:
         for w in segment.words:

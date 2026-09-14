@@ -1,7 +1,7 @@
-import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult } from '@/core/adapters/types';
-import type { Capability } from '@/core/types/payloads';
-import type { VideoIR } from '@/core/types/ir';
-import { assertValidIR } from '@/core/types/validate-ir';
+import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult } from '@/contracts/adapters/types';
+import type { Capability } from '@/contracts/types/payloads';
+import type { VideoIR } from '@/contracts/types/ir';
+import { assertValidIR } from '@/contracts/types/validate-ir';
 import { COMPOSITION_ID, REMOTION_ENGINE_ID, REMOTION_ADAPTER_VERSION } from './constants';
 
 export type MountPlayer = (element: HTMLElement, ir: VideoIR) => PlayerHandle;

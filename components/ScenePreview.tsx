@@ -1,8 +1,23 @@
 'use client';
 import React from 'react';
-import { previewEngine } from '@/core/adapters/registry';
-import type { ScenePreviewOptions } from '@/core/adapters/types';
-import { safeZonesFor } from '@/core/visual/safe-zones';
+import { previewEngine } from '@/contracts/adapters/registry';
+import type { ScenePreviewOptions } from '@/contracts/adapters/types';
+import { safeZonesFor } from '@/contracts/visual/safe-zones';
+
+/**
+ * gsap's source, fetched once for the whole app.
+ *
+ * A still is enough for a scene, whose markup carries its own words. It is not enough for a drawing
+ * that spans the film: those are written to be placed and revealed by their own script, so a still
+ * of one is an empty frame. `animate` runs the script in the sandbox, which needs gsap inlined.
+ */
+let gsapSource: Promise<string> | null = null;
+const loadGsap = (): Promise<string> => {
+  gsapSource ??= fetch('/api/vendor/gsap.js')
+    .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`vendor gsap: ${r.status}`))))
+    .catch(() => { gsapSource = null; return ''; });
+  return gsapSource;
+};
 
 /**
  * A still of one scene, drawn by the engine that can (`previewScene` on its adapter), in a
@@ -12,20 +27,43 @@ import { safeZonesFor } from '@/core/visual/safe-zones';
  * ways, and draws the largest frame of the scene's ratio that fits inside it, centred (a modal). The
  * document is rebuilt when the scene changes and not otherwise.
  */
-export const ScenePreview: React.FC<{ options: ScenePreviewOptions; className?: string; style?: React.CSSProperties; onClick?: () => void; delayMs?: number; fit?: boolean; guides?: boolean }> = ({ options, className, style, onClick, delayMs, fit, guides }) => {
+export const ScenePreview: React.FC<{ options: ScenePreviewOptions; className?: string; style?: React.CSSProperties; onClick?: () => void; delayMs?: number; fit?: boolean; guides?: boolean; lazy?: boolean; animate?: boolean }> = ({ options, className, style, onClick, delayMs, fit, guides, lazy, animate }) => {
   const width = options.width ?? 1080;
   const height = options.height ?? 1920;
   const ref = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = React.useState(0.1);
   const key = JSON.stringify(options);
-  const build = (o: ScenePreviewOptions) => previewEngine()?.previewScene?.(o) ?? '';
-  const [html, setHtml] = React.useState(() => build(options));
+  // Empty until gsap arrives; the document is built again when it does.
+  const [gsap, setGsap] = React.useState('');
   React.useEffect(() => {
+    if (!animate || gsap) return;
+    let alive = true;
+    void loadGsap().then((src) => { if (alive) setGsap(src); });
+    return () => { alive = false; };
+  }, [animate, gsap]);
+  const build = (o: ScenePreviewOptions) => previewEngine()?.previewScene?.({ ...o, ...(animate && gsap ? { animate: { gsapSource: gsap } } : {}) }) ?? '';
+  /**
+   * `lazy` holds the document back until the frame has been scrolled near. Each of these is a whole
+   * page with the film's style sheet in it, so a grid that mounts every one at once costs a browser
+   * far more than the few the person can actually see. Once seen it stays built: scrolling back up
+   * a list that rebuilds itself flickers.
+   */
+  const [seen, setSeen] = React.useState(!lazy);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (seen || !el || typeof IntersectionObserver === 'undefined') { setSeen(true); return; }
+    const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) setSeen(true); }, { rootMargin: '300px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
+  const [html, setHtml] = React.useState(() => (lazy ? '' : build(options)));
+  React.useEffect(() => {
+    if (!seen) return;
     if (!delayMs) { setHtml(build(options)); return; }
     const t = setTimeout(() => setHtml(build(options)), delayMs);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, delayMs]);
+  }, [key, delayMs, seen, gsap]);
   React.useEffect(() => {
     const el = ref.current;
     if (!el) return;

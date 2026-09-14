@@ -1,0 +1,38 @@
+{
+  "id": "music-cuts",
+  "name": {
+    "en": "Music cuts",
+    "vi": "Cắt theo nhạc"
+  },
+  "description": {
+    "en": "No voice: the music is the clock and everything moves with it.",
+    "vi": "Không lời: nhạc là đồng hồ và mọi thứ chuyển động theo nó."
+  },
+  "script": {
+    "guidance": "Nobody speaks. Each scene is one line short enough to read in a second — a claim, a name, a number. Write no body text at all: there is no voice to carry it and no time to read it.",
+    "keys": [
+      "title",
+      "kicker",
+      "number",
+      "label"
+    ],
+    "words": {
+      "min": 3,
+      "max": 8
+    }
+  },
+  "draw": {
+    "guidance": "Bold and flat: one line of type, very large, centred or hard against one edge, over a plain ground. High contrast, one accent colour, no gradients to speak of and no small text anywhere.",
+    "motion": [
+      "There is no voice, so never call nodecine.when(): it has nothing to hear and will only spread things evenly, which is the opposite of this form.",
+      "Everything is driven by the sound. Read it with nodecine.audio('music-1'); it returns null when no analysis is wired in, so guard it and fall back to a steady pulse of nodecine.duration / 4.",
+      "Use nodecine.frame(function (t) { ... }) with the bands: scale the type by 1 + bass * 0.06, push the accent's brightness with high, and let the ground breathe on level. Small numbers — the frame should pulse, not jump.",
+      "Things arrive on a beat and hold: no long eases, no drifting. A move takes under 0.2s and then the frame is still until the next one.",
+      "The scene ends on the frame it began: no fade out, the cut does the work."
+    ]
+  },
+  "transition": {
+    "type": "cut",
+    "seconds": 0.1
+  }
+}

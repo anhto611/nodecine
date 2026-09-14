@@ -1,20 +1,21 @@
 import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { keepWebGlobals } from '@/server/web-globals';
 import path from 'node:path';
-import { registerEngine } from '@/core/adapters/registry';
-import { registerCodeRenderer } from '@/core/visual/renderers';
-import type { ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
-import { allClips, type VideoIR } from '@/core/types/ir';
+import { registerEngine } from '@/contracts/adapters/registry';
+import { registerCodeRenderer } from '@/contracts/visual/renderers';
+import type { ExportSettings, RenderProgress, RenderResult } from '@/contracts/adapters/types';
+import { allClips, type VideoIR } from '@/contracts/types/ir';
 import { contentHash } from '@/core/hash';
 import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
 import { createHyperframesAdapter } from './adapter';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { buildHyperframesDocument } from './document';
 import { analysisOf } from './analysis';
+import { loadLibs } from './libs';
 import { registerVendorSources, vendorSource } from './vendor.server';
 import { registerHyperframesTransitions } from './transitions';
 import { registerVendorSource } from '@/server/vendor';
-import { renderScaleFor } from '@/core/visual/frame';
+import { renderScaleFor } from '@/contracts/visual/frame';
 import { FONT_FILES } from './markup';
 import { assetNamesIn, assetPath } from '@/server/paths';
 
@@ -59,7 +60,8 @@ async function buildProjectDir(ir: VideoIR, settings: Pick<ExportSettings, 'reso
   const [gsapSource, runtimeSource] = await Promise.all([vendorSource('gsap.js'), vendorSource('hyperframes-runtime.js')]);
   const scale = renderScaleFor({ width: ir.meta.width, height: ir.meta.height }, settings.resolution ?? '1080p');
   const analysis = await analysisOf(ir, (url) => readFile(mediaPath(fileNameFromMediaUrl(url)), 'utf8').then((s) => JSON.parse(s) as unknown));
-  const html = buildHyperframesDocument(ir, { gsapSource, runtimeSource, mediaSrc: (url) => local.get(url) ?? url, fontBase: 'fonts', scale, assetBase: 'assets', analysis });
+  const libs = await loadLibs(ir, vendorSource);
+  const html = buildHyperframesDocument(ir, { gsapSource, runtimeSource, mediaSrc: (url) => local.get(url) ?? url, fontBase: 'fonts', scale, assetBase: 'assets', analysis, libs });
   await writeFile(path.join(projectDir, 'index.html'), html, 'utf8');
   return { projectDir, scale };
 }
@@ -86,6 +88,9 @@ export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, 
 export function registerHyperframesServer(): void {
   registerVendorSources(registerVendorSource);
   registerCodeRenderer('html-gsap', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
+  // The same page draws the two other formats; the libraries are inlined only when a clip asks (libs.ts).
+  registerCodeRenderer('html-three', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
+  registerCodeRenderer('lottie', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
   registerHyperframesTransitions();
   registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer }));
 }

@@ -1,1 +1,1 @@
-{"id": "core/hyperframes-engine", "definition": "hyperframesEngine", "body": "HyperframesEngineBody", "icon": "chip", "group": "resource", "translations": "hyperframesEngineTranslations", "register": {"server": "registerHyperframesServer", "client": "registerHyperframesClient"}}
+{"id": "core/hyperframes-engine", "icon": "chip", "group": "resource", "translations": "hyperframesEngineTranslations", "register": {"server": "registerHyperframesServer", "client": "registerHyperframesClient"}}

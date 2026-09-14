@@ -4,11 +4,11 @@ import path from 'node:path';
 import { ALL_NODES, NODE_FEATURES } from '@/nodes';
 import { NODE_SERVER_REGISTRATIONS, NODE_SERVICE_EXTENSIONS } from '@/nodes/.generated/server';
 import { NODE_CLIENT_REGISTRATIONS } from '@/nodes/index.client';
-import { _resetEngineRegistry, listEngineIds, previewEngine } from '@/core/adapters/registry';
-import { STYLE, SCENE_SOURCE } from '@/core/__tests__/scene-fixtures';
+import { _resetEngineRegistry, listEngineIds, previewEngine } from '@/contracts/adapters/registry';
+import { STYLE, SCENE_SOURCE } from '@/contracts/__tests__/scene-fixtures';
 import { hasTranslation } from '@/lib/i18n';
 import { NODE_TRANSLATIONS } from '@/nodes/.generated/locales';
-import { makeFakeServices } from '@/core/__tests__/fakes';
+import { makeFakeServices } from '@/contracts/__tests__/fakes';
 
 /**
  * What the capsule layout promises (ARCHITECTURE §2): every node is one folder with a manifest,

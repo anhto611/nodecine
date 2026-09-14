@@ -1,0 +1,13 @@
+{
+  "id": "explainer",
+  "name": { "en": "Explainer", "vi": "Giải thích" },
+  "description": { "en": "A narrated idea, one point per scene, drawn as type.", "vi": "Một ý được kể, mỗi cảnh một điểm, dựng bằng chữ." },
+  "script": {
+    "guidance": "Plain, unhurried speech. One idea per scene, each building on the last. A headline that states the idea, and at most one short line under it that adds something the headline does not already say.",
+    "keys": ["kicker", "title", "body", "points"]
+  },
+  "draw": {
+    "guidance": "Type is the whole picture. One headline large enough to read at a glance, a quieter line under it, generous space around both. Nothing decorative competes with the words: at most one soft shape or rule in the background.",
+    "motion": []
+  }
+}

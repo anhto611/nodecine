@@ -1,9 +1,10 @@
 import { ErrorCode, NodeError, toNodeError } from '../errors';
 import { makePacket, type Packet } from '../types/packet';
-import { PAYLOAD_SCHEMAS } from '../types/payloads';
+import { getPortType } from '../types/ports';
 import { getNodeType, readCapability, type AnyNodeDefinition, type BlockReason } from '../nodes/definition';
 import {
   downstreamOf,
+  flowNodes,
   hasBlockingIssues,
   incomingEdges,
   nodeById,
@@ -89,8 +90,11 @@ export class Executor {
    */
   private syncRuntimes(): void {
     for (const n of this.graph.nodes) {
-      if (!this.runtimes.has(n.id)) { this.runtimes.set(n.id, initialRuntime(n.bypassed)); continue; }
-      if (getNodeType(n.type)?.kind === 'ondemand') continue;
+      // An on-demand node is never bypassed: it is out of every Run by type, so a flag left over in
+      // a saved graph must not grey its card out and must not follow it into a run.
+      const ondemand = getNodeType(n.type)?.kind === 'ondemand';
+      if (!this.runtimes.has(n.id)) { this.runtimes.set(n.id, initialRuntime(!ondemand && n.bypassed)); continue; }
+      if (ondemand) continue;
       if (n.bypassed && this.runtimes.get(n.id)!.state !== 'bypassed') this.setState(n.id, { state: 'bypassed' });
       else if (!n.bypassed && this.runtimes.get(n.id)!.state === 'bypassed') this.setState(n.id, { state: 'idle' });
     }
@@ -152,10 +156,25 @@ export class Executor {
     const runId = ++this.runId;
     const startedAt = this.services.now();
     this.abort = new AbortController();
-    const toRun = sorted.order.filter((id) => !nodeById(this.graph, id)!.bypassed);
-    for (const id of toRun) this.setState(id, { state: 'queued', reused: false, error: undefined, blockedBy: undefined, progress: undefined });
-    this.hooks.onRunStart?.({ runId, stepTotal: toRun.length });
-    this.log('run', 'info', `run #${runId} started · ${toRun.length} nodes`);
+    // Only the flow runs: a node with no wire on it is not part of the film, so it is not started
+    // and cannot report a failure after a run it was never in (CORE_CONTRACTS §1.4).
+    // "Not in the flow" only means something once there is a flow: a graph where nothing is wired
+    // at all is run whole, which is what a single node on its own is.
+    const flow = flowNodes(this.graph);
+    const inFlow = (id: string) => flow.size === 0 || flow.has(id);
+    /**
+     * An on-demand node is never part of a Run (EXECUTION_ENGINE §3). Its bypass flag is a property
+     * of the type, not a switch, so honouring the flag here let a saved graph put a render at the
+     * end of every Run with the player waiting behind it. Its own button still runs it, via runNode.
+     */
+    const onDemand = (id: string) => getNodeType(nodeById(this.graph, id)!.type)?.kind === 'ondemand';
+    // Bypassed nodes stay in the list: the loop logs them and moves on, which is how a person sees
+    // that the node they switched off was reached and skipped. They are not queued, and not counted.
+    const toRun = sorted.order.filter((id) => inFlow(id) && !onDemand(id));
+    const willRun = toRun.filter((id) => !nodeById(this.graph, id)!.bypassed);
+    for (const id of willRun) this.setState(id, { state: 'queued', reused: false, error: undefined, blockedBy: undefined, progress: undefined });
+    this.hooks.onRunStart?.({ runId, stepTotal: willRun.length });
+    this.log('run', 'info', `run #${runId} started · ${willRun.length} nodes`);
 
     let ok = true;
     let step = 0;
@@ -163,7 +182,7 @@ export class Executor {
     // Whatever happens in here, the run has to end: an escaping throw used to leave `abort` set, and
     // from then on every Run answered "A run is already in progress" until the server was restarted.
     try {
-      for (const nodeId of sorted.order) {
+      for (const nodeId of toRun) {
         const node = nodeById(this.graph, nodeId);
         // The canvas can push a graph while this runs; a node that left it has nothing to run.
         if (!node) continue;
@@ -176,7 +195,7 @@ export class Executor {
           continue;
         }
         step += 1;
-        this.hooks.onStep?.({ nodeId, step, stepTotal: toRun.length });
+        this.hooks.onStep?.({ nodeId, step, stepTotal: willRun.length });
         const outcome = await this.executeNode(nodeId, { force: opts.force ?? false });
         if (outcome === 'cancelled') { cancelledAt = nodeId; ok = false; }
         else if (outcome === 'error' || outcome === 'blocked') ok = false;
@@ -193,21 +212,6 @@ export class Executor {
     return { ok };
   }
 
-  /** Runs every resource node once, e.g. when the studio opens or settings change (EXECUTION_ENGINE §1.1). */
-  async probeResources(): Promise<void> {
-    if (this.abort) return;
-    this.abort = new AbortController();
-    try {
-      for (const node of this.graph.nodes) {
-        const def = getNodeType(node.type);
-        if (!def || def.kind !== 'resource' || node.bypassed) continue;
-        this.setState(node.id, { state: 'queued', error: undefined, blockedBy: undefined, reused: false });
-        await this.executeNode(node.id, { force: true, single: true });
-      }
-    } finally {
-      this.abort = null;
-    }
-  }
 
   /**
    * Runs exactly one node with whatever packets are on its inputs, bypassing the cache
@@ -257,16 +261,21 @@ export class Executor {
             if (port.required === false && !port.multiple) continue;
             return fail({ kind: 'upstream', code: ErrorCode.NODE_BYPASSED_UPSTREAM, message: `upstream node ${edge.source} is bypassed`, nodeId: edge.source });
           }
+          // A node that ran and chose to say nothing on that port is not a failure: the Illustrator
+          // emits a layer only for a film that has one, and a wire to an optional port must not turn
+          // that silence into a blocked consumer. A node that did not run, or failed, still blocks.
+          if (!packet && port.required === false && upstream.state === 'success') continue;
           if (!packet || upstream.state === 'error' || upstream.state === 'cancelled' || upstream.state === 'blocked') {
-            // Carry the original reason down the chain. A blocked upstream reports it under blockedBy
-            // rather than error, and without that the whole tail claims a port is unwired when the real
-            // cause is one provider several nodes back — the fix travels with it for the same reason.
+            // Carry the original reason down the chain, whichever way it was reported: blocked
+            // upstream keeps it under blockedBy, a failed one under error. Without this the whole
+            // tail claims a port is unwired when the real cause is a missing encoder several nodes
+            // back — and the remedy travels with the code for the same reason.
             const cause = upstream.error ?? upstream.blockedBy;
             return fail({
               kind: 'upstream',
               code: cause?.code ?? ErrorCode.GRAPH_PORT_UNCONNECTED,
               message: `upstream node ${edge.source} has no result`,
-              ...(upstream.blockedBy?.fix ? { fix: upstream.blockedBy.fix } : {}),
+              ...(cause?.fix ? { fix: cause.fix } : {}),
               nodeId: edge.source,
             });
           }
@@ -277,7 +286,7 @@ export class Executor {
           if (!cap || cap.status !== 'ready') {
             return fail({
               kind: 'capability',
-              code: cap?.code ?? ErrorCode.ENGINE_NOT_READY,
+              code: cap?.code ?? ErrorCode.NODE_NOT_READY,
               message: cap?.reason ?? `capability "${key}" of "${port.name}" is unavailable`,
               fix: cap?.fix,
               ...(single ? {} : { nodeId: edge.source }),
@@ -298,6 +307,32 @@ export class Executor {
       this.setState(nodeId, { state: 'error', error: { code: ErrorCode.NODE_TYPE_UNKNOWN, message: node.type, retryable: false } });
       return 'error';
     }
+    // A pinned node is frozen: it hands back what the graph keeps and does not run, whatever its
+    // inputs say and however hard the run is forced. That is the whole point — a look you approved
+    // must not be redrawn because the script changed, and must not be paid for twice.
+    if (node.pinned) {
+      const outputs: Record<string, Packet> = {};
+      const bad: string[] = [];
+      for (const port of def.outputs) {
+        const payload = node.pinned.outputs[port.name];
+        if (payload === undefined) continue;
+        const schema = getPortType(port.type)?.schema;
+        if (schema && !schema.safeParse(payload).success) { bad.push(port.name); continue; }
+        outputs[port.name] = makePacket({ sourceNodeId: nodeId, sourcePort: port.name, targetPort: '', payloadType: port.type, payload, now: () => this.services.now() });
+      }
+      // A pin this build can no longer read is worse than no pin: it would feed the film something
+      // shaped wrong. Say which port, and say how to get out of it.
+      if (bad.length || Object.keys(outputs).length === 0) {
+        const message = bad.length ? `the pinned output "${bad[0]}" no longer fits this build` : 'the pin holds nothing this node emits';
+        this.setState(nodeId, { state: 'error', error: { code: ErrorCode.NODE_OUTPUT_INVALID, message, retryable: false, fix: 'unpin the node and run it again' } });
+        this.log(nodeId, 'error', message, ErrorCode.NODE_OUTPUT_INVALID);
+        return 'error';
+      }
+      this.setState(nodeId, { state: 'success', outputs, reused: true, error: undefined, blockedBy: undefined, progress: undefined });
+      this.log(nodeId, 'info', `pinned ${new Date(node.pinned.at).toISOString().slice(0, 16).replace('T', ' ')}; not run`);
+      return 'success';
+    }
+
     // Params the schema refuses are this node's failure, not the run's. Throwing here took the whole
     // run down with it, and a graph pushed mid-run is not validated per node the way a submission is.
     const parsedParams = def.paramsSchema.safeParse(node.params);
@@ -372,10 +407,10 @@ export class Executor {
       for (const port of def.outputs) {
         const value = raw[port.name];
         if (value === undefined) continue;
-        const schema = PAYLOAD_SCHEMAS[port.type as keyof typeof PAYLOAD_SCHEMAS];
+        const schema = getPortType(port.type)?.schema;
         if (schema) {
           const parsed = schema.safeParse(value);
-          if (!parsed.success) throw new NodeError(ErrorCode.NODE_OUTPUT_INVALID, `output "${port.name}": ${parsed.error.issues[0]?.message ?? 'invalid'}`);
+          if (!parsed.success) throw new NodeError(ErrorCode.NODE_OUTPUT_INVALID, `output "${port.name}"${parsed.error.issues[0]?.path.length ? `.${parsed.error.issues[0]!.path.join(".")}` : ""}: ${parsed.error.issues[0]?.message ?? "invalid"}`);
         }
         outputs[port.name] = makePacket({ sourceNodeId: nodeId, sourcePort: port.name, targetPort: '', payloadType: port.type, payload: value, now: () => this.services.now() });
       }
@@ -387,7 +422,7 @@ export class Executor {
       this.log(nodeId, 'info', `done in ${durationMs}ms`);
       return 'success';
     } catch (err) {
-      const e = toNodeError(err, ErrorCode.PROVIDER_PROCESS_FAILED);
+      const e = toNodeError(err, ErrorCode.NODE_RUN_FAILED);
       if (signal.aborted || e.code === ErrorCode.RUN_CANCELLED) {
         this.setState(nodeId, { state: 'cancelled', progress: undefined });
         this.log(nodeId, 'warn', 'cancelled', ErrorCode.RUN_CANCELLED);

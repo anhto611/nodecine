@@ -1,11 +1,11 @@
 'use client';
 import React from 'react';
-import type { ScenePlan } from '@/core/types/payloads';
-import { padTailFramesOf, voiceTrackOf, type VideoIR } from '@/core/types/ir';
+import type { ScenePlan } from '@/contracts/types/payloads';
+import { padTailFramesOf, voiceTrackOf, type VideoIR } from '@/contracts/types/ir';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
 import { useInputPayload, useOutputPayload } from '@/store/useStudio';
-import { readIR } from '@/core/types/migrate-ir';
+import { readIR } from '@/contracts/types/migrate-ir';
 import type { BodyProps } from '@/nodes/kit';
 
 export const AssemblerBody: React.FC<BodyProps> = ({ nodeId }) => {

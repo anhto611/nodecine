@@ -1,9 +1,12 @@
 import { z } from 'zod';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import type { FactItem, FactSheet, SourceRef } from '@/core/types/payloads';
-import { NodeError, toNodeError } from '@/core/errors';
-import { parsePageUrls } from '@/core/network/public-url';
+import type { FactItem, FactSheet, SourceRef } from '@/contracts/types/payloads';
+import { NodeError, toNodeError } from '@/contracts/errors';
+import { parsePageUrls } from '@/contracts/network/public-url';
 import { RETRYABLE, WebErrorCode } from './errors';
+import { parseGithubSource, repoUrl } from './github/parse-source';
+import { buildFetchedFacts, buildPassthroughFacts, type RepoData } from './github/facts';
+import { fetchRepo } from './github/fetch-repo';
 import type { PageRead } from './types';
 
 const Params = z.object({
@@ -17,15 +20,25 @@ const Params = z.object({
 
 export const WEB_FETCHER = 'core/web-fetcher';
 
+/** The one call out of the node, swappable so a test never touches GitHub. */
+export const github = { fetchRepo };
+
 /**
- * CORE_CONTRACTS §5.14 — a link becomes facts: what the page calls itself, who published it, and
- * its picture kept as a scene asset so a scene may show it. Optionally a photograph of the page.
- * Anything that is not a public web address passes through as text, the way the GitHub fetcher does,
- * so this node never breaks a graph that is fed a topic instead of a link.
+ * CORE_CONTRACTS §5.14 — a link becomes facts.
+ *
+ * A repository link is answered by GitHub's own API: stars, language, the README's first lines, the
+ * things only that API knows. Any other link is read as a page: what it calls itself, who published
+ * it, its picture kept as a scene asset. Anything that is neither passes through as text, so this
+ * node never breaks a graph that is fed a topic instead of a link.
+ *
+ * The two were separate nodes until 2026-09-13. Both took a `SourceRef` and gave a `FactSheet`, both
+ * passed plain text through, and the only difference was which shape of link they recognised — a
+ * thing the node can see for itself. Two nodes for that made the person decide in advance what kind
+ * of link they were about to paste.
  */
 export const webFetcher: NodeDefinition<typeof Params> = {
   type: WEB_FETCHER,
-  version: 1,
+  version: 2,
   kind: 'process',
   inputs: [{ name: 'source', type: 'SourceRef' }],
   outputs: [{ name: 'facts', type: 'FactSheet' }],
@@ -34,11 +47,28 @@ export const webFetcher: NodeDefinition<typeof Params> = {
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const source = inputs.source!.payload as SourceRef;
     const fetchedAt = new Date(services.now()).toISOString();
-    const targets = parsePageUrls(source.value, params.maxPages);
 
+    // A repository first: its link is also a page, and the page says far less than the API does.
+    const coords = parseGithubSource(source.value);
+    if (coords) {
+      log('info', `fetching ${repoUrl(coords)}`);
+      progress(0.1, 'github');
+      let data: RepoData;
+      try {
+        data = await github.fetchRepo(coords, signal);
+      } catch (e) {
+        const err = toNodeError(e, WebErrorCode.REPO_NETWORK);
+        throw new NodeError(err.code, err.message, RETRYABLE[err.code] ?? err.retryable, err.details);
+      }
+      const facts: FactSheet = { facts: buildFetchedFacts(data), sourceLabel: repoUrl(coords), fetchedAt, mode: 'fetched' };
+      log('info', `${repoUrl(coords)} · ${Object.keys(facts.facts).length} facts`);
+      return { facts };
+    }
+
+    const targets = parsePageUrls(source.value, params.maxPages);
     if (targets.length === 0) {
       log('info', `no web address in the input; passing ${source.value.trim().length} chars through`);
-      const facts: FactSheet = { facts: { text: source.value.trim() }, sourceLabel: 'text', fetchedAt, mode: 'passthrough' };
+      const facts: FactSheet = { facts: buildPassthroughFacts(source.value), sourceLabel: 'text', fetchedAt, mode: 'passthrough' };
       return { facts };
     }
 

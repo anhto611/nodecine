@@ -1,31 +1,40 @@
 'use client';
 import React from 'react';
-import type { SceneContent, Stage, Transition } from '@/core/types/payloads';
-import { listTransitions } from '@/core/visual/transitions';
+import type { SceneContent, Stage, Transition } from '@/contracts/types/payloads';
+import { listTransitions } from '@/contracts/visual/transitions';
 import { Btn, Dialog, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useNode, useStudio } from '@/store/useStudio';
 import { ContentEditor } from '@/components/node-runtime/content-editor';
+import { SPLIT_RULES, splitScript, type SplitRule } from '@/nodes/script/split';
 
 type SceneRow = { role: string; weight: number; narration: string; content: SceneContent; stage?: Stage; transitionAfter?: Transition };
 
 /**
- * One scene of a Static Script, with room to edit it (USER_FLOWS §1.9): the narration on the left,
- * what is on screen on the right, and previous/next to walk the script without closing. Edits go
- * straight to the node's parameters, the same as typing in the node, so undo and dirty marks work
- * the same and there is nothing to save.
+ * The Static Script's dialogs (USER_FLOWS §1.9). One overlay serves the whole Studio, so this one
+ * answers for both of the node's: the scene editor, and pasting a whole script to be cut into scenes.
+ * A node card is 220 pixels and a summary; this is where there is room to write.
+ */
+export const SceneEditorDialog: React.FC = () => {
+  const overlay = useStudio((s) => s.overlay);
+  const data = overlay?.data as { paste?: boolean } | undefined;
+  return data?.paste ? <PasteDialog /> : <SceneDialog />;
+};
+
+/**
+ * One scene of a Static Script, with room to edit it: the narration on the left, what is on screen
+ * on the right, and previous/next to walk the script without closing. Edits go straight to the
+ * node's parameters, the same as typing in the node, so undo and dirty marks work the same and
+ * there is nothing to save.
  */
 const isSceneTarget = (o: { nodeId: string; data?: unknown }): o is { nodeId: string; data: { index: number } } => typeof (o.data as { index?: unknown } | undefined)?.index === 'number';
 
-export const SceneEditorDialog: React.FC = () => {
+const SceneDialog: React.FC = () => {
   const t = useT();
   const overlay = useStudio((s) => s.overlay);
   const setOverlay = useStudio((s) => s.setOverlay);
-  // The store holds one overlay for the whole Studio; this dialog answers only when it is a Static
-  // Script's. Both of these are held still across renders so the effect below runs when the scene
-  // being edited actually changes, not on every keystroke in it.
   const target = React.useMemo(() => (overlay && isSceneTarget(overlay) ? { nodeId: overlay.nodeId, index: overlay.data.index } : null), [overlay]);
-  const open = (t: { nodeId: string; index: number } | null) => setOverlay(t ? { nodeId: t.nodeId, data: { index: t.index } } : null);
+  const open = (x: { nodeId: string; index: number } | null) => setOverlay(x ? { nodeId: x.nodeId, data: { index: x.index } } : null);
   const setParams = useStudio((s) => s.setParams);
   const node = useNode(target?.nodeId ?? '');
   const scenes = React.useMemo(() => (node?.params as { scenes?: SceneRow[] } | undefined)?.scenes ?? [], [node]);
@@ -62,20 +71,20 @@ export const SceneEditorDialog: React.FC = () => {
         <Btn primary onClick={close}>{t('script.done')}</Btn>
       </>}
     >
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 0 }}>
-          <div style={{ flex: '0 0 38%', display: 'flex', flexDirection: 'column', gap: 6, padding: 12, borderRight: '1px solid var(--line)', minWidth: 0 }}>
-            <div className="nc-k">{t('script.narration')}</div>
-            <textarea className={`nc-textarea ${stopFlow}`} style={{ flex: 1, resize: 'none', fontSize: 'var(--fs-label)', lineHeight: 1.6 }} placeholder={t('node.script')} value={scene.narration ?? ''} onChange={(e) => update({ narration: e.target.value })} autoFocus />
-          </div>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, padding: 12, overflowY: 'auto' }}>
-            <div className="nc-k">{t('script.onScreen')}</div>
-            <ContentEditor content={scene.content ?? {}} onChange={(content) => update({ content })} />
-            <div className="nc-k" style={{ marginTop: 8 }}>{t('script.transitionAfter')}</div>
-            <TransitionAfter value={scene.transitionAfter} last={index >= scenes.length - 1} onChange={(transitionAfter) => update({ transitionAfter })} />
-            <div className="nc-k" style={{ marginTop: 8 }}>{t('script.stage')}</div>
-            <StageField value={scene.stage} onChange={(stage) => update({ stage })} />
-          </div>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 0 }}>
+        <div style={{ flex: '0 0 38%', display: 'flex', flexDirection: 'column', gap: 6, padding: 12, borderRight: '1px solid var(--line)', minWidth: 0 }}>
+          <div className="nc-k">{t('script.narration')}</div>
+          <textarea className={`nc-textarea ${stopFlow}`} style={{ flex: 1, resize: 'none', fontSize: 'var(--fs-label)', lineHeight: 1.6 }} placeholder={t('node.script')} value={scene.narration ?? ''} onChange={(e) => update({ narration: e.target.value })} autoFocus />
         </div>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, padding: 12, overflowY: 'auto' }}>
+          <div className="nc-k">{t('script.onScreen')}</div>
+          <ContentEditor content={scene.content ?? {}} onChange={(content) => update({ content })} />
+          <div className="nc-k" style={{ marginTop: 8 }}>{t('script.transitionAfter')}</div>
+          <TransitionAfter value={scene.transitionAfter} last={index >= scenes.length - 1} onChange={(transitionAfter) => update({ transitionAfter })} />
+          <div className="nc-k" style={{ marginTop: 8 }}>{t('script.stage')}</div>
+          <StageField value={scene.stage} onChange={(stage) => update({ stage })} />
+        </div>
+      </div>
     </Dialog>
   );
 };
@@ -116,5 +125,54 @@ const StageField: React.FC<{ value?: Stage; onChange: (v: Stage | undefined) => 
       <textarea className={`nc-textarea ${stopFlow}`} style={{ minHeight: 44, fontSize: 'var(--fs-hint)', fontFamily: 'var(--font-mono, monospace)', borderColor: invalid ? 'var(--err)' : undefined }} placeholder="{ }" value={shown} onChange={(e) => commit(e.target.value)} onBlur={() => { if (!invalid) setDraft(null); }} />
       <div className="nc-hint" style={{ color: invalid ? 'var(--err)' : undefined }}>{invalid ? t('script.stageInvalid') : t('script.stageHint')}</div>
     </>
+  );
+};
+
+/**
+ * A whole script pasted at once, cut into scenes (CORE_CONTRACTS §5.2).
+ *
+ * A script is written as prose and pasted as prose; typing it back one scene at a time is work the
+ * app should be doing. The cut is mechanical — see `split.ts` — so nothing said is reworded, and the
+ * count on the button is the check: it is read before the list is replaced, not after.
+ */
+const PasteDialog: React.FC = () => {
+  const t = useT();
+  const overlay = useStudio((s) => s.overlay);
+  const setOverlay = useStudio((s) => s.setOverlay);
+  const setParams = useStudio((s) => s.setParams);
+  const node = useNode(overlay?.nodeId ?? '');
+  const scenes = ((node?.params as { scenes?: SceneRow[] } | undefined)?.scenes) ?? [];
+  const [text, setText] = React.useState('');
+  const [rule, setRule] = React.useState<SplitRule>('blank-line');
+  const chunks = React.useMemo(() => splitScript(text, rule), [text, rule]);
+  const close = () => setOverlay(null);
+  if (!overlay || !node) return null;
+
+  const cut = () => {
+    setParams(overlay.nodeId, { scenes: chunks.map((narration) => ({ role: scenes[0]?.role ?? 'scene', weight: 1, narration, content: {} })) });
+    close();
+  };
+
+  return (
+    <Dialog
+      width="min(760px, 92vw)"
+      height="min(620px, 88vh)"
+      icon={<Icon.doc size={14} />}
+      title={<span style={{ fontWeight: 400 }}>{t('script.paste')}</span>}
+      onClose={close}
+      closeTitle={t('script.done')}
+      footer={<>
+        <select className={`nc-select ${stopFlow}`} value={rule} onChange={(e) => setRule(e.target.value as SplitRule)}>
+          {SPLIT_RULES.map((r) => <option key={r} value={r}>{t(`script.rule.${r}`)}</option>)}
+        </select>
+        <div style={{ flex: 1 }} />
+        <Btn primary disabled={chunks.length === 0} onClick={cut}>{t('script.cut')} · {chunks.length}</Btn>
+      </>}
+    >
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}>
+        <div className="nc-hint">{t('script.pasteHint')}</div>
+        <textarea className={`nc-textarea ${stopFlow}`} style={{ flex: 1, resize: 'none', fontSize: 'var(--fs-label)', lineHeight: 1.6 }} placeholder={t('script.pastePlaceholder')} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
+      </div>
+    </Dialog>
   );
 };

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { stat } from 'node:fs/promises';
 import { createServerServices } from '@/server/services.server';
-import { buildCaptionTrack, retime } from '@/core/captions/cues';
+import { buildCaptionTrack, retime } from '@/contracts/captions/cues';
 import { buildIR } from '@/nodes/assembler/build-ir';
 import { mediaUrl } from '@/server/paths';
-import { SCENE_SOURCE, STYLE } from '@/core/__tests__/scene-fixtures';
+import { SCENE_SOURCE, STYLE } from '@/contracts/__tests__/scene-fixtures';
 
 /**
  * Manual: real alignment (stable-ts) on a real voice-over, then a real producer render with karaoke
@@ -21,7 +21,7 @@ describe.skipIf(!enabled)('captions, for real', () => {
     const text = process.env.NODECINE_MANUAL_TEXT!;
     const durationSeconds = Number(process.env.NODECINE_MANUAL_DURATION ?? '3');
     const audioUrl = mediaUrl(file);
-    const heard = await services.invoke<import('@/core/types/payloads').Word[]>('transcribe/align', [audioUrl, text, 'vi-VN', { model: 'small' }, new AbortController().signal]);
+    const heard = await services.invoke<import('@/contracts/types/payloads').Word[]>('transcribe/align', [audioUrl, text, 'vi-VN', { model: 'small' }, new AbortController().signal]);
     const words = retime(text, heard);
     console.log('words', words.map((w) => `${w.text}@${w.start}`).join(' '));
     const track = buildCaptionTrack(words, { maxChars: 26 });

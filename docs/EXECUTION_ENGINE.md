@@ -40,7 +40,7 @@ Khi người dùng sửa một tham số của node, node đó và toàn bộ no
 
 1. Bộ máy sắp xếp đồ thị theo thứ tự tô-pô. Nếu phát hiện chu trình, luồng dừng ngay trước khi chạy node nào, và các dây nối tạo thành chu trình được tô đỏ.
 2. Kiểm tra tính đầy đủ: mọi cổng nhận bắt buộc phải có đúng một dây nối tới. Thiếu dây nối là lỗi mức đồ thị, không phải lỗi mức node. Kiểm tra này chạy liên tục theo mỗi thay đổi của đồ thị, kết quả hiện ngay trên node liên quan và trên nút Chạy Luồng bị vô hiệu hóa, nên không có bước kiểm tra riêng lúc bấm. Số lượng Node Xuất Bản Video và Node Xuất MP4 không bị giới hạn, kể cả bằng không; đồ thị không có node đích nào chỉ nhận cảnh báo `GRAPH_NO_SINK` chứ không bị chặn, vì người dùng có thể đang dựng dở.
-3. Node ở trạng thái `bypassed` bị bỏ qua khi duyệt. Nếu một node phía sau cần đầu ra của node bị bỏ qua ở một cổng **bắt buộc**, node đó chuyển sang `blocked` với thông báo nêu tên node bị bỏ qua. Cổng **tùy chọn** nối vào node bị bỏ qua được coi như không nối: Đóng Gói Timeline vẫn chạy khi người dùng bỏ qua cặp Căn Mốc Từ → Phụ Đề của bản mẫu, chỉ không có phụ đề. Node Xuất MP4 bị bỏ qua không node nào phụ thuộc, nên luồng chạy hết các node còn lại.
+3. Node ở trạng thái `bypassed` bị bỏ qua khi duyệt. Nếu một node phía sau cần đầu ra của node bị bỏ qua ở một cổng **bắt buộc**, node đó chuyển sang `blocked` với thông báo nêu tên node bị bỏ qua. Cổng **tùy chọn** nối vào node bị bỏ qua được coi như không nối: Đóng Gói Timeline vẫn chạy khi người dùng bỏ qua cặp Căn Mốc Từ → Phụ Đề của bản mẫu, chỉ không có phụ đề. Node Xuất MP4 nằm ngoài Chạy Luồng theo loại của nó (mục 3 bên dưới), và không node nào phụ thuộc vào nó, nên luồng chạy hết các node còn lại.
 4. Các node được chạy theo thứ tự tô-pô, tuần tự, kể cả với những node về lý thuyết có thể chạy song song. Đồ thị mẫu chỉ có khoảng mười node và node thắt cổ chai nằm ở lệnh gọi ra ngoài, nên chạy song song không mang lại lợi ích đáng kể mà lại làm phức tạp việc báo tiến độ.
 5. Dây luồng và dây thành phần (Hợp Đồng Lõi mục 1.1) là một với bộ máy: một node chờ mọi dây vào của nó, dù dây đó mang nội dung hay mang mô hình, giọng, động cơ. Sự phân biệt chỉ nằm ở cách vẽ trên canvas.
 6. Trước khi chạy một node, bộ máy tính chữ ký của node đó. Nếu chữ ký trùng với chữ ký của kết quả đang lưu, node được bỏ qua và kết quả cũ được tái sử dụng.
@@ -60,7 +60,7 @@ Hệ quả trực tiếp: đổi tốc độ đọc chỉ làm thay đổi thàn
 
 Trình duyệt gửi job kèm `requestId` của chính nó. Máy chủ trả `5xx` **không có thân** nghĩa là chưa vào tới route (lúc dev là Next đang dựng lại module sau khi sửa file), nên trình duyệt **thử lại có giãn cách** — 0,7s, 2s, 5s, 5s, tổng gần 13 giây — rồi mới báo lỗi `SERVER_NOT_READY` kèm câu chỉ dẫn. Con số đo từ thực tế: dựng lại chuỗi module của `/api/jobs` (kéo theo cả registry node và hai engine) mất hơn mười giây sau khi sửa một file mà mọi thứ đều import, nên một lần thử sau 0,7 giây vẫn rơi đúng vào giữa cửa sổ đó; lỗi do chính route viết ra (luôn có trường `error`) là từ chối thật, không thử lại. Thử lại một `POST` tạo job chỉ an toàn nhờ `requestId`: lần gửi thứ hai nhận lại đúng job của lần đầu, không xếp hàng hai lần — nếu không, đoán sai một lần là kết xuất hai lần cùng một phim.
 
-Node **theo yêu cầu** (`ondemand`: Xuất MP4, Ảnh Bìa) mang cờ `bypassed` như một thuộc tính của **loại**, không phải một công tắc người dùng bật: chúng không bao giờ tham gia Chạy Luồng, chỉ chạy bằng nút của chính mình. Vì thế mỗi lần canvas đẩy đồ thị mới lên (kéo node cũng là một lần đẩy), bộ máy **không** áp lại trạng thái `bypassed` cho chúng — làm vậy sẽ xoá mất kết quả nút của chúng vừa tạo ra: kết xuất xong một tấm bìa rồi kéo node đi vài phân là ảnh biến mất, không rõ vì đâu.
+Node **theo yêu cầu** (`ondemand`: Xuất MP4, Ảnh Bìa) không bao giờ tham gia Chạy Luồng, chỉ chạy bằng nút của chính mình. Bộ máy loại chúng khỏi danh sách chạy theo **loại**, không theo cờ `bypassed`: một đồ thị đã lưu mang cờ ngược lại từng đặt một lượt kết xuất dài vào cuối mỗi lần Chạy, và trình phát phải xếp hàng sau nó. Vì cờ không còn nghĩa gì với chúng, thẻ node loại này không hiện công tắc bỏ qua. Vì thế mỗi lần canvas đẩy đồ thị mới lên (kéo node cũng là một lần đẩy), bộ máy **không** áp lại trạng thái `bypassed` cho chúng — làm vậy sẽ xoá mất kết quả nút của chúng vừa tạo ra: kết xuất xong một tấm bìa rồi kéo node đi vài phân là ảnh biến mất, không rõ vì đâu.
 
 Chạy riêng một node: người dùng có thể yêu cầu bộ máy chạy đúng một node, dùng gói dữ liệu đang có trên các dây vào mà không duyệt lại đồ thị. Thao tác này phục vụ nút thử lại trên node đang lỗi, nút Kiểm tra lại trên node tài nguyên và nút Kết xuất trên Node Xuất MP4. Nếu một dây vào chưa có gói dữ liệu, yêu cầu bị từ chối trước khi chạy, kèm tên cổng còn thiếu.
 
@@ -183,24 +183,5 @@ Trạng thái node trong bộ nhớ (kết quả từng node, chữ ký bộ nh�
 Tài liệu này đặt ra ba nhóm kiểm thử bắt buộc của lõi; gói có bài kiểm thử riêng trong tài liệu của gói.
 
 1. Kiểm thử phân bổ khung hình và kiểm định IR. Với một tập thời lượng âm thanh trải từ dưới ngưỡng tối thiểu tới trên ngưỡng, và với các bộ trọng số khác nhau kể cả một cảnh duy nhất, khẳng định tổng các cảnh luôn bằng đúng tổng số khung hình, cảnh liền nhau không khe hở, không cảnh nào có thời lượng bằng 0, cùng đầu vào luôn cho cùng kết quả; và hàm kiểm định IR từ chối mọi bản đặc tả dựng tay vi phạm một trong năm bất biến.
-2. Kiểm thử chữ ký node. Khẳng định việc đổi tham số của một node chỉ làm thay đổi chữ ký của chính node đó và các node phía sau, không ảnh hưởng node phía trước; và node tài nguyên probe lại nhưng mã băm không đổi thì phía sau vẫn dùng lại.
+2. Kiểm thử chữ ký node. Khẳng định việc đổi tham số của một node chỉ làm thay đổi chữ ký của chính node đó và các node phía sau, không ảnh hưởng node phía trước.
 3. Kiểm thử đè dữ kiện. Với một `FactSheet` và một `ScenePlan` có `factBindings`, khẳng định giá trị trong IR luôn bằng giá trị trong `facts`, kể cả khi `props` gốc có cùng tên với giá trị khác; và không có `factBindings` thì `props` giữ nguyên.
-
----
-
-## 10. Chạy Hàng Loạt (Batch)
-
-Một mẻ là **cùng một luồng được nộp vào hàng đợi nhiều lần, mỗi lần một giá trị khác**. Đây là mô hình của ComfyUI: ô *batch count* trong Extra options nộp prompt N lần khi bấm Queue một cái, và `control_after_generate` trên một widget đẩy giá trị đi giữa các lần. Nó hợp ở đây vì hàng đợi (`server/jobs.ts`) vốn đã chạy từng đồ thị một và giữ lịch sử từng lần chạy.
-
-**Mô hình của n8n không dùng được**, và vì một lý do cụ thể chứ không phải vì khó: ở n8n mọi gói là một danh sách và mọi node chạy một lần cho mỗi mục. NodeCine đã dùng danh sách theo nghĩa khác — `facts.items` nghĩa là **một mục một cảnh**, đó là bản mẫu Tin AI. Hai nghĩa của danh sách không sống chung trong một bộ máy.
-
-Cái đi qua từng lần chạy là node Nhập Liệu bật `perRun`: **mỗi dòng là một lần chạy**. `core/engine/batch.ts` là hàm thuần — `batchPlan` nói bấm Chạy sẽ nộp bao nhiêu lần (nút hiện luôn con số đó), `expandBatch` trả về đúng chừng ấy đồ thị, mỗi cái mang một dòng. Tham số `perRun` do **bộ chạy** đọc chứ không phải node, đúng chỗ ComfyUI đọc `control_after_generate`: một widget mà hàng đợi diễn giải, còn node vẫn phát đúng một giá trị.
-
-Luật:
-
-- Đồ thị trên canvas **không bị sửa**: mỗi lần chạy nộp một bản sao mang một dòng, và sau mẻ máy chủ được đưa lại đúng đồ thị người dùng đang nhìn.
-- **Tuần tự**, không song song. Kết xuất đã ăn hết máy rồi; tài liệu Remotion cũng khuyên không kết xuất nhiều video cùng lúc.
-- Một lần chạy hỏng **không bỏ dở mẻ** — ghi cảnh báo rồi chạy tiếp, như prompt lỗi không làm rỗng hàng đợi ComfyUI. Chỉ đồ thị không hợp lệ hay mất máy chủ mới dừng cả mẻ.
-- Bấm Dừng dừng cả mẻ, không chỉ lần chạy đang chạy.
-- Nhiều node cùng bật `perRun` thì số lần chạy bằng số dòng **nhiều nhất**; node ít dòng hơn giữ dòng cuối của nó cho các lần còn lại. `batchPlan` trả về `counts` để giao diện nói ra khi hai bên lệch nhau.
-- Một dòng (hay rỗng) thì đó là một lần chạy thường; phần còn lại của bộ máy không cần biết có khái niệm mẻ.

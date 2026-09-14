@@ -1,4 +1,4 @@
-import { secondsToFrames } from '@/core/types/ir-v3';
+import { secondsToFrames } from '@/contracts/types/ir-v3';
 /**
  * Weight-based frame allocation (CORE_CONTRACTS §5.4).
  * Deterministic: every scene except the last gets floor(total × w / Σw); the last takes the remainder.

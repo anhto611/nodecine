@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import type { SceneScript } from '@/core/types/payloads';
+import { ProviderPick } from '@/components/node-runtime/provider-pick';
+import type { SceneScript } from '@/contracts/types/payloads';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
 import { useOutputPayload } from '@/store/useStudio';
@@ -13,7 +14,8 @@ export const SceneBreakdownBody: React.FC<BodyProps> = ({ nodeId }) => {
   const written = out?.scenes.filter((s) => hasWritten(s.content)).length ?? 0;
   return (
     <>
-      <FormBody nodeId={nodeId} />
+      <ProviderPick nodeId={nodeId} kind="llm" />
+      <FormBody nodeId={nodeId} omit={['llmProvider', 'llmSettings']} />
       {out && <Kv k={t('node.written')} v={`${written}/${out.scenes.length}`} dim={!written} />}
       {out && written > 0 && (
         <div className="nc-hint" style={{ whiteSpace: 'pre-wrap' }}>

@@ -23,6 +23,8 @@ const NodeInstanceSchema = z.object({
   position: z.object({ x: z.number(), y: z.number() }),
   /** Which version of the node type wrote `params`; absent on anything saved before the stamp. */
   version: z.number().int().positive().optional(),
+  /** Frozen outputs: the node hands these back instead of running (CORE_CONTRACTS §1.5). */
+  pinned: z.object({ outputs: z.record(z.string(), z.unknown()), at: z.string().min(1) }).optional(),
 });
 const EdgeSchema = z.object({ id: z.string().min(1), source: z.string(), sourcePort: z.string(), target: z.string(), targetPort: z.string() });
 export const GraphSchema = z.object({ nodes: z.array(NodeInstanceSchema), edges: z.array(EdgeSchema) });

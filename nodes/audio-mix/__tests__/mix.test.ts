@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { makeFakeServices } from '@/core/__tests__/fakes';
+import { makeFakeServices } from '@/contracts/__tests__/fakes';
 import type { RunContext } from '@/core/nodes/definition';
-import type { Voiceover } from '@/core/types/payloads';
+import type { Voiceover } from '@/contracts/types/payloads';
 import { audioMix } from '../node';
 import { mixFilter } from '../server';
 

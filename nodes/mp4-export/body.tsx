@@ -1,15 +1,15 @@
 'use client';
 import React from 'react';
-import type { EngineRef } from '@/core/types/payloads';
-import type { VideoIR } from '@/core/types/ir';
+import { EnginePick } from '@/components/node-runtime/provider-pick';
+import type { VideoIR } from '@/contracts/types/ir';
 import { readCapability } from '@/core/nodes/definition';
 import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useInputPayload, useRuntime, useStudio } from '@/store/useStudio';
-import { readIR } from '@/core/types/migrate-ir';
+import { readIR } from '@/contracts/types/migrate-ir';
 import { useParams, type BodyProps } from '@/nodes/kit';
 import { FormBody } from '@/nodes/form-body';
-import { RESOLUTIONS, outputSizeFor } from '@/core/visual/frame';
+import { RESOLUTIONS, outputSizeFor } from '@/contracts/visual/frame';
 import { useFrame } from '@/nodes/kit';
 
 export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
@@ -21,12 +21,15 @@ export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
   const runNode = useStudio((s) => s.runNode);
   const cancel = useStudio((s) => s.cancel);
   const ir: VideoIR | undefined = readIR(useInputPayload(nodeId, 'ir'));
-  const engine = useInputPayload<EngineRef>(nodeId, 'engine');
-  const canRender = !!ir && !!engine && readCapability(engine, 'render')?.status === 'ready' && !running;
+  // The engine is this node's own setting now (§1.3): it is probed when the render runs, so the
+  // button asks only whether one is named and whether there is a film to render.
+  const [params] = useParams<{ engineId: string }>(nodeId);
+  const canRender = !!ir && !!params.engineId && !running;
   const result = rt?.result as { outputUrl?: string; bytes?: number; fileName?: string } | undefined;
   if (rt?.state === 'running') {
     return (
       <>
+      <EnginePick nodeId={nodeId} />
         <Kv k={`${p.codec} · ${p.quality}`} v={rt.progress?.message ?? '…'} />
         <div className="nc-bar"><div style={{ width: `${Math.round((rt.progress?.fraction ?? 0) * 100)}%` }} /></div>
         <Btn small danger className={stopFlow} onClick={cancel} style={{ alignSelf: 'flex-end', marginTop: 4 }}>{t('node.cancel')}</Btn>
@@ -45,7 +48,7 @@ export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
         </a>
       )}
       <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-        <Btn small primary className={stopFlow} disabled={!canRender} onClick={() => void runNode(nodeId)} style={{ flex: 1, justifyContent: 'center' }} title={!ir ? t('node.waiting', { port: t('port.videoIR') }) : !engine ? t('node.waiting', { port: t('port.engineRef') }) : readCapability(engine, 'render')?.reason}>
+        <Btn small primary className={stopFlow} disabled={!canRender} onClick={() => void runNode(nodeId)} style={{ flex: 1, justifyContent: 'center' }} title={!ir ? t('node.waiting', { port: t('port.videoIR') }) : undefined}>
           <Icon.play size={9} /> {t('node.render')}
         </Btn>
       </div>

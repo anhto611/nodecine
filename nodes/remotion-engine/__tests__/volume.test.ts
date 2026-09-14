@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { volumeOf } from '../Video';
-import type { AudioTrack } from '@/core/types/ir';
+import type { AudioTrack } from '@/contracts/types/ir';
 
 const music: AudioTrack = { id: 'music-1', role: 'music', url: '/api/media/0000000000000001.mp3', startFrame: 0, durationInFrames: 300, gain: 0.2, fadeInSeconds: 1, fadeOutSeconds: 2, duck: { by: 'voice', to: 0.05 } };
 

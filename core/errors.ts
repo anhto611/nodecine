@@ -2,32 +2,12 @@
  * Stable error and reason codes (EXECUTION_ENGINE §6). UI messages come from locale dictionaries
  * keyed by code.
  *
- * Only what the core, the engine and the provider layer raise. A failure that belongs to one node
- * belongs in that node's capsule — `nodes/<name>/errors.ts` beside its strings in the capsule's own
- * locales — the way the Web Fetcher and the GitHub Fetcher already keep theirs. Core carrying
- * `ALIGN_FAILED` meant core knew there was such a thing as an aligner.
+ * Only what running a graph raises: a wire, a node, a run. What a model, a voice, an engine or an IR
+ * raises is the video contracts' (`contracts/errors.ts`), and a failure of one node belongs in that
+ * node's capsule — `nodes/<name>/errors.ts` beside its strings in the capsule's own locales.
  */
 export const ErrorCode = {
   INPUT_EMPTY: 'INPUT_EMPTY',
-  PROVIDER_NOT_CONNECTED: 'PROVIDER_NOT_CONNECTED',
-  PROVIDER_NOT_INSTALLED: 'PROVIDER_NOT_INSTALLED',
-  PROVIDER_NOT_AUTHENTICATED: 'PROVIDER_NOT_AUTHENTICATED',
-  PROVIDER_PROBE_FAILED: 'PROVIDER_PROBE_FAILED',
-  PROVIDER_PROCESS_FAILED: 'PROVIDER_PROCESS_FAILED',
-  KEY_MISSING: 'KEY_MISSING',
-  KEY_INVALID: 'KEY_INVALID',
-  LLM_UPSTREAM: 'LLM_UPSTREAM',
-  /** A provider could not get schema-valid JSON out of the model. Thrown by providers, so core's. */
-  LLM_SCHEMA_INVALID: 'LLM_SCHEMA_INVALID',
-  /** A model was asked for one language and wrote in another, twice (core/ai/structured-completion). */
-  LLM_LANGUAGE_MISMATCH: 'LLM_LANGUAGE_MISMATCH',
-  TTS_UPSTREAM: 'TTS_UPSTREAM',
-  TTS_AUDIO_UNREADABLE: 'TTS_AUDIO_UNREADABLE',
-  IR_INVALID: 'IR_INVALID',
-  IR_VERSION_UNSUPPORTED: 'IR_VERSION_UNSUPPORTED',
-  ENGINE_NOT_READY: 'ENGINE_NOT_READY',
-  ENGINE_SCENE_UNSUPPORTED: 'ENGINE_SCENE_UNSUPPORTED',
-  ENGINE_TRANSITION_UNSUPPORTED: 'ENGINE_TRANSITION_UNSUPPORTED',
   NODE_BYPASSED_UPSTREAM: 'NODE_BYPASSED_UPSTREAM',
   GRAPH_CYCLE: 'GRAPH_CYCLE',
   GRAPH_PORT_UNCONNECTED: 'GRAPH_PORT_UNCONNECTED',
@@ -36,6 +16,10 @@ export const ErrorCode = {
   NODE_TYPE_UNKNOWN: 'NODE_TYPE_UNKNOWN',
   NODE_PARAMS_INVALID: 'NODE_PARAMS_INVALID',
   NODE_OUTPUT_INVALID: 'NODE_OUTPUT_INVALID',
+  /** An input names a capability that is not ready, and whatever reported it gave no code of its own. */
+  NODE_NOT_READY: 'NODE_NOT_READY',
+  /** A node threw something that carried no code. */
+  NODE_RUN_FAILED: 'NODE_RUN_FAILED',
   RUN_CANCELLED: 'RUN_CANCELLED',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

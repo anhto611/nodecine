@@ -1,22 +1,26 @@
 import { z } from 'zod';
-import { ErrorCode } from '@/core/errors';
+import { resolveEngine } from '@/contracts/resources';
+import { ErrorCode } from '@/contracts/errors';
 import { Mp4ExportErrorCode } from './errors';
-import { safeFileName } from '@/core/file-name';
-import { unsupportedFilmBlock } from '@/core/visual/transitions';
-import type { EngineRef } from '@/core/types/payloads';
-import type { VideoIR } from '@/core/types/ir';
+import { safeFileName } from '@/contracts/file-name';
+import { unsupportedFilmBlock } from '@/contracts/visual/transitions';
+import type { VideoIR } from '@/contracts/types/ir';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import { NodeError } from '@/core/errors';
+import { NodeError } from '@/contracts/errors';
 
-const Params = z.object({ codec: z.enum(['h264', 'h265']).default('h264'), quality: z.enum(['high', 'medium', 'low']).default('high'), fileName: z.string().min(1).default('nodecine.mp4'), resolution: z.enum(['1080p', '1440p', '2160p']).default('1080p') });
+const Params = z.object({
+  /** The engine this node draws with (§1.3): an engine id and its settings. */
+  engineId: z.string().max(60).default(''),
+  engineSettings: z.record(z.string(), z.unknown()).default({}),
+  codec: z.enum(['h264', 'h265']).default('h264'), quality: z.enum(['high', 'medium', 'low']).default('high'), fileName: z.string().min(1).default('nodecine.mp4'), resolution: z.enum(['1080p', '1440p', '2160p']).default('1080p') });
 export const mp4Export: NodeDefinition<typeof Params> = {
-  type: 'core/mp4-export', version: 1, kind: 'ondemand', defaultBypassed: true,
-  inputs: [{ name: 'ir', type: 'VideoIR' }, { name: 'engine', type: 'EngineRef', requires: ['render'] }], outputs: [],
-  paramsSchema: Params, defaultParams: { codec: 'h264', quality: 'high', fileName: 'nodecine.mp4', resolution: '1080p' },
-  preflight: (inputs) => unsupportedFilmBlock(inputs.engine?.payload as EngineRef | undefined, inputs.ir?.payload as VideoIR | undefined),
+  type: 'core/mp4-export', version: 1, kind: 'ondemand',
+  inputs: [{ name: 'ir', type: 'VideoIR' }], outputs: [],
+  paramsSchema: Params, defaultParams: { engineId: '', engineSettings: {}, codec: 'h264', quality: 'high', fileName: 'nodecine.mp4', resolution: '1080p' },
+  preflight: (inputs, params) => unsupportedFilmBlock(params.engineId, inputs.ir?.payload as VideoIR | undefined),
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const ir = inputs.ir!.payload as VideoIR;
-    const engine = inputs.engine!.payload as EngineRef;
+    const engine = await resolveEngine(services, params, ['render']);
     const fileName = safeFileName(params.fileName, 'nodecine.mp4');
     // A render is minutes of somebody's evening: when it fails, the log should say a render failed,
     // not repeat whichever subprocess message came back up the stack under a generic code.

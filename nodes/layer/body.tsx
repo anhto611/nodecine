@@ -31,7 +31,7 @@ export const LayerBody: React.FC<BodyProps> = ({ nodeId }) => {
           <FormBody nodeId={nodeId} fields={['fit', 'loop', 'offsetSeconds', 'gain']} widgets={{ gain: { widget: 'range', step: 0.05, format: (v) => `${Math.round(v * 100)}%` } }} />
         </>
       ) : (
-        <FormBody nodeId={nodeId} fields={['source']} widgets={{ source: { widget: 'textarea', placeholder: t('node.layerSourcePlaceholder') } }} />
+        <FormBody nodeId={nodeId} fields={['format', 'source']} widgets={{ source: { widget: 'textarea', placeholder: t((p.format ?? 'html-gsap') === 'lottie' ? 'node.layerLottiePlaceholder' : 'node.layerSourcePlaceholder') } }} />
       )}
       <FormBody nodeId={nodeId} fields={['startSeconds', 'durationSeconds']} />
       <div className="nc-hint">{t('node.layerHint')}</div>

@@ -32,7 +32,7 @@ NodeCine phục vụ 4 nhóm người dùng trọng tâm tương ứng với cá
 
 ### 2.3. Growth Marketers & E-commerce Sellers (Tiếp thị & Bán hàng)
 
-- Chân dung: Nhà tiếp thị tăng trưởng, chủ shop online, người làm tiếp thị liên kết (Affiliate) cần sản xuất hàng loạt video quảng cáo A/B test.
+- Chân dung: Nhà tiếp thị tăng trưởng, chủ shop online, người làm tiếp thị liên kết (Affiliate) cần sản xuất nhiều video quảng cáo để A/B test.
 - Nhu cầu cốt lõi: Nối nguồn dữ liệu từ bảng tính (CSV/Google Sheet) hoặc API sản phẩm vào quy trình node để xuất hàng chục biến thể video quảng cáo với tiêu đề, giá bán và lời kêu gọi hành động khác nhau mà không phải dựng lại từ đầu.
 - Thể loại video chính:
   - Flash Sale & Discount Countdown Alerts.
@@ -180,6 +180,5 @@ Các hạng mục dưới đây đã được cân nhắc và cố ý loại kh�
 - Bổ sung các bản mẫu còn lại trong 4 danh mục dưới dạng JSON, mỗi bản mang mô tả phong cách của nó; node lấy dữ liệu mới (RSS, YouTube) là node lõi riêng.
 - Họ node truy xuất dữ liệu mở rộng: Reddit Fetcher, CSV và Google Sheet Loader, Market API Fetcher. Chúng dùng chung vị trí và vai trò với Node Truy Xuất Repo trong đồ thị.
 - Nhà cung cấp cần khóa API: Anthropic, ElevenLabs và các dịch vụ đám mây khác. Tất cả cắm vào cùng cổng `LLMRef` hoặc `TTSRef` đã có, và vào cùng hai node nhà cung cấp — cái phải làm thêm là két giữ khóa, không phải node mới.
-- Chạy hàng loạt (batch) nhiều biến thể video từ một nguồn dữ liệu bảng tính.
 - Đặt nhiều Node Video Output trên cùng một đồ thị để so sánh hai engine, hoặc hai bản dựng, cạnh nhau.
 - Phụ đề chạy từng từ, phục vụ nhóm người dùng sáng tạo nội dung không lộ mặt.

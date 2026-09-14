@@ -1,6 +1,6 @@
 import { gsap } from 'gsap';
-import { beatClipsOf, type CodeClip, type VideoIR } from '@/core/types/ir';
-import { BIND_SCRIPT, SCENE_MOUNT, captionLine, captionStyleOf, esc, sceneMarkup, scopedCss } from '@/core/visual/scene-markup';
+import { beatClipsOf, type CodeClip, type VideoIR } from '@/contracts/types/ir';
+import { BIND_SCRIPT, SCENE_MOUNT, captionLine, captionStyleOf, esc, sceneMarkup, scopedCss, sourceForFormat } from '@/contracts/visual/scene-markup';
 
 /**
  * The `html-gsap` format inside Remotion: the same scene machinery HyperFrames runs, driven by
@@ -23,6 +23,8 @@ export interface PreparedScene {
   facts: Record<string, unknown>;
   words: { text: string; start: number }[];
   cues: PreparedCue[];
+  /** Whether this clip is one of the beats (the scenes), as opposed to a layer's drawing. */
+  beat: boolean;
   /** Frames this clip stays mounted past its own end, for the transition into the next beat. */
   overlapFrames: number;
   /** The transition into this clip, and out of it, when it is a beat clip. */
@@ -63,7 +65,8 @@ export function prepareFilm(ir: VideoIR, mediaBaseUrl = ''): PreparedFilm {
       const hearFrom = beat ? beat.startFrame : start;
       const hearTo = beat ? beat.startFrame + beat.durationInFrames : end;
       const si = beat ? beat.index : extra++;
-      const bare = sceneMarkup(clip.source, { withCaptions: !!ir.captions && !!beat, start: start / fps, duration: clip.durationInFrames / fps });
+      const source = sourceForFormat(clip.format, clip.source, { loop: clip.loop });
+      const bare = sceneMarkup(source, { withCaptions: !!ir.captions && !!beat, start: start / fps, duration: clip.durationInFrames / fps });
       const style = captionStyleOf(bare.captionSlot?.tag ?? '');
       const cues: PreparedCue[] = beat
         ? allCues.map((cue, ci) => ({ cue, ci })).filter(({ cue }) => cue.startFrame < hearTo && cue.startFrame + cue.durationInFrames > hearFrom).map(({ cue, ci }) => ({
@@ -75,7 +78,7 @@ export function prepareFilm(ir: VideoIR, mediaBaseUrl = ''): PreparedFilm {
           }))
         : [];
       const words = allCues.flatMap((cue) => cue.words).filter((w) => w.startFrame >= hearFrom && w.startFrame < hearTo).map((w) => ({ text: w.text, start: (w.startFrame - start) / fps }));
-      const scene = sceneMarkup(clip.source, { captionsHtml: cues.map((cue) => captionLine(cue.id, cue.words, style)).join(''), withCaptions: !!ir.captions && !!beat, start: start / fps, duration: clip.durationInFrames / fps });
+      const scene = sceneMarkup(source, { captionsHtml: cues.map((cue) => captionLine(cue.id, cue.words, style)).join(''), withCaptions: !!ir.captions && !!beat, start: start / fps, duration: clip.durationInFrames / fps });
       if (beat && !scene.captionSlot) defaultBand = true;
       const tIn = beat && beat.index > 0 ? transitionAfter(beat.index - 1) : null;
       const tOut = beat ? transitionAfter(beat.index) : null;
@@ -92,6 +95,7 @@ export function prepareFilm(ir: VideoIR, mediaBaseUrl = ''): PreparedFilm {
         facts: clip.facts ?? {},
         words,
         cues,
+        beat: !!beat,
         overlapFrames: tOut ? Math.min(Math.round(tOut.seconds * fps), ir.meta.totalDurationInFrames - end) : 0,
         transitionIn: tIn,
         transitionOut: tOut && nextBeat ? { ...tOut, atFrame: nextBeat.startFrame } : null,
@@ -105,6 +109,19 @@ export function prepareFilm(ir: VideoIR, mediaBaseUrl = ''): PreparedFilm {
     scenes,
     defaultBand,
   };
+}
+
+/**
+ * What a scene of the other two formats reaches for by name — `lottie`, `THREE` — put on the window
+ * the way the HyperFrames page inlines them, and only for a film that uses the format: lottie-web
+ * touches a canvas the moment it loads, which a test's DOM does not have and a film of plain scenes
+ * does not need.
+ */
+export async function loadFormatLibs(ir: Pick<VideoIR, 'tracks'>): Promise<void> {
+  const formats = new Set(ir.tracks.flatMap((t) => t.clips.flatMap((c) => (c.kind === 'code' ? [c.format] : []))));
+  const w = window as unknown as { lottie?: unknown; THREE?: unknown };
+  if (formats.has('lottie') && !w.lottie) w.lottie = (await import('lottie-web')).default;
+  if (formats.has('html-three') && !w.THREE) w.THREE = await import('three');
 }
 
 type MountScene = (g: typeof gsap, root: HTMLElement, scene: PreparedScene, film: { vars: unknown; beats: unknown; analysis: unknown }, unwrap: WeakMap<object, object>) => gsap.core.Timeline[];
@@ -153,4 +170,29 @@ export class SceneInstance {
   dispose(): void {
     this.master.kill();
   }
+}
+
+/**
+ * Mount one scene into an element and keep it mounted (CORE_CONTRACTS §4).
+ *
+ * The markup is written here rather than through React's `dangerouslySetInnerHTML`, and that is the
+ * whole point. React 19 compares that prop by the identity of the `{ __html }` object, not by the
+ * string inside it, so a component that builds the object inline rewrites the element's children on
+ * every render — even when the markup has not changed by one character. Under Remotion that is every
+ * frame: gsap writes the inline styles for the frame, React wipes them and puts the pristine markup
+ * back, and the timeline goes on seeking nodes that are no longer in the document. What came out was
+ * a film with a drifting background and no text on it at all.
+ *
+ * Returns the instance and a teardown. The caller re-runs it when the markup itself changes.
+ */
+export function mountSceneInto(root: HTMLElement, scene: PreparedScene, film: Pick<PreparedFilm, 'vars' | 'beats' | 'analysis'>): { instance: SceneInstance; dispose: () => void } {
+  root.innerHTML = scene.html;
+  const instance = new SceneInstance(root, scene, film);
+  return {
+    instance,
+    dispose: () => {
+      instance.dispose();
+      root.innerHTML = '';
+    },
+  };
 }

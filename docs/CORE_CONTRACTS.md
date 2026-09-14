@@ -2,6 +2,8 @@
 
 Tài liệu này định nghĩa phần **khung** của NodeCine: những hợp đồng mà mọi node, mọi cảnh và mọi engine đều phải tuân theo, và không chứa bất kỳ chi tiết nào của một bản mẫu cụ thể. Chi tiết của từng bản mẫu nằm ở `docs/templates/`.
 
+Ba tầng (Kiến trúc mục 2): `core/` lo node chạy thế nào, `contracts/` giữ các hợp đồng video mà tài liệu này mô tả, `nodes/` là các node. Mọi tệp nhắc tới ở đây mà không có tiền tố `core/` đều nằm ở `contracts/` trừ khi ghi khác.
+
 Nguyên tắc phân tầng: **lõi định nghĩa hình dạng, gói định nghĩa nội dung.** Lõi biết có "cảnh" nhưng không biết cảnh Hook là gì; biết có "dữ kiện" nhưng không biết số sao GitHub là gì. Mọi thứ lõi không biết đều được tra qua registry, cùng một pattern cho engine, nhà cung cấp và kiểu cảnh.
 
 Tài liệu liên quan: Kiến trúc Hệ thống mô tả nơi từng phần thực thi; Đặc tả Bộ Máy Thực Thi mô tả cách đồ thị được chạy.
@@ -12,7 +14,7 @@ Tài liệu liên quan: Kiến trúc Hệ thống mô tả nơi từng phần th
 
 ### 1.1. Kiểu cổng
 
-Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ được phép tạo khi định danh kiểu ở cổng xuất trùng khớp tuyệt đối với định danh kiểu ở cổng nhận. Không có cơ chế ép kiểu ngầm. Lõi định nghĩa mười ba kiểu (`PORT_TYPES`); không thứ gì ngoài lõi được thêm kiểu cổng mới, chỉ được định nghĩa hình dạng cụ thể của `payload` bên trong các kiểu có sẵn.
+Mỗi cổng mang đúng một định danh kiểu. Một dây nối chỉ được phép tạo khi định danh kiểu ở cổng xuất trùng khớp tuyệt đối với định danh kiểu ở cổng nhận. Không có cơ chế ép kiểu ngầm. Lõi (`core/types/ports.ts`) chỉ giữ registry kiểu cổng rỗng và không biết tên kiểu nào. Các kiểu cổng video, nhãn và schema của chúng nằm ở `contracts/ports.ts` và đăng ký vào lõi lúc khởi động; executor kiểm gói trên dây bằng schema đã đăng ký. Node không tự thêm kiểu cổng: kiểu mới là một dòng trong `contracts/ports.ts`.
 
 | Định danh kiểu | Nhãn hiển thị | Ý nghĩa | Node lõi phát | Node lõi nhận |
 | --- | --- | --- | --- | --- |
@@ -44,6 +46,41 @@ Một cổng xuất được phép nối ra nhiều cổng nhận. Một cổng 
 - `contentHash`: Chuỗi băm ổn định tính từ `payload`, cơ sở của cơ chế chạy lại từng phần.
 
 Gói tin chỉ mang dữ liệu thành công. Trạng thái lỗi không đi qua dây nối mà được ghi vào trạng thái của chính node phát sinh lỗi.
+
+### 1.3. Phần một node cần: mô hình, giọng, động cơ
+
+Từ 2026-09-12, **không còn node tài nguyên**. Mô hình ngôn ngữ, giọng đọc và động cơ là **thiết lập của chính node cần chúng**, và node tự dò khi chạy (`contracts/resources.ts`: `resolveLLM`, `resolveTTS`, `resolveEngine`). Đồ thị chỉ còn một loại dây: nội dung chảy từ bước này sang bước kia.
+
+Vì sao bỏ: bốn node và hơn chục sợi dây phải dựng trước khi vẽ được một khung hình, và lý do một node không chạy được lại hiện trên một node khác. Nay node nào thiếu phần của nó thì chính nó báo, kèm đúng mã lỗi và cách sửa mà trước đây Bộ Máy Thực Thi kiểm trên dây.
+
+- Tham số: `llmProvider` + `llmSettings`, `ttsProvider` + `ttsSettings`, `engineId` + `engineSettings`.
+- Kiểm năng lực chuyển vào lúc dò: model phải `installed` và `authenticated`, giọng phải `installed` và `encoder`, động cơ phải `preview` (node xem) hoặc `render` (node xuất).
+- Node phía dưới bị chặn với `kind: 'upstream'` mang theo mã lỗi **và cách sửa** của node hỏng, nên nguyên nhân vẫn đi hết dây chuyền.
+- Đồ thị cũ được **gộp lúc mở**: `registerResourceFold` trong `nodes/migrations.ts` khai bốn kiểu node đã mất và thiết lập của chúng rơi về đâu; `migrateGraph` gộp xong thì xóa node và mọi dây của chúng.
+- Node chỉ dò khi nó chạy. Node dùng lại kết quả cũ thì không dò, nên đổi một thiết lập ở máy khác giữa hai lần chạy chỉ lộ ra khi node thật sự chạy lại.
+
+### 1.4. Luồng, và node chỉ nằm trên canvas
+
+**Luồng** là những node có dây cắm vào hoặc đi ra (`flowNodes`). Node không có sợi dây nào **không được chạy**: nó không thuộc bộ phim, nên không thể hỏng sau một lần chạy nó chưa từng tham gia. Cả đồ thị không có sợi dây nào thì chạy hết, vì lúc đó không có luồng nào để đứng ngoài.
+
+**Nút Chạy sáng khi có một node không có cổng vào nào và đã nối đầu ra đi đâu đó** (`canRun`) — hôm nay là Nhập Liệu và Kịch Bản Tĩnh. Không gì khác bắt đầu được một bộ phim.
+
+**Cổng bắt buộc còn trống, hay tham số node tự thấy không hợp lệ, là cảnh báo**, hiện ngay trên thẻ node. Khi lần chạy tới node đó thì chính nó dừng lại và nói lý do tại chỗ. Đây là chỗ đổi so với trước: một node đang nối dở từng khóa nút Chạy của cả luồng, kèm một dãy mã lỗi trên đầu canvas.
+
+Vẫn là **lỗi** và vẫn từ chối chạy: đồ thị có vòng lặp, node không rõ kiểu, dây nối sai kiểu, và một cổng đơn bị cắm hai dây. Đó là đồ thị hỏng, không phải đồ thị làm dở.
+
+### 1.5. Ghim kết quả
+
+Một node mang `pinned = { outputs, at }` thì **đóng băng**: Bộ Máy Thực Thi trả lại đúng các payload đã lưu, không chạy `run`, không đọc đầu vào, không bị chặn khi node phía trên lỗi, và **không rã ra khi chạy ép** (Shift+Chạy). Ghim khác bộ nhớ đệm chữ ký ở đúng chỗ đó: đệm là tối ưu, ghim là một quyết định.
+
+Lý do nó tồn tại: workflow trước đây chỉ lưu **lời dặn** (một câu mô tả phong cách) chứ không lưu **kết quả** (tờ CSS sinh ra từ câu đó), nên mỗi lần chạy là một lần suy ra lại, và hai video cùng workflow ra hai bộ bố cục khác nhau. Ghim là cách một kết quả đã duyệt trở thành tài sản của workflow, đồng thời dồn phần gọi mô hình đắt đỏ về một lần thay vì mỗi video một lần.
+
+Luật:
+
+- Chỉ ghim được thứ đã chạy ra: `pinNode` lấy `outputs` của lần chạy gần nhất, bỏ qua cổng không có gì, và không tạo ghim rỗng (`core/engine/graph.ts`).
+- Payload được kiểm lại theo lược đồ của kiểu cổng lúc trả về. Ghim mà bản dựng hôm nay không đọc được là lỗi `NODE_OUTPUT_INVALID` kèm hướng dẫn bỏ ghim, chứ không âm thầm đẩy hình sai xuống dưới.
+- Ghim đi cùng đồ thị xuống đĩa (`pinned` trong lược đồ node ở `core/templates/registry.ts`), nên nó là một phần của workflow chứ không phải trạng thái của một phiên.
+- Payload đóng băng nên `contentHash` không đổi, nên mọi node phía dưới dùng lại kết quả cũ thay vì chạy lại.
 
 ---
 
@@ -105,13 +142,13 @@ Tự chứa: mỗi cảnh mang **bức vẽ của chính nó** và cả plan man
 
 Ba thứ **chung cho mọi cảnh** của một lần chạy nằm ở gốc `ScenePlan` và được chép nguyên sang IR. Mỗi cảnh vẽ trọn khung của nó; một tờ CSS chung làm chúng trông là cùng một phim.
 
-- `style` = `{ name, css }`. Tờ CSS định nghĩa trên `.nc-scene` (gốc của mọi cảnh) các biến `--bg --fg --accent --muted --line --font-display --font-body`, nền và font chữ mặc định, và một bộ class dùng chung (tiêu đề, đoạn, thẻ, nhãn, con số, mục danh sách…) mà các cảnh dựng lên từ đó. Engine đặt nó trong `@scope ([data-composition-id])` **sau** CSS phụ đề mặc định, nên phong cách nào muốn đặt lại chỗ phụ đề thì viết đè `.nc-captions-default` (2.8, 2.10). Không `:root` (scope không tới), không `!important`, không `@import`. Font đóng gói: Comfortaa và JetBrains Mono (`public/fonts`); ngoài ra là system stack.
-- `transition` = `{ type, seconds }` (mặc định `fade` 0,4 s): cách cảnh này nhường cảnh sau, mặc định cho cả phim; một cảnh đè riêng bằng `transitionAfter` (2.3). `type` là **một tên trong registry chuyển cảnh** (`core/visual/transitions.ts`, mục 4): rỗng trong lõi, engine tự lấp lúc khởi động, node xuất hỏi trước khi nạp và chặn bằng `ENGINE_TRANSITION_UNSUPPORTED` kèm danh sách tên engine đó có. Bốn tên `cut`, `fade`, `slide`, `zoom` mọi engine bắt buộc có (`REQUIRED_TRANSITIONS`), để IR bản 2 di trú lên vẫn chạy ở mọi engine; HyperFrames đăng ký thêm catalog của nó (`nodes/hyperframes-engine/transitions.ts`: `slide-left`, `slide-right`, `push-up`, `push-left`, `wipe-left`, `wipe-up`, `iris`, `blur`, `flip`), Remotion mới có bốn tên bắt buộc. Engine giữ cảnh trước còn hiện thêm đúng `seconds` sau mốc cắt, cảnh sau bắt đầu đúng mốc cắt và được vẽ đè lên, nên `cut` là 0 chồng lấn. IR không đổi độ dài cảnh vì chuyển cảnh: đó là chuyện của engine.
+- `style` = `{ name, css, captions? }`. Tờ CSS định nghĩa trên `.nc-scene` (gốc của mọi cảnh) các biến `--bg --fg --accent --muted --line --font-display --font-body`, nền và font chữ mặc định, và một bộ class dùng chung (tiêu đề, đoạn, thẻ, nhãn, con số, mục danh sách…) mà các cảnh dựng lên từ đó. Engine đặt nó trong `@scope ([data-composition-id])` **sau** CSS phụ đề mặc định. `captions = { left, right, bottom, size }` (px của khung) là **chỗ ngồi của dải phụ đề, dưới dạng số**: tờ CSS được đổi mặt chữ, màu, bóng và `--caption-on` của `.nc-captions-default` nhưng **không được dời nó** (không `top/bottom/left/right/inset/position/transform/margin`), vì lớp trải dài và bố cục từng cảnh phải tránh đúng dải đó và không đọc được một quy tắc CSS. Phim vẽ trước khi có thoả thuận này thì `captions` vắng và engine dùng mặc định của bản dựng (2.8, 2.10). Không `:root` (scope không tới), không `!important`, không `@import`. Font đóng gói: Comfortaa và JetBrains Mono (`public/fonts`); ngoài ra là system stack.
+- `transition` = `{ type, seconds }` (mặc định `fade` 0,4 s): cách cảnh này nhường cảnh sau, mặc định cho cả phim; một cảnh đè riêng bằng `transitionAfter` (2.3). `type` là **một tên trong registry chuyển cảnh** (`contracts/visual/transitions.ts`, mục 4): rỗng trong lõi, engine tự lấp lúc khởi động, node xuất hỏi trước khi nạp và chặn bằng `ENGINE_TRANSITION_UNSUPPORTED` kèm danh sách tên engine đó có. Bốn tên `cut`, `fade`, `slide`, `zoom` mọi engine bắt buộc có (`REQUIRED_TRANSITIONS`), để IR bản 2 di trú lên vẫn chạy ở mọi engine; HyperFrames đăng ký thêm catalog của nó (`nodes/hyperframes-engine/transitions.ts`: `slide-left`, `slide-right`, `push-up`, `push-left`, `wipe-left`, `wipe-up`, `iris`, `blur`, `flip`), Remotion mới có bốn tên bắt buộc. Engine giữ cảnh trước còn hiện thêm đúng `seconds` sau mốc cắt, cảnh sau bắt đầu đúng mốc cắt và được vẽ đè lên, nên `cut` là 0 chồng lấn. IR không đổi độ dài cảnh vì chuyển cảnh: đó là chuyện của engine.
 - `vars` (bản đồ tên → chữ **hoặc ảnh**, mặc định rỗng): **giá trị của cả video** — số tập, tên kênh, và **nhân vật hay logo** (`AssetUrlSchema`: ảnh tải lên theo mã băm, hay SVG nhúng). Cảnh vẽ bằng `data-var="<tên>"`: chữ đổ vào `textContent`, ảnh vào `src` của `<img>`; thiếu giá trị thì phần tử bị bỏ. Đóng Gói Timeline thêm `date` và `time` của lần chạy theo ngôn ngữ video, trừ khi plan tự đặt.
 
 Ảnh và logo là **tài nguyên theo mã băm**: tải lên `POST /api/assets` (data URL ảnh, tối đa 2 MB) → `.nodecine/assets/<sha1>.<ext>`, tham chiếu bằng `/api/assets/<tên>`; máy chủ chỉ phục vụ tên hợp lệ. Khi kết xuất, engine chép mọi ảnh được tham chiếu **ở bất cứ đâu trong IR** (`source` của cảnh, `style.css`, `vars`) vào thư mục dự án và viết lại đường dẫn. Một SVG nhỏ (≤ 64 KB) có thể đi thẳng trong đồ thị dưới dạng data URL, để bản mẫu là một tệp.
 
-Vùng an toàn (`core/visual/safe-zones.ts`): với khung dọc, cột nút bên phải, khối phụ đề dưới đáy, thanh trên và lề trái (72/168/260/680 px); khung ngang 96 px bốn bên. Một định nghĩa cho ba chỗ dùng — luật trong prompt, lint, và lớp kẻ trên khung xem trước.
+Vùng an toàn (`contracts/visual/safe-zones.ts`): với khung dọc, cột nút bên phải, khối phụ đề dưới đáy, thanh trên và lề trái (72/168/260/680 px); khung ngang 96 px bốn bên. Một định nghĩa cho ba chỗ dùng — luật trong prompt, lint, và lớp kẻ trên khung xem trước.
 
 ### 2.7. Tài nguyên của cảnh
 
@@ -122,11 +159,13 @@ Vùng an toàn (`core/visual/safe-zones.ts`): với khung dọc, cột nút bên
 Mỗi cảnh là một đoạn HTML (`source`, tối đa 200 000 ký tự) theo định dạng duy nhất `html-gsap` (`SCENE_FORMAT`). Quy ước:
 
 - **Markup**, kèm `<style>` (chỉ những gì riêng cảnh này — engine bọc trong `@scope ([data-scene="<id>"])`) và `<script>` tùy chọn. Không `<html>`, `<head>`, `<body>` (kiểm định IR từ chối, 3.1). Cảnh vẽ **trọn khung** của nó: gốc `.nc-scene` đã có nền và font từ `style.css` (2.6); cảnh dùng class và biến của tờ CSS chung, đặt vị trí bằng px trên hệ tọa độ `frame`, giữ nội dung trong vùng an toàn.
-- **Chữ viết thẳng vào markup**: tiêu đề, ý, con số của cảnh nằm trong HTML, không có `data-prop` và không có bước đổ props. Chỉ hai thứ được đổ lúc chạy: `data-var="<tên>"` nhận giá trị của cả video (2.6) và `data-fact="<khóa>"` nhận dữ kiện đã giải cho cảnh (2.3, 5.4) — chữ vào `textContent` (số định dạng `en-US`), `<img>`/`<video>` nhận `src`, thiếu giá trị thì phần tử bị bỏ (`BIND_SCRIPT`, `core/visual/markup.ts`).
+- **Chữ viết thẳng vào markup**: tiêu đề, ý, con số của cảnh nằm trong HTML, không có `data-prop` và không có bước đổ props. Chỉ hai thứ được đổ lúc chạy: `data-var="<tên>"` nhận giá trị của cả video (2.6) và `data-fact="<khóa>"` nhận dữ kiện đã giải cho cảnh (2.3, 5.4) — chữ vào `textContent` (số định dạng `en-US`), `<img>`/`<video>` nhận `src`, thiếu giá trị thì phần tử bị bỏ (`BIND_SCRIPT`, `contracts/visual/markup.ts`).
 - Ảnh và clip: `<img src>` / `<video src>` trỏ vào tài nguyên đã tải lên; `timeVideos` (2.12) gắn mốc cảnh lên mọi thẻ video. `<em class="nc-emph">` là cụm nhấn màu accent.
-- **Phụ đề**: cảnh nào có phần tử `data-slot="captions"` thì dòng phụ đề đổ vào đó, CSS của cảnh đặt vị trí và dáng (`data-caption-style="karaoke"` mặc định hay `"reveal"`, biến `--caption-on` cho từ đang đọc). Cảnh không khai slot nhận **dải mặc định** `.nc-captions-default` (trong vùng an toàn, font body, từ đang đọc màu accent); tờ CSS phong cách viết đè class đó để dời hay đổi dáng cho cả phim (2.6, 2.10).
+- **Phụ đề**: cảnh nào có phần tử `data-slot="captions"` thì dòng phụ đề đổ vào đó, CSS của cảnh đặt vị trí và dáng (`data-caption-style="karaoke"` mặc định hay `"reveal"`, biến `--caption-on` cho từ đang đọc). Cảnh không khai slot nhận **dải mặc định** `.nc-captions-default`, đặt theo `style.captions` (2.8); tờ CSS phong cách đổi dáng nó được, dời chỗ thì không.
 - `<script>` gọi `nodecine.timeline(tl)` với một GSAP timeline có mốc 0 là đầu cảnh; `gsap` nhận vào đã **scope vào cảnh** (chuỗi selector chỉ tìm trong cảnh, `SCOPED_GSAP`). Chỉ `fromTo`, không `from` (lệch khi tua). Renderer **tua** timeline theo thời gian tuyệt đối, nên không `repeat: -1` hay bất cứ gì phụ thuộc đồng hồ thật.
-- Tên các móc (`nc-scene`, `data-slot="captions"`, `.nc-captions-default`, `data-var`, `data-fact`, `asset:`, `.nc-emph`, bảy biến của phong cách, API của `nodecine`) là hằng trong `core/visual/contract.ts`: Họa Sĩ viết theo đó, engine thực hiện, không bên nào định nghĩa lại.
+- **Không có gì sổ ra trong thân node.** Thân node là một dòng cho mỗi thứ, còn chỗ sửa là một hộp thoại: 220px đủ cho một dòng, không đủ cho một biểu mẫu, và một danh sách mở hết ra là một cột dài hơn màn hình. Một capsule khai `overlay` trong manifest, cửa sổ giữ đúng một `overlay = { nodeId, data }`, và hộp thoại nào nhận ra `data` của mình thì hiện. Bốn chỗ đang dùng: cảnh của Kịch Bản Tĩnh, dán kịch bản, nhịp của Biên Kịch, và vật của Bộ Dựng.
+
+- Tên các móc (`nc-scene`, `data-slot="captions"`, `.nc-captions-default`, `data-var`, `data-fact`, `asset:`, `.nc-emph`, bảy biến của phong cách, API của `nodecine`) là hằng trong `contracts/visual/contract.ts`: Họa Sĩ viết theo đó, engine thực hiện, không bên nào định nghĩa lại.
 - Script nhận `nodecine.root`, `nodecine.index` (số thứ tự cảnh, từ 0), `nodecine.duration` (giây), `nodecine.words` (từ giọng đọc nói trong cảnh, mốc từ đầu cảnh, rỗng khi chưa căn mốc) và hai trợ giúp (`SCENE_HELPERS`): `nodecine.when("cụm chữ")` — giây giọng đọc tới cụm đó (dò từ dài nhất, tiến dần), không có mốc thì rải các cụm được hỏi đều trên cảnh, để một ý **hiện đúng lúc được nói**; `nodecine.count(selector, vars)` — con số đếm từ 0 lên đúng giá trị đang hiện, giữ nguyên dấu nhóm. Khung xem trước chạy cùng script với `index` 0 và `words` rỗng.
 - Không mạng, không tài nguyên ngoài. Renderer chạy code trong iframe có sandbox, không cùng origin với Studio, CSP `default-src 'none'`. Đây là ràng buộc an toàn, không phải tùy chọn.
 
@@ -152,7 +191,7 @@ Từ vựng là cố định để biên kịch không cần biết giao diện:
 
 Cấu trúc duy nhất do Node Đóng Gói Timeline tạo ra, độc lập với engine **và độc lập với mọi node**. Tự chứa: mỗi cảnh mang bức vẽ của nó và IR mang phong cách chung, nên một engine vẽ được IR mà không cần đăng ký gì, và một IR đã lưu phát lại được ở bất kỳ đâu. Đây là ranh giới giữa phần dựng nội dung và phần kết xuất.
 
-- `irVersion` (Số nguyên): Phiên bản lược đồ, hiện là `3` (`core/types/ir-v3.ts`). Lược đồ đầy đủ và ngữ nghĩa ở `docs/IR_V3.md` mục 4 và 5; dưới đây là bộ khung. Điểm đọc nào có thể gặp IR bản 2 đã lưu (lịch sử việc, thẻ trong MP4, trình phát) gọi `migrateIR` (`core/types/migrate-ir.ts`) trước; Adapter từ chối nạp phiên bản không hỗ trợ với `IR_VERSION_UNSUPPORTED`.
+- `irVersion` (Số nguyên): Phiên bản lược đồ, hiện là `3` (`contracts/types/ir-v3.ts`). Lược đồ đầy đủ và ngữ nghĩa ở `docs/IR_V3.md` mục 4 và 5; dưới đây là bộ khung. Điểm đọc nào có thể gặp IR bản 2 đã lưu (lịch sử việc, thẻ trong MP4, trình phát) gọi `migrateIR` (`contracts/types/migrate-ir.ts`) trước; Adapter từ chối nạp phiên bản không hỗ trợ với `IR_VERSION_UNSUPPORTED`.
 - `meta`:
   - `title` (Chuỗi), `language` (Chuỗi BCP 47): Lấy từ tham số node và `ScenePlan`.
   - `fps` (Số nguyên): Mặc định 30, do tham số của Node Đóng Gói Timeline.
@@ -189,10 +228,11 @@ Một rãnh trống là hợp lệ nhưng vô nghĩa: kiểm định cảnh báo
 
 ## 4. Renderer Theo Định Dạng Code: Cách Lõi Không Cần Biết Cảnh Là Gì
 
-Lõi không có danh sách kiểu cảnh. Một cảnh là một bức vẽ trong IR (mục 2.8), theo định dạng `html-gsap` (mỗi đoạn mã mang `format` của nó; hôm nay chỉ có một). Thứ duy nhất engine phải đăng ký là **một renderer cho mỗi định dạng code** nó hiểu — `registerCodeRenderer(format, engineId, renderer)` (`core/visual/renderers.ts`) — và **một cách vẽ cho mỗi tên chuyển cảnh** — `registerTransition(name, engineId, impl)` (`core/visual/transitions.ts`) — cùng pattern với registry engine và nhà cung cấp. Từ 2026-09-10 tối engine là **một capsule như mọi node** (`nodes/hyperframes-engine/`, `nodes/remotion-engine/`): manifest khai `register.server` và `register.client`, registry sinh gọi chúng lúc khởi động; adapter có thêm năng lực tuỳ chọn `previewScene(options)` trả về trang một cảnh, và Studio vẽ storyboard qua `previewEngine()` chứ không tự dựng trang.
+Lõi không có danh sách kiểu cảnh. Một cảnh là một bức vẽ trong IR (mục 2.8); mỗi đoạn mã mang `format` của nó, và lõi biết ba (`SCENE_FORMATS` trong `contracts/visual/contract.ts`): `html-gsap` là mảnh HTML kèm script gsap; `html-three` là mảnh HTML có `THREE` trong tầm với, tự vẽ mỗi khung qua `nodecine.frame`; `lottie` là JSON của bản hoạt hình, lõi bọc thành cảnh và lottie-web tua theo khung (`lottieScene`). Thư viện chỉ được nhúng vào trang khi có đoạn dùng tới (`nodes/hyperframes-engine/libs.ts`); three không có bản classic nên `scripts/vendor-three.mjs` đóng gói từ ES module lúc `nodes:prepare`. Thứ duy nhất engine phải đăng ký là **một renderer cho mỗi định dạng code** nó hiểu — `registerCodeRenderer(format, engineId, renderer)` (`contracts/visual/renderers.ts`) — và **một cách vẽ cho mỗi tên chuyển cảnh** — `registerTransition(name, engineId, impl)` (`contracts/visual/transitions.ts`) — cùng pattern với registry engine và nhà cung cấp. Từ 2026-09-10 tối engine là **một capsule như mọi node** (`nodes/hyperframes-engine/`, `nodes/remotion-engine/`): manifest khai `register.server` và `register.client`, registry sinh gọi chúng lúc khởi động; adapter có thêm năng lực tuỳ chọn `previewScene(options)` trả về trang một cảnh, và Studio vẽ storyboard qua `previewEngine()` chứ không tự dựng trang.
 
-Vì `html-gsap` là định dạng của lõi và hai engine cùng vẽ nó, **bộ máy cảnh** nằm trong lõi (`core/visual/scene-markup.ts`): tách mảnh thành markup, style, script; đặt phụ đề vào khe; đóng dấu thời gian cho `<video>` trong cảnh; các tờ CSS nền và font; `BIND_SCRIPT` đổ giá trị vào `data-var`/`data-fact`; và `SCENE_MOUNT` — hàm `mountScene(gsap, root, scene, data, unwrap)` chạy script của cảnh với gsap khoanh vùng và đối tượng `nodecine` (`timeline`, `root`, `index`, `duration`, `words`, `when`, `count`, `beats`, `beat`, `audio`), trả về các timeline cảnh đã đăng ký. Catalog chuyển cảnh viết bằng gsap cũng là của lõi (`core/visual/gsap-transitions.ts`). Mỗi engine giữ phần của riêng nó: HyperFrames dựng **trang** (`document.ts`: một `.clip` mỗi đoạn, `data-track-index`, bootstrap gọi `mountScene` rồi ghép timeline chủ, catalog nhúng vào trang) và bản xem trước cảnh (`markup.ts`); Remotion dựng **composition** (`Video.tsx`: một `AbsoluteFill` mỗi rãnh, một `Sequence` mỗi đoạn, `scene-runtime.ts` gắn markup vào một `div`, chạy `mountScene`, và mỗi khung `seek` timeline chủ của cảnh tới giây hiện tại; chuyển cảnh là style theo tiến độ từ catalog riêng `transitions.ts`, cùng mười ba tên).
+Vì `html-gsap` là định dạng của lõi và hai engine cùng vẽ nó, **bộ máy cảnh** nằm trong lõi (`contracts/visual/scene-markup.ts`): tách mảnh thành markup, style, script; đặt phụ đề vào khe; đóng dấu thời gian cho `<video>` trong cảnh; các tờ CSS nền và font; `BIND_SCRIPT` đổ giá trị vào `data-var`/`data-fact`; và `SCENE_MOUNT` — hàm `mountScene(gsap, root, scene, data, unwrap)` chạy script của cảnh với gsap khoanh vùng và đối tượng `nodecine` (`timeline`, `root`, `index`, `duration`, `words`, `when`, `count`, `beats`, `beat`, `audio`), trả về các timeline cảnh đã đăng ký. Catalog chuyển cảnh viết bằng gsap cũng là của lõi (`contracts/visual/gsap-transitions.ts`). Mỗi engine giữ phần của riêng nó: HyperFrames dựng **trang** (`document.ts`: một `.clip` mỗi đoạn, `data-track-index`, bootstrap gọi `mountScene` rồi ghép timeline chủ, catalog nhúng vào trang) và bản xem trước cảnh (`markup.ts`); Remotion dựng **composition** (`Video.tsx`: một `AbsoluteFill` mỗi rãnh, một `Sequence` mỗi đoạn, `scene-runtime.ts` gắn markup vào một `div` **ngoài tầm quản lý của React** — `mountSceneInto`, không phải `dangerouslySetInnerHTML`, vì React 19 so prop đó theo định danh object chứ không theo chuỗi bên trong, nên một component dựng object tại chỗ sẽ ghi đè lại markup mỗi lần render, tức mỗi khung, xoá sạch style gsap vừa viết và bỏ timeline lại với những node đã rời tài liệu — rồi chạy `mountScene`, và mỗi khung `seek` timeline chủ của cảnh tới giây hiện tại; chuyển cảnh là style theo tiến độ từ catalog riêng `transitions.ts`, cùng mười ba tên).
 
+- Cả hai engine vẽ được cả ba định dạng: HyperFrames nhúng thư viện vào trang, Remotion nạp `lottie-web` và `three` vào `window` khi phim có đoạn dùng tới (`loadFormatLibs`). `nodecine.frame(fn)` là hợp đồng chung cho cảnh tự vẽ từng khung: lõi treo `fn` lên một timeline dài bằng cảnh, nên nó chạy khi tua, ở trang cũng như lúc kết xuất, và không bao giờ theo đồng hồ thật.
 - Node Xuất Bản Video và Node Xuất MP4, trước khi nạp, hỏi `unsupportedFilmBlock(engine, ir)`: tra **`format` của từng đoạn mã trong IR** (không phải hằng số) với `engineId` đang nối vào, rồi tra từng tên chuyển cảnh phim dùng trong registry chuyển cảnh cùng mẫu (`registerTransition(name, engineId, impl)`). Thiếu renderer thì node chuyển `blocked` với viền vàng và mã `ENGINE_SCENE_UNSUPPORTED` kèm tên định dạng; thiếu chuyển cảnh thì `ENGINE_TRANSITION_UNSUPPORTED` kèm danh sách tên engine có. Cả hai engine có `html-gsap` và mười ba tên chuyển cảnh; khác nhau ở chỗ Remotion chưa lặp được đoạn media video (IR không mang độ dài tệp) và ghi đè hình bằng style theo khung thay vì tween.
 - Một kiểu cảnh mới không đụng tới lược đồ IR, Adapter hay node lõi, và cũng không đụng tới code: Họa Sĩ vẽ cảnh cho từng kịch bản, không ai phải thêm tay.
 
@@ -206,8 +246,6 @@ Lõi ship đúng những node cần để dựng được video từ một kịc
 
 Ô văn bản, phát `SourceRef`. Không diễn giải, không gọi mạng. Ô trống là lỗi kiểm tra liên tục `INPUT_EMPTY`.
 
-Tham số thứ hai, `perRun`, không phải của node mà của **hàng đợi**: bật lên thì mỗi dòng trong ô là một lần chạy cả luồng (Bộ Máy Thực Thi mục 10). Node vẫn phát đúng một giá trị mỗi lần chạy như thường; chỗ đọc `perRun` là bộ chạy, đúng chỗ ComfyUI đọc `control_after_generate` của một widget.
-
 ### 5.2. Kịch Bản Tĩnh (Static Script)
 
 Node phát `SceneScript` (2.11) và `AudioScript` từ nội dung gõ tay, dành cho việc dựng video không cần mô hình ngôn ngữ và để kiểm thử khung. Không cổng nhận: chặng kịch bản không cần biết giao diện, Họa Sĩ đứng sau sẽ vẽ. Tham số:
@@ -215,7 +253,7 @@ Node phát `SceneScript` (2.11) và `AudioScript` từ nội dung gõ tay, dành
 - Không còn ô lời thoại chung: `AudioScript.text` là các `narration` ghép lại, `segments` là từng đoạn. Không có tham số ngôn ngữ: người dùng đã viết lời cuối cùng nên ngôn ngữ của văn bản chính là ngôn ngữ của video. Node nhận diện bằng hàm thuần `detectLanguage(text)` của lõi (theo hệ chữ viết; chữ Latinh có dấu riêng của tiếng Việt thì là `vi`, chữ Latinh khác coi là `en`) và điền vào `SceneScript.language` lẫn `AudioScript.language`. Đoán sai thì người dùng chọn giọng tay trên Giọng Đọc.
 - `scenes`: mỗi mục gồm `role`, `weight`, `narration` (lời đọc trên cảnh) và `content` theo từ vựng (2.11). Thân node chỉ hiện **mỗi cảnh một dòng** (vai, chip cho từng khóa nội dung, chữ đầu của lời — `nodes/script/summary.ts`, thuần); sửa trong **hộp thoại cảnh** (`SceneEditorDialog`, mở qua `sceneEditor` trong store), nơi có một ô cho mỗi khóa đang dùng, một ô chọn để thêm khóa, `points` mỗi dòng một ý, và các mục của `entries` dàn ngang. Lý do: hai mục có ảnh không nhét được vào 220px của node, và hai mươi cảnh mở hết là một cột dài hơn màn hình. Vẽ là việc của Họa Sĩ. Mặc định là ba cảnh `title / how / next`, mỗi cảnh một câu lời.
 
-- **Dán kịch bản** (`nodes/script/split.ts`): một mục gập lại trên đầu thân node nhận cả kịch bản rồi cắt thành cảnh, vì kịch bản viết ra là một khối văn xuôi chứ không phải từng cảnh một. Ba luật cắt do người chọn — dòng trống, mỗi dòng, mỗi câu — vì chỉ người viết mới biết mình đã viết theo lối nào; luật câu cắt nhầm ở chữ viết tắt (`v.v.`, `T.P.`), đó là lý do có ba luật chứ không phải một. Cắt là thuần cơ học: không gọi mô hình, không sửa một chữ nào, chỉ gộp khoảng trắng — số cảnh hiện ngay trên nút để đọc trước khi bấm. Bấm xong thì **thay** danh sách cảnh: mỗi khúc một cảnh, `weight` 1, `content` rỗng, `role` lấy theo cảnh đầu đang có. Đi qua `setParams` nên Ctrl+Z hoàn lại nguyên danh sách cũ.
+- **Dán kịch bản** (`nodes/script/split.ts`): một nút trên thân node mở hộp thoại nhận cả kịch bản rồi cắt thành cảnh, vì kịch bản viết ra là một khối văn xuôi chứ không phải từng cảnh một. Ba luật cắt do người chọn — dòng trống, mỗi dòng, mỗi câu — vì chỉ người viết mới biết mình đã viết theo lối nào; luật câu cắt nhầm ở chữ viết tắt (`v.v.`, `T.P.`), đó là lý do có ba luật chứ không phải một. Cắt là thuần cơ học: không gọi mô hình, không sửa một chữ nào, chỉ gộp khoảng trắng — số cảnh hiện ngay trên nút để đọc trước khi bấm. Bấm xong thì **thay** danh sách cảnh: mỗi khúc một cảnh, `weight` 1, `content` rỗng, `role` lấy theo cảnh đầu đang có. Đi qua `setParams` nên Ctrl+Z hoàn lại nguyên danh sách cũ.
 
 Không có `factBindings` vì không có nguồn dữ kiện; người dùng gõ thẳng giá trị.
 
@@ -241,8 +279,9 @@ Quy tắc phân bổ thời lượng, tất định:
 4. `startFrame` tích lũy từ 0.
 5. Giải dữ kiện: với mỗi cảnh có `factBindings`, `facts[khóa]` của đoạn mã tương ứng bằng `facts[khóa]` cho mọi khóa có mặt trong `FactSheet.facts` và nói được điều gì (chuỗi rỗng bị bỏ qua); engine đổ vào phần tử `data-fact` của cảnh (2.8). Dữ kiện luôn thắng chữ đã vẽ. Plan có ràng buộc mà không dây `facts` thì cảnh báo `FACTS_NOT_CONNECTED`.
 6. Rãnh: các lớp nối vào `layers`, theo thứ tự dây, được đánh số `layer-<n>` chung cho cả hai vị trí; mỗi lớp thành một rãnh một đoạn, kẹp vào phim (`layerTrack`): bắt đầu ở `startSeconds`, dài `durationSeconds` hoặc tới hết phim. Rãnh xếp: các lớp `under` theo thứ tự dây, rồi `scenes`, rồi các lớp `over`, dây cuối trên cùng. Lớp bắt đầu sau khi phim hết là lỗi `LAYER_OUTSIDE_FILM`, không phải bỏ qua. `stage` của mỗi cảnh trong plan chép sang `beats[i].stage`.
-7. Track âm thanh: các `AudioTrackSpec` nối vào `audio`, theo thứ tự dây, thành `audio[]` sau track giọng, đặt tên `<role>-<n>` (`music-1`, `ambient-2`), kẹp vào phim (`audioTrackOf`): bắt đầu ở `startSeconds`, dài `playSeconds`, hoặc hết phim nếu `loop`, hoặc hết tệp; `duckTo` thành `duck: { by: 'voice', to }` **chỉ khi có giọng** (bất biến 8). Bắt đầu sau khi phim hết là `AUDIO_OUTSIDE_FILM`.
-8. Chạy hàm kiểm định IR ở mục 3.1 trước khi phát.
+7. Cắt theo nhịp: tham số `snapToBeat` (mặc định tắt). Bật, và có một `AudioTrackSpec` mang `beatSeconds` (do Phân Tích Âm Thanh đo, 5.21), thì mỗi **mốc cắt** giữa hai cảnh dời tới nhịp gần nhất trong vòng nửa giây (`snapToBeats`); mốc đầu và cuối phim không phải mốc cắt nên không dời, không cảnh nào bị bóp về 0, và tổng khung giữ nguyên theo cấu trúc nên bất biến 4 vẫn đúng dù nhạc thế nào.
+8. Track âm thanh: các `AudioTrackSpec` nối vào `audio`, theo thứ tự dây, thành `audio[]` sau track giọng, đặt tên `<role>-<n>` (`music-1`, `ambient-2`), kẹp vào phim (`audioTrackOf`): bắt đầu ở `startSeconds`, dài `playSeconds`, hoặc hết phim nếu `loop`, hoặc hết tệp; `duckTo` thành `duck: { by: 'voice', to }` **chỉ khi có giọng** (bất biến 8). Bắt đầu sau khi phim hết là `AUDIO_OUTSIDE_FILM`.
+9. Chạy hàm kiểm định IR ở mục 3.1 trước khi phát.
 
 Ví dụ đối chiếu với trọng số 1, 2, 1 và âm thanh 11.2 giây ở 30 fps: 336 khung, phân bổ 84, 168, 84, bắt đầu 0, 84, 252. Với âm thanh 7.5 giây: 225 khung nhỏ hơn 270 nên tổng là 270, đuôi lặng 45, phân bổ 67, 135, 68. Không giọng và `durationSeconds` 3: 90 khung, phân bổ 22, 45, 23, `audio` rỗng. Phần dư dồn cho cảnh cuối luôn nhỏ hơn số cảnh trừ một, tức nhỏ hơn 2 khung với ba cảnh.
 
@@ -270,7 +309,7 @@ Mô tả ở mục 6, 7 và 8. Cả ba dùng chung khuôn: không cổng nhận,
 
 ### 5.8. Biên Kịch (Screenwriter)
 
-Có **một node biên kịch**, trong lõi. Cổng nhận: `LLMRef` bắt buộc, `FactSheet` tùy chọn và `SourceRef` tùy chọn; phát `SceneScript` (2.11) và `AudioScript`. Node **không biết giao diện**. Đó là chặng sau (Họa Sĩ, 5.9), nên sửa giao diện không bao giờ chạy lại mô hình. Mọi thứ từng khiến mỗi loại video cần một node biên kịch riêng đều là **tham số** hoặc **dữ liệu trên dây**:
+Có **một node biên kịch**, trong lõi. Cổng nhận: `FactSheet`, `SourceRef` và `PlateSheet`, cả ba tùy chọn; phát `SceneScript` (2.11) và `AudioScript`. Node **không biết giao diện**. Đó là chặng sau (Họa Sĩ, 5.9), nên sửa giao diện không bao giờ chạy lại mô hình. Mọi thứ từng khiến mỗi loại video cần một node biên kịch riêng đều là **tham số** hoặc **dữ liệu trên dây**:
 
 - `prompt` — đề bài người dùng viết. Thứ duy nhất chỉ người dùng nói được.
 - `beats` — danh sách **beat**: `{ role, brief, weight, count, factBindings }`. `role` là tên ngắn của một đoạn (hook, quote, cta), cũng là vai một bố cục được gán theo; `brief` nói đoạn đó làm gì; `count` là số cảnh liên tiếp; `factBindings` là `khóaNộiDung → khóaDữKiện`.
@@ -278,31 +317,25 @@ Có **một node biên kịch**, trong lõi. Cổng nhận: `LLMRef` bắt buộ
 
 Mô hình viết **lời đọc và nội dung từng cảnh** theo từ vựng cố định (2.11): mỗi beat khai triển thành `count` phần tử, mỗi phần tử là `narration` cộng đối tượng nội dung trừ các khóa đã ràng buộc dữ kiện; ngân sách từ của lời tính theo trọng số (khoảng 13–17 từ cho một đơn vị, tức năm giây). Không còn lời thoại chung cho cả bài: lời cả bài là các đoạn ghép lại. Lược đồ đầu ra là từ vựng nội dung, không phụ thuộc giao diện. Mô hình phải trả về đúng số cảnh, đúng thứ tự; khóa lạ bị bỏ, không bị từ chối.
 
+**Danh mục bố cục trên cổng nhận** (5.23): có `PlateSheet` nối vào thì prompt in ra đúng những bố cục phim đang có, mỗi bố cục là một danh sách khóa kèm ngân sách ký tự, và mỗi cảnh phải viết đúng một bố cục — đủ khóa của nó, không thừa khóa nào. Từ vựng in ra cũng thu về những khóa mà một bố cục nào đó thật sự vẽ. Đây là luật chép nguyên của cutdown: *thứ mô hình nhìn thấy là thứ nó viết ra được*, nên in một hình dạng không ai vẽ là mời một cảnh mà Dựng Cảnh sẽ từ chối, sau khi nửa đắt nhất của lần chạy đã trả tiền rồi. Không có dây nào thì node viết như cũ, cả từ vựng đều mở. Cảnh nào viết ra hình dạng ngoài danh mục thì node ghi cảnh báo kèm số thứ tự cảnh; chặn thật vẫn là việc của Dựng Cảnh.
+
 Ba bất biến do node này giữ:
 
 1. **Khóa đã ràng buộc không bao giờ được hỏi mô hình**, và **dữ kiện đã ràng buộc không bao giờ vào prompt**. Số sao, lệnh cài, đường dẫn đi thẳng từ `FactSheet` tới Đóng Gói Timeline; mô hình không có gì để chép sai.
 2. Prompt được dựng từ các nguồn tách bạch: đề bài mang ý đồ, beat mang cấu trúc, từ vựng nội dung mang hình dạng, dữ kiện mang sự thật. Không có gì trong prompt nói về một loại video hay một giao diện cụ thể.
 3. Đổi giao diện không chạy lại Biên Kịch: Họa Sĩ không nằm trong chữ ký của node này, nên sửa mô tả phong cách chỉ chạy lại Họa Sĩ và Đóng Gói Timeline.
 
-Vòng gọi mô hình (`core/ai/structured-completion.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `nodes/screenwriter/beats.ts`, prompt ở `nodes/screenwriter/prompt.ts`.
+Vòng gọi mô hình (`contracts/ai/structured-completion.ts`): sai cấu trúc thử lại một lần, sai ngôn ngữ thử lại một lần với prompt nghiêm hơn, rồi ném `LLM_SCHEMA_INVALID` hoặc `LLM_LANGUAGE_MISMATCH` kèm nguyên văn câu trả lời để node hiển thị. Chính sách ngôn ngữ ở `core/text/languages.ts`. Beat và lược đồ ở `nodes/screenwriter/beats.ts`, prompt ở `nodes/screenwriter/prompt.ts`.
 
 Hệ quả: một video GitHub showcase là *node này* với bảy beat và ba ràng buộc dữ kiện, rồi một Họa Sĩ với mô tả "phong cách lập trình viên nền tối"; một video trích dẫn là *node này* với beat `title ×1, quote ×4`, rồi một Họa Sĩ với mô tả "thẻ trích dẫn trên nền mực". Người dùng dựng cả hai từ canvas trống; sự khác nhau nằm trọn trong chữ, và một bản mẫu chia sẻ mang theo giao diện dưới dạng một câu mô tả.
 
-### 5.9. Họa Sĩ (Illustrator)
+### 5.9. Họa Sĩ (Illustrator) — đã gỡ 13/9
 
-Node `core/illustrator` (`nodes/illustrator/`), chặng hình của luồng, **một việc**: mỗi lần chạy, mô hình vẽ giao diện cho đúng kịch bản này, rồi node phát `ScenePlan` (2.3). Không kho bố cục, không bảng gán cảnh, không hộp sửa code và không lưu kết quả sinh vào tham số. Mỗi cảnh là một bức vẽ hoàn chỉnh.
+Node `core/illustrator` vẽ một tờ phong cách rồi vẽ **từng cảnh** của phim, mỗi lần chạy. Nó bị gỡ ngày 13/9 vì ba node đã làm hết việc của nó, rẻ hơn và ổn định hơn: Bối Cảnh (5.22) vẽ phong cách với các vật xuyên phim, Vẽ Bố Cục (5.23) vẽ một bố cục cho mỗi *hình dạng* nội dung thay vì mỗi cảnh, Dựng Cảnh (5.24) đổ chữ vào mà không gọi mô hình. Đầu vào và đầu ra của cả chuỗi giống hệt nó: `SceneScript` vào, `ScenePlan` ra.
 
-Cổng: nhận `scenes: SceneScript` (2.11) từ Biên Kịch, Kịch Bản Tĩnh hay Phân Cảnh, `llm: LLMRef` **bắt buộc**, và `engine: EngineRef` **tùy chọn** — engine phim sẽ chiếu, nếu đã biết (PRD mục 8): node kiểm `html-gsap` và mọi tên chuyển cảnh với những gì engine đó đã đăng ký và cảnh báo ngay tại đây, nơi người dùng còn đổi được, thay vì để node xuất chặn ba bước sau; không nối thì không kiểm gì. Phát `plan: ScenePlan`. Tham số, tất cả là chữ người dùng gõ: `brief` (mô tả phong cách, thứ duy nhất bản mẫu mang theo về giao diện), `frame` (preset tỉ lệ `9:16 | 16:9 | 1:1 | 4:5`; `frameOf(graph)` đọc nó cho mọi khung xem trước), `character` (một tài nguyên ảnh cố định cho cả video, thành `vars.character`), `transition` (tên chuyển cảnh, mặc định `fade`; ô chọn trong thân node liệt kê tên của engine nối vào, hoặc của mọi engine) và `transitionSeconds` (0,4). Mỗi cảnh của plan ghi `format: 'html-gsap'` — định dạng duy nhất Họa Sĩ vẽ được hôm nay — và chép `transitionAfter` từ kịch bản. `stage` lấy từ kịch bản khi kịch bản nói; không thì từ mô hình: lời nhắc vẽ cảnh cho phép trả thêm `stage` khi guide nêu một thứ xuyên phim do lớp vẽ (điện thoại, linh vật, thanh phụ đề), và luật vẽ nói với mô hình về `nodecine.beats`, `nodecine.beat.stage` và `nodecine.audio`.
+Đồ thị đã lưu tự đi lên: một node Họa Sĩ (hay Đạo Diễn Mỹ Thuật cũ hơn) thành một Bối Cảnh mang mô tả phong cách, tỉ lệ, nền và vật xuyên phim của nó; một Vẽ Bố Cục; và một Dựng Cảnh giữ nguyên định danh cũ, nên mọi dây đọc `plan` không phải đổi.
 
-Cách vẽ (`node.ts`):
-
-1. **Phong cách** (`style.ts`, một lần gọi): từ mô tả, tỉ lệ, ngôn ngữ và luật (`rules.ts`: `STYLE_RULES`) → `{ name, css, guide }` — tờ CSS chung (2.6) và một *guide* vài dòng kể các class và chỗ phụ đề, chỉ sống trong lần chạy để đưa vào prompt cảnh. Lint (`lintStyleCss`: đủ bảy biến, không markup); hỏng thì hỏi lại một lần kèm lý do (`fresh`), lần hai vẫn hỏng là lỗi `STYLE_DRAW_FAILED`.
-2. **Từng cảnh** (`scene.ts`, một lần gọi mỗi cảnh, ba cảnh song song): prompt mang lời đọc, nội dung theo từng khóa (`describeContent`: chữ nguyên văn, ảnh/clip dưới dạng `src`, mục của `entries` sâu một cấp, khóa ràng buộc dữ kiện đánh dấu `data-fact="<khóa>"` kèm chữ tạm), các `vars` phải vẽ, guide, **cả tờ CSS**, luật code (`codeRules`: định dạng đoạn, vùng an toàn, gsap scope, `nodecine.when`/`count`, giữ chuyển động suốt `nodecine.duration`) và luật nội dung (`SCENE_RULES`: viết đúng chữ, không bịa không bỏ) → `{ source }`. Lint (`lintSceneSource`): *cứng* — có `<html>/<body>`, không markup, thiếu `data-fact` cho khóa ràng buộc → hỏi lại một lần, rồi `SCENE_DRAW_FAILED`; *mềm* — `.from(`, `!important`, tải từ mạng → ghi cảnh báo, vẫn dùng.
-3. Phát plan tự chứa: `frame`, `style`, `transition` fade 0,4 s, `vars`, `scenes[{ weight, source, factBindings }]`. Đóng Gói và engine không cần biết mô hình.
-
-Câu trả lời mô hình cache theo prompt (mục 7), nên chạy lại cùng mô tả và kịch bản là miễn phí và ra cùng giao diện; giữ Shift khi Chạy (chạy ép) là hỏi mới. Chi phí: một cộng số cảnh lần gọi.
-
-Thân node: form mô tả và tỉ lệ, ô chọn ảnh nhân vật, và sau khi chạy là **storyboard** chỉ để xem (`body.tsx`, mỗi cảnh một khung `components/ScenePreview.tsx` dựng từ `buildScenePreview`). Không có ô nào để sửa giao diện: đổi mô tả rồi chạy lại.
+**Thứ mất đi, nói rõ:** Họa Sĩ là nơi duy nhất viết `stage` cho từng cảnh, vì quyết định đặt chiếc điện thoại ở đâu trong cảnh này và chừa chỗ cho nó trong bố cục là cùng một quyết định. Một bố cục dùng lại cho nhiều cảnh không quyết được điều đó. Bù lại: Vẽ Bố Cục nhận danh sách lớp và được cho biết **lằn** phải chừa, nên bố cục nào cũng để trống chỗ đó; và vật xuyên phim được yêu cầu **tự chọn đường đi** khi không cảnh nào chỉ chỗ, thay vì đứng yên.
 
 ### 5.10. Vì sao giao diện là một chặng sau kịch bản
 
@@ -319,6 +352,8 @@ Node lõi `core/github-fetcher`: nhận `SourceRef`, phát `FactSheet`. Link rep
 Node lõi `core/transcribe`: nhận `Voiceover` và `AudioScript`, phát `Voiceover` có `words`. Là **căn chỉnh cưỡng bức**, không phải nhận dạng: văn bản đã biết, công cụ chỉ trả lời mỗi từ được đọc lúc nào, nên model nhỏ là đủ và chữ không bao giờ sai. Chạy qua `services.alignWords` → `nodes/transcribe/align.server.ts` gọi `stable-ts` bằng Python trong venv `.nodecine/tools/stable-ts` (`npm run setup:align` cài một lần; `NODECINE_ALIGN_PYTHON` ghi đè); lời thoại đi qua stdin, đường dẫn audio dựng lại từ tên băm của `audioUrl`. Kết quả qua `retime` để chữ là chữ của kịch bản, chỉ mượn mốc thời gian. Voice-over đã có `words` (nhà cung cấp trả sẵn, ví dụ ElevenLabs sau này) thì đi qua nguyên vẹn. Tham số: `model` (`small` mặc định, `medium`, `large-v3`). Thiếu công cụ báo `PROVIDER_NOT_INSTALLED` kèm lệnh cài; căn chỉnh hỏng báo `ALIGN_FAILED`.
 
 Đầu ra của bộ căn là một JSON mỗi từ một mục, dài quá trần 8 KB mặc định của `exec` từ khoảng 150 từ trở lên; node đặt trần riêng 8 MB và coi đầu ra bị cắt là lỗi `ALIGN_FAILED` nêu rõ, không đọc JSON cụt.
+
+Từ 2026-09-11 cổng `script` là **tùy chọn**, và đó là hai chế độ chứ không phải một. Có kịch bản thì **căn**: chữ là của mình, mô hình chỉ nói từng từ được đọc lúc nào, nên lời thoại không bao giờ trả về sai chính tả. Không có kịch bản thì **nhận dạng**: một bản thu người dùng đưa vào thì không ai trong ứng dụng biết trong đó nói gì, nên mô hình phải nghe ra chữ rồi mới đặt mốc được. Script Python chọn nhánh theo việc stdin có chữ hay không; nghe không ra chữ nào là `TRANSCRIBE_NO_WORDS`. Nhờ vế thứ hai, gắn phụ đề lên một bản thu có sẵn mới đi được từ đầu tới cuối.
 
 ### 5.13. Phụ Đề (Captions)
 
@@ -378,7 +413,7 @@ Phần nặng nhất **thư viện lo sẵn**: `executeRenderJob` của `@hyperf
 
 **Cỡ của thẻ video phải đặt bằng hộp, không bằng con số.** Lúc kết xuất, producer thay thẻ `<video>` bằng ảnh từng khung và đóng **style inline** cỡ riêng lên bản thay thế đó; inline thắng luật theo class, nên một `width: 1920px` trong CSS của cảnh bị bỏ qua và clip ra đúng cỡ gốc của nó, nằm ở góc khung. `inset: 0` với `width/height: 100%` thì sống sót qua lần tráo. Ảnh tĩnh không bị tráo nên vẫn dùng được lối đặt cỡ cố định mà Ken Burns cần.
 
-Đúng ở đây còn nghĩa là mang mốc thời gian của **chính cảnh đó**. Producer đọc `data-start` và `data-duration` ngay trên thẻ video; thiếu thì nó coi clip bắt đầu ở giây 0 và chạy hết độ dài tự nhiên, tức một cảnh b-roll ở phút thứ hai sẽ nhảy lên đầu phim. `timeVideos` (`core/visual/markup.ts`, hàm thuần) đóng dấu mốc đó lên mọi `<video>` trong cảnh, bỏ qua thẻ nào cảnh đã tự ghi mốc. Nó cũng thêm `muted`: tiếng của phim là giọng đọc, tiếng của clip sẽ nói đè lên.
+Đúng ở đây còn nghĩa là mang mốc thời gian của **chính cảnh đó**. Producer đọc `data-start` và `data-duration` ngay trên thẻ video; thiếu thì nó coi clip bắt đầu ở giây 0 và chạy hết độ dài tự nhiên, tức một cảnh b-roll ở phút thứ hai sẽ nhảy lên đầu phim. `timeVideos` (`contracts/visual/markup.ts`, hàm thuần) đóng dấu mốc đó lên mọi `<video>` trong cảnh, bỏ qua thẻ nào cảnh đã tự ghi mốc. Nó cũng thêm `muted`: tiếng của phim là giọng đọc, tiếng của clip sẽ nói đè lên.
 
 **Clip vào máy thế nào.** Một clip quá lớn để đi qua data URL base64 như một cái logo, nên nó theo lối của nhạc và giọng: người dùng bỏ tệp vào `.nodecine/clips`, ô chọn liệt kê theo tên, và `POST /api/assets/from-library` bảo máy chủ **đọc tệp ngay tại chỗ**, băm rồi chép vào kho tài nguyên. Chỉ cái tên đi qua dây. Cảnh giữ `/api/assets/<băm>.mp4` như mọi tài nguyên khác, nên bản kết xuất chép clip đi kèm y như chép ảnh.
 
@@ -424,18 +459,60 @@ IR hiện không mang thumbnail độc lập. Khi triển khai, Họa Sĩ sẽ v
 
 Một lớp của phim (`LayerSpecSchema`, `docs/IR_V3.md` mục 10 bước 4): một thứ chạy **bên** các cảnh trên rãnh riêng, do node Lớp phát và Đóng Gói Timeline nhận bao nhiêu cũng được. Hai dạng, phân biệt bằng `kind`:
 
-- `media`: `url` là tài nguyên máy này đang giữ (2.7) — clip lấy từ thư mục clips hay ảnh tải lên; `fit` (`cover` | `contain`), `loop`, `offsetSeconds` (giây vào trong tệp), `gain` (0 là câm, mặc định).
-- `code`: `source` là một đoạn HTML như của cảnh (2.8); script của nó thấy `nodecine.beats` và, nếu nó là đoạn nhịp, `nodecine.beat`.
+- `media`: `url` là tài nguyên máy này đang giữ (2.7) — clip lấy từ thư mục clips hay ảnh tải lên; `fit` (`cover` | `contain`), `loop`, `offsetSeconds` (giây vào trong tệp), `gain` (0 là câm, mặc định), `sourceSeconds` (độ dài thật của tệp, do node Lớp đo bằng ffprobe: engine không lặp được thứ nó không biết dài bao nhiêu — Remotion bọc clip trong `Loop` đúng số khung một lượt).
+- `code`: `source` là một đoạn HTML như của cảnh (2.8) — hoặc JSON Lottie khi `format` là `lottie`; script của nó thấy `nodecine.beats` và, nếu nó là đoạn nhịp, `nodecine.beat`. `loop` chỉ có nghĩa với định dạng **tự có độ dài** như Lottie, khi đoạn dài hơn bản hoạt hình: bật thì quay vòng, tắt thì giữ khung cuối. Điểm ra của một lớp Lottie là loại trừ, nên tua đúng tới độ dài của nó vẽ ra con số không — đó là cách một lớp mười ba giây tắt ngóm ở giây thứ hai. Đồng hồ của đoạn là đồng hồ duy nhất được phép dời bản hoạt hình: runtime của HyperFrames tự tìm mọi Lottie đã đăng ký rồi tua theo đồng hồ phim, không kẹp, nên `lottieScene` thay `setCurrentRawFrameValue` của bản hoạt hình bằng một hàm luôn vẽ lại khung mà cảnh vừa xin — ai tua cũng vậy.
 
 Cả hai mang `placement` (`under` | `over` các cảnh), `startSeconds` và `durationSeconds` tùy chọn (không có là tới hết phim). Lớp không biết phim dài bao nhiêu; Đóng Gói kẹp nó vào phim. Đây là cách gameplay lặp dưới một câu chuyện, một bản ghi màn hình được các cảnh chú thích, một logo góc màn hình, hay một chiếc điện thoại xuyên phim đi vào IR mà không cần bọc trong một cảnh.
 
 `stage` (`StageSchema`, bản đồ tự do) đi kèm: mỗi cảnh của `SceneScript` và `ScenePlan` có thể mang `stage`, Đóng Gói chép nó sang nhịp tương ứng, và lớp xuyên phim đọc `nodecine.beats[i].stage` để biết cảnh đó muốn nó ở đâu. Lõi không đọc nội dung `stage`.
 
+**Quy ước cho một mục `stage`, vì lõi không kiểm được:** `{ x, y, scale, rot }` với `x`, `y` là **tâm** của vật, tính bằng px của khung thiết kế kể từ góc trên trái — không phải độ dời so với bất cứ đâu; `scale` 1 là cỡ lớp đã vẽ; `rot` là độ, chiều kim đồng hồ. Hai phía phải theo cùng quy ước này: người vẽ cảnh (Họa Sĩ, hoặc tay người) ghi theo nó, và script của lớp đặt vật đúng vào điểm đó. Đây đúng là chỗ `stage` tự do trả giá: ngày 2026-09-11 Họa Sĩ ghi toạ độ tuyệt đối còn script của một lớp đọc chúng như độ dời của gsap, nên chiếc điện thoại bay ra khỏi khung và chỉ còn một góc — không có lỗi nào báo, vì cả hai cách đọc đều hợp lệ với lược đồ.
+
+### 2.14b. Nền cảnh khi có lớp chạy dưới
+
+Cảnh phủ kín khung và tờ phong cách cho `.nc-scene` một nền đặc, nên một lớp đặt **dưới** các cảnh sẽ bị che hoàn toàn. Vì vậy khi rãnh nhịp có rãnh nào có đoạn nằm dưới nó (`hasTracksUnderBeats`), engine đánh dấu các đoạn nhịp bằng `data-beat` và thêm một luật không thuộc layer nào: `.nc-scene[data-beat] { background: transparent }` (`TRANSPARENT_GROUND_CSS`). Chỉ cảnh mất nền; bức vẽ của một lớp giữ nguyên nền nó tự sơn. Phim không có gì nằm dưới thì không có dấu và không có luật, nên trang ra giống hệt như trước.
+
+Họa Sĩ có tham số `ground` (`solid` | `transparent`) để vẽ ngay từ đầu cho hợp: `transparent` thì mô hình được dặn không vẽ nền toàn khung, đặt chữ trên panel mờ và chừa khung cho hình bên dưới.
+
 ### 2.15. `AudioTrackSpec`
 
-Một âm thanh bên cạnh giọng (`AudioTrackSpecSchema`, `docs/IR_V3.md` mục 5.3): `url` là tệp media đã đo (`durationSeconds`), `role` là `music` hay `ambient`, `gain`, `startSeconds`, `playSeconds` (tùy chọn, không có là hết phim nếu `loop`, hết tệp nếu không), `offsetSeconds`, `loop`, `fadeInSeconds`, `fadeOutSeconds`, `duckTo` (mức hạ xuống khi giọng nói), `analysisUrl` (JSON độ lớn và dải tần theo khung, do Phân Tích Âm Thanh viết, 5.21). Nhạc Nền phát nó ở đầu ra `track` bên cạnh bản trộn; Nhập Âm Thanh phát bản thu của mình ở đầu ra `track` với vai `ambient`. Đóng Gói Timeline nhận bao nhiêu cũng được ở cổng `audio` và kẹp từng track vào phim (5.4 quy tắc 7).
+Một âm thanh bên cạnh giọng (`AudioTrackSpecSchema`, `docs/IR_V3.md` mục 5.3): `url` là tệp media đã đo (`durationSeconds`), `role` là `music` hay `ambient`, `gain`, `startSeconds`, `playSeconds` (tùy chọn, không có là hết phim nếu `loop`, hết tệp nếu không), `offsetSeconds`, `loop`, `fadeInSeconds`, `fadeOutSeconds`, `duckTo` (mức hạ xuống khi giọng nói), `analysisUrl` (JSON độ lớn và dải tần theo khung, do Phân Tích Âm Thanh viết, 5.21) và `beatSeconds` (các mốc nhịp, giây). Nhạc Nền phát nó ở đầu ra `track` bên cạnh bản trộn; Nhập Âm Thanh phát bản thu của mình ở đầu ra `track` với vai `ambient`. Đóng Gói Timeline nhận bao nhiêu cũng được ở cổng `audio` và kẹp từng track vào phim (5.4 quy tắc 7).
 
 Fade và duck là dữ liệu mà engine vẽ: HyperFrames đặt keyframe `volume` trên timeline chủ, Remotion tính `volume` theo khung. Với `duck`, cả hai lấy **cửa sổ giọng nói** từ lõi (`speechWindowsOf`: các dòng phụ đề gộp qua khoảng lặng dưới một phần ba giây, hoặc trọn track giọng khi không có phụ đề) và hạ track xuống `duck.to` một phần tư giây trước từ đầu, trả lại mức cũ bốn phần mười giây sau từ cuối. Nhạc Nền vẫn trộn sẵn có sidechain ở đầu ra `voiceover` cho ai muốn một tệp.
+
+## 6. Kiểu Dựng: Loại Phim Này Là Loại Gì
+
+Tới 2026-09-11, thứ duy nhất nói cho mô hình biết nó đang làm loại phim gì là một câu về màu và kiểu chữ. Nên phim nào cũng ra một hình dạng — một tiêu đề, một dòng chữ phụ, cả hai mờ dần hiện lên đúng lúc giọng đọc tới — và mười ba workflow dựng cho mười ba thể loại chỉ khác nhau ở thứ nằm sau chữ. Đo trên mười ba phim đó: 46 cảnh, 353 tween, 116 tween gắn vào `nodecine.when()`, `nodecine.count()` dùng đúng 2 lần, và tên class mô hình vẽ ra gần như trùng nhau. Thể loại chưa bao giờ nằm trong dữ liệu; nó nằm trong đầu người viết lời nhắc.
+
+**Kiểu dựng** (`FilmForm`, `contracts/forms/registry.ts`) là gói hướng dẫn và mặc định đưa thể loại vào dữ liệu:
+
+- `script.guidance` — Biên Kịch phải viết thế nào cho loại phim này; `script.keys` giới hạn từ vựng nội dung, để một phim toàn số lớn không được đưa cho từ `body` rồi trả về một đoạn văn không biết đặt đâu.
+- `draw.guidance` — Họa Sĩ dựng khung thế nào: thứ gì nằm đâu, chiếm bao nhiêu, mắt dừng ở đâu.
+- `draw.motion` — **cái gì chuyển động và vì sao**. Danh sách này **thay** từ vựng mặc định (`DEFAULT_MOTION`: điểm nào giọng nhắc tới thì hiện ra, và có gì đó trôi bên dưới cho khung không chết). Đúng chỗ này là lý do mọi phim từng giống nhau, nên đúng chỗ này là nơi hai loại phim tách ra. Để rỗng thì giữ mặc định.
+- `spanning` — phim này có một thứ xuyên suốt hay không, và nó nằm trên hay dưới các cảnh (5.9b).
+- `transition` — cảnh nhường cảnh sau thế nào, khi node chưa được bảo khác.
+
+Kiểu dựng là **dữ liệu**, giống bản mẫu: một tệp JSON trong `forms/`, đăng ký lúc khởi động ở cả hai phía (`registerForms()` trong `server/register.ts` và `lib/bootstrap.client.ts`). Thêm một loại phim là thêm một tệp và một dòng; không chỗ nào khác trong repo học tên nó.
+
+**Kiểu dựng không bao giờ đi vào IR.** Nó định hình câu hỏi đặt cho mô hình rồi hết nhiệm vụ. Lõi vẫn không biết có bao nhiêu kiểu cảnh (mục 4), và engine không bao giờ nghe thấy tên một kiểu dựng.
+
+**Nó đi theo dây.** Biên Kịch có tham số `form`, viết theo nó và ghi tên nó vào `SceneScript.form`. Họa Sĩ đọc từ đó, và có tham số `form` của riêng mình để đè lên khi cần — chọn hai lần là hai cơ hội để hai bên lệch nhau, nên mặc định của Họa Sĩ là đi theo kịch bản. Tên kiểu dựng mà bản này không có thì node dừng với `NODE_PARAMS_INVALID`: im lặng vẽ lại hình dạng cũ mà không nói gì là tệ hơn.
+
+Sáu kiểu dựng bản này mang theo: `explainer` (giữ nguyên cách cũ), `kinetic-type` (chữ chiếm trọn khung, từng từ nảy theo lời, khung đứng yên giữa các từ), `data-story` (mỗi cảnh một con số lớn đếm lên, cột mọc dần), `device-demo` (thiết bị giữ phim, cảnh chỉ là nhãn bên cạnh, kèm `spanning`), `music-cuts` (không lời, mọi thứ bám `nodecine.audio`, cắt thẳng), `footage-frame` (hình chạy dưới, cảnh chỉ là một dải chữ ở một phần ba dưới).
+
+### 6.1. Tư Thế: Khung Này Xếp Ra Sao
+
+Kiểu dựng nói phim thuộc loại gì; **tư thế** nói một cảnh của loại đó xếp thế nào. Một tư thế là hình học viết tay: ô chữ của cảnh, và chỗ đứng của từng vật xuyên phim trong lúc cảnh đó lên hình.
+
+Vì sao phải viết tay. Hỏi mô hình cả hai câu "trông thế nào" và "nằm ở đâu" thì có ngày nó viết tít đè lên dải phụ đề — đã xảy ra, ngày 13/9. Tách ra thì mỗi bên chỉ trả lời câu nó trả lời được: **tư thế nói chỗ, bố cục nói dáng**. Số do người đo một lần thì không sai được, và mô hình chỉ được vẽ trong ô đã đo.
+
+- Tư thế nằm trong tệp kiểu dựng, vài cái, có tên như cỡ máy quay: `text-top-tilt-right`, `text-bottom-tilt-right`.
+- Cảnh nào tự khai tư thế thì giữ; còn lại **xoay vòng** theo thứ tự tệp khai, nên hai cảnh liền nhau không xếp giống nhau.
+- Một bố cục trả lời cho **một cặp: hình dạng nội dung và tư thế**. Cùng ba khóa mà đặt trong ô trên đỉnh khung hay dưới chân khung là hai bản vẽ khác nhau, nên chữ ký của bố cục mang cả tư thế.
+- Ô chữ của tư thế đi thẳng vào lời dặn vẽ bố cục: vẽ trong ô này, không đâu khác. Có ô rồi thì không cần dặn tránh gì nữa — ô đã sạch từ lúc người viết đo nó.
+- `stage` của tư thế trở thành `stage` của cảnh, nên vật xuyên phim đổi chỗ qua từng cảnh **không tốn một lượt gọi mô hình nào**. Cảnh tự khai `stage` thì đè lên tư thế.
+
+Phim không có tư thế thì mọi thứ chạy như cũ: bố cục tự quyết bố trí trong cả khung.
 
 ## 7. Provider và Node Nhà Cung Cấp Mô Hình Ngôn Ngữ
 
@@ -512,12 +589,59 @@ Không thứ gì bên ngoài lõi được thêm kiểu cổng hay sửa lược
 
 ### 5.20. Lớp (Layer)
 
-Node lõi `core/layer`: không có đầu vào, phát một `LayerSpec` (2.14). Tham số: `kind` (`media` | `code`), `url` (chọn clip từ thư mục clips qua `POST /api/assets/from-library`, hay tải ảnh lên — chỉ mã băm đi qua dây), `source` (bức vẽ khi là code), `placement`, `fit`, `loop`, `offsetSeconds`, `gain`, `startSeconds`, `durationSeconds` (tùy chọn). Node không quyết gì: nó chỉ gói tham số thành một đặc tả; Đóng Gói Timeline mới biết phim dài bao nhiêu và đặt lớp vào rãnh (5.4 quy tắc 6). Thiếu tệp hay thiếu bức vẽ là `INPUT_EMPTY`.
+Node lõi `core/layer`: không có đầu vào, phát một `LayerSpec` (2.14). Tham số: `kind` (`media` | `code`), `url` (chọn clip từ thư mục clips qua `POST /api/assets/from-library`, hay tải ảnh lên — chỉ mã băm đi qua dây), `source` (bức vẽ khi là code), `format` (một trong ba định dạng, mục 4), `placement`, `fit`, `loop`, `offsetSeconds`, `gain`, `startSeconds`, `durationSeconds` (tùy chọn). Node đo tệp media bằng service `layer/measure` (ffprobe) để `sourceSeconds` đi được vào IR; ngoài ra không quyết gì, chỉ gói tham số thành một đặc tả; Đóng Gói Timeline mới biết phim dài bao nhiêu và đặt lớp vào rãnh (5.4 quy tắc 6). Thiếu tệp hay thiếu bức vẽ là `INPUT_EMPTY`.
 
 Nhiều node Lớp nối vào cùng cổng `layers`; thứ tự dây là thứ tự chồng. Một bức vẽ xuyên phim muốn đi theo cảnh đọc `nodecine.beats`, và cảnh nói mình muốn gì bằng `stage` (2.14). Chưa có ô sửa `stage` trong Kịch Bản Tĩnh; giá trị đặt trong đồ thị hoặc do Họa Sĩ phát khi mô tả phong cách yêu cầu.
 
 ### 5.21. Phân Tích Âm Thanh (Audio Analysis)
 
-Node lõi `core/audio-analysis`: nhận `AudioTrackSpec`, phát cùng track kèm `analysisUrl` (2.15). Service `audio-analysis/analyze` giải mã tệp bằng ffmpeg ra PCM 16 kHz mono, lõi (`core/audio/analysis.ts`) tính mỗi khung hình một hàng `[level, bass, mid, high]` bằng FFT 512 điểm cửa sổ Hann — bass 20–250 Hz, mid 250–2000, high 2000–8000 — chuẩn hóa theo đỉnh của chính tệp, và ghi JSON `{ version, fps, sampleRate, bands, frames }` vào kho media dưới mã băm của tệp và nhịp khung; cùng tệp cùng nhịp thì không giải mã lại. Tham số: `fps` (30, nên khớp Đóng Gói).
+Node lõi `core/audio-analysis`: nhận `AudioTrackSpec`, phát cùng track kèm `analysisUrl` (2.15). Service `audio-analysis/analyze` giải mã tệp bằng ffmpeg ra PCM 16 kHz mono, lõi (`contracts/audio/analysis.ts`) tính mỗi khung hình một hàng `[level, bass, mid, high]` bằng FFT 512 điểm cửa sổ Hann — bass 20–250 Hz, mid 250–2000, high 2000–8000 — chuẩn hóa theo đỉnh của chính tệp, và ghi JSON `{ version, fps, sampleRate, bands, frames }` vào kho media dưới mã băm của tệp và nhịp khung; cùng tệp cùng nhịp thì không giải mã lại. Node còn dò **nhịp** từ chính phân tích đó (`detectBeats`): thông lượng dải thấp và dải giữa, làm trơn ba khung để bỏ dao động theo pha cửa sổ, lấy đỉnh cục bộ đứng trên trung bình lân cận và trên một ngưỡng tuyệt đối, cách nhau ít nhất 0,16 s. Không có mô hình tempo: một cú cắt cần đúng lúc trống rơi, không cần một lưới đều, nên bản nhạc đổi nhịp hay dừng lại vẫn ra đúng mốc. Kết quả về `beatSeconds` của track, và Đóng Gói dùng nó khi bật `snapToBeat` (5.4). Tham số: `fps` (30, nên khớp Đóng Gói).
 
 Engine nhúng JSON vào trang (HyperFrames đọc qua `fetch` ở trình phát và từ đĩa khi kết xuất vì CSP của trang cấm `connect-src`; Remotion `fetch` từ gốc media) và cảnh đọc `nodecine.audio('<id track>')` → `{ at(t), bands(frame) }`, `at(t)` là dải tần ở giây `t` của cảnh; `null` khi không có phân tích.
+
+#### 5.9b. Thứ xuyên phim, do Họa Sĩ vẽ
+
+Tham số `spanning` không rỗng thì Họa Sĩ vẽ thêm **một** thứ ở trên screen suốt cả phim và không phải cảnh: chiếc điện thoại các cảnh nói về, một linh vật, khung chú thích quanh bản ghi màn hình, một thế giới máy quay bay xuyên qua. Nó được vẽ **một lần**, trước các cảnh, và ra ở cổng `layer` dưới dạng `LayerSpec` (2.14) để nối vào cổng `layers` của Đóng Gói.
+
+Vì sao đặt ở Họa Sĩ chứ không ở node Lớp: một thứ vẽ bên cạnh các cảnh chỉ chạy được khi hai bên thoả thuận — về chỗ nó đứng, về phần khung nó chiếm, về việc cảnh có được sơn nền hay không. Chỉ kẻ vẽ cả hai mới bắt được chúng thoả thuận. Ngày 2026-09-11 cho thấy điều ngược lại: lớp do người gõ tay, cảnh do mô hình vẽ, và các cảnh viết chữ thẳng lên mặt điện thoại.
+
+Ba giao kèo mà Họa Sĩ tự giữ:
+
+- **Khoá cố định.** Cảnh nói chỗ nó muốn bằng `stage.spanning = { x, y, scale, rot }` (2.14), và script của lớp đọc đúng khoá đó. Một từ cố định, không thương lượng, vì một cái tên do hai câu trả lời của mô hình tự đặt sẽ có ngày viết khác nhau.
+- **Kích thước đi cả hai chiều.** Mô hình vẽ xong khai `width` và `height` — cỡ tự nhiên của nó, tức `scale: 1` nghĩa là gì. Lời nhắc vẽ cảnh mang đúng hai số đó, kèm luật: hình chữ nhật nó chiếm ở chỗ cảnh vừa chọn **không phải của cảnh**, không chữ nào, thẻ nào, ảnh nào được lấn vào.
+- **Nền tự tắt.** `spanningPlacement` là `under` thì nó chính là nền của phim, nên Họa Sĩ tự yêu cầu phong cách và các cảnh không sơn nền nữa; người dùng không phải biết và không phải nhớ bật tham số `ground`.
+
+**Một cảnh hỏng không kéo cả phim.** Mô hình vẽ trượt một cảnh sau hai lần hỏi thì cảnh đó nhận một bức vẽ thay thế dựng từ chính nội dung của nó bằng các class của tờ phong cách, đứng yên, và nhật ký ghi rõ cảnh nào đã thay — mười hai phút vẽ không bị vứt vì một lần gọi quá hạn. Trượt **tất cả** các cảnh thì node dừng hẳn: một phim toàn bức thay thế là dấu hiệu mô hình không trả lời, và dựng nó ra là che đi chuyện đó.
+
+Lớp do mô hình vẽ phải đọc `nodecine.beats` khi phim có nhiều hơn một cảnh; không đọc thì bị từ chối và hỏi lại, vì một thứ không theo nhịp phim thì chỉ là hình dán. Node Lớp vẫn nguyên vẹn cho những thứ không cần mô hình: một tệp clip, một bản ghi màn hình, hay một bức vẽ người dùng muốn tự kiểm soát.
+
+### 5.22. Bối Cảnh (Set)
+
+Node lõi `core/set`: nhận tùy chọn `SceneScript` (chỉ để đọc form và biết phim có mấy cảnh); phát **hai cổng** — `style: StyleSheet` và `cast: CastSheet`.
+
+Đây là mọi thứ của một phim **không đổi**: tờ CSS chung cho mọi cảnh, và những vật nằm lại trên màn hình khi cảnh đi qua. Trước 12/9 chúng là hai node, và việc tách làm hai là cái sai: cả hai đều vẽ một lần, cả hai đều ghim, cả hai thuộc về kênh chứ không thuộc về video, và một cái thiếu cái kia là nửa câu trả lời — một vật được vẽ theo phong cách và khung của phim, nên tờ CSS luôn phải có trước.
+
+Hai cổng ra chứ không một gói chung, để phía sau không đổi gì: Họa Sĩ và Vẽ Bố Cục nhận phong cách, Họa Sĩ và Đóng Gói nhận bộ dựng.
+
+- `style.captions = { left, right, bottom, size }` là **chỗ ngồi của dải phụ đề dưới dạng số**. Tờ CSS được đổi mặt chữ, màu, bóng của `.nc-captions-default` nhưng **không được dời nó**, vì lớp trải dài và bố cục từng cảnh phải tránh đúng dải đó và không đọc được một quy tắc CSS.
+- Mỗi vật có **một cái tên**, và tên đó là khóa cảnh viết dưới `stage`, cũng là khóa được nướng vào script của chính vật lúc vẽ. Hai vật trùng tên là lỗi tham số.
+- `width` và `height` bằng 0 thì node tự vẽ và tự báo kích thước; cả hai lớn hơn 0 thì bố cục thuộc về nơi khác (một node Lớp, một tệp) và node chỉ báo cho các cảnh biết có vật đó.
+- Có vật nằm **dưới** cảnh thì nền cảnh tự chuyển trong suốt, không ai phải nhớ.
+- Ghim node này (mục 1.4) là giữ nguyên cái nhìn của cả kênh: mọi video sau không hỏi mô hình gì ở đây.
+
+### 5.23. Vẽ Bố Cục (Plate Maker)
+
+Node lõi `core/plates`: nhận `SceneScript`, `StyleSheet` và tùy chọn một `PlateSheet` đã có; phát `PlateSheet` = `{ plates: [{ id, keys, source, budget? }] }`.
+
+Một **bố cục** là bố cục của cả một cảnh, với một khe mang tên cho mỗi khóa nội dung nó vẽ. Node hỏi mô hình **một lượt cho mỗi hình dạng nội dung chưa có**, không phải mỗi cảnh: một kịch bản mười cảnh dùng ba hình dạng chỉ tốn ba lượt, và danh mục đã ghim thì không tốn lượt nào.
+
+- **Chữ ký là bộ khóa nội dung.** `signatureOf` (`contracts/visual/plates.ts`) đọc cảnh ra danh sách khóa theo thứ tự của từ vựng, nên hai cảnh cùng hình dạng dùng chung một bố cục.
+- Bố cục thiếu khe cho một khóa, hay có hai khe cho một khóa, thì bị trả lại kèm lý do; hỏi lại một lần rồi dừng.
+- `budget` là số ký tự mỗi khe chịu được, do mô hình khai. Chưa ai đọc nó; chỗ sẽ đọc là Biên Kịch.
+
+### 5.24. Dựng Cảnh (Scene Builder)
+
+Node lõi `core/compose`: nhận `SceneScript`, `StyleSheet`, `PlateSheet`; phát `ScenePlan` như Họa Sĩ, nên Đóng Gói và engine không đổi gì. **Không gọi mô hình.**
+
+Đổ nội dung từng cảnh vào khe của bố cục khớp chữ ký. Thuần: cùng kịch bản và cùng danh mục thì ra cùng khung hình, từng byte. Hình dạng nào chưa ai vẽ thì dừng ngay tại đây kèm tên hình dạng đó, chứ không ra một cảnh trống.
+

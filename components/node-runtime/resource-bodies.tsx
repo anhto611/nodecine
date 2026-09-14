@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import type { EngineRef, LLMRef, TTSRef } from '@/core/types/payloads';
+import type { EngineRef, LLMRef, TTSRef } from '@/contracts/types/payloads';
 import { readCapability } from '@/core/nodes/definition';
 import { Kv, Dot, useT, stopFlow } from '@/components/ui';
 import { useOutputPayload, useRuntime, useStudio } from '@/store/useStudio';

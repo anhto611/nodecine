@@ -36,25 +36,15 @@
         "position": {
           "x": 370,
           "y": 124
-        }
-      },
-      {
-        "id": "llm-provider",
-        "type": "core/llm-provider",
-        "params": {
-          "providerId": "claude-code",
-          "settings": {}
         },
-        "bypassed": false,
-        "position": {
-          "x": 700,
-          "y": 506
-        }
+        "version": 2
       },
       {
         "id": "screenwriter",
         "type": "core/screenwriter",
         "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
           "prompt": "Dựng bản tin đếm ngược 5 tin AI trong 24 giờ, giọng người dẫn tin công nghệ: nhanh, gọn, không hoa mỹ.\nMỗi cảnh item đã được gắn sẵn một trang nguồn: tiêu đề, mô tả, tên miền và ảnh của trang đó tự lên hình, bạn chỉ viết lời đọc cho nó. TUYỆT ĐỐI không bịa tin, không bịa số, không bịa tên; chỉ nói đúng những gì trang đó nói. Trang nào không có số thì đừng thêm số.\nThứ hạng đếm ngược theo đúng thứ tự các trang: cảnh item đầu tiên là #5, rồi #4, #3, #2, và cảnh cuối là #1. Viết thứ hạng vào number.",
           "outputLanguage": "vi",
           "beats": [
@@ -85,48 +75,26 @@
               "count": 1,
               "factBindings": {}
             }
-          ]
+          ],
+          "form": "",
+          "targetSeconds": 0
         },
         "bypassed": false,
         "position": {
           "x": 700,
           "y": 46
-        }
-      },
-      {
-        "id": "illustrator",
-        "type": "core/illustrator",
-        "params": {
-          "brief": "Bản tin công nghệ đếm ngược: nền tối, số thứ tự lớn màu accent, tiêu đề đậm, dòng nguồn nhỏ ở đáy; chữ mono cho số, sans cho lời.",
-          "frame": "9:16",
-          "character": ""
         },
-        "bypassed": false,
-        "position": {
-          "x": 1690,
-          "y": 573
-        }
-      },
-      {
-        "id": "tts-provider",
-        "type": "core/tts-provider",
-        "params": {
-          "providerId": "system-tts",
-          "settings": {
-            "rate": 1
-          }
-        },
-        "bypassed": false,
-        "position": {
-          "x": 1030,
-          "y": 415
-        }
+        "version": 3
       },
       {
         "id": "tts",
         "type": "core/tts-engine",
         "params": {
-          "speed": 1
+          "speed": 1,
+          "ttsProvider": "system-tts",
+          "ttsSettings": {
+            "rate": 1
+          }
         },
         "bypassed": false,
         "position": {
@@ -138,27 +106,15 @@
         "id": "transcribe",
         "type": "core/transcribe",
         "params": {
-          "model": "small"
+          "model": "small",
+          "maxChars": 26
         },
         "bypassed": false,
         "position": {
           "x": 1360,
           "y": 64
-        }
-      },
-      {
-        "id": "captions",
-        "type": "core/captions",
-        "params": {
-          "style": "karaoke",
-          "position": "bottom",
-          "maxChars": 26
         },
-        "bypassed": false,
-        "position": {
-          "x": 1690,
-          "y": 73
-        }
+        "version": 2
       },
       {
         "id": "music",
@@ -174,7 +130,8 @@
         "position": {
           "x": 1690,
           "y": 350
-        }
+        },
+        "version": 2
       },
       {
         "id": "assembler",
@@ -182,28 +139,23 @@
         "params": {
           "fps": 30,
           "minTotalFrames": 300,
-          "title": "AI news"
+          "title": "AI news",
+          "snapToBeat": false
         },
         "bypassed": false,
         "position": {
           "x": 2020,
           "y": 284
-        }
-      },
-      {
-        "id": "engine",
-        "type": "core/hyperframes-engine",
-        "params": {},
-        "bypassed": false,
-        "position": {
-          "x": 2350,
-          "y": 1025
-        }
+        },
+        "version": 3
       },
       {
         "id": "output",
         "type": "core/video-output",
-        "params": {},
+        "params": {
+          "engineId": "hyperframes",
+          "engineSettings": {}
+        },
         "bypassed": false,
         "position": {
           "x": 2350,
@@ -217,12 +169,61 @@
           "codec": "h264",
           "quality": "high",
           "fileName": "ai-news.mp4",
-          "resolution": "1080p"
+          "resolution": "1080p",
+          "engineId": "hyperframes",
+          "engineSettings": {}
         },
         "bypassed": true,
         "position": {
           "x": 2400,
           "y": 40
+        }
+      },
+      {
+        "id": "illustrator-set",
+        "type": "core/set",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "brief": "Bản tin công nghệ đếm ngược: nền tối, số thứ tự lớn màu accent, tiêu đề đậm, dòng nguồn nhỏ ở đáy; chữ mono cho số, sans cho lời.",
+          "frame": "9:16",
+          "character": "",
+          "ground": "solid",
+          "form": "",
+          "language": "auto",
+          "members": []
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1690,
+          "y": 833
+        }
+      },
+      {
+        "id": "illustrator-plates",
+        "type": "core/plates",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "redraw": false
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1690,
+          "y": 573
+        }
+      },
+      {
+        "id": "illustrator",
+        "type": "core/compose",
+        "params": {
+          "transition": "fade",
+          "transitionSeconds": 0.4
+        },
+        "bypassed": false,
+        "position": {
+          "x": 2030,
+          "y": 573
         }
       }
     ],
@@ -249,39 +250,11 @@
         "targetPort": "facts"
       },
       {
-        "id": "e3",
-        "source": "llm-provider",
-        "sourcePort": "llm",
-        "target": "screenwriter",
-        "targetPort": "llm"
-      },
-      {
-        "id": "e4",
-        "source": "llm-provider",
-        "sourcePort": "llm",
-        "target": "illustrator",
-        "targetPort": "llm"
-      },
-      {
-        "id": "e5",
-        "source": "screenwriter",
-        "sourcePort": "scenes",
-        "target": "illustrator",
-        "targetPort": "scenes"
-      },
-      {
         "id": "e6",
         "source": "screenwriter",
         "sourcePort": "script",
         "target": "tts",
         "targetPort": "script"
-      },
-      {
-        "id": "e7",
-        "source": "tts-provider",
-        "sourcePort": "tts",
-        "target": "tts",
-        "targetPort": "tts"
       },
       {
         "id": "e8",
@@ -298,25 +271,11 @@
         "targetPort": "script"
       },
       {
-        "id": "e10",
-        "source": "transcribe",
-        "sourcePort": "voiceover",
-        "target": "captions",
-        "targetPort": "voiceover"
-      },
-      {
         "id": "e11",
-        "source": "captions",
+        "source": "transcribe",
         "sourcePort": "captions",
         "target": "assembler",
         "targetPort": "captions"
-      },
-      {
-        "id": "e12",
-        "source": "illustrator",
-        "sourcePort": "plan",
-        "target": "assembler",
-        "targetPort": "plan"
       },
       {
         "id": "e13",
@@ -340,25 +299,60 @@
         "targetPort": "ir"
       },
       {
-        "id": "e16",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "output",
-        "targetPort": "engine"
-      },
-      {
-        "id": "e17",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "export",
-        "targetPort": "engine"
-      },
-      {
         "id": "e18",
         "source": "music",
         "sourcePort": "voiceover",
         "target": "assembler",
         "targetPort": "voiceover"
+      },
+      {
+        "id": "screenwriter-scenes-illustrator-plates-scenes",
+        "source": "screenwriter",
+        "sourcePort": "scenes",
+        "target": "illustrator-plates",
+        "targetPort": "scenes"
+      },
+      {
+        "id": "screenwriter-scenes-illustrator-scenes",
+        "source": "screenwriter",
+        "sourcePort": "scenes",
+        "target": "illustrator",
+        "targetPort": "scenes"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-plates-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator-plates",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-layers-illustrator-plates-layers",
+        "source": "illustrator-set",
+        "sourcePort": "layers",
+        "target": "illustrator-plates",
+        "targetPort": "layers"
+      },
+      {
+        "id": "illustrator-plates-plates-illustrator-plates",
+        "source": "illustrator-plates",
+        "sourcePort": "plates",
+        "target": "illustrator",
+        "targetPort": "plates"
+      },
+      {
+        "id": "illustrator-plan-assembler-plan",
+        "source": "illustrator",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
       }
     ]
   }

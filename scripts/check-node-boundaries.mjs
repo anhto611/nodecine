@@ -91,6 +91,11 @@ for (const file of await walk(root)) {
   if (isTest) continue;
   if (relative.startsWith(`core${path.sep}`) && /['"]@\/nodes(?:\/|['"])/.test(source)) errors.push(`${relative}: core may not import nodes`);
   if (relative.startsWith(`core${path.sep}`) && /['"]@\/providers(?:\/|['"])/.test(source)) errors.push(`${relative}: core may not import providers`);
+  // The core runs graphs of nodes and knows nothing of video: what runs on a wire, the IR, a model or
+  // an engine are the contracts', which register into the core rather than being read by it.
+  if (relative.startsWith(`core${path.sep}`) && /['"]@\/contracts(?:\/|['"])/.test(source)) errors.push(`${relative}: core may not import contracts`);
+  // Contracts sit between the core and the capsules: they may use the core, never a node or a provider.
+  if (relative.startsWith(`contracts${path.sep}`) && /['"]@\/(nodes|providers|server|app|components|store|lib)(?:\/|['"])/.test(source)) errors.push(`${relative}: contracts may not import the app, a node or a provider`);
   // A provider's index.ts spawns processes; only its settings.ts is safe for the browser bundle.
   if (relative.startsWith(`providers${path.sep}`) && /['"]@\/nodes\/(?!form-body|kit)/.test(source)) errors.push(`${relative}: a provider may not import nodes`);
   // The services file pulls in node:fs, child processes and puppeteer: only the server may load it, or the browser bundle breaks.

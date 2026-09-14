@@ -8,9 +8,9 @@ import { NodeError } from '../errors';
 import { registerNodes } from '@/nodes';
 import staticScriptJson from '@/lib/first-run.json';
 const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
-import { validateIR } from '../types/validate-ir';
-import type { VideoIR } from '../types/ir';
-import { makeFakeServices, registerFakeEngineSupport, resetEngineSupport } from './fakes';
+import { validateIR } from '@/contracts/types/validate-ir';
+import type { VideoIR } from '@/contracts/types/ir';
+import { makeFakeServices, registerFakeEngineSupport, resetEngineSupport } from '@/contracts/__tests__/fakes';
 
 function setup(opts: Parameters<typeof makeFakeServices>[0] = {}, withRenderer = true) {
   _resetNodeRegistry();
@@ -32,11 +32,11 @@ describe('graph validation', () => {
     const issues = validateGraph(staticScriptTemplate());
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
   });
-  it('an unconnected required input disables Run; a missing provider gets PROVIDER_NOT_CONNECTED', () => {
+  it('an unconnected required input disables Run', () => {
     const { graph } = setup();
-    graph.edges = graph.edges.filter((e) => e.id !== 'e3');
+    graph.edges = graph.edges.filter((e) => e.id !== 'e2');
     const issues = validateGraph(graph);
-    expect(issues.some((i) => i.code === 'PROVIDER_NOT_CONNECTED' && i.nodeId === 'tts')).toBe(true);
+    expect(issues.some((i) => i.code === 'GRAPH_PORT_UNCONNECTED' && i.nodeId === 'tts')).toBe(true);
   });
   it('detects cycles and reports the offending edges', () => {
     const { graph } = setup();
@@ -60,12 +60,13 @@ describe('graph validation', () => {
 });
 
 describe('Phase A run', () => {
-  it('runs six nodes, skips the bypassed export, and produces a valid IR in the player node', async () => {
+  it('runs six nodes, leaves the export alone, and produces a valid IR in the player node', async () => {
     const { executor, services } = setup();
     const { ok } = await executor.run();
     expect(ok).toBe(true);
-    for (const id of ['script', 'tts-provider', 'tts', 'assembler', 'engine', 'output']) expect(executor.runtime(id).state).toBe('success');
-    expect(executor.runtime('export').state).toBe('bypassed');
+    for (const id of ['script', 'tts', 'assembler', 'output']) expect(executor.runtime(id).state).toBe('success');
+    // Untouched rather than skipped: a Run never reaches an on-demand node at all.
+    expect(executor.runtime('export').state).toBe('idle');
     const ir = executor.runtime('assembler').outputs.ir!.payload as VideoIR;
     expect(validateIR(ir)).toEqual({ ok: true, warnings: [] });
     expect(ir.beats).toHaveLength(3);
@@ -81,8 +82,8 @@ describe('Phase A run', () => {
       { id: 'phone', type: 'core/layer', params: { kind: 'code', source: '<div class="phone"></div>', placement: 'over', fit: 'cover', loop: true, offsetSeconds: 0, gain: 0, startSeconds: 0, url: '' }, bypassed: false, position: { x: 0, y: 0 } },
     );
     graph.edges.push(
-      { id: 'l1', source: 'bg', sourcePort: 'layer', target: 'assembler', targetPort: 'layers' },
-      { id: 'l2', source: 'phone', sourcePort: 'layer', target: 'assembler', targetPort: 'layers' },
+      { id: 'l1', source: 'bg', sourcePort: 'layers', target: 'assembler', targetPort: 'layers' },
+      { id: 'l2', source: 'phone', sourcePort: 'layers', target: 'assembler', targetPort: 'layers' },
     );
     expect(validateGraph(graph).filter((i) => i.severity === 'error')).toEqual([]);
     executor.setGraph(graph);
@@ -125,9 +126,11 @@ describe('Phase A run', () => {
     expect(executor.runtime('tts').reused).toBe(true);
     expect(executor.runtime('assembler').reused).toBe(true);
     expect(synths()).toBe(3);
-    // resource nodes always re-probe (EXECUTION_ENGINE §1.1) but their unchanged hash lets downstream reuse: three of them, twice
-    expect(probes()).toBe(6);
-    expect(executor.runtime('tts-provider').reused).toBe(false);
+    // A node probes what it needs when it runs, so a reused node probes nothing. Five across two
+    // passes: the model twice on the first (the set draws the look, the plate maker the layouts) and
+    // the voice once, then the engine on both, because a sink has no outputs to reuse and always runs.
+    expect(probes()).toBe(5);
+    expect(services.calls.filter((c) => c.name === 'probeLLM')).toHaveLength(2);
 
     graph.nodes.find((n) => n.id === 'tts')!.params.speed = 1.15;
     executor.invalidate('tts');
@@ -159,15 +162,15 @@ describe('Phase A run', () => {
   });
 });
 
-describe('resource nodes and capability blocking (EXECUTION_ENGINE §1.1)', () => {
-  it('missing ffmpeg: provider is success (yellow), TTS engine is blocked by capability with the fix', async () => {
+describe('a part a node needs that is not ready (EXECUTION_ENGINE §1.1)', () => {
+  it('missing ffmpeg: the node that wanted the voice fails, with the remedy on it', async () => {
     const { executor, services } = setup({ encoder: false });
     const { ok } = await executor.run();
     expect(ok).toBe(false);
-    expect(executor.runtime('tts-provider').state).toBe('success');
+    // The voice is this node's own now (§1.3), so the failure is reported here and not one node back.
     const tts = executor.runtime('tts');
-    expect(tts.state).toBe('blocked');
-    expect(tts.blockedBy).toMatchObject({ kind: 'capability', code: 'PROVIDER_NOT_INSTALLED', fix: 'brew install ffmpeg' });
+    expect(tts.state).toBe('error');
+    expect(tts.error).toMatchObject({ code: 'PROVIDER_NOT_INSTALLED', fix: 'brew install ffmpeg' });
     expect(services.calls.some((c) => c.name === 'synthesize')).toBe(false);
     expect(executor.runtime('assembler').state).toBe('blocked');
     expect(executor.runtime('assembler').blockedBy?.kind).toBe('upstream');
@@ -184,20 +187,23 @@ describe('resource nodes and capability blocking (EXECUTION_ENGINE §1.1)', () =
     });
   });
 
-  it('the world changing between runs is detected because probe() always re-runs', async () => {
-    const { executor, services } = setup();
+  it('the world changing between runs is caught on the next run of the node that asks', async () => {
+    const { executor, services, graph } = setup();
     await executor.run();
     services.setOptions({ encoder: false });
+    // A reused node asks nothing, which is the point of the cache; the node has to run to find out.
+    graph.nodes.find((n) => n.id === 'tts')!.params.speed = 1.2;
+    executor.invalidate('tts');
     await executor.run();
-    expect(executor.runtime('tts').state).toBe('blocked');
+    expect(executor.runtime('tts').state).toBe('error');
+    expect(executor.runtime('tts').error?.code).toBe('PROVIDER_NOT_INSTALLED');
   });
 
   it('swapping to Remotion blocks the player by capability (no html-gsap renderer) and re-runs nothing upstream', async () => {
     const { executor, graph, services } = setup();
     await executor.run();
-    graph.nodes.find((n) => n.id === 'engine')!.type = 'core/remotion-engine';
-    graph.nodes.find((n) => n.id === 'engine')!.params = { glBackend: 'angle' };
-    executor.invalidate('engine');
+    graph.nodes.find((n) => n.id === 'output')!.params.engineId = 'remotion';
+    executor.invalidate('output');
     const synthsBefore = services.calls.filter((c) => c.name === 'synthesize').length;
     await executor.run();
     expect(executor.runtime('output').state).toBe('blocked');
@@ -225,24 +231,35 @@ describe('on-demand export and single-node runs (EXECUTION_ENGINE §3)', () => {
     expect(state).toBe('success');
     expect(executor.runtime('export').result).toMatchObject({ bytes: 4_800_000, fileName: 'static-script.mp4' });
     const after = services.calls.slice(before).map((c) => c.name);
-    expect(after).toEqual(['render']);
+    // The engine is this node's own, so a render probes it and then renders: two calls, no more.
+    expect(after).toEqual(['probeEngine', 'render']);
   });
   it('Render before any run is refused with the missing port', async () => {
     const { executor } = setup();
     await expect(executor.runNode('export')).rejects.toThrow(/has no packet/);
   });
-  it('un-bypassing the export makes it run on the next Run', async () => {
+  it('stays out of a Run whatever its bypass flag says', async () => {
+    // The flag is a property of the type here, not a switch a person flips, and honouring it let a
+    // saved graph put a render at the end of every Run with the player waiting behind it.
     const { executor, services } = setup();
     executor.setBypassed('export', false);
     await executor.run();
-    expect(executor.runtime('export').state).toBe('success');
-    expect(services.calls.some((c) => c.name === 'render')).toBe(true);
+    expect(executor.runtime('export').state).not.toBe('success');
+    expect(services.calls.some((c) => c.name === 'render')).toBe(false);
   });
-  it('a render with the engine lacking render capability is blocked, not errored', async () => {
+
+  it('is not counted among the steps of a Run, so the progress reads true', async () => {
+    const { graph, services } = setup();
+    let stepTotal = -1;
+    const executor = new Executor(graph, services, { onRunStart: (i) => { stepTotal = i.stepTotal; } });
+    await executor.run();
+    expect(stepTotal).toBe(graph.nodes.filter((n) => n.type !== 'core/mp4-export' && !n.bypassed).length);
+  });
+  it('a render with the engine lacking render capability says so on the export node', async () => {
     const { executor } = setup({ renderReady: false });
     await executor.run();
-    await expect(executor.runNode('export')).resolves.toBe('blocked');
-    expect(executor.runtime('export').blockedBy?.code).toBe('ENGINE_NOT_READY');
+    await expect(executor.runNode('export')).resolves.toBe('error');
+    expect(executor.runtime('export').error?.code).toBe('ENGINE_NOT_READY');
   });
 });
 
@@ -278,10 +295,31 @@ describe('errors and cancellation', () => {
     expect(executor.runtime('assembler').state).toBe('blocked');
   });
 
-  it('run() refuses an invalid graph', async () => {
+  it('run() refuses a graph that is malformed, not one that is merely unfinished', async () => {
     const { executor, graph } = setup();
-    graph.edges = graph.edges.filter((e) => e.id !== 'e2');
+    // An empty port stops that node and says so there (§1.4); a cycle is a graph that cannot be run
+    // at all, and that is what a refusal is for.
+    graph.edges = graph.edges.filter((e) => !(e.target === 'illustrator' && e.targetPort === 'scenes'));
+    const { ok } = await executor.run();
+    expect(ok).toBe(false);
+    expect(executor.runtime('illustrator').blockedBy?.code).toBe('GRAPH_PORT_UNCONNECTED');
+
+    graph.edges.push({ id: 'cyc', source: 'assembler', sourcePort: 'ir', target: 'script', targetPort: 'x' });
     await expect(executor.run()).rejects.toThrow(GraphInvalidError);
+  });
+
+  it('starts, and stops on the node that is actually broken (§1.4)', async () => {
+    const { executor, graph } = setup();
+    // Nothing between the voice and the Assembler is required, so this no longer refuses to start.
+    // It runs, and the voice node says what is wrong with it — which is the difference: a reason on
+    // a node, instead of a Run button that will not press and a list of codes above the canvas.
+    graph.edges = graph.edges.filter((e) => e.id !== 'e2');
+    const { ok } = await executor.run();
+    expect(ok).toBe(false);
+    expect(executor.runtime('tts').state).toBe('blocked');
+    expect(executor.runtime('tts').blockedBy?.code).toBe('GRAPH_PORT_UNCONNECTED');
+    // A wire the person drew and that then failed is not dropped in silence: the film waits.
+    expect(executor.runtime('assembler').blockedBy?.kind).toBe('upstream');
   });
 });
 

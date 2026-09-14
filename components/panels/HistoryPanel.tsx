@@ -3,7 +3,7 @@ import React from 'react';
 import { useStudio } from '@/store/useStudio';
 import { Icon } from '../icons';
 import { useT } from '../ui';
-import { voiceTrackOf } from '@/core/types/ir';
+import { voiceTrackOf } from '@/contracts/types/ir';
 
 /** In-session run history (USER_FLOWS §1.6): click an entry to load its IR into the player nodes without re-running. */
 export const HistoryPanel: React.FC = () => {

@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import type { Voiceover } from '@/core/types/payloads';
+import type { Voiceover } from '@/contracts/types/payloads';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
 import { useParams } from '@/nodes/kit';

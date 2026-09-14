@@ -1,0 +1,31 @@
+{
+  "id": "footage-frame",
+  "name": {
+    "en": "Footage with a band",
+    "vi": "Footage kèm dải chữ"
+  },
+  "description": {
+    "en": "A picture runs under the whole film; every scene is a lower third over it.",
+    "vi": "Một hình chạy dưới suốt phim; mỗi cảnh chỉ là một dải chữ đè lên."
+  },
+  "script": {
+    "guidance": "The picture carries the film; the words name what is being seen. One short headline per scene and at most one line under it. Never describe the footage — say the thing the viewer would not know from looking.",
+    "keys": [
+      "kicker",
+      "title",
+      "body"
+    ],
+    "words": {
+      "min": 9,
+      "max": 18
+    }
+  },
+  "draw": {
+    "guidance": "Footage runs under every scene, so draw NO ground of any kind and leave most of the frame empty. Everything you draw sits in one band across the lower third: a translucent dark panel with a soft blur behind the type, its edges soft, and the type white with a light shadow so it survives any picture under it. Nothing in the upper two thirds.",
+    "motion": [
+      "The band wipes or slides in once at the start of the scene, from the edge it is anchored to, over about 0.45s, and stays.",
+      "The type inside it fades up a beat after the band arrives, as one block.",
+      "Nothing else moves: the footage under you is already moving, and a second motion on top reads as a mistake."
+    ]
+  }
+}

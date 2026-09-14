@@ -1,4 +1,37 @@
 {
-  "core/art-director": { "replacedBy": "core/illustrator", "since": "2026-09-10" },
-  "core/cover-export": { "since": "2026-09-10" }
+  "core/art-director": {
+    "since": "2026-09-10"
+  },
+  "core/captions": {
+    "since": "2026-09-12"
+  },
+  "core/cast": {
+    "since": "2026-09-12"
+  },
+  "core/cover-export": {
+    "since": "2026-09-10"
+  },
+  "core/github-fetcher": {
+    "replacedBy": "core/web-fetcher",
+    "since": "2026-09-13"
+  },
+  "core/hyperframes-engine": {
+    "since": "2026-09-12"
+  },
+  "core/illustrator": {
+    "since": "2026-09-13"
+  },
+  "core/llm-provider": {
+    "since": "2026-09-12"
+  },
+  "core/remotion-engine": {
+    "since": "2026-09-12"
+  },
+  "core/style": {
+    "replacedBy": "core/set",
+    "since": "2026-09-12"
+  },
+  "core/tts-provider": {
+    "since": "2026-09-12"
+  }
 }

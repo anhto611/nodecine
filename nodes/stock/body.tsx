@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import type { SceneScript } from '@/core/types/payloads';
+import { ProviderPick } from '@/components/node-runtime/provider-pick';
+import type { SceneScript } from '@/contracts/types/payloads';
 import { Kv, useT } from '@/components/ui';
 import { FormBody } from '@/nodes/form-body';
 import { useInputPayload, useOutputPayload } from '@/store/useStudio';
@@ -13,7 +14,8 @@ export const StockMediaBody: React.FC<BodyProps> = ({ nodeId }) => {
   const found = out?.scenes.filter((s) => s.content.image || s.content.clip).length ?? 0;
   return (
     <>
-      <FormBody nodeId={nodeId} />
+      <ProviderPick nodeId={nodeId} kind="llm" optional />
+      <FormBody nodeId={nodeId} omit={['llmProvider', 'llmSettings']} />
       {out && <Kv k={t('node.footage')} v={`${found}/${out.scenes.length}`} dim={!found} />}
       {found > 0 && (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>

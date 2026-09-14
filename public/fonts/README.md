@@ -2,7 +2,7 @@
 
 Files, not links: a render must not depend on Google Fonts answering, and a frame captured while a
 webfont was still swapping would show the fallback. Every file here is copied into the render's
-project directory (`FONT_FILES` in `core/visual/markup.ts` is the one list) and declared with
+project directory (`FONT_FILES` in `contracts/visual/markup.ts` is the one list) and declared with
 `font-display: block`.
 
 | Font | Files | Licence |

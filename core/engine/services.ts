@@ -1,44 +1,16 @@
-import type { ZodTypeAny, z } from 'zod';
-import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover } from '../types/payloads';
-import type { VideoIR } from '../types/ir';
-import type { ExportSettings, RenderProgress, RenderResult } from '../adapters/types';
-
 /**
  * Everything a node needs from outside the graph. The executor runs on the server (ARCHITECTURE
  * §1.2); `server/services.server.ts` implements this with the providers and engines directly.
  * Tests implement it with fakes.
+ *
+ * The core declares only what running a node needs whatever the node is about: a way to call a
+ * service a capsule contributed, and a clock. What a video workflow adds — a model, a voice, an
+ * engine — is declared in `contracts/services.ts` by augmenting this interface.
  */
 export type NodeService = (...args: never[]) => Promise<unknown>;
 
 export interface NodeServices {
   /** Call a service contributed by a node capsule. Core knows only this extension port, never service names. */
   invoke<T>(serviceId: string, args: unknown[]): Promise<T>;
-  probeLLM(providerId: string, settings: Record<string, unknown>): Promise<LLMRef>;
-  probeTTS(providerId: string, settings: Record<string, unknown>): Promise<TTSRef>;
-  probeEngine(engineId: string, settings: Record<string, unknown>): Promise<EngineRef>;
-  synthesize(ref: TTSRef, text: string, voice: Voice, speed: number, signal: AbortSignal): Promise<Voiceover>;
-  /**
-   * Ask the model. The server keeps every answer on disk by provider and prompt, so the same
-   * question asked again — after a restart, or because a downstream visual node re-ran — is
-   * free and identical; `fresh` skips that and asks again (a forced run, a retry).
-   */
-  complete<S extends ZodTypeAny>(ref: LLMRef, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean }): Promise<z.infer<S>>;
-  render(
-    ref: EngineRef,
-    ir: VideoIR,
-    settings: ExportSettings,
-    onProgress: (p: RenderProgress) => void,
-    signal: AbortSignal,
-  ): Promise<RenderResult>;
-  /**
-   * Text kept as a file the browser can download, named by its own content (CORE_CONTRACTS §5.16).
-   * `extension` is the kind of file it is — `srt`, `vtt` — and never a path.
-   */
-  saveText(text: string, extension: string): Promise<{ url: string; bytes: number }>;
-  /**
-   * One file from several, in order, with a pause after each part. Returns the file, its measured
-   * length and where each part starts and how long it lasts, pause included (CORE_CONTRACTS §5.3).
-   */
-  concatAudio(parts: { audioUrl: string; durationSeconds: number }[], gapSeconds: number, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number; segments: { start: number; durationSeconds: number }[] }>;
   now(): number;
 }

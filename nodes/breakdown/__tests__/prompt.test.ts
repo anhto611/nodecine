@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WRITTEN_KEYS, type SceneScript } from '@/core/types/payloads';
+import { WRITTEN_KEYS, type SceneScript } from '@/contracts/types/payloads';
 import { buildBreakdownPrompt, hasWritten, outputSchemaFor } from '../prompt';
 
 const script: SceneScript = {

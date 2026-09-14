@@ -1,6 +1,6 @@
-import { NodeError } from '@/core/errors';
+import { NodeError } from '@/contracts/errors';
 import { downloadImageAsset, getVetted, MEDIA_UA, readCapped, saveAsset } from '@/server/fetch-media';
-import { parsePageUrl, isPrivateHost } from '@/core/network/public-url';
+import { parsePageUrl, isPrivateHost } from '@/contracts/network/public-url';
 import { parsePageMeta } from './parse-meta';
 import { WebErrorCode } from './errors';
 import type { PageRead, ReadPageOptions } from './types';

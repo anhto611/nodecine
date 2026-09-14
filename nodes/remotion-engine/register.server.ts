@@ -1,10 +1,10 @@
 import path from 'node:path';
 import { readdir, stat } from 'node:fs/promises';
-import { registerEngine } from '@/core/adapters/registry';
-import { registerCodeRenderer } from '@/core/visual/renderers';
+import { registerEngine } from '@/contracts/adapters/registry';
+import { registerCodeRenderer } from '@/contracts/visual/renderers';
 import { registerRemotionTransitions } from './transitions';
-import type { ExportSettings, RenderProgress, RenderResult } from '@/core/adapters/types';
-import type { VideoIR } from '@/core/types/ir';
+import type { ExportSettings, RenderProgress, RenderResult } from '@/contracts/adapters/types';
+import type { VideoIR } from '@/contracts/types/ir';
 import { contentHash } from '@/core/hash';
 import { ensureTmpDir, mediaUrl } from '@/server/paths';
 import { createRemotionAdapter } from './adapter';
@@ -101,6 +101,8 @@ async function serverRender(ir: VideoIR, settings: ExportSettings, onProgress: (
 export function registerRemotionServer(): void {
   // `html-gsap` through the core's scene machinery (scene-runtime.ts), and the catalogue drawn as styles per frame.
   registerCodeRenderer('html-gsap', REMOTION_ENGINE_ID, 'html-gsap-clip');
+  registerCodeRenderer('html-three', REMOTION_ENGINE_ID, 'html-gsap-clip');
+  registerCodeRenderer('lottie', REMOTION_ENGINE_ID, 'html-gsap-clip');
   registerRemotionTransitions();
   registerEngine(REMOTION_ENGINE_ID, (settings) => createRemotionAdapter(settings, { render: serverRender }));
 }

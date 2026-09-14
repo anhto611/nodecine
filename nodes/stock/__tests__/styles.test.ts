@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { STOCK_GROUPS, STOCK_STYLES, stylePrompt } from '../styles';
 import { buildStockPrompt } from '../prompt';
-import type { SceneScript } from '@/core/types/payloads';
+import type { SceneScript } from '@/contracts/types/payloads';
 
 const script: SceneScript = {
   language: 'vi',

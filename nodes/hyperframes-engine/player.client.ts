@@ -1,8 +1,9 @@
 'use client';
-import type { VideoIR } from '@/core/types/ir';
-import type { PlayerHandle } from '@/core/adapters/types';
+import type { VideoIR } from '@/contracts/types/ir';
+import type { PlayerHandle } from '@/contracts/adapters/types';
 import { buildHyperframesDocument } from './document';
 import { analysisOf } from './analysis';
+import { loadLibs } from './libs';
 import type { MountPlayer } from './adapter';
 
 /**
@@ -83,10 +84,11 @@ export const mountHyperframesPlayer: MountPlayer = (element: HTMLElement, ir: Vi
     raf = requestAnimationFrame(tick);
   };
 
-  void Promise.all([vendorSources(), defineElement(), analysisOf(ir, (url) => fetch(url).then((r) => (r.ok ? r.json() : null)))])
-    .then(([sources, , analysis]) => {
+  const vendorText = (n: string) => fetch(`/api/vendor/${n}`).then((r) => { if (!r.ok) throw new Error(`vendor ${n}: ${r.status}`); return r.text(); });
+  void Promise.all([vendorSources(), defineElement(), analysisOf(ir, (url) => fetch(url).then((r) => (r.ok ? r.json() : null))), loadLibs(ir, vendorText)])
+    .then(([sources, , analysis, libs]) => {
       if (disposed) return;
-      const html = buildHyperframesDocument(ir, { ...sources, fontBase: '/fonts', analysis });
+      const html = buildHyperframesDocument(ir, { ...sources, fontBase: '/fonts', analysis, libs });
       const el = document.createElement('hyperframes-player') as HyperframesPlayerElement;
       el.setAttribute('width', String(ir.meta.width));
       el.setAttribute('height', String(ir.meta.height));

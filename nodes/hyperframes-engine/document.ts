@@ -1,6 +1,6 @@
-import { speechWindowsOf, beatClipsOf, type Clip, type CodeClip, type VideoIR } from '@/core/types/ir';
+import { allClips, speechWindowsOf, beatClipsOf, type Clip, type CodeClip, type VideoIR, hasTracksUnderBeats } from '@/contracts/types/ir';
 import { transitionCatalogScript } from './transitions';
-import { BIND_SCRIPT, SCENE_MOUNT, baseLayer, baseStyles, captionLine, captionStyleOf, captionStyles, esc, sceneMarkup, scopedCss, styleCss } from './markup';
+import { BIND_SCRIPT, LAYER_NO_GROUND_CSS, SCENE_MOUNT, TRANSPARENT_GROUND_CSS, sourceForFormat, baseLayer, baseStyles, captionLine, captionStyleOf, captionStyles, esc, sceneMarkup, scopedCss, styleCss } from './markup';
 
 export { splitCode, captionStyleOf, captionStyles } from './markup';
 
@@ -38,6 +38,8 @@ export interface DocumentOptions {
   assetBase?: string;
   /** The analysis JSON of each track that has one, by track id, read by the caller: the page may not fetch. */
   analysis?: Record<string, unknown>;
+  /** Library sources inlined for the formats the film uses: lottie-web for `lottie`, three (as an IIFE) for `html-three`. */
+  libs?: { lottie?: string; three?: string };
 }
 
 /** Marker the HyperFrames player looks for before deciding to inject a runtime of its own. */
@@ -149,6 +151,12 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
   }
   const beatByClip = new Map(ir.beats.map((b) => [b.clipId, b] as const));
   const beatClips = beatClipsOf(ir);
+  const formats = new Set(allClips(ir).flatMap((c) => (c.kind === 'code' ? [c.format] : [])));
+  // A drawing that is not one of the beats is a layer's. Beat clips are marked only when the film has
+  // one of those, or something under them; a film of scenes alone keeps the page it always had.
+  const underBeats = hasTracksUnderBeats(ir);
+  const hasLayerDrawings = allClips(ir).some((c) => c.kind === 'code' && !beatByClip.has(c.id));
+  const markBeats = underBeats || hasLayerDrawings;
   const allCues = ir.captions?.cues ?? [];
 
   const codeClip = (c: CodeClip, trackIndex: number) => {
@@ -164,7 +172,8 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     const overlap = overlapAfter.get(c.id) ?? 0;
     const clipSeconds = overlap ? Math.min(duration - start / fps, c.durationInFrames / fps + overlap) : c.durationInFrames / fps;
     // Each clip decides where its captions go (its `data-slot="captions"`); a beat clip without a slot gets the default band.
-    const bare = sceneMarkup(c.source, { withCaptions: !!ir.captions && !!beat, start: start / fps, duration: c.durationInFrames / fps });
+    const source = sourceForFormat(c.format, c.source, { loop: c.loop });
+    const bare = sceneMarkup(source, { withCaptions: !!ir.captions && !!beat, start: start / fps, duration: c.durationInFrames / fps });
     const captionStyle = captionStyleOf(bare.captionSlot?.tag ?? '');
     // Every line spoken while this beat is on screen; a line across a cut is drawn in both beats.
     const cues = beat
@@ -182,9 +191,9 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     // The words the voice says while this clip is up, on the clip's own clock, for `nodecine.when`.
     const words = allCues.flatMap((cue) => cue.words).filter((w) => w.startFrame >= hearFrom && w.startFrame < hearTo).map((w) => ({ text: w.text, start: (w.startFrame - start) / fps }));
     const cuesHtml = cues.map((cue) => captionLine(cue.id, cue.words, captionStyle)).join('');
-    const scene = sceneMarkup(c.source, { captionsHtml: cuesHtml, withCaptions: !!ir.captions && !!beat, start: start / fps, duration: c.durationInFrames / fps });
+    const scene = sceneMarkup(source, { captionsHtml: cuesHtml, withCaptions: !!ir.captions && !!beat, start: start / fps, duration: c.durationInFrames / fps });
     return {
-      html: `<div id="${esc(c.id)}" class="clip nc-scene" data-scene="${esc(c.id)}" data-start="${start / fps}" data-duration="${clipSeconds}" data-track-index="${trackIndex}">${scene.html}</div>`,
+      html: `<div id="${esc(c.id)}" class="clip nc-scene" data-scene="${esc(c.id)}"${beat && markBeats ? ' data-beat=""' : ''} data-start="${start / fps}" data-duration="${clipSeconds}" data-track-index="${trackIndex}">${scene.html}</div>`,
       css: scopedCss(`[data-scene="${esc(c.id)}"]`, scene.styles.join('\n')),
       defaultBand: !!beat && !scene.captionSlot,
       data: { id: c.id, index: si, track: trackIndex, start: start / fps, duration: c.durationInFrames / fps, facts: c.facts ?? {}, words, scripts: scene.scripts, captions: cues },
@@ -216,8 +225,11 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     // clips live in an inner frame that keeps the design size and is scaled as one picture. A
     // transform, not `zoom`: zoom left bottom-anchored offsets unscaled.
     ...(scale !== 1 ? [`html, body, [data-composition-id] { width: ${outW}px; height: ${outH}px; }`, `.nc-frame { position: absolute; left: 0; top: 0; width: ${width}px; height: ${height}px; transform: scale(${scale}); transform-origin: 0 0; }`] : []),
-    ...(ir.captions ? [baseLayer(captionStyles(width, height, scenes.some((s) => s.defaultBand)))] : []),
+    ...(ir.captions ? [baseLayer(captionStyles(width, height, scenes.some((s) => s.defaultBand), ir.style.captions))] : []),
     styleCss(ir.style),
+    // A layer never paints the film's ground; the scenes drop theirs when something is drawn under them.
+    ...(hasLayerDrawings ? [LAYER_NO_GROUND_CSS] : []),
+    ...(underBeats ? [TRANSPARENT_GROUND_CSS] : []),
     ...rendered.map((r) => r.css),
   ].filter(Boolean);
 
@@ -266,6 +278,9 @@ export function buildHyperframesDocument(ir: VideoIR, o: DocumentOptions): strin
     `<meta name="viewport" content="width=${outW}, height=${outH}">`,
     `<title>${esc(ir.meta.title)}</title>`,
     `<script>${o.gsapSource}</script>`,
+    // The libraries a format needs, after gsap and before anything that runs a scene; only when a clip asks.
+    ...(formats.has('lottie') && o.libs?.lottie ? [`<script>${o.libs.lottie}</script>`] : []),
+    ...(formats.has('html-three') && o.libs?.three ? [`<script>${o.libs.three}</script>`] : []),
     RUNTIME_MARKER,
     `<script data-hyperframes-preview-runtime>${o.runtimeSource}</script>`,
     `<style>\n${styles.join('\n')}\n</style>`,

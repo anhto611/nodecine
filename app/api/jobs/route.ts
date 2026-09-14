@@ -6,7 +6,7 @@ import { jobHub } from '@/server/jobs';
 
 const Body = z.object({
   key: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),
-  kind: z.enum(['run', 'node', 'probe']),
+  kind: z.enum(['run', 'node']),
   graph: GraphSchema,
   name: z.string().max(200).optional(),
   nodeId: z.string().optional(),

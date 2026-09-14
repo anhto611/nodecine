@@ -1,10 +1,9 @@
 'use client';
 import { create } from 'zustand';
 import { RemoteExecutor } from '@/lib/remote-executor';
-import { validateGraph, type Graph, type GraphIssue, type NodeInstance, GraphInvalidError } from '@/core/engine/graph';
-import { expandBatch } from '@/core/engine/batch';
+import { pinNode, unpinNode, validateGraph, type Graph, type GraphIssue, type NodeInstance, GraphInvalidError } from '@/core/engine/graph';
 import type { NodeRuntime } from '@/core/engine/state';
-import type { RunRecord } from '@/core/engine/history';
+import type { RunRecord } from '@/contracts/history';
 import { UndoStack } from '@/lib/undo-stack';
 import { contentHash } from '@/core/hash';
 import { getNodeType } from '@/core/nodes/definition';
@@ -44,8 +43,6 @@ export interface StudioState {
   runtimes: Record<string, NodeRuntime>;
   issues: GraphIssue[];
   running: boolean;
-  /** Which run of a batch is going, when the workflow is queued once per line (EXECUTION_ENGINE §9). */
-  batch: { index: number; total: number } | null;
   step: { nodeId: string; step: number; total: number } | null;
   history: RunRecord[];
   viewingRun: number | null;
@@ -87,6 +84,13 @@ export interface StudioState {
   reconnect(edgeId: string, edge: { source: string; sourcePort: string; target: string; targetPort: string }): boolean;
   toggleBypass(nodeId: string): void;
   /**
+   * Freeze this node's last outputs into the graph, or thaw them (CORE_CONTRACTS §1.4). A pinned
+   * node hands those outputs back on every run and never asks the model again, which is how a look
+   * you approved becomes the workflow's own rather than something derived afresh each time.
+   */
+  togglePin(nodeId: string): void;
+  setOverlay(target: { nodeId: string; data?: unknown } | null): void;
+  /**
    * Run the whole graph. `force` ignores the signature cache — Shift+Run: what a person reaches for
    * when the answer on disk is stale for a reason the signature cannot see (a model that would
    * answer differently today, a file changed under a path, code edited while the app was open).
@@ -121,7 +125,6 @@ export interface StudioState {
   toggleLogs(): void;
   setTemplatesOpen(open: boolean): void;
   setSettingsOpen(open: boolean): void;
-  setOverlay(target: { nodeId: string; data?: unknown } | null): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
 }
@@ -166,7 +169,6 @@ export const useStudio = create<StudioState>((set, get) => {
       const runtimes: Record<string, NodeRuntime> = {};
       for (const [id, rt] of ex.runtimes_()) runtimes[id] = rt;
       set({ runtimes, logTick: get().logTick + 1 });
-      void ex.probeResources();
     });
   };
   const addTab = (tab: Omit<WorkflowTab, 'key'>) => {
@@ -182,8 +184,6 @@ export const useStudio = create<StudioState>((set, get) => {
   };
   // One undo history per open tab, in memory only: a reload starts with a clean slate, like ComfyUI.
   const undoStacks = new Map<string, UndoStack<Graph>>();
-  // Set by cancel: a batch must stop between runs, not only inside the one that is going.
-  let stopBatch = false;
   const stackFor = (key: string) => { let s = undoStacks.get(key); if (!s) { s = new UndoStack<Graph>(); undoStacks.set(key, s); } return s; };
   const syncUndoFlags = () => { const s = stackFor(get().activeTab); set({ canUndo: s.canUndo, canRedo: s.canRedo }); };
   /** Puts a graph on the active tab and the executor without touching the undo history. */
@@ -209,7 +209,6 @@ export const useStudio = create<StudioState>((set, get) => {
     runtimes: {},
     issues: [],
     running: false,
-    batch: null,
     step: null,
     history: [],
     viewingRun: null,
@@ -250,7 +249,7 @@ export const useStudio = create<StudioState>((set, get) => {
         onStateChange: (nodeId, runtime) => set((s) => ({ runtimes: { ...s.runtimes, [nodeId]: runtime } })),
         onRunStart: ({ stepTotal }) => set({ running: true, step: { nodeId: '', step: 0, total: stepTotal }, viewingRun: null }),
         onStep: ({ nodeId, step, stepTotal }) => set({ step: { nodeId, step, total: stepTotal } }),
-        onRunEnd: () => set((s) => (s.batch ? { step: null } : { running: false, step: null })),
+        onRunEnd: () => set({ running: false, step: null }),
         onHistory: (history) => set({ history }),
         onParamsPatch: (nodeId, patch) => get().applyParamsPatch(nodeId, patch),
       });
@@ -270,7 +269,6 @@ export const useStudio = create<StudioState>((set, get) => {
       const runtimes: Record<string, NodeRuntime> = {};
       for (const [id, rt] of executor.runtimes_()) runtimes[id] = rt;
       set({ runtimes });
-      void executor.probeResources();
       persist();
       // Whatever an older build left in localStorage moves to the server once, then the key is cleared.
       void (async () => {
@@ -433,6 +431,18 @@ export const useStudio = create<StudioState>((set, get) => {
       refresh({ ...get().graph, nodes: get().graph.nodes.map((n) => (n.id === nodeId ? { ...n, bypassed: !node.bypassed } : n)) });
     },
 
+    togglePin(nodeId) {
+      const graph = get().graph;
+      const node = graph.nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+      if (node.pinned) { refresh(unpinNode(graph, nodeId)); get().executor?.invalidate(nodeId); return; }
+      // Only what the last run actually produced can be frozen; there is nothing to approve otherwise.
+      const outputs = get().runtimes[nodeId]?.outputs ?? {};
+      const next = pinNode(graph, nodeId, outputs, new Date().toISOString());
+      if (next === graph) return;
+      refresh(next);
+    },
+
     async run(opts = {}) {
       const ex = get().executor;
       if (!ex) return;
@@ -441,30 +451,10 @@ export const useStudio = create<StudioState>((set, get) => {
         return;
       }
       try {
-        stopBatch = false;
-        set({ running: true, batch: null });
-        // A batch is the same workflow queued once per line, one after another (EXECUTION_ENGINE §9).
-        // Sequential on purpose: the render already takes the whole machine, so two at once only
-        // makes both slower — the same reason Remotion tells you to render one video at a time.
-        const graphs = expandBatch(get().graph);
-        if (graphs.length === 1) {
-          await ex.run({ force: opts.force });
-        } else {
-          for (const [i, g] of graphs.entries()) {
-            if (stopBatch) break;
-            set({ batch: { index: i + 1, total: graphs.length } });
-            ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'info', message: `batch ${i + 1}/${graphs.length}` });
-            // One bad line does not abandon the rest, the way a failed prompt does not empty
-            // ComfyUI's queue. Only an unusable graph or a lost server throws, and that ends it.
-            const { ok } = await ex.run({ graph: g, force: opts.force });
-            if (!ok) ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'warn', message: `batch ${i + 1}/${graphs.length} did not finish; carrying on` });
-          }
-          // Leave the server holding the graph the canvas shows, not the last variant of the batch.
-          ex.setGraph(get().graph);
-          set({ running: false, batch: null, step: null });
-        }
+        set({ running: true });
+        await ex.run({ force: opts.force });
       } catch (e) {
-        set({ running: false, batch: null, step: null });
+        set({ running: false, step: null });
         if (e instanceof GraphInvalidError) {
           set({ issues: e.issues });
           ex.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: e.issues[0]?.code, message: e.issues.map((i) => `${i.nodeId ?? 'graph'}: ${i.code} ${i.message}`).join('; ') });
@@ -476,7 +466,6 @@ export const useStudio = create<StudioState>((set, get) => {
     },
 
     cancel() {
-      stopBatch = true;
       get().executor?.cancel();
     },
 
@@ -602,14 +591,34 @@ export function useRuntime(nodeId: string) {
  * hand; when that walk has to change — showing a run from the history, say — it changes here.
  */
 export function useOutputPayload<T = unknown>(nodeId: string, port: string): T | undefined {
-  return useStudio((s) => s.runtimes[nodeId]?.outputs[port]?.payload as T | undefined);
+  return useStudio((s) => (s.runtimes[nodeId]?.outputs[port]?.payload ?? pinnedOutput(s.graph, nodeId, port)) as T | undefined);
+}
+
+/**
+ * What a pin holds, for a node that has not run in this session.
+ *
+ * A pinned node's stored outputs are its outputs: it hands them back and never runs (§1.5). Reading
+ * only the runtime meant that opening a workflow whose set and plates were pinned showed two empty
+ * cards, with the drawings sitting right there in the file — and the only way to see them was to
+ * start a run, which is the one thing a pin exists to make unnecessary.
+ */
+function pinnedOutput(graph: Graph, nodeId: string, port: string): unknown {
+  return graph.nodes.find((n) => n.id === nodeId)?.pinned?.outputs[port];
 }
 
 /** The packet currently sitting on an input port, following the wire upstream. */
+/**
+ * Whether anything is wired into this port — true before the run that fills it, unlike
+ * `useInputPayload`. A node body asks so it can put away the settings the wire has taken over.
+ */
+export function useInputWired(nodeId: string, port: string): boolean {
+  return useStudio((s) => s.graph.edges.some((e) => e.target === nodeId && e.targetPort === port));
+}
+
 export function useInputPayload<T = unknown>(nodeId: string, port: string): T | undefined {
   return useStudio((s) => {
     const edge = s.graph.edges.find((e) => e.target === nodeId && e.targetPort === port);
     if (!edge) return undefined;
-    return s.runtimes[edge.source]?.outputs[edge.sourcePort]?.payload as T | undefined;
+    return (s.runtimes[edge.source]?.outputs[edge.sourcePort]?.payload ?? pinnedOutput(s.graph, edge.source, edge.sourcePort)) as T | undefined;
   });
 }

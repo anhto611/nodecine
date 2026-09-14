@@ -1,15 +1,15 @@
 import { mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { Executor } from '@/core/engine/executor';
-import type { RunRecord } from '@/core/engine/history';
-import type { VideoIR } from '@/core/types/ir';
-import type { EngineRef } from '@/core/types/payloads';
+import type { RunRecord } from '@/contracts/history';
+import type { VideoIR } from '@/contracts/types/ir';
+import type { EngineRef } from '@/contracts/types/payloads';
 import { GraphInvalidError, validateGraph, hasBlockingIssues, type Graph, type GraphIssue } from '@/core/engine/graph';
 import { LogBuffer, type LogEntry } from '@/core/engine/log';
 import type { NodeRuntime } from '@/core/engine/state';
 import type { NodeServices } from '@/core/engine/services';
 import { createServerServices } from './services.server';
-import { migrateIR } from '@/core/types/migrate-ir';
+import { migrateIR } from '@/contracts/types/migrate-ir';
 import { ensureServerRegistrations } from './register';
 import { NODE_FEATURES } from '@/nodes';
 
@@ -28,7 +28,7 @@ const hasNodeFeature = (type: string, feature: string): boolean => NODE_FEATURES
  * process, and a job the process died on comes back marked cancelled rather than forever running.
  */
 
-export type JobKind = 'run' | 'node' | 'probe';
+export type JobKind = 'run' | 'node';
 export type JobStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
 
 export interface Job {
@@ -310,13 +310,10 @@ export class JobHub {
             const { ok } = await slot.executor.run({ force: job.force });
             job.ok = ok;
             this.recordRun(job, slot);
-          } else if (job.kind === 'node') {
+          } else {
             const state = await slot.executor.runNode(job.nodeId!);
             job.ok = state === 'success';
             this.recordExport(job, slot);
-          } else {
-            await slot.executor.probeResources();
-            job.ok = true;
           }
           job.status = job.ok === false && this.wasCancelled(slot) ? 'cancelled' : 'done';
         } catch (e) {
@@ -343,10 +340,11 @@ export class JobHub {
     const asm = graph.nodes.find((n) => hasNodeFeature(n.type, 'history-ir'));
     const ir = asm ? (slot.executor.runtime(asm.id).outputs.ir?.payload as VideoIR | undefined) : undefined;
     if (!ir) return;
+    // The engine is the player node's own setting now (§1.4), so it is read off that node rather
+    // than followed back along a wire.
     const out = graph.nodes.find((n) => hasNodeFeature(n.type, 'history-preview') && slot.executor.runtime(n.id).state === 'success');
-    const engineEdge = out ? graph.edges.find((e) => e.target === out.id && e.targetPort === 'engine') : undefined;
-    const engine = engineEdge ? (slot.executor.runtime(engineEdge.source).outputs[engineEdge.sourcePort]?.payload as EngineRef | undefined) : undefined;
-    job.result = { ir, engineId: engine?.engineId, durationMs: Date.now() - (job.startedAt ?? job.createdAt), exports: [] };
+    const engineId = out ? String((out.params as { engineId?: string }).engineId ?? '') : '';
+    job.result = { ir, ...(engineId ? { engineId } : {}), durationMs: Date.now() - (job.startedAt ?? job.createdAt), exports: [] };
     this.lastRun.set(job.key, job.id);
     this.emit({ type: 'history', key: job.key, history: this.history(job.key) });
   }

@@ -1,0 +1,35 @@
+{
+  "id": "data-story",
+  "name": {
+    "en": "Data story",
+    "vi": "Câu chuyện số liệu"
+  },
+  "description": {
+    "en": "One figure per scene, held large and counted up.",
+    "vi": "Mỗi cảnh một con số, để thật lớn và đếm lên."
+  },
+  "script": {
+    "guidance": "Every scene is one figure and what it means. Put the figure in `number` and its unit or subject in `label`; the narration says what the figure tells us, never the digits alone. A scene that compares things puts each side in `entries` with its own number and label.",
+    "keys": [
+      "kicker",
+      "number",
+      "label",
+      "title",
+      "entries",
+      "source"
+    ],
+    "words": {
+      "min": 8,
+      "max": 16
+    }
+  },
+  "draw": {
+    "guidance": "The figure is the picture: set it at a size that leaves room for nothing else — a quarter of the frame's height or more — with its label small and quiet beneath it. A scene with entries becomes a row or column of bars, one per entry, each bar labelled and carrying its own number at the end. Keep the axis implicit: no grid, no ticks, no legend.",
+    "motion": [
+      "Every figure counts up from zero: tl.add(nodecine.count('.number', { duration: 1.1, ease: 'power2.out' }), 0.2) — the number is never simply revealed already written.",
+      "Bars grow from nothing along their own length, staggered a tenth of a second apart, easing out; the bar and the number it belongs to finish together.",
+      "The figure holds still and full for the rest of the scene once it has counted: a number the eye cannot rest on cannot be read.",
+      "The one figure the scene is about is the only thing in the accent colour; everything compared with it stays quiet."
+    ]
+  }
+}

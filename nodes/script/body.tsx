@@ -1,14 +1,15 @@
 'use client';
 import React from 'react';
-import type { SceneContent } from '@/core/types/payloads';
-import { Btn, useT, stopFlow } from '@/components/ui';
+import type { SceneContent, Stage, Transition } from '@/contracts/types/payloads';
+import { Btn, Kv, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useParams, type BodyProps } from '@/nodes/kit';
-import { useStudio } from '@/store/useStudio';
-import { Section } from '@/nodes/kit';
+import { useNode, useStudio } from '@/store/useStudio';
+import { ContentEditor } from '@/components/node-runtime/content-editor';
+import { listTransitions } from '@/contracts/visual/transitions';
 import { SPLIT_RULES, splitScript, type SplitRule } from '@/nodes/script/split';
 import { contentChips, moveScene, narrationLead } from '@/nodes/script/summary';
-type SceneRow = { role: string; weight: number; narration: string; content: SceneContent };
+type SceneRow = { role: string; weight: number; narration: string; content: SceneContent; stage?: Stage; transitionAfter?: Transition };
 
 /**
  * Body of the Static Script (USER_FLOWS §1.9): the scenes, one line each — number, role, the first
@@ -29,9 +30,7 @@ export const StaticScriptBody: React.FC<BodyProps> = ({ nodeId }) => {
   };
   return (
     <>
-      <PasteScript
-        onCut={(chunks) => set({ scenes: chunks.map((narration) => ({ role: scenes[0]?.role ?? 'scene', weight: 1, narration, content: {} })) })}
-      />
+      <PasteScript nodeId={nodeId} />
       <div className="nc-k" style={{ display: 'flex', justifyContent: 'space-between' }}><span>{t('node.scenes')}</span><span style={{ color: 'var(--tx-3)' }}>{scenes.length}</span></div>
       {scenes.map((s, i) => (
         <div key={i} className={`nc-scene-line ${stopFlow}`} title={t('script.openHint')} onClick={() => openScene({ nodeId, index: i })}>
@@ -62,24 +61,12 @@ export const StaticScriptBody: React.FC<BodyProps> = ({ nodeId }) => {
  * app should be doing. The cut is mechanical — see `split.ts` — so nothing said is reworded, and the
  * count on the button is the check: it is read before the list is replaced, not after.
  */
-const PasteScript: React.FC<{ onCut: (chunks: string[]) => void }> = ({ onCut }) => {
+const PasteScript: React.FC<{ nodeId: string }> = ({ nodeId }) => {
   const t = useT();
-  const [open, setOpen] = React.useState(false);
-  const [text, setText] = React.useState('');
-  const [rule, setRule] = React.useState<SplitRule>('blank-line');
-  const chunks = React.useMemo(() => splitScript(text, rule), [text, rule]);
+  const setOverlay = useStudio((s) => s.setOverlay);
   return (
-    <Section title={t('script.paste')} open={open} onToggle={() => setOpen(!open)}>
-      <div className="nc-hint">{t('script.pasteHint')}</div>
-      <textarea className={`nc-textarea ${stopFlow}`} rows={5} placeholder={t('script.pastePlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
-      <span style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-        <select className={`nc-select ${stopFlow}`} value={rule} onChange={(e) => setRule(e.target.value as SplitRule)}>
-          {SPLIT_RULES.map((r) => <option key={r} value={r}>{t(`script.rule.${r}`)}</option>)}
-        </select>
-        <Btn small className={stopFlow} disabled={chunks.length === 0} onClick={() => { onCut(chunks); setText(''); setOpen(false); }}>
-          {t('script.cut')} · {chunks.length}
-        </Btn>
-      </span>
-    </Section>
+    <Btn small className={stopFlow} onClick={() => setOverlay({ nodeId, data: { paste: true } })} style={{ alignSelf: 'flex-start' }}>
+      {t('script.paste')}
+    </Btn>
   );
 };

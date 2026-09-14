@@ -1,14 +1,14 @@
 'use client';
 import { GraphInvalidError, type Graph, type GraphIssue } from '@/core/engine/graph';
 import type { ExecutorHooks } from '@/core/engine/executor';
-import type { RunRecord } from '@/core/engine/history';
+import type { RunRecord } from '@/contracts/history';
 import { LogBuffer, type LogEntry } from '@/core/engine/log';
 import { initialRuntime, type NodeRuntime } from '@/core/engine/state';
 import type { Job } from '@/server/jobs';
 
 /**
  * The browser's view of an executor that runs on the server (ARCHITECTURE §1.2). It offers the
- * store the surface the in-browser executor had — runtimes, logs, run, runNode, probe, invalidate,
+ * store the surface the in-browser executor had — runtimes, logs, run, runNode, invalidate,
  * bypass, cancel — and behind it submits jobs, listens to the event stream and mirrors what comes
  * back. One instance follows the active tab: switching tabs switches the key it speaks for.
  */
@@ -157,7 +157,7 @@ export class RemoteExecutor {
     void this.send({ action: 'cancel' }, false);
   }
 
-  /** `graph` queues that graph instead of the one held here: one run of a batch, without editing the canvas. */
+  /** `graph` queues that graph instead of the one held here, without editing the canvas. */
   async run(opts: { force?: boolean; graph?: Graph } = {}): Promise<{ ok: boolean }> {
     const job = await this.submit('run', { force: opts.force }, opts.graph);
     return { ok: job.ok === true };
@@ -168,9 +168,6 @@ export class RemoteExecutor {
     return this.runtime(nodeId).state;
   }
 
-  async probeResources(): Promise<void> {
-    await this.submit('probe', {});
-  }
 
   dispose(): void {
     this.source?.close();
@@ -179,7 +176,7 @@ export class RemoteExecutor {
 
   // ---------- wire ----------
 
-  private async submit(kind: 'run' | 'node' | 'probe', extra: { nodeId?: string; force?: boolean }, graph?: Graph): Promise<Job> {
+  private async submit(kind: 'run' | 'node', extra: { nodeId?: string; force?: boolean }, graph?: Graph): Promise<Job> {
     if (this.pushGraph) { clearTimeout(this.pushGraph); this.pushGraph = null; }
     const requestId = newRequestId();
     const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', { key: this.key, kind, graph: graph ?? this.graph, name: this.name, ...extra }, requestId));

@@ -1,11 +1,11 @@
-import type { AudioTrackSpec, CaptionTrack, LayerSpec, ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
-import { readFactPath } from '@/core/types/payloads';
-import { videoVars } from '@/core/visual/vars';
-import { IR_VERSION, secondsToFrames, type AudioTrack, type Beat, type Clip, type CodeClip, type IRCaptions, type Track, type VideoIR } from '@/core/types/ir';
-import { SCENE_FORMAT } from '@/core/types/payloads';
+import type { AudioTrackSpec, CaptionTrack, LayerSpec, ScenePlan, FactSheet, Voiceover } from '@/contracts/types/payloads';
+import { readFactPath } from '@/contracts/types/payloads';
+import { videoVars } from '@/contracts/visual/vars';
+import { IR_VERSION, secondsToFrames, type AudioTrack, type Beat, type Clip, type CodeClip, type IRCaptions, type Track, type VideoIR } from '@/contracts/types/ir';
+import { SCENE_FORMAT } from '@/contracts/types/payloads';
 import { allocateFrames, computeTotalFrames, framesFromSegments } from './allocate';
-import { assertValidIR } from '@/core/types/validate-ir';
-import { NodeError } from '@/core/errors';
+import { assertValidIR } from '@/contracts/types/validate-ir';
+import { NodeError } from '@/contracts/errors';
 import { AssemblerErrorCode } from './errors';
 
 /** Timeline Assembler node parameters (CORE_CONTRACTS §5.4). */
@@ -13,6 +13,8 @@ export interface AssemblerParams {
   fps: number;
   minTotalFrames: number;
   title: string;
+  /** Move each cut to the nearest beat of a sound that carries them (Audio Analysis). */
+  snapToBeat: boolean;
   /** The film's length when nothing spoken sets it; ignored when a voice-over is wired in. */
   durationSeconds?: number;
 }
@@ -21,7 +23,46 @@ export const DEFAULT_ASSEMBLER_PARAMS: AssemblerParams = {
   fps: 30,
   minTotalFrames: 270,
   title: 'Untitled',
+  snapToBeat: false,
 };
+
+/**
+ * The scene lengths with every cut moved to the nearest beat (docs/IR_V3.md §5.4). The first cut and
+ * the film's end do not move — they are not cuts — and no scene may collapse: a beat nearer than a
+ * frame to its neighbour is passed over. The total is preserved by construction, so invariant 4
+ * holds whatever the music does.
+ */
+export function snapToBeats(frames: number[], beatSeconds: number[], fps: number, maxDriftSeconds = 0.5): number[] {
+  if (frames.length < 2 || beatSeconds.length === 0) return frames;
+  const beats = beatSeconds.map((s) => Math.round(s * fps)).sort((a, b) => a - b);
+  const drift = Math.round(maxDriftSeconds * fps);
+  const total = frames.reduce((n, f) => n + f, 0);
+  // The cuts, as absolute frames: one per boundary between two scenes.
+  const cuts: number[] = [];
+  let at = 0;
+  for (let i = 0; i < frames.length - 1; i++) { at += frames[i]!; cuts.push(at); }
+  const moved = cuts.map((cut, i) => {
+    let best = cut;
+    let bestGap = drift + 1;
+    for (const b of beats) {
+      const gap = Math.abs(b - cut);
+      if (gap < bestGap) { bestGap = gap; best = b; }
+    }
+    // Keep the order: a cut never lands on or before the one before it, nor at or past the film's end.
+    const floor = (i === 0 ? 0 : cuts[i - 1]!) + 1;
+    return Math.max(floor, Math.min(total - (frames.length - 1 - i), best));
+  });
+  // Each moved cut is applied in turn, so a later one is measured against where the earlier one landed.
+  const out: number[] = [];
+  let prev = 0;
+  for (let i = 0; i < moved.length; i++) {
+    const cut = Math.max(prev + 1, moved[i]!);
+    out.push(cut - prev);
+    prev = cut;
+  }
+  out.push(total - prev);
+  return out.every((f) => f > 0) ? out : frames;
+}
 
 export interface BuildIRInput {
   plan: ScenePlan;
@@ -133,8 +174,8 @@ export function layerTrack(layer: LayerSpec, n: number, total: number, fps: numb
   }
   const durationInFrames = Math.min(total - startFrame, layer.durationSeconds ? Math.max(1, secondsToFrames(layer.durationSeconds, fps)) : total);
   const clip: Clip = layer.kind === 'media'
-    ? { id: `${id}-clip`, kind: 'media', startFrame, durationInFrames, url: layer.url, offsetSeconds: layer.offsetSeconds, fit: layer.fit, loop: layer.loop, gain: layer.gain }
-    : { id: `${id}-clip`, kind: 'code', startFrame, durationInFrames, format: SCENE_FORMAT, source: layer.source };
+    ? { id: `${id}-clip`, kind: 'media', startFrame, durationInFrames, url: layer.url, offsetSeconds: layer.offsetSeconds, fit: layer.fit, loop: layer.loop, gain: layer.gain, ...(layer.sourceSeconds ? { sourceSeconds: layer.sourceSeconds } : {}) }
+    : { id: `${id}-clip`, kind: 'code', startFrame, durationInFrames, format: layer.format ?? SCENE_FORMAT, source: layer.source, ...(layer.loop === undefined ? {} : { loop: layer.loop }) };
   return { id, clips: [clip] };
 }
 
@@ -148,7 +189,10 @@ export function buildIR(input: BuildIRInput): VideoIR {
   const { total } = clockOf(voiceover, p, sounds);
   // The cut follows the speech when the voice-over came scene by scene; weights are for a voice-over that did not, and for silence.
   const bySpeech = voiceover?.segments && voiceover.segments.length === plan.scenes.length;
-  const frames = bySpeech ? framesFromSegments(total, voiceover!.segments!, p.fps) : allocateFrames(total, plan.scenes.map((s) => s.weight));
+  const allocated = bySpeech ? framesFromSegments(total, voiceover!.segments!, p.fps) : allocateFrames(total, plan.scenes.map((s) => s.weight));
+  // The music decides where the cut lands, when the graph asks for it and a sound carries its beats.
+  const beatSeconds = p.snapToBeat ? (sounds.find((a) => a.beatSeconds?.length)?.beatSeconds ?? []) : [];
+  const frames = beatSeconds.length ? snapToBeats(allocated, beatSeconds, p.fps) : allocated;
 
   // One track of code clips, one beat per clip: the plan's scenes, in order, edge to edge. The
   // layers stack around it: those placed under, in wire order, bottom first; then the scenes; then

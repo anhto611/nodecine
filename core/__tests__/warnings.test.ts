@@ -4,8 +4,8 @@ import { Executor } from '../engine/executor';
 import type { Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
 import { registerNodes } from '@/nodes';
-import { makeFakeServices } from './fakes';
-import { FACT_SOURCE, STYLE } from './scene-fixtures';
+import { makeFakeServices } from '@/contracts/__tests__/fakes';
+import { FACT_SOURCE, STYLE } from '@/contracts/__tests__/scene-fixtures';
 
 /**
  * A stand-in illustrator: emits a plan that binds facts, which the core's own
@@ -40,14 +40,12 @@ function graph(): Graph {
   return {
     nodes: [
       { id: 'dir', type: 'test/director', params: { bindFacts: true }, bypassed: false, position: { x: 0, y: 0 } },
-      { id: 'tts-provider', type: 'core/tts-provider', params: { providerId: 'system-tts', settings: { rate: 1 } }, bypassed: false, position: { x: 0, y: 0 } },
-      { id: 'tts', type: 'core/tts-engine', params: { speed: 1 }, bypassed: false, position: { x: 0, y: 0 } },
+      { id: 'tts', type: 'core/tts-engine', params: { ttsProvider: 'system-tts', ttsSettings: { rate: 1 }, speed: 1 }, bypassed: false, position: { x: 0, y: 0 } },
       { id: 'asm', type: 'core/timeline-assembler', params: { fps: 30, minTotalFrames: 270, title: 'T' }, bypassed: false, position: { x: 0, y: 0 } },
     ],
     edges: [
       { id: 'e1', source: 'dir', sourcePort: 'plan', target: 'asm', targetPort: 'plan' },
       { id: 'e2', source: 'dir', sourcePort: 'script', target: 'tts', targetPort: 'script' },
-      { id: 'e3', source: 'tts-provider', sourcePort: 'tts', target: 'tts', targetPort: 'tts' },
       { id: 'e4', source: 'tts', sourcePort: 'voiceover', target: 'asm', targetPort: 'voiceover' },
     ],
   };

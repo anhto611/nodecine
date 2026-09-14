@@ -1,10 +1,14 @@
 import { z } from 'zod';
-import { WRITTEN_KEYS, type LLMRef, type SceneContent, type SceneScript } from '@/core/types/payloads';
+import { resolveLLM } from '@/contracts/resources';
+import { WRITTEN_KEYS, type LLMRef, type SceneContent, type SceneScript } from '@/contracts/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import { runScreenwriter } from '@/core/ai/structured-completion';
+import { runScreenwriter } from '@/contracts/ai/structured-completion';
 import { DENSITIES, buildBreakdownPrompt, hasWritten, outputSchemaFor, type WrittenScene } from './prompt';
 
 const Params = z.object({
+  /** The language model this node draws with (§1.3): a provider id and its settings. */
+  llmProvider: z.string().max(60).default(''),
+  llmSettings: z.record(z.string(), z.unknown()).default({}),
   /** A scene the person already wrote for keeps its words: their choice outranks the model's. */
   overwrite: z.boolean().default(false),
   /** How much goes on screen per scene. `auto` lets each narration decide. */
@@ -32,14 +36,13 @@ export const sceneBreakdown: NodeDefinition<typeof Params> = {
   kind: 'process',
   inputs: [
     { name: 'scenes', type: 'SceneScript' },
-    { name: 'llm', type: 'LLMRef', requires: ['installed', 'authenticated'] },
   ],
   outputs: [{ name: 'scenes', type: 'SceneScript' }],
   paramsSchema: Params,
-  defaultParams: { overwrite: false, density: 'auto' },
+  defaultParams: { llmProvider: '', llmSettings: {}, overwrite: false, density: 'auto' },
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const script = inputs.scenes!.payload as SceneScript;
-    const ref = inputs.llm!.payload as LLMRef;
+    const ref = await resolveLLM(services, params);
 
     const wanted = script.scenes.map((s, i) => (params.overwrite || !hasWritten(s.content) ? i : -1)).filter((i) => i >= 0);
     if (wanted.length === 0) {

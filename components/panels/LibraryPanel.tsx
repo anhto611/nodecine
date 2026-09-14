@@ -2,7 +2,7 @@
 import React from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { listNodeTypes, type AnyNodeDefinition } from '@/core/nodes/definition';
-import { PORT_LABEL_KEYS } from '@/core/types/ports';
+import { portLabelKey } from '@/core/types/ports';
 import { GROUP_ORDER, NODE_META, type LibraryGroup } from '@/lib/node-meta';
 import { useStudio } from '@/store/useStudio';
 import { Icon } from '../icons';
@@ -52,7 +52,7 @@ const LibraryItem: React.FC<{ def: AnyNodeDefinition; onAdd: (type: string, pos:
   const meta = NODE_META[def.type];
   const IconC = meta ? Icon[meta.icon] : Icon.chip;
   const rf = safeReactFlow();
-  const ports = `${def.inputs.map((p) => t(PORT_LABEL_KEYS[p.type])).join(' · ') || '—'} → ${def.outputs.map((p) => t(PORT_LABEL_KEYS[p.type])).join(' · ') || '—'}`;
+  const ports = `${def.inputs.map((p) => t(portLabelKey(p.type))).join(' · ') || '—'} → ${def.outputs.map((p) => t(portLabelKey(p.type))).join(' · ') || '—'}`;
   const drop = () => {
     const center = rf ? rf.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) : { x: 200, y: 200 };
     onAdd(def.type, center);

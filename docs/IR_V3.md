@@ -261,7 +261,8 @@ Sáu bước của mục 10 đã xong. Các việc ngoài IR còn lại làm n�
 - `duck` được engine vẽ: `speechWindowsOf` trong lõi, keyframe `volume` ở HyperFrames, hàm `volume` theo khung ở Remotion.
 - Node **Phân Tích Âm Thanh** (`core/audio-analysis`) viết `analysisUrl`; `core/audio/analysis.ts` là FFT thuần; `nodecine.audio(id)` ở cả hai engine.
 - Remotion vẽ `html-gsap`: bộ máy cảnh chuyển vào `core/visual/scene-markup.ts` (`SCENE_MOUNT`), catalog gsap vào `core/visual/gsap-transitions.ts`; `nodes/remotion-engine/scene-runtime.ts` gắn cảnh và `seek` theo khung, `transitions.ts` vẽ mười ba tên bằng style theo tiến độ. Chưa kiểm bằng một lần kết xuất Remotion thật trong phiên này; trình phát và bộ dựng được test trong jsdom.
-- Còn mở: Remotion chưa lặp đoạn media video (IR không mang độ dài tệp); Họa Sĩ chỉ vẽ `html-gsap`.
+- **Các tầng còn lại, 2026-09-11.** Tầng 1 và 9: định dạng `html-three` và `lottie` trong `SCENE_FORMATS`, `nodecine.frame(fn)` cho cảnh tự vẽ từng khung, three đóng gói bằng `scripts/vendor-three.mjs`, lottie-web vendor thẳng; **kiểm bằng render thật** (`formats.manual.test.ts`: khung sáng và đổi giữa hai mốc). Tầng 4 trọn vẹn: `detectBeats` trong lõi, `beatSeconds` trên track, tham số `snapToBeat` của Đóng Gói dời mốc cắt tới nhịp gần nhất. Lỗ nền cảnh đã vá: `hasTracksUnderBeats` + `TRANSPARENT_GROUND_CSS` ở cả hai engine, Họa Sĩ có tham số `ground`. Remotion lặp được clip: node Lớp đo tệp (`layer/measure`), `sourceSeconds` vào IR, `Loop` bọc clip — **kiểm bằng render thật** (clip 2 giây dưới phim 3 giây, khung 0,5 s và 2,5 s trùng nhau).
+- Còn mở: tách phông xanh (runtime HyperFrames chỉ có `chromaBleed` và `chromaticAberration`, không có chroma key; làm được thì phải tự vẽ canvas từng khung và sẽ giẫm lên đường tiêm khung hình của producer); Họa Sĩ chỉ vẽ `html-gsap`, hai định dạng kia phải viết tay qua node Lớp; node nguồn CSV/Sheet và dữ liệu thị trường vẫn nằm ở PRD mục 8.
 
 ## 11. Cố ý không làm
 

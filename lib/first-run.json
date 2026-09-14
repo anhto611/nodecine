@@ -6,20 +6,6 @@
   "graph": {
     "nodes": [
       {
-        "id": "illustrator",
-        "type": "core/illustrator",
-        "params": {
-          "brief": "Thẻ chữ đơn giản trên nền tối: tiêu đề lớn, kicker nhỏ phía trên, chữ mono.",
-          "frame": "9:16",
-          "character": ""
-        },
-        "bypassed": false,
-        "position": {
-          "x": 1030,
-          "y": 671
-        }
-      },
-      {
         "id": "script",
         "type": "core/static-script",
         "params": {
@@ -58,28 +44,18 @@
         "position": {
           "x": 40,
           "y": 412
-        }
-      },
-      {
-        "id": "tts-provider",
-        "type": "core/tts-provider",
-        "params": {
-          "providerId": "system-tts",
-          "settings": {
-            "rate": 1
-          }
         },
-        "bypassed": false,
-        "position": {
-          "x": 370,
-          "y": 303
-        }
+        "version": 4
       },
       {
         "id": "tts",
         "type": "core/tts-engine",
         "params": {
-          "speed": 1
+          "speed": 1,
+          "ttsProvider": "system-tts",
+          "ttsSettings": {
+            "rate": 1
+          }
         },
         "bypassed": false,
         "position": {
@@ -91,27 +67,15 @@
         "id": "transcribe",
         "type": "core/transcribe",
         "params": {
-          "model": "small"
+          "model": "small",
+          "maxChars": 26
         },
         "bypassed": false,
         "position": {
           "x": 700,
           "y": 438
-        }
-      },
-      {
-        "id": "captions",
-        "type": "core/captions",
-        "params": {
-          "style": "karaoke",
-          "position": "bottom",
-          "maxChars": 26
         },
-        "bypassed": false,
-        "position": {
-          "x": 1030,
-          "y": 447
-        }
+        "version": 2
       },
       {
         "id": "assembler",
@@ -119,28 +83,23 @@
         "params": {
           "fps": 30,
           "minTotalFrames": 270,
-          "title": "Static script"
+          "title": "Static script",
+          "snapToBeat": false
         },
         "bypassed": false,
         "position": {
           "x": 1360,
           "y": 405
-        }
-      },
-      {
-        "id": "engine",
-        "type": "core/hyperframes-engine",
-        "params": {},
-        "bypassed": false,
-        "position": {
-          "x": 1690,
-          "y": 1288
-        }
+        },
+        "version": 3
       },
       {
         "id": "output",
         "type": "core/video-output",
-        "params": {},
+        "params": {
+          "engineId": "hyperframes",
+          "engineSettings": {}
+        },
         "bypassed": false,
         "position": {
           "x": 1690,
@@ -153,7 +112,9 @@
         "params": {
           "codec": "h264",
           "quality": "high",
-          "fileName": "static-script.mp4"
+          "fileName": "static-script.mp4",
+          "engineId": "hyperframes",
+          "engineSettings": {}
         },
         "bypassed": true,
         "position": {
@@ -162,27 +123,54 @@
         }
       },
       {
-        "id": "llm-provider",
-        "type": "core/llm-provider",
+        "id": "illustrator-set",
+        "type": "core/set",
         "params": {
-          "providerId": "claude-code",
-          "settings": {}
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "brief": "Thẻ chữ đơn giản trên nền tối: tiêu đề lớn, kicker nhỏ phía trên, chữ mono.",
+          "frame": "9:16",
+          "character": "",
+          "ground": "solid",
+          "form": "",
+          "language": "auto",
+          "members": []
         },
         "bypassed": false,
         "position": {
           "x": 1030,
-          "y": 1091
+          "y": 931
+        }
+      },
+      {
+        "id": "illustrator-plates",
+        "type": "core/plates",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "redraw": false
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1030,
+          "y": 671
+        }
+      },
+      {
+        "id": "illustrator",
+        "type": "core/compose",
+        "params": {
+          "transition": "fade",
+          "transitionSeconds": 0.4
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1370,
+          "y": 671
         }
       }
     ],
     "edges": [
-      {
-        "id": "scenes",
-        "source": "script",
-        "sourcePort": "scenes",
-        "target": "illustrator",
-        "targetPort": "scenes"
-      },
       {
         "id": "c1",
         "source": "tts",
@@ -198,25 +186,11 @@
         "targetPort": "script"
       },
       {
-        "id": "c3",
-        "source": "transcribe",
-        "sourcePort": "voiceover",
-        "target": "captions",
-        "targetPort": "voiceover"
-      },
-      {
         "id": "c4",
-        "source": "captions",
+        "source": "transcribe",
         "sourcePort": "captions",
         "target": "assembler",
         "targetPort": "captions"
-      },
-      {
-        "id": "plan",
-        "source": "illustrator",
-        "sourcePort": "plan",
-        "target": "assembler",
-        "targetPort": "plan"
       },
       {
         "id": "e2",
@@ -224,13 +198,6 @@
         "sourcePort": "script",
         "target": "tts",
         "targetPort": "script"
-      },
-      {
-        "id": "e3",
-        "source": "tts-provider",
-        "sourcePort": "tts",
-        "target": "tts",
-        "targetPort": "tts"
       },
       {
         "id": "e4",
@@ -254,25 +221,53 @@
         "targetPort": "ir"
       },
       {
-        "id": "e7",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "output",
-        "targetPort": "engine"
+        "id": "script-scenes-illustrator-plates-scenes",
+        "source": "script",
+        "sourcePort": "scenes",
+        "target": "illustrator-plates",
+        "targetPort": "scenes"
       },
       {
-        "id": "e8",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "export",
-        "targetPort": "engine"
-      },
-      {
-        "id": "e-llm-illustrator",
-        "source": "llm-provider",
-        "sourcePort": "llm",
+        "id": "script-scenes-illustrator-scenes",
+        "source": "script",
+        "sourcePort": "scenes",
         "target": "illustrator",
-        "targetPort": "llm"
+        "targetPort": "scenes"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-plates-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator-plates",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-layers-illustrator-plates-layers",
+        "source": "illustrator-set",
+        "sourcePort": "layers",
+        "target": "illustrator-plates",
+        "targetPort": "layers"
+      },
+      {
+        "id": "illustrator-plates-plates-illustrator-plates",
+        "source": "illustrator-plates",
+        "sourcePort": "plates",
+        "target": "illustrator",
+        "targetPort": "plates"
+      },
+      {
+        "id": "illustrator-plan-assembler-plan",
+        "source": "illustrator",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
       }
     ]
   }

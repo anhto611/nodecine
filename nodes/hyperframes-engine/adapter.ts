@@ -1,7 +1,7 @@
-import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult, ScenePreviewOptions } from '@/core/adapters/types';
-import type { VideoIR } from '@/core/types/ir';
-import type { Capability } from '@/core/types/payloads';
-import { assertValidIR } from '@/core/types/validate-ir';
+import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult, ScenePreviewOptions } from '@/contracts/adapters/types';
+import type { VideoIR } from '@/contracts/types/ir';
+import type { Capability } from '@/contracts/types/payloads';
+import { assertValidIR } from '@/contracts/types/validate-ir';
 import { HYPERFRAMES_ADAPTER_VERSION, HYPERFRAMES_ENGINE_ID } from './constants';
 
 export type MountPlayer = (element: HTMLElement, ir: VideoIR) => PlayerHandle;

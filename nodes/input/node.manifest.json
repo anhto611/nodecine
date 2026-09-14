@@ -1,1 +1,1 @@
-{"id": "core/input-trigger", "definition": "inputTrigger", "body": "InputTriggerBody", "icon": "bolt", "group": "source", "translations": "inputTriggerTranslations", "features": ["batch-source"]}
+{"id": "core/input-trigger", "definition": "inputTrigger", "body": "InputTriggerBody", "icon": "bolt", "group": "source", "translations": "inputTriggerTranslations"}

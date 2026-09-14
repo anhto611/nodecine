@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { AudioTrackSpec, Voiceover } from '@/core/types/payloads';
+import type { AudioTrackSpec, Voiceover } from '@/contracts/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import type { MixResult } from './types';
 

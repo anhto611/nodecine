@@ -25,16 +25,16 @@ describe('submitting the same request twice', () => {
 
   it('queues one job and hands the same one back', () => {
     const h = hub();
-    const first = h.submit({ key: 'idem-test', kind: 'probe', graph: graph(), requestId: 'req-abc' });
-    const second = h.submit({ key: 'idem-test', kind: 'probe', graph: graph(), requestId: 'req-abc' });
+    const first = h.submit({ key: 'idem-test', kind: 'run', graph: graph(), requestId: 'req-abc' });
+    const second = h.submit({ key: 'idem-test', kind: 'run', graph: graph(), requestId: 'req-abc' });
     expect(second.id).toBe(first.id);
     expect(h.list().filter((j) => j.key === 'idem-test')).toHaveLength(1);
   });
 
   it('still queues two jobs for two different submissions', () => {
     const h = hub();
-    const a = h.submit({ key: 'idem-test-2', kind: 'probe', graph: graph(), requestId: 'req-1' });
-    const b = h.submit({ key: 'idem-test-2', kind: 'probe', graph: graph(), requestId: 'req-2' });
+    const a = h.submit({ key: 'idem-test-2', kind: 'run', graph: graph(), requestId: 'req-1' });
+    const b = h.submit({ key: 'idem-test-2', kind: 'run', graph: graph(), requestId: 'req-2' });
     expect(b.id).not.toBe(a.id);
   });
 });

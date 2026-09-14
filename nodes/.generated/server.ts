@@ -3,6 +3,7 @@ import type { NodeService } from '@/core/engine/services';
 import { audioAnalysisServices } from '../audio-analysis/server';
 import { audioInputServices } from '../audio-input/server';
 import { audioMixServices } from '../audio-mix/server';
+import { layerServices } from '../layer/server';
 import { stockMediaServices } from '../stock/server';
 import { transcribeServices } from '../transcribe/server';
 import { webFetcherServices } from '../web/server';
@@ -13,6 +14,7 @@ export const NODE_SERVICE_EXTENSIONS: Record<string, NodeService>[] = [
   audioAnalysisServices,
   audioInputServices,
   audioMixServices,
+  layerServices,
   stockMediaServices,
   transcribeServices,
   webFetcherServices,

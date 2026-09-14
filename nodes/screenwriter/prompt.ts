@@ -1,6 +1,6 @@
-import { languageName } from '@/core/text/languages';
-import type { FactSheet } from '@/core/types/payloads';
-import { CONTENT_GUIDE } from '@/core/content-guide';
+import { languageName } from '@/contracts/text/languages';
+import type { FactSheet } from '@/contracts/types/payloads';
+import { CONTENT_GUIDE } from '@/contracts/content-guide';
 import { wordBudget, type ExpandedBeat } from '@/nodes/screenwriter/beats';
 
 /**
@@ -38,7 +38,24 @@ export interface PromptInput {
   scenes: ExpandedBeat[];
   language: string;
   strict: boolean;
+  /** What kind of film this is (§6): how it should be written, which keys it is made of, how long a scene speaks. */
+  form?: { guidance: string; keys?: readonly string[]; words?: { min: number; max: number } };
+  /** The length the whole narration should take, when somebody asked for one. */
+  targetSeconds?: number;
+  /**
+   * The layouts this film can be drawn in, when a plate catalogue reached this node (docs §5.23).
+   *
+   * Cutdown's rule, worth copying whole: the prompt prints only the layouts the running film really
+   * has. What the model sees is what it writes, so offering a shape nobody drew is inviting a scene
+   * nothing can draw — and a scene like that stops the film at the scene builder, after the
+   * expensive half of the run has already been paid for.
+   */
+  shapes?: { keys: readonly string[]; budget?: Record<string, number> }[];
 }
+
+/** One layout as the model reads it: the keys it must write, and how long each may be. */
+const shapeLine = (shape: { keys: readonly string[]; budget?: Record<string, number> }, i: number): string =>
+  `  ${String.fromCharCode(65 + i)}. ${shape.keys.map((k) => `${k}${shape.budget?.[k] ? ` (≤${shape.budget[k]} chars)` : ''}`).join(', ')}`;
 
 export function buildScreenwriterPrompt(p: PromptInput): string {
   const lang = languageName(p.language);
@@ -46,9 +63,12 @@ export function buildScreenwriterPrompt(p: PromptInput): string {
   const facts = factsForPrompt(p.facts, p.excludeFacts);
   const boundKeys = [...new Set(p.scenes.flatMap((s) => Object.keys(s.factBindings)))];
 
+  // The form's shape of scene wins; then a length asked for, shared out by weight; then the old way.
+  const weightSum = p.scenes.reduce((n, s) => n + s.weight, 0);
+  const budget = { ...(p.form?.words ? { words: p.form.words } : {}), ...(p.targetSeconds ? { totalSeconds: p.targetSeconds, weightSum } : {}) };
   const sceneLines = p.scenes.flatMap((s, i) => {
     const bound = Object.keys(s.factBindings);
-    const words = wordBudget(s.weight);
+    const words = wordBudget(s.weight, budget);
     const head = `  ${i + 1}. ${s.role}${s.brief.trim() ? ` — ${s.brief.trim()}` : ''} (say ${words.min}–${words.max} words${bound.length ? `; do not write: ${bound.join(', ')}` : ''})`;
     // A scene taken from a list is about one thing: the model needs that thing to narrate it, even
     // though the words on screen come from the same data without passing through the model.
@@ -71,9 +91,25 @@ export function buildScreenwriterPrompt(p: PromptInput): string {
     `"""`,
     ...(facts.length ? [``, `Facts about the subject — use them, do not change them:`, ...facts] : []),
     ``,
+    ...(p.form ? [`This film's form — how it has to be written:`, p.form.guidance.trim(), ``] : []),
+    ...(p.targetSeconds ? [`The whole film should take about ${p.targetSeconds} seconds to read aloud, which is what the word counts below add up to. Stay inside them: they are the film's length.`, ``] : []),
     `Each scene is a JSON object. "narration" is what the voice says over that scene — spoken language, one thought, the word count given per scene; it must not repeat the on-screen text word for word. The other keys are what is on screen; write what the scene needs and leave the rest out:`,
-    ...Object.entries(CONTENT_GUIDE).map(([k, v]) => `- ${k}: ${v}`),
+    ...Object.entries(CONTENT_GUIDE)
+      // A form is made of some of the vocabulary, not all of it: offering the rest invites a scene
+      // of paragraphs into a film that has nowhere to put one. A catalogue narrows it further, to
+      // the keys some layout in it actually draws.
+      .filter(([k]) => !p.form?.keys?.length || p.form.keys.includes(k))
+      .filter(([k]) => !p.shapes?.length || p.shapes.some((s) => s.keys.includes(k)))
+      .map(([k, v]) => `- ${k}: ${v}`),
     ``,
+    ...(p.shapes?.length
+      ? [
+          `This film is drawn from a fixed set of layouts. Every scene must use EXACTLY ONE of them: write every key that layout lists and no other key at all. Choose the layout that fits what the scene has to say — a figure belongs in a layout with a number, three parallel points in one with points.`,
+          ...p.shapes.map(shapeLine),
+          `A scene whose keys match none of these cannot be drawn and the film stops there.`,
+          ``,
+        ]
+      : []),
     `Scenes, in order:`,
     ...sceneLines,
     ``,

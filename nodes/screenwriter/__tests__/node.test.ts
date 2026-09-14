@@ -5,8 +5,8 @@ import type { Graph } from '@/core/engine/graph';
 import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition } from '@/core/nodes/definition';
 import { SCREENWRITER } from '@/nodes/screenwriter/node';
-import { makeFakeServices } from '@/core/__tests__/fakes';
-import type { SceneScript } from '@/core/types/payloads';
+import { makeFakeServices } from '@/contracts/__tests__/fakes';
+import type { SceneScript } from '@/contracts/types/payloads';
 
 /**
  * The GitHub showcase's writing step, rebuilt from parts a user can reach: a fact source and the
@@ -27,13 +27,11 @@ const factSource: AnyNodeDefinition = {
   run: async () => ({ facts }),
 } as unknown as AnyNodeDefinition;
 
-const writer = (params: Record<string, unknown>) => ({ id: 'writer', type: SCREENWRITER, params, bypassed: false, position: { x: 0, y: 0 } });
-const llm = { id: 'llm', type: 'core/llm-provider', params: { providerId: 'claude-code', settings: {} }, bypassed: false, position: { x: 0, y: 0 } };
+const writer = (params: Record<string, unknown>) => ({ id: 'writer', type: SCREENWRITER, params: { llmProvider: 'claude-code', ...params }, bypassed: false, position: { x: 0, y: 0 } });
 const factsNode = { id: 'facts', type: 'test/facts', params: {}, bypassed: false, position: { x: 0, y: 0 } };
 const graph = (params: Record<string, unknown>, withFacts: boolean): Graph => ({
-  nodes: [...(withFacts ? [factsNode] : []), llm, writer(params)],
+  nodes: [...(withFacts ? [factsNode] : []), writer(params)],
   edges: [
-    { id: 'e1', source: 'llm', sourcePort: 'llm', target: 'writer', targetPort: 'llm' },
     ...(withFacts ? [{ id: 'e2', source: 'facts', sourcePort: 'facts', target: 'writer', targetPort: 'facts' }] : []),
   ],
 });

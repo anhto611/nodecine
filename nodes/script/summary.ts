@@ -1,4 +1,4 @@
-import { CONTENT_KEYS, type ContentKey, type SceneContent } from '@/core/types/payloads';
+import { CONTENT_KEYS, type ContentKey, type SceneContent } from '@/contracts/types/payloads';
 
 /**
  * What one scene looks like folded to a line (USER_FLOWS §1.9): the first words the voice says,

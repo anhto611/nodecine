@@ -5,8 +5,8 @@ import type { Graph } from '@/core/engine/graph';
 import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition } from '@/core/nodes/definition';
 import { SCENE_BREAKDOWN } from '@/nodes/breakdown/node';
-import { makeFakeServices } from '@/core/__tests__/fakes';
-import type { SceneScript } from '@/core/types/payloads';
+import { makeFakeServices } from '@/contracts/__tests__/fakes';
+import type { SceneScript } from '@/contracts/types/payloads';
 
 /**
  * A pasted script, cut into scenes with nothing on screen but one the person wrote by hand and one
@@ -33,13 +33,11 @@ const scriptSource: AnyNodeDefinition = {
 
 const graph = (params: Record<string, unknown> = {}): Graph => ({
   nodes: [
-    { id: 'llm', type: 'core/llm-provider', params: { providerId: 'claude-code', settings: {} }, bypassed: false, position: { x: 0, y: 0 } },
     { id: 'src', type: 'test/scenes', params: {}, bypassed: false, position: { x: 0, y: 0 } },
-    { id: 'cut', type: SCENE_BREAKDOWN, params, bypassed: false, position: { x: 0, y: 0 } },
+    { id: 'cut', type: SCENE_BREAKDOWN, params: { llmProvider: 'claude-code', ...params }, bypassed: false, position: { x: 0, y: 0 } },
   ],
   edges: [
     { id: 'e1', source: 'src', sourcePort: 'scenes', target: 'cut', targetPort: 'scenes' },
-    { id: 'e2', source: 'llm', sourcePort: 'llm', target: 'cut', targetPort: 'llm' },
   ],
 });
 

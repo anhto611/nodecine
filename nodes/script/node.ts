@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { detectLanguage } from '@/core/text/detect-language';
-import { SceneContentSchema, StageSchema, TransitionSchema } from '@/core/types/payloads';
+import { detectLanguage } from '@/contracts/text/detect-language';
+import { SceneContentSchema, StageSchema, TransitionSchema } from '@/contracts/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 
 const SceneRow = z.object({

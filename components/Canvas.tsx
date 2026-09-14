@@ -18,14 +18,13 @@ import {
   applyNodeChanges,
 } from '@xyflow/react';
 import { getNodeType, listNodeTypes } from '@/core/nodes/definition';
-import { PORT_LABEL_KEYS, type PortType } from '@/core/types/ports';
+import { portLabelKey, type PortType } from '@/core/types/ports';
 import { NODE_META } from '@/lib/node-meta';
 import { layoutGraph } from '@/lib/layout';
 import { useStudio } from '@/store/useStudio';
 import { NodeCard, type NcNode } from './nodes/NodeCard';
 import { Icon } from './icons';
 import { useT } from './ui';
-import { edgeKind } from '@/core/engine/graph';
 
 const nodeTypes = { nc: NodeCard };
 
@@ -51,7 +50,7 @@ const PortPicker: React.FC<{ pick: { x: number; y: number; type: PortType; from:
   const options = listNodeTypes().filter((d) => (pick.from === 'source' ? d.inputs : d.outputs).some((p) => p.type === pick.type));
   return (
     <div ref={ref} className="nc-menu" style={{ position: 'fixed', left: pick.x, top: pick.y, bottom: 'auto', minWidth: 200, maxHeight: 280, overflowY: 'auto' }} role="menu">
-      <div className="nc-menu-title">{t('canvas.connectTo', { port: t(PORT_LABEL_KEYS[pick.type]) })}</div>
+      <div className="nc-menu-title">{t('canvas.connectTo', { port: t(portLabelKey(pick.type)) })}</div>
       {options.length === 0 && <div className="nc-menu-item nc-dim">{t('canvas.connectNone')}</div>}
       {options.map((d) => {
         const IconC = Icon[NODE_META[d.type]?.icon ?? 'chip'];
@@ -76,7 +75,6 @@ function CanvasInner() {
   const graph = useStudio((s) => s.graph);
   const runtimes = useStudio((s) => s.runtimes);
   const setNodePositions = useStudio((s) => s.setNodePositions);
-  const modalOpen = useStudio((s) => !!s.overlay);
   const undo = useStudio((s) => s.undo);
   const redo = useStudio((s) => s.redo);
   const canUndo = useStudio((s) => s.canUndo);
@@ -91,6 +89,8 @@ function CanvasInner() {
   const select = useStudio((s) => s.select);
   const setPanel = useStudio((s) => s.setPanel);
   const rf = useReactFlow();
+  // While a dialog is open the canvas must not eat Delete or Backspace: they belong to the text in it.
+  const modalOpen = useStudio((s) => !!s.overlay);
 
   const [zoom, setZoom] = React.useState(1);
 
@@ -102,6 +102,13 @@ function CanvasInner() {
   React.useEffect(() => {
     setNodes((prev) => syncNodes(prev, graph.nodes));
   }, [graph.nodes]);
+  // A drag is not a choice: the panel is opened by a click, so the gesture is watched here and a
+  // click that ended a drag is ignored.
+  const dragged = React.useRef(false);
+  const gesture = (nodeId: string | null) => {
+    const target = panelTarget({ dragged: dragged.current, nodeId });
+    if (target !== undefined) select(target);
+  };
   const edges: Edge[] = React.useMemo(
     () =>
       graph.edges.map((e) => ({
@@ -111,8 +118,7 @@ function CanvasInner() {
         target: e.target,
         targetHandle: e.targetPort,
         // React Flow's own animated edge: a dashed stroke that marches along the wire. Resource wires use it.
-        animated: edgeKind(graph, e) === 'resource',
-        className: `${edgeKind(graph, e) === 'resource' ? 'nc-edge-resource' : 'nc-edge-flow'} ${runtimes[e.source]?.outputs[e.sourcePort] && runtimes[e.source]?.state === 'success' ? 'active' : ''}`,
+        className: `nc-edge-flow ${runtimes[e.source]?.outputs[e.sourcePort] && runtimes[e.source]?.state === 'success' ? 'active' : ''}`,
       })),
     [graph, runtimes],
   );
@@ -127,7 +133,6 @@ function CanvasInner() {
     for (const c of changes) {
       if (c.type === 'position' && c.position && !c.dragging) moved[c.id] = c.position;
       if (c.type === 'remove') removed.push(c.id);
-      if (c.type === 'select') select(c.selected ? c.id : null);
     }
     if (Object.keys(moved).length) setNodePositions(moved);
     if (removed.length) removeNodes(removed);
@@ -143,25 +148,32 @@ function CanvasInner() {
   // Dragging the end of a wire: onto another port it moves there, into empty space it comes off.
   // React Flow reports the move first and the release second, so a flag tells the two apart.
   const reconnected = React.useRef(false);
-  const onReconnectStart = () => { reconnected.current = false; };
+  // Taking hold of a wire that is already there is a reconnect, and React Flow runs it through the
+  // same connection gesture as drawing a new one. Dropping it on bare canvas therefore used to ask
+  // what node should go there, when what the person did was pull a wire off.
+  const reconnecting = React.useRef(false);
+  const onReconnectStart = () => { reconnected.current = false; reconnecting.current = true; };
   const onReconnect = (oldEdge: RfEdge, c: Connection) => {
     if (!c.source || !c.target || !c.sourceHandle || !c.targetHandle) return;
     reconnected.current = true;
     reconnectWire(oldEdge.id, { source: c.source, sourcePort: c.sourceHandle, target: c.target, targetPort: c.targetHandle });
   };
-  const onReconnectEnd = (_e: MouseEvent | TouchEvent, edge: RfEdge) => { if (!reconnected.current) removeEdges([edge.id]); };
+  const onReconnectEnd = (_e: MouseEvent | TouchEvent, edge: RfEdge) => {
+    if (!reconnected.current) removeEdges([edge.id]);
+    // Cleared a tick later: the drop reaches onConnectEnd too, and that has to know what this was.
+    setTimeout(() => { reconnecting.current = false; }, 0);
+  };
 
   // A wire dropped on empty canvas asks what should go there: only nodes with a port of that type.
   const [pick, setPick] = React.useState<{ x: number; y: number; flow: { x: number; y: number }; nodeId: string; port: string; type: PortType; from: 'source' | 'target' } | null>(null);
   const onConnectEnd = (e: MouseEvent | TouchEvent, state: FinalConnectionState) => {
-    // Only a drop on bare canvas asks the question; a drop on a node either connected or was refused.
-    if (state.isValid || state.toNode || !state.fromNode || !state.fromHandle?.id) return setPick(null);
+    if (!dropOffersNode({ isValid: !!state.isValid, onNode: !!state.toNode, fromNode: !!state.fromNode, fromHandle: !!state.fromHandle?.id, reconnecting: reconnecting.current })) return setPick(null);
     const def = getNodeType(graph.nodes.find((n) => n.id === state.fromNode!.id)?.type ?? '');
-    const from = state.fromHandle.type === 'source' ? 'source' : 'target';
+    const from = state.fromHandle!.type === 'source' ? 'source' : 'target';
     const port = (from === 'source' ? def?.outputs : def?.inputs)?.find((p) => p.name === state.fromHandle!.id);
     if (!port) return setPick(null);
     const point = 'changedTouches' in e ? { x: e.changedTouches[0]!.clientX, y: e.changedTouches[0]!.clientY } : { x: e.clientX, y: e.clientY };
-    setPick({ ...point, flow: rf.screenToFlowPosition(point), nodeId: state.fromNode.id, port: port.name, type: port.type, from });
+    setPick({ ...point, flow: rf.screenToFlowPosition(point), nodeId: state.fromNode!.id, port: port.name, type: port.type, from });
   };
   const addFromPick = (type: string) => {
     if (!pick) return;
@@ -206,6 +218,9 @@ function CanvasInner() {
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onNodeDragStart={() => { dragged.current = true; }}
+        onNodeDragStop={() => { setTimeout(() => { dragged.current = false; }, 0); }}
+        onNodeClick={(_, n) => gesture(n.id)}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
@@ -217,7 +232,7 @@ function CanvasInner() {
         // Shift and drag draws a selection box; the nodes it catches move and delete as one.
         selectionKeyCode="Shift"
         selectionOnDrag={false}
-        onPaneClick={() => setPick(null)}
+        onPaneClick={() => { setPick(null); gesture(null); }}
         onMove={(_, vp) => setZoom(vp.zoom)}
         fitView
         fitViewOptions={{ padding: 0.08 }}
@@ -273,6 +288,29 @@ function CanvasInner() {
       </div>
     </div>
   );
+}
+
+/**
+ * Whether dropping a wire on bare canvas should ask what node to put there.
+ *
+ * Only a wire drawn from a port and let go over nothing: a drop on a node either connected or was
+ * refused, and a wire pulled off an existing edge is a reconnect — the person is taking a wire away,
+ * not asking for something new.
+ */
+export function dropOffersNode(o: { isValid: boolean; onNode: boolean; fromNode: boolean; fromHandle: boolean; reconnecting: boolean }): boolean {
+  return !o.reconnecting && !o.isValid && !o.onNode && o.fromNode && o.fromHandle;
+}
+
+/**
+ * Which node the panel is about after a gesture on the canvas, or `undefined` to leave it alone.
+ *
+ * Dragging a node and choosing one are two different gestures, and React Flow reports the first as
+ * the second: pressing on a card selects it, so every drag used to throw the panel open on whatever
+ * was being moved. A drag says nothing about what the panel should show; only a click does — on a
+ * node, or on the empty canvas, which means nothing is chosen.
+ */
+export function panelTarget(gesture: { dragged: boolean; nodeId: string | null }): string | null | undefined {
+  return gesture.dragged ? undefined : gesture.nodeId;
 }
 
 export const Canvas: React.FC = () => (

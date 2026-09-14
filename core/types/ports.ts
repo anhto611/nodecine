@@ -1,50 +1,48 @@
-/** The thirteen core port types (CORE_CONTRACTS §1.1). Nothing outside the core may add a port type. */
-export const PORT_TYPES = [
-  'SourceRef',
-  'FactSheet',
-  'ScenePlan',
-  'AudioScript',
-  'Voiceover',
-  'VideoIR',
-  'EngineRef',
-  'LLMRef',
-  'TTSRef',
-  'SceneScript',
-  'CaptionTrack',
-  'LayerSpec',
-  'AudioTrackSpec',
-] as const;
-
-export type PortType = (typeof PORT_TYPES)[number];
-
-/** Display label next to each port — dictionary keys, translated by the UI locale. */
-export const PORT_LABEL_KEYS: Record<PortType, string> = {
-  SourceRef: 'port.sourceRef',
-  FactSheet: 'port.factSheet',
-  ScenePlan: 'port.scenePlan',
-  AudioScript: 'port.audioScript',
-  Voiceover: 'port.voiceover',
-  VideoIR: 'port.videoIR',
-  EngineRef: 'port.engineRef',
-  LLMRef: 'port.llmRef',
-  TTSRef: 'port.ttsRef',
-  SceneScript: 'port.sceneScript',
-  CaptionTrack: 'port.captionTrack',
-  LayerSpec: 'port.layerSpec',
-  AudioTrackSpec: 'port.audioTrackSpec',
-};
+import type { ZodTypeAny } from 'zod';
 
 /**
- * Two kinds of wire (CORE_CONTRACTS §1.1): content flows step by step through the pipeline; a
- * resource is a part a node needs — a model, a voice, an engine. The executor treats both
- * as dependencies; the canvas draws them apart (resources enter from the top, dashed).
+ * Port types (CORE_CONTRACTS §1.1): what may run on a wire. The core runs wires and knows none by
+ * name; `contracts/ports.ts` names them and registers them at startup, like every other registry here.
+ *
+ * `PortTypes` is filled the same way, by module augmentation, so a node that declares a port with a
+ * misspelt type still fails to compile even though the core never lists a single one.
  */
-export const PORT_KIND: Record<PortType, 'flow' | 'resource'> = {
-  SourceRef: 'flow', FactSheet: 'flow', SceneScript: 'flow', ScenePlan: 'flow', AudioScript: 'flow', Voiceover: 'flow', VideoIR: 'flow', CaptionTrack: 'flow', LayerSpec: 'flow', AudioTrackSpec: 'flow',
-  EngineRef: 'resource', LLMRef: 'resource', TTSRef: 'resource',
-};
-export const isResourcePort = (type: PortType): boolean => PORT_KIND[type] === 'resource';
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface PortTypes {}
+
+export type PortType = Extract<keyof PortTypes, string>;
+
+export interface PortTypeInfo {
+  /** Display label next to each port — a dictionary key, translated by the UI locale. */
+  labelKey: string;
+  /** What every packet on this wire must parse as. A type without one is carried unchecked. */
+  schema?: ZodTypeAny;
+}
+
+const registry = new Map<string, PortTypeInfo>();
+
+export function registerPortType(type: PortType, info: PortTypeInfo): void {
+  registry.set(type, info);
+}
+
+export function getPortType(type: string): PortTypeInfo | undefined {
+  return registry.get(type);
+}
 
 export function isPortType(value: string): value is PortType {
-  return (PORT_TYPES as readonly string[]).includes(value);
+  return registry.has(value);
+}
+
+/** The label key for a port, or the type's own name when nothing registered it. */
+export function portLabelKey(type: string): string {
+  return registry.get(type)?.labelKey ?? type;
+}
+
+export function listPortTypes(): PortType[] {
+  return [...registry.keys()] as PortType[];
+}
+
+/** Test-only. */
+export function _resetPortTypes(): void {
+  registry.clear();
 }

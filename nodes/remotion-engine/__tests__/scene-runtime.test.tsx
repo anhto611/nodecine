@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { migrateIR } from '@/core/types/migrate-ir';
-import lumenV2 from '@/core/__tests__/fixtures/ir-v2-lumen.json';
+import { migrateIR } from '@/contracts/types/migrate-ir';
+import lumenV2 from '@/contracts/__tests__/fixtures/ir-v2-lumen.json';
 import { SceneInstance, prepareFilm } from '../scene-runtime';
 
 /**
@@ -45,7 +45,7 @@ describe('SceneInstance', () => {
       css: '', scripts: ["nodecine.timeline(gsap.timeline().fromTo('.title', { opacity: 0 }, { opacity: 1, duration: 1 }, 0));"],
       facts: {}, words: [{ text: 'Hi', start: 1 }],
       cues: [{ id: 'nc-cap-0-0', show: 1, hide: 2, style: 'karaoke' as const, words: [{ id: 'nc-cap-0-0-w0', text: 'Hi', at: 1.2 }] }],
-      overlapFrames: 0, transitionIn: null, transitionOut: null,
+      beat: true, overlapFrames: 0, transitionIn: null, transitionOut: null,
     };
     const root = document.createElement('div');
     document.body.append(root);
@@ -64,6 +64,28 @@ describe('SceneInstance', () => {
     expect(root.querySelector<HTMLElement>('#nc-cap-0-0-w0')!.style.color).toContain('var(--caption-on');
     inst.seek(3);
     expect(line.style.visibility).toBe('hidden');
+    inst.dispose();
+    root.remove();
+  });
+});
+
+describe('a scene that draws itself each frame', () => {
+  it('is called with the second of the scene on every seek, through nodecine.frame', () => {
+    const calls: number[] = [];
+    (window as unknown as { __calls: number[] }).__calls = calls;
+    const scene = {
+      id: 's2', index: 0, start: 0, duration: 4, html: '<canvas id="c"></canvas>', css: '',
+      scripts: ['nodecine.frame(function (t) { window.__calls.push(Math.round(t * 100) / 100); });'],
+      facts: {}, words: [], cues: [], beat: true, overlapFrames: 0, transitionIn: null, transitionOut: null,
+    };
+    const root = document.createElement('div');
+    document.body.append(root);
+    root.innerHTML = scene.html;
+    const inst = new SceneInstance(root, scene, { vars: {}, beats: [], analysis: {} });
+    inst.seek(1.5);
+    inst.seek(3);
+    expect(calls).toContain(1.5);
+    expect(calls).toContain(3);
     inst.dispose();
     root.remove();
   });

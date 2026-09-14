@@ -8,7 +8,7 @@ import { _resetNodeRegistry } from '@/core/nodes/definition';
 import { registerNodes } from '@/nodes';
 import type { Graph } from '@/core/engine/graph';
 import type { NodeRuntime } from '@/core/engine/state';
-import type { TTSRef } from '@/core/types/payloads';
+import type { TTSRef } from '@/contracts/types/payloads';
 
 /**
  * One body serves both provider nodes, so it is the widest piece of node UI in the app. It draws

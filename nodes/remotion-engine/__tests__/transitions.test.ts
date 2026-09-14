@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { REQUIRED_TRANSITIONS } from '@/core/types/ir';
-import { GSAP_TRANSITION_CATALOG } from '@/core/visual/gsap-transitions';
+import { REQUIRED_TRANSITIONS } from '@/contracts/types/ir';
+import { GSAP_TRANSITION_CATALOG } from '@/contracts/visual/gsap-transitions';
 import { REMOTION_TRANSITIONS, transitionStyle } from '../transitions';
 
 describe('the Remotion transition catalogue', () => {

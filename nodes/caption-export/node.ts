@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { CaptionExportErrorCode } from './errors';
-import { safeFileName } from '@/core/file-name';
+import { safeFileName } from '@/contracts/file-name';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import type { CaptionTrack } from '@/core/types/payloads';
+import type { CaptionTrack } from '@/contracts/types/payloads';
 import { SUBTITLE_FORMATS, toSubtitles } from './subtitles';
-import { NodeError } from '@/core/errors';
+import { NodeError } from '@/contracts/errors';
 
 const Params = z.object({ format: z.enum(SUBTITLE_FORMATS).default('srt'), fileName: z.string().min(1).max(80).default('nodecine') });
 export const captionExport: NodeDefinition<typeof Params> = {

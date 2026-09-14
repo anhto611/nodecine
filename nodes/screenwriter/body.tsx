@@ -1,14 +1,16 @@
 'use client';
 import React from 'react';
-import { OUTPUT_LANGUAGES, languageName } from '@/core/text/languages';
+import { ProviderPick } from '@/components/node-runtime/provider-pick';
+import { OUTPUT_LANGUAGES, languageName } from '@/contracts/text/languages';
 import type { Beat } from '@/nodes/screenwriter/beats';
-import { CONTENT_KEYS, type AudioScript, type ContentKey, type SceneScript } from '@/core/types/payloads';
+import { CONTENT_KEYS, type AudioScript, type ContentKey, type SceneScript } from '@/contracts/types/payloads';
 import { Btn, Kv, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { useNode, useRuntime, useStudio } from '@/store/useStudio';
 import type { BodyProps } from '@/nodes/kit';
+import { FormPicker } from '@/nodes/form-picker';
 
-type Params = { prompt: string; outputLanguage: string; beats: Beat[] };
+type Params = { prompt: string; outputLanguage: string; targetSeconds: number; beats: Beat[] };
 
 /**
  * Body of the Screenwriter: the brief, the language, then the beats — each a role, a line on what
@@ -26,22 +28,24 @@ export const ScreenwriterBody: React.FC<BodyProps> = ({ nodeId }) => {
   const script = rt?.outputs.script?.payload as AudioScript | undefined;
   const raw = (rt?.error?.details as { raw?: unknown } | undefined)?.raw;
 
-  const [open, setOpen] = React.useState<number | null>(null);
+  const setOverlay = useStudio((s) => s.setOverlay);
+  const openBeat = (i: number) => setOverlay({ nodeId, data: { beat: i } });
   const set = (patch: Partial<Params>) => setParams(nodeId, patch);
-  const updateBeat = (i: number, patch: Partial<Beat>) => set({ beats: beats.map((b, j) => (j === i ? { ...b, ...patch } : b)) });
   const removeBeat = (i: number) => set({ beats: beats.filter((_, j) => j !== i) });
   const addBeat = () => set({ beats: [...beats, { role: `beat ${beats.length + 1}`, brief: '', weight: 1, count: 1, factBindings: {} }] });
-  const bind = (i: number, key: ContentKey, factKey: string | null) => {
-    const next = { ...beats[i]!.factBindings };
-    if (factKey === null) delete next[key];
-    else next[key] = factKey;
-    updateBeat(i, { factBindings: next });
-  };
 
   return (
     <>
+      <ProviderPick nodeId={nodeId} kind="llm" />
       <div className="nc-k">{t('screenwriter.brief')}</div>
       <textarea className={`nc-textarea ${stopFlow}`} value={p.prompt ?? ''} onChange={(e) => set({ prompt: e.target.value })} />
+      <FormPicker nodeId={nodeId} />
+      <Kv k={t('screenwriter.targetSeconds')} v={
+        <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <input className={`nc-input ${stopFlow}`} type="number" min={0} max={600} step={5} style={{ width: 64 }} value={p.targetSeconds ?? 0} onChange={(e) => set({ targetSeconds: Math.max(0, Math.min(600, Number(e.target.value) || 0)) })} />
+          <span className="nc-k">{p.targetSeconds ? 's' : t('node.auto')}</span>
+        </span>
+      } />
       <Kv k={t('screenwriter.outputLanguage')} v={
         <select className={`nc-select ${stopFlow}`} value={p.outputLanguage ?? 'auto'} onChange={(e) => set({ outputLanguage: e.target.value })}>
           {OUTPUT_LANGUAGES.map((l) => <option key={l} value={l}>{l === 'auto' ? t('node.auto') : `${l} · ${languageName(l)}`}</option>)}
@@ -50,53 +54,28 @@ export const ScreenwriterBody: React.FC<BodyProps> = ({ nodeId }) => {
 
       <div className="nc-k" style={{ marginTop: 4 }}>{t('screenwriter.beats')}</div>
       {beats.map((b, i) => {
-        const bound = Object.entries(b.factBindings) as [ContentKey, string][];
-        const unbound = CONTENT_KEYS.filter((k) => !(k in b.factBindings));
-        const isOpen = open === i;
-        // One line per beat; only the beat being edited unfolds.
+        const bound = Object.entries(b.factBindings ?? {}) as [ContentKey, string][];
+        // One line per beat, drawn and hovered like a scene of a Static Script so that it reads as
+        // something to click. Everything about it is edited in the dialog, where there is room.
         return (
-          <div key={i} style={{ border: `1px solid ${isOpen ? 'var(--line-3)' : 'var(--line)'}`, borderRadius: 3, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <div className="nc-scene-row" style={{ cursor: 'pointer' }} onClick={() => setOpen(isOpen ? null : i)}>
-              <span className="nc-k" style={{ color: 'var(--accent-2)', flex: '0 0 auto' }}>{isOpen ? '▾' : '▸'} {i + 1}</span>
-              <span className="nc-k" style={{ color: 'var(--tx)', flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.role || t('screenwriter.role')}</span>
-              <span className="nc-k" style={{ flex: '0 0 auto' }} title={`${t('node.weight')} ${b.weight}`}>{b.count}× · {b.weight}w</span>
-              {b.factList ? <span className="nc-k" style={{ flex: '0 0 auto', color: 'var(--mark, var(--tx-3))' }} title={t('screenwriter.overList', { key: b.factList })}>[]</span> : null}
-              {bound.length > 0 && <span className="nc-k" style={{ flex: '0 0 auto' }} title={bound.map(([k, f]) => `${k} ← ${f}`).join(', ')}>{bound.length}⚲</span>}
-            </div>
-            {isOpen && (
-              <>
-                <div className="nc-scene-row">
-                  <input className={`nc-input ${stopFlow}`} style={{ flex: 1, minWidth: 0 }} value={b.role} title={t('screenwriter.role')} onChange={(e) => updateBeat(i, { role: e.target.value })} />
-                  <input className={`nc-input ${stopFlow}`} style={{ width: 30 }} type="number" min={0.1} step={0.5} value={b.weight} title={t('node.weight')} onChange={(e) => updateBeat(i, { weight: Number(e.target.value) || 1 })} />
-                  <span className="nc-k">{t('screenwriter.count')}</span>
-                  <input className={`nc-input ${stopFlow}`} style={{ width: 30 }} type="number" min={1} max={12} step={1} value={b.count} onChange={(e) => updateBeat(i, { count: Math.max(1, Math.min(12, Math.round(Number(e.target.value) || 1))) })} />
-                  <button className={`nc-chip ${stopFlow}`} onClick={() => { removeBeat(i); setOpen(null); }} disabled={beats.length <= 1} title="remove"><Icon.x size={9} /></button>
-                </div>
-                <textarea className={`nc-textarea ${stopFlow}`} rows={2} placeholder={t('screenwriter.beatBrief')} value={b.brief} onChange={(e) => updateBeat(i, { brief: e.target.value })} />
-                {/* Naming a list turns the beat into one scene per item, and its bindings into fields of that item. */}
-                <Kv k={t('screenwriter.overListLabel')} v={
-                  <input className={`nc-input ${stopFlow}`} placeholder={t('screenwriter.overListNone')} title={t('screenwriter.overListHint')} value={b.factList ?? ''} onChange={(e) => updateBeat(i, { factList: e.target.value.trim() || undefined })} />
-                } />
-                {bound.map(([key, factKey]) => (
-                  <Kv key={key} k={t(`content.${key}`)} v={
-                    <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      <input className={`nc-input ${stopFlow}`} title={b.factList ? t('screenwriter.bindField', { key: b.factList }) : t('screenwriter.bind')} value={factKey} onChange={(e) => bind(i, key, e.target.value)} />
-                      <button className={`nc-chip ${stopFlow}`} onClick={() => bind(i, key, null)} title={t('screenwriter.bindNone')}><Icon.x size={9} /></button>
-                    </span>
-                  } />
-                ))}
-                {unbound.length > 0 && (
-                  <select className={`nc-select ${stopFlow}`} value="" title={t('screenwriter.bind')} onChange={(e) => { if (e.target.value) bind(i, e.target.value as ContentKey, e.target.value); }}>
-                    <option value="">{t('screenwriter.bindAdd')}</option>
-                    {unbound.map((k) => <option key={k} value={k}>{t(`content.${k}`)}</option>)}
-                  </select>
-                )}
-              </>
-            )}
+          <div key={i} className={`nc-scene-line ${stopFlow}`} title={t('screenwriter.openHint')} onClick={() => openBeat(i)}>
+            <span className="nc-k" style={{ color: 'var(--accent-2)', flex: 'none', width: 16 }}>{i + 1}</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
+                <span className="nc-k" style={{ minWidth: 0 }}>{b.role || t('screenwriter.role')}</span>
+                <span className="nc-chip" style={{ cursor: 'inherit' }} title={`${t('node.weight')} ${b.weight}`}>{b.count}× · {b.weight}w</span>
+                {b.factList ? <span className="nc-chip" style={{ cursor: 'inherit' }} title={t('screenwriter.overList', { key: b.factList })}>[] {b.factList}</span> : null}
+                {bound.length > 0 && <span className="nc-chip" style={{ cursor: 'inherit' }} title={bound.map(([k, f]) => `${k} ← ${f}`).join(', ')}>{bound.length}⚲</span>}
+              </span>
+              <span style={{ minWidth: 0, color: b.brief.trim() ? 'var(--tx)' : 'var(--tx-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.brief.trim() || t('screenwriter.beatNoBrief')}</span>
+            </span>
+            <span className="nc-scene-tools" onClick={(e) => e.stopPropagation()}>
+              <button className="nc-chip" onClick={() => removeBeat(i)} disabled={beats.length <= 1} title={t('common.remove')}><Icon.x size={9} /></button>
+            </span>
           </div>
         );
       })}
-      <Btn small className={stopFlow} onClick={() => { addBeat(); setOpen(beats.length); }} style={{ alignSelf: 'flex-start' }}><Icon.plus size={10} /> {t('node.addScene')}</Btn>
+      <Btn small className={stopFlow} onClick={() => { addBeat(); openBeat(beats.length); }} style={{ alignSelf: 'flex-start' }}><Icon.plus size={10} /> {t('node.addScene')}</Btn>
 
       {script && scenes && (
         <>

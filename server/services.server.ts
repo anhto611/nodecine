@@ -1,10 +1,10 @@
 import path from 'node:path';
 import type { ZodTypeAny, z } from 'zod';
 import type { NodeServices } from '@/core/engine/services';
-import { getLLMProviderFactory, getTTSProviderFactory } from '@/core/providers/registry';
-import { getEngineFactory } from '@/core/adapters/registry';
-import { makeEngineRef } from '@/core/adapters/types';
-import { buildTTSRef } from '@/core/providers/types';
+import { getLLMProviderFactory, getTTSProviderFactory } from '@/contracts/providers/registry';
+import { getEngineFactory } from '@/contracts/adapters/registry';
+import { makeEngineRef } from '@/contracts/adapters/types';
+import { buildTTSRef } from '@/contracts/providers/types';
 import { ensureServerRegistrations } from '@/server/register';
 import { embedWorkflow } from '@/server/video-meta';
 import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';

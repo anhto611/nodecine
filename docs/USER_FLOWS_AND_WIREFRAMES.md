@@ -100,7 +100,7 @@ Lịch sử chạy (Run History):
 
 Cài đặt (mở từ tab ở đáy dải):
 
-- Cửa sổ modal, gồm các đường dẫn và địa chỉ ghi đè được (đọc từ biến môi trường), thư mục tệp tạm, và ngôn ngữ giao diện với mặc định English và có sẵn Tiếng Việt. Mục nhập khóa API chỉ xuất hiện khi có nhà cung cấp cần khóa. Đổi ngôn ngữ áp dụng tức thì. Toàn bộ bản vẽ trong tài liệu này minh họa ở ngôn ngữ giao diện Tiếng Việt.
+- Cửa sổ modal, gồm các đường dẫn và địa chỉ ghi đè được (đọc từ biến môi trường), thư mục tệp tạm, và ngôn ngữ giao diện với mặc định English và có sẵn Tiếng Việt. Mục nhập khóa API chỉ xuất hiện khi có nhà cung cấp cần khóa. Đổi ngôn ngữ áp dụng tức thì. Toàn bộ bố cục trong tài liệu này minh họa ở ngôn ngữ giao diện Tiếng Việt.
 
 ### 1.7. Panel Nhật ký (Logs Panel, đáy màn hình)
 
@@ -149,6 +149,24 @@ Node duy nhất của lõi cho phép dựng video hoàn toàn bằng tay, và l�
 - Thân node: mục *dán kịch bản* gập lại ở trên, rồi **danh sách cảnh, mỗi cảnh một dòng**: số thứ tự, vai, một chip cho mỗi thứ trên hình (tiêu đề, ảnh, *2 mục*…), và những chữ đầu của lời thoại. Hai mươi cảnh là hai mươi dòng, node vẫn rộng 220px. Nút lên, xuống, bỏ hiện khi rê chuột vào dòng. Ngôn ngữ tự nhận diện từ văn bản, không có hộp chọn.
 - **Bấm một dòng mở hộp thoại sửa cảnh** (cùng mô hình với hộp thoại trong app): vai và trọng số trên đầu, lời thoại bên trái, nội dung theo từ vựng bên phải với các mục của `entries` dàn ngang thành cột; *cảnh trước* / *cảnh sau* (hay phím mũi tên) đi hết kịch bản không cần đóng; Escape hay *xong* đóng. Sửa ghi thẳng vào tham số node như gõ trên node, nên Ctrl+Z và dấu chưa lưu như cũ, không có nút lưu. Bố cục, màu và trường do Họa Sĩ vẽ ở chặng sau. *Thêm cảnh* thêm một cảnh trống rồi mở luôn.
 - Mặc định ba cảnh `text-card` trọng số 1, 2, 1 với nội dung mẫu, để người dùng bấm Chạy Luồng là có video ngay.
+
+### 1.10. Node Bối Cảnh và Node Vẽ Bố Cục (xem khung và bố cục)
+
+Hai node này vẽ một lần rồi ghim, nên thứ chúng giữ phải xem được mà không cần chạy cả phim.
+
+- **Bối Cảnh**: dưới tên phong cách là **một khung hình của cái khung**: nền theo tờ CSS, mọi vật xuyên phim có bố cục riêng xếp đúng thứ tự phim xếp chúng, và một dòng lời thoại mẫu ở đúng chỗ phim viết phụ đề. Vật vẽ tĩnh: script của nó đi theo các cảnh, mà ở đây chưa có cảnh nào, nên cái xem được là nó bắt đầu ở đâu và chiếm bao nhiêu khung. Bấm một vật mở hộp thoại của nó, nay có thêm bố cục của riêng nó kèm khung an toàn.
+- **Vẽ Bố Cục**: một khung hình nhỏ cho mỗi bố cục, chữ mẫu vẫn nằm trong khe. Bấm một cái mở hộp thoại: cả khung kèm khung an toàn, danh sách khóa kèm ngân sách ký tự của từng khe, *bản trước* / *bản sau* hay phím mũi tên đi hết danh mục. Chưa nối Bối Cảnh vào thì node nói thiếu gì chứ không để trống.
+
+Lý do có mục này: trước đó cả hai node chỉ hiện tên và con số. Một bố cục mà mọi video sau đều dựng theo thì không ai duyệt được bằng một dòng chữ.
+
+### 1.11. Kho Bố Cục (Plate Store)
+
+Kho là **của workflow đang mở**, không phải của cả máy: bố cục được vẽ theo một tờ phong cách và đặt cạnh tờ khác thì vô nghĩa. Vì vậy nó **không có mục trên dải trái** — dải trái là điều hướng của hệ thống. Nó mở bằng nút *xem cả kho* trên thẻ Vẽ Bố Cục, hoặc bằng cách bấm một ảnh nhỏ trên thẻ đó.
+
+- **Hộp thoại, hai nửa.** Trái: lưới mọi bố cục, tìm được theo hình dạng hoặc tên. Phải: bản đang chọn vẽ cả khung kèm khung an toàn, danh sách khóa kèm ngân sách ký tự. Phím mũi tên đi hết kho. Hộp thoại chứ không phải panel bên vì một bố cục là cả khung dọc, xếp vào cột 260px thì lại thành ảnh nhỏ.
+- **Đọc từ đồ thị trên canvas.** Cổng nào đang mang `PlateSheet` thì lấy, ưu tiên kết quả lần chạy vừa rồi, chưa chạy thì lấy phần đã ghim. Không có thư mục riêng, không có bản sao để lệch nhau.
+- **Hai luật gạn.** Bố cục không có tờ phong cách nối vào thì không vào kho: vẽ nó bằng phong cách khác không phải "vẽ hơi xấu" mà là vẽ sai. Hai node Vẽ Bố Cục trong cùng đồ thị giữ cùng một bố cục thì tính là một.
+- **Chỉ đọc.** Muốn sửa thì vẽ lại ở node giữ nó.
 
 ## 2. Quy chuẩn Cấu trúc Node Chức Năng (Node Anatomy)
 
@@ -214,7 +232,7 @@ Kịch bản này là toàn bộ phạm vi nghiệm thu của Pha A. Đổi engi
 
 Các kịch bản có dữ liệu thật (dán link repo, gọi mô hình ngôn ngữ, đổi ngôn ngữ kịch bản do AI viết) thuộc bản mẫu GitHub Repo Showcase, tại `templates/github-showcase.md` mục 5.
 
-### Kịch bản 4: Xây Dựng Luồng Mới từ Bản Vẽ Trống (Custom Pipeline Flow)
+### Kịch bản 4: Xây Dựng Luồng Mới từ Bố Cục Trống (Custom Pipeline Flow)
 
 1. Người dùng bấm tab "Bản mẫu" ở đầu dải trái, chọn "Canvas trống" ở cột trái của Trình duyệt Bản mẫu. Hệ thống hỏi xác nhận vì thao tác này xóa toàn bộ đồ thị hiện tại, sau đó dọn sạch canvas.
 2. Người dùng mở panel Thư viện node từ dải trái, tìm và kéo thả từng node lên canvas.

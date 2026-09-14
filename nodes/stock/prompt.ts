@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { SceneScript } from '@/core/types/payloads';
+import type { SceneScript } from '@/contracts/types/payloads';
 import { stylePrompt, type StockStyle } from './styles';
 
 /**

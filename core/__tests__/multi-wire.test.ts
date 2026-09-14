@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import { validateGraph, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { makeFakeServices } from './fakes';
+import { makeFakeServices } from '@/contracts/__tests__/fakes';
 
 /**
  * A `multiple` port takes any number of wires and hands the packets to run() as a list, in edge
@@ -88,7 +88,9 @@ describe('multiple-wire ports', () => {
     g.edges = g.edges.filter((e) => e.targetPort !== 'parts');
     const issue = validateGraph(g).find((i) => i.port === 'parts');
     expect(issue?.code).toBe('GRAPH_PORT_UNCONNECTED');
-    expect(issue?.severity).toBe('error');
+    // Nothing downstream of this collector ends at a sink, so its empty port is said, not obeyed
+    // (§1.4): a node that cannot reach the film cannot stop the run.
+    expect(issue?.severity).toBe('warning');
   });
 
   it('re-runs when a wire is added and reuses when the list is unchanged', async () => {
@@ -114,5 +116,67 @@ describe('multiple-wire ports', () => {
     const rt = ex.runtime('col');
     expect(rt.state).toBe('blocked');
     expect(rt.blockedBy?.nodeId).toBe('b2');
+  });
+});
+
+/**
+ * A port that a node leaves silent. Not every output is produced on every run — the Illustrator
+ * emits a spanning layer only when the film has one — and a wire from such a port into an optional
+ * input must leave the consumer alone rather than block it.
+ */
+describe('a wire from a port the upstream left silent', () => {
+  const sometimes: NodeDefinition<typeof Params> = {
+    type: 'test/sometimes',
+    version: 1,
+    kind: 'source',
+    inputs: [],
+    outputs: [{ name: 'out', type: 'SourceRef' }, { name: 'extra', type: 'SourceRef' }],
+    paramsSchema: Params,
+    defaultParams: { value: '' },
+    run: async ({ params }) => (params.value ? { out: { value: params.value }, extra: { value: 'extra' } } : { out: { value: 'plain' } }),
+  };
+  const taker: NodeDefinition<typeof NoParams> = {
+    type: 'test/taker',
+    version: 1,
+    kind: 'process',
+    inputs: [
+      { name: 'head', type: 'SourceRef' },
+      { name: 'parts', type: 'SourceRef', required: false, multiple: true },
+      { name: 'one', type: 'SourceRef', required: false },
+    ],
+    outputs: [{ name: 'out', type: 'SourceRef' }],
+    paramsSchema: NoParams,
+    defaultParams: {},
+    run: async ({ inputs, lists }) => ({ out: { value: `${(inputs.head!.payload as { value: string }).value}:${(lists.parts ?? []).length}:${inputs.one ? 'one' : 'none'}` } }),
+  };
+
+  const g = (value: string): Graph => ({
+    nodes: [
+      { id: 'src', type: 'test/sometimes', params: { value }, bypassed: false, position: { x: 0, y: 0 } },
+      { id: 'take', type: 'test/taker', params: {}, bypassed: false, position: { x: 0, y: 0 } },
+    ],
+    edges: [
+      { id: 'a', source: 'src', sourcePort: 'out', target: 'take', targetPort: 'head' },
+      { id: 'b', source: 'src', sourcePort: 'extra', target: 'take', targetPort: 'parts' },
+      { id: 'c', source: 'src', sourcePort: 'extra', target: 'take', targetPort: 'one' },
+    ],
+  });
+
+  beforeEach(() => {
+    _resetNodeRegistry();
+    registerNodeType(sometimes as unknown as AnyNodeDefinition);
+    registerNodeType(taker as unknown as AnyNodeDefinition);
+  });
+
+  it('runs the consumer with that input simply absent', async () => {
+    const ex = new Executor(g(''), makeFakeServices());
+    expect((await ex.run()).ok).toBe(true);
+    expect((ex.runtime('take').outputs.out!.payload as { value: string }).value).toBe('plain:0:none');
+  });
+
+  it('carries the packet when the upstream does produce one', async () => {
+    const ex = new Executor(g('yes'), makeFakeServices());
+    expect((await ex.run()).ok).toBe(true);
+    expect((ex.runtime('take').outputs.out!.payload as { value: string }).value).toBe('yes:1:one');
   });
 });

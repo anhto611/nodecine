@@ -1,9 +1,9 @@
 import os from 'node:os';
 import path from 'node:path';
 import { readdir, readFile, rename } from 'node:fs/promises';
-import { registerTTSProvider } from '@/core/providers/registry';
-import type { SynthesizeResult, TTSProvider } from '@/core/providers/types';
-import type { Capability, Voice } from '@/core/types/payloads';
+import { registerTTSProvider } from '@/contracts/providers/registry';
+import type { SynthesizeResult, TTSProvider } from '@/contracts/providers/types';
+import type { Capability, Voice } from '@/contracts/types/payloads';
 import { exec, ExecError, findBinary } from '@/server/exec';
 import { convertToMp3, ffmpegBin, measureDurationSeconds } from '@/server/audio';
 import { ensureTmpDir } from '@/server/paths';

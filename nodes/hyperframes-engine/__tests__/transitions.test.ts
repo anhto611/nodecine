@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { REQUIRED_TRANSITIONS } from '@/core/types/ir';
+import { REQUIRED_TRANSITIONS } from '@/contracts/types/ir';
 import { TRANSITION_CATALOG, transitionCatalogScript } from '../transitions';
 
 describe('the HyperFrames transition catalogue', () => {

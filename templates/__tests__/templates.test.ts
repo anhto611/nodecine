@@ -19,15 +19,15 @@ beforeEach(() => {
   registerTemplates();
 });
 
-/** The Illustrator downstream of a script node, following `scenes` however many hops it takes (Stock Media may sit between). */
-function illustratorAfter(t: ReturnType<typeof listTemplates>[number], nodeId: string) {
+/** The Plate Maker downstream of a script node, following `scenes` however many hops it takes (Stock Media may sit between). */
+function platesAfter(t: ReturnType<typeof listTemplates>[number], nodeId: string) {
   const seen = new Set<string>();
   for (let at = nodeId; !seen.has(at); ) {
     seen.add(at);
     const edge = t.graph.edges.find((e) => e.source === at && e.sourcePort === 'scenes');
     const next = t.graph.nodes.find((n) => n.id === edge?.target);
     if (!next) return undefined;
-    if (next.type === 'core/illustrator') return next;
+    if (next.type === 'core/plates') return next;
     at = next.id;
   }
   return undefined;
@@ -54,13 +54,18 @@ describe('shipped templates', () => {
     }
   });
 
-  it('send every screenwriter and script into an Illustrator that has a brief and a model', () => {
+  it('send every screenwriter and script into a Plate Maker with a model, beside a Set with a brief', () => {
+    // The model is a setting on the node that needs it (§1.3); it was a wired provider node until
+    // 2026-09-12, and asserting the wire here was asserting the shape of that older build.
     for (const t of listTemplates()) {
       for (const n of t.graph.nodes.filter((n) => n.type === 'core/screenwriter' || n.type === 'core/static-script')) {
-        const ill = illustratorAfter(t, n.id);
-        expect(ill, `${t.id}/${n.id}: illustrator`).toBeDefined();
-        expect(String(ill!.params.brief).length, `${t.id}: brief`).toBeGreaterThan(20);
-        expect(t.graph.edges.some((e) => e.target === ill!.id && e.targetPort === 'llm'), `${t.id}: llm wired into the illustrator`).toBe(true);
+        const plates = platesAfter(t, n.id);
+        expect(plates, `${t.id}/${n.id}: plate maker`).toBeDefined();
+        expect(String(plates!.params.llmProvider), `${t.id}: the plate maker names no model`).not.toBe('');
+        // The look is the Set's now; the Illustrator carried both until 2026-09-13.
+        const set = t.graph.nodes.find((x) => x.type === 'core/set');
+        expect(set, `${t.id}: set`).toBeDefined();
+        expect(String(set!.params.brief).length, `${t.id}: brief`).toBeGreaterThan(20);
       }
     }
   });
@@ -69,18 +74,21 @@ describe('shipped templates', () => {
     for (const t of listTemplates()) {
       const g = templateGraph(t);
       expect(() => topoSort(g)).not.toThrow();
-      const errors = validateGraph(g).filter((i) => i.severity === 'error').map((i) => i.code);
-      // github-showcase ships with an empty Input Trigger: the repo link is the one thing only the user has.
-      expect(errors, t.id).toEqual(t.id === 'github-showcase' ? ['INPUT_EMPTY'] : []);
+      const issues = validateGraph(g);
+      expect(issues.filter((i) => i.severity === 'error').map((i) => i.code), t.id).toEqual([]);
+      // github-showcase ships with an empty Input Trigger: the repo link is the one thing only the
+      // user has. That is a warning and never an error — an empty box must not disable Run.
+      const warned = issues.filter((i) => i.severity === 'warning').map((i) => i.code);
+      if (t.id === 'github-showcase') expect(warned).toContain('INPUT_EMPTY');
     }
   });
 
   // The card is what a person picks a template by, so what it says about the frame must come from
   // the template. A hardcoded "9:16" was right for four templates and a lie about the fifth.
-  it('say on the card the shape their own illustrator draws', () => {
+  it('say on the card the shape their own set is drawn to', () => {
     for (const t of listTemplates()) {
       const shape = shapeOfTemplate(t.graph);
-      const preset = t.graph.nodes.find((n) => n.type === 'core/illustrator')?.params.frame;
+      const preset = t.graph.nodes.find((n) => n.type === 'core/set')?.params.frame;
       if (!preset) { expect(shape).toBeNull(); continue; }
       expect(shape!.ratio).toBe(preset);
       expect(shape!.fps).toBe(t.graph.nodes.find((n) => n.type === 'core/timeline-assembler')?.params.fps ?? 30);

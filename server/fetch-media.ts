@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { rename, writeFile } from 'node:fs/promises';
-import { NodeError } from '@/core/errors';
+import { NodeError } from '@/contracts/errors';
 import { ASSET_TYPES, assetUrl, ensureAssetsDir } from '@/server/paths';
-import { parsePageUrl } from '@/core/network/public-url';
+import { parsePageUrl } from '@/contracts/network/public-url';
 
 /**
  * Bringing a file in from the open internet, safely (CORE_CONTRACTS §9.2). Shared by every node

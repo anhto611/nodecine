@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pickVoice } from '../node';
-import type { TTSRef } from '@/core/types/payloads';
+import type { TTSRef } from '@/contracts/types/payloads';
 
 /** Choosing a voice for a script's language (CORE_CONTRACTS §8.2), for a provider whose voices speak any language. */
 describe('pickVoice', () => {

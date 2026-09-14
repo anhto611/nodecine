@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { buildIR, clockOf, resolveFacts } from '../build-ir';
+import { buildIR, clockOf, resolveFacts, snapToBeats } from '../build-ir';
 import { AssemblerErrorCode } from '../errors';
-import { NodeError } from '@/core/errors';
-import { videoVars } from '@/core/visual/vars';
-import { validateIR, IRInvalidError } from '@/core/types/validate-ir';
-import { beatClipsOf, padTailFramesOf } from '@/core/types/ir';
-import type { AudioTrackSpec, CaptionTrack, LayerSpec, ScenePlan, FactSheet, Voiceover } from '@/core/types/payloads';
-import { FACT_SOURCE, SCENE_SOURCE, STYLE } from '@/core/__tests__/scene-fixtures';
+import { NodeError } from '@/contracts/errors';
+import { videoVars } from '@/contracts/visual/vars';
+import { validateIR, IRInvalidError } from '@/contracts/types/validate-ir';
+import { beatClipsOf, padTailFramesOf } from '@/contracts/types/ir';
+import type { AudioTrackSpec, CaptionTrack, LayerSpec, ScenePlan, FactSheet, Voiceover } from '@/contracts/types/payloads';
+import { FACT_SOURCE, SCENE_SOURCE, STYLE } from '@/contracts/__tests__/scene-fixtures';
 
 const voiceover: Voiceover = {
   audioUrl: '/api/media/0123456789abcdef.mp3',
@@ -275,5 +275,39 @@ describe('a scene names its format and how it gives way (docs/IR_V3.md §5.4)', 
     expect(beatClipsOf(ir).map((c) => c.format)).toEqual(['html-gsap', 'lottie', 'html-gsap']);
     expect(ir.transitions).toEqual({ default: { name: 'wipe-left', seconds: 0.5 }, at: [{ afterClipId: 'scene-1', name: 'cut', seconds: 0.1 }] });
     expect(validateIR(ir)).toEqual({ ok: true, warnings: [] });
+  });
+});
+
+describe('cutting on the beat (docs/IR_V3.md §5.4)', () => {
+  const music: AudioTrackSpec = { url: '/api/media/' + 'd'.repeat(16) + '.mp3', durationSeconds: 12, role: 'music', gain: 0.2, startSeconds: 0, loop: true, beatSeconds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] };
+
+  it('moves each cut to the nearest beat and leaves the total alone', () => {
+    // 300 frames at 30 fps: cuts at 100 and 200; the beats at 3 s (90) and 7 s (210) are the nearest.
+    expect(snapToBeats([100, 100, 100], [1, 2, 3, 7], 30)).toEqual([90, 120, 90]);
+    const snapped = snapToBeats([100, 100, 100], [3, 7], 30);
+    expect(snapped.reduce((n, f) => n + f, 0)).toBe(300);
+  });
+
+  it('leaves a cut alone when no beat is near it, and never collapses a scene', () => {
+    // A beat 2 s from the cut is beyond the half-second drift.
+    expect(snapToBeats([100, 100, 100], [5], 30)).toEqual([100, 100, 100]);
+    // Two cuts drawn to the same beat stay one frame apart rather than one of them vanishing.
+    const tight = snapToBeats([10, 10, 10], [0.34], 30);
+    expect(tight.every((f) => f > 0)).toBe(true);
+    expect(tight.reduce((n, f) => n + f, 0)).toBe(30);
+    expect(snapToBeats([50], [1], 30)).toEqual([50]);
+    expect(snapToBeats([10, 10], [], 30)).toEqual([10, 10]);
+  });
+
+  it('is off unless the graph asks for it, and then follows the sound that carries beats', () => {
+    const plain = buildIR({ plan, voiceover, audio: [music] });
+    expect(plain.beats.map((b) => b.durationInFrames)).toEqual([84, 168, 84]);
+    const onBeat = buildIR({ plan, voiceover, audio: [music], params: { snapToBeat: true } });
+    // 336 frames, cuts at 84 and 252; the beats at 3 s (90) and 8 s (240) are the nearest within half a second... 
+    expect(onBeat.beats.map((b) => b.durationInFrames)).toEqual([90, 150, 96]);
+    expect(onBeat.beats.reduce((n, b) => n + b.durationInFrames, 0)).toBe(336);
+    expect(validateIR(onBeat)).toEqual({ ok: true, warnings: [] });
+    // A sound with no beats changes nothing, asked or not.
+    expect(buildIR({ plan, voiceover, audio: [{ ...music, beatSeconds: undefined }], params: { snapToBeat: true } }).beats.map((b) => b.durationInFrames)).toEqual([84, 168, 84]);
   });
 });

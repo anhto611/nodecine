@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { migrateIR } from '@/core/types/migrate-ir';
-import lumenV2 from '@/core/__tests__/fixtures/ir-v2-lumen.json';
+import { migrateIR } from '@/contracts/types/migrate-ir';
+import lumenV2 from '@/contracts/__tests__/fixtures/ir-v2-lumen.json';
 
 /**
  * Manual: a real Remotion bundle, and a real render of the Lumen film through it. Enable with
@@ -40,6 +40,20 @@ describe.skipIf(!mode)('Remotion, for real', () => {
       const { stat } = await import('node:fs/promises');
       expect((await stat(outputLocation)).size).toBeGreaterThan(10_000);
       console.log('rendered', outputLocation);
+
+      // Footage under the scenes, repeated: the file is two seconds of the film's six, so the
+      // composition has to start it over twice, and the scenes over it have to stay transparent.
+      const clip = process.env.NODECINE_MANUAL_LOOP_CLIP;
+      if (clip) {
+        const looped = structuredClone(ir);
+        looped.tracks = [{ id: 'under', clips: [{ id: 'bg', kind: 'media', startFrame: 0, durationInFrames: 90, url: clip, offsetSeconds: 0, fit: 'cover', loop: true, gain: 0, sourceSeconds: Number(process.env.NODECINE_MANUAL_LOOP_SECONDS ?? '2') }] }, ...looped.tracks];
+        const props = { ir: looped, mediaBaseUrl: 'http://127.0.0.1:3000' };
+        const comp = await selectComposition({ serveUrl, id: 'nodecine', inputProps: props });
+        const out2 = path.join(outDir, 'looped.mp4');
+        await renderMedia({ composition: comp, serveUrl, codec: 'h264', outputLocation: out2, inputProps: props });
+        expect((await stat(out2)).size).toBeGreaterThan(10_000);
+        console.log('rendered with looping footage', out2);
+      }
     }
   }, 600_000);
 });

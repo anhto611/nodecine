@@ -61,26 +61,30 @@ export class DocVersionUnsupportedError extends Error {
 /** What changed on the way forward, so the person can be told rather than surprised. */
 export interface MigrationNote {
   nodeId?: string;
-  code: 'DOC_FORMAT' | 'NODE_VERSION' | 'NODE_REPLACED' | 'NODE_RETIRED' | 'PARAMS_RESET' | 'PARAMS_DROPPED';
+  code: 'DOC_FORMAT' | 'NODE_VERSION' | 'NODE_REPLACED' | 'NODE_RETIRED' | 'PARAMS_RESET' | 'PARAMS_DROPPED' | 'NODE_RESOURCE_FOLDED';
   message: string;
 }
 
 /** Step the document up to the current format, one version at a time. */
 export function migrateDoc(doc: SavedDoc): { doc: SavedDoc; notes: MigrationNote[] } {
   const from = typeof doc.schemaVersion === 'number' ? doc.schemaVersion : PROJECT_SCHEMA_VERSION;
-  if (from === PROJECT_SCHEMA_VERSION) return { doc, notes: [] };
-  if (!readableSchemaVersions().includes(from)) throw new DocVersionUnsupportedError(from);
+  const older = from !== PROJECT_SCHEMA_VERSION;
+  if (older && !readableSchemaVersions().includes(from)) throw new DocVersionUnsupportedError(from);
 
   let current = doc;
-  for (let v = from; v < PROJECT_SCHEMA_VERSION; v++) {
+  for (let v = from; older && v < PROJECT_SCHEMA_VERSION; v++) {
     const step = steps.get(v);
     if (!step) throw new DocVersionUnsupportedError(from);
     current = step(current);
   }
+  // The graph is brought forward whatever the document says. A node type retired today is retired
+  // for files written yesterday too, and most changes to a node never touch the document format —
+  // returning early on a current file meant every one of them was skipped, so a workflow saved this
+  // morning opened this afternoon full of node types this build no longer has.
   const migrated = migrateGraph(current.graph);
   return {
     doc: { ...current, graph: migrated.graph, schemaVersion: PROJECT_SCHEMA_VERSION },
-    notes: [{ code: 'DOC_FORMAT', message: `brought forward from format ${from} to ${PROJECT_SCHEMA_VERSION}` }, ...migrated.notes],
+    notes: [...(older ? [{ code: 'DOC_FORMAT' as const, message: `brought forward from format ${from} to ${PROJECT_SCHEMA_VERSION}` }] : []), ...migrated.notes],
   };
 }
 
@@ -90,8 +94,66 @@ export function migrateDoc(doc: SavedDoc): { doc: SavedDoc; notes: MigrationNote
  */
 export function migrateGraph(graph: Graph): { graph: Graph; notes: MigrationNote[] } {
   const notes: MigrationNote[] = [];
+  // Per-node first: an old per-vendor provider is renamed to the plain one here, and only then is it
+  // something the fold recognises. Folding first would leave it behind as a node nothing can run.
   const nodes = graph.nodes.map((node) => migrateNode(node, notes));
-  return { graph: { ...graph, nodes }, notes };
+  return { graph: graphSteps.reduce((g, step) => step(g, notes), foldResourceNodes({ ...graph, nodes }, notes)), notes };
+}
+
+/**
+ * A model, a voice or an engine used to be a node of its own, wired into everything that needed it.
+ * Each is now a setting on the node that needs it (CORE_CONTRACTS §1.3), so a saved graph has its
+ * providers folded into its consumers and the four old nodes, with every wire they were on, removed.
+ * Folding has to happen here and not in a node's own `migrate`: the id being moved lives in a
+ * different node, which a per-node migration never sees.
+ */
+const folds = new Map<string, (params: Record<string, unknown>) => Record<string, unknown>>();
+
+/**
+ * Say that a node type is gone and what its settings became on whoever it fed. Filled by
+ * `nodes/migrations.ts`, the one file whose subject is node ids across time; core holds the
+ * mechanism and names none of them.
+ */
+const graphSteps: ((graph: Graph, notes: MigrationNote[]) => Graph)[] = [];
+
+/**
+ * A change to the shape of a graph that no single node can make: two nodes becoming one, a wire
+ * moving. Filled by `nodes/migrations.ts`, the one file whose subject is node ids across time.
+ */
+export function registerGraphStep(step: (graph: Graph, notes: MigrationNote[]) => Graph): void {
+  graphSteps.push(step);
+}
+
+/** Test-only. */
+export function _resetGraphSteps(): void {
+  graphSteps.length = 0;
+}
+
+export function registerResourceFold(type: string, fields: (params: Record<string, unknown>) => Record<string, unknown>): void {
+  folds.set(type, fields);
+}
+
+/** Test-only. */
+export function _resetResourceFolds(): void {
+  folds.clear();
+}
+
+function foldResourceNodes(graph: Graph, notes: MigrationNote[]): Graph {
+  const resources = new Map(graph.nodes.filter((n) => folds.has(n.type)).map((n) => [n.id, n]));
+  if (!resources.size) return graph;
+  const patches = new Map<string, Record<string, unknown>>();
+  for (const edge of graph.edges) {
+    const from = resources.get(edge.source);
+    if (!from) continue;
+    patches.set(edge.target, { ...(patches.get(edge.target) ?? {}), ...folds.get(from.type)!(from.params) });
+  }
+  for (const [nodeId, patch] of patches) {
+    notes.push({ nodeId, code: 'NODE_RESOURCE_FOLDED', message: `${Object.keys(patch).join(' and ')} moved onto this node; the resource nodes it was wired to are gone` });
+  }
+  return {
+    nodes: graph.nodes.filter((n) => !resources.has(n.id)).map((n) => (patches.has(n.id) ? { ...n, params: { ...n.params, ...patches.get(n.id) } } : n)),
+    edges: graph.edges.filter((e) => !resources.has(e.source) && !resources.has(e.target)),
+  };
 }
 
 function migrateNode(node: NodeInstance, notes: MigrationNote[]): NodeInstance {

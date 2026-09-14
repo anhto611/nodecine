@@ -9,24 +9,23 @@ import { AudioInputBody } from '../audio-input/body';
 import { AudioMixBody } from '../audio-mix/body';
 import { SceneBreakdownBody } from '../breakdown/body';
 import { CaptionExportBody } from '../caption-export/body';
-import { CaptionsBody } from '../captions/body';
-import { GithubFetcherBody } from '../github/body';
-import { HyperframesEngineBody } from '../hyperframes-engine/body';
-import { IllustratorBody } from '../illustrator/body';
+import { ComposeBody } from '../compose/body';
 import { InputTriggerBody } from '../input/body';
 import { LayerBody } from '../layer/body';
-import { LlmProviderBody } from '../llm-provider/body';
 import { ExportBody } from '../mp4-export/body';
-import { RemotionEngineBody } from '../remotion-engine/body';
+import { PlatesBody } from '../plates/body';
 import { ScreenwriterBody } from '../screenwriter/body';
 import { StaticScriptBody } from '../script/body';
+import { SetBody } from '../set/body';
 import { StockMediaBody } from '../stock/body';
 import { TranscribeBody } from '../transcribe/body';
 import { TtsBody } from '../tts/body';
-import { TtsProviderBody } from '../tts-provider/body';
 import { VideoOutputBody } from '../video-output/body';
 import { WebFetcherBody } from '../web/body';
+import { PlateStore } from '../plates/PlateStore';
+import { BeatEditorDialog } from '../screenwriter/BeatEditorDialog';
 import { SceneEditorDialog } from '../script/SceneEditorDialog';
+import { SetMemberDialog } from '../set/MemberDialog';
 import { registerHyperframesClient } from '../hyperframes-engine/register.client';
 import { registerRemotionClient } from '../remotion-engine/register.client';
 
@@ -37,24 +36,27 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'core/audio-mix': AudioMixBody,
   'core/scene-breakdown': SceneBreakdownBody,
   'core/caption-export': CaptionExportBody,
-  'core/captions': CaptionsBody,
-  'core/github-fetcher': GithubFetcherBody,
-  'core/hyperframes-engine': HyperframesEngineBody,
-  'core/illustrator': IllustratorBody,
+  'core/compose': ComposeBody,
   'core/input-trigger': InputTriggerBody,
   'core/layer': LayerBody,
-  'core/llm-provider': LlmProviderBody,
   'core/mp4-export': ExportBody,
-  'core/remotion-engine': RemotionEngineBody,
+  'core/plates': PlatesBody,
   'core/screenwriter': ScreenwriterBody,
   'core/static-script': StaticScriptBody,
+  'core/set': SetBody,
   'core/stock-media': StockMediaBody,
   'core/transcribe': TranscribeBody,
   'core/tts-engine': TtsBody,
-  'core/tts-provider': TtsProviderBody,
   'core/video-output': VideoOutputBody,
   'core/web-fetcher': WebFetcherBody,
 };
+
+export const NODE_OVERLAYS: React.FC[] = [
+  PlateStore,
+  BeatEditorDialog,
+  SceneEditorDialog,
+  SetMemberDialog,
+];
 
 export const NODE_META: Record<string, NodeMeta> = {
   'core/timeline-assembler': { icon: 'layers', group: 'output' },
@@ -63,28 +65,20 @@ export const NODE_META: Record<string, NodeMeta> = {
   'core/audio-mix': { icon: 'wave', group: 'audio' },
   'core/scene-breakdown': { icon: 'bot', group: 'script' },
   'core/caption-export': { icon: 'down', group: 'output' },
-  'core/captions': { icon: 'doc', group: 'audio' },
-  'core/github-fetcher': { icon: 'branch', group: 'source' },
-  'core/hyperframes-engine': { icon: 'chip', group: 'resource' },
-  'core/illustrator': { icon: 'bot', group: 'visual' },
+  'core/compose': { icon: 'layers', group: 'visual' },
   'core/input-trigger': { icon: 'bolt', group: 'source' },
   'core/layer': { icon: 'layers', group: 'visual' },
-  'core/llm-provider': { icon: 'term', group: 'resource' },
   'core/mp4-export': { icon: 'down', group: 'output' },
-  'core/remotion-engine': { icon: 'chip', group: 'resource' },
+  'core/plates': { icon: 'brush', group: 'visual' },
   'core/screenwriter': { icon: 'bot', group: 'script' },
   'core/static-script': { icon: 'doc', group: 'script' },
+  'core/set': { icon: 'brush', group: 'visual' },
   'core/stock-media': { icon: 'screen', group: 'visual' },
   'core/transcribe': { icon: 'wave', group: 'audio' },
   'core/tts-engine': { icon: 'wave', group: 'audio' },
-  'core/tts-provider': { icon: 'mic', group: 'resource' },
   'core/video-output': { icon: 'screen', group: 'output', layout: 'wide' },
   'core/web-fetcher': { icon: 'doc', group: 'source' },
 };
-
-export const NODE_OVERLAYS: React.FC[] = [
-  SceneEditorDialog,
-];
 
 /** What a capsule registers in the browser beyond its body: an engine's player and preview. */
 export const NODE_CLIENT_REGISTRATIONS: (() => void)[] = [

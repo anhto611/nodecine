@@ -12,20 +12,6 @@
   "graph": {
     "nodes": [
       {
-        "id": "illustrator",
-        "type": "core/illustrator",
-        "params": {
-          "brief": "Thẻ trích dẫn trên nền mực: câu trích chiếm trọn khung, một vạch màu accent, tên nguồn nhỏ bên dưới; tối giản, nhiều khoảng trống.",
-          "frame": "9:16",
-          "character": ""
-        },
-        "bypassed": false,
-        "position": {
-          "x": 1360,
-          "y": 671
-        }
-      },
-      {
         "id": "input",
         "type": "core/input-trigger",
         "params": {
@@ -38,22 +24,11 @@
         }
       },
       {
-        "id": "llm-provider",
-        "type": "core/llm-provider",
-        "params": {
-          "providerId": "claude-code",
-          "settings": {}
-        },
-        "bypassed": false,
-        "position": {
-          "x": 370,
-          "y": 846
-        }
-      },
-      {
         "id": "screenwriter",
         "type": "core/screenwriter",
         "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
           "prompt": "A short vertical video of motivational quote cards on the subject. Quotes are one or two sentences each, under 200 characters, with who said them — or a source such as \"an old proverb\" when unsure. Never attribute a quote to a famous person who did not say it. Keep one tone across every card. The narration introduces and connects the quotes rather than reading them aloud; warm and unhurried.",
           "outputLanguage": "auto",
           "beats": [
@@ -71,34 +46,26 @@
               "count": 4,
               "factBindings": {}
             }
-          ]
+          ],
+          "form": "",
+          "targetSeconds": 0
         },
         "bypassed": false,
         "position": {
           "x": 370,
           "y": 419
-        }
-      },
-      {
-        "id": "tts-provider",
-        "type": "core/tts-provider",
-        "params": {
-          "providerId": "system-tts",
-          "settings": {
-            "rate": 1
-          }
         },
-        "bypassed": false,
-        "position": {
-          "x": 700,
-          "y": 303
-        }
+        "version": 3
       },
       {
         "id": "tts",
         "type": "core/tts-engine",
         "params": {
-          "speed": 1
+          "speed": 1,
+          "ttsProvider": "system-tts",
+          "ttsSettings": {
+            "rate": 1
+          }
         },
         "bypassed": false,
         "position": {
@@ -110,27 +77,15 @@
         "id": "transcribe",
         "type": "core/transcribe",
         "params": {
-          "model": "small"
+          "model": "small",
+          "maxChars": 26
         },
         "bypassed": false,
         "position": {
           "x": 1030,
           "y": 438
-        }
-      },
-      {
-        "id": "captions",
-        "type": "core/captions",
-        "params": {
-          "style": "karaoke",
-          "position": "bottom",
-          "maxChars": 26
         },
-        "bypassed": false,
-        "position": {
-          "x": 1360,
-          "y": 447
-        }
+        "version": 2
       },
       {
         "id": "assembler",
@@ -138,43 +93,78 @@
         "params": {
           "fps": 30,
           "minTotalFrames": 300,
-          "title": "Quote cards"
+          "title": "Quote cards",
+          "snapToBeat": false
         },
         "bypassed": false,
         "position": {
           "x": 1690,
           "y": 405
-        }
-      },
-      {
-        "id": "engine",
-        "type": "core/hyperframes-engine",
-        "params": {},
-        "bypassed": false,
-        "position": {
-          "x": 2020,
-          "y": 798
-        }
+        },
+        "version": 3
       },
       {
         "id": "output",
         "type": "core/video-output",
-        "params": {},
+        "params": {
+          "engineId": "hyperframes",
+          "engineSettings": {}
+        },
         "bypassed": false,
         "position": {
           "x": 2020,
           "y": 119
         }
+      },
+      {
+        "id": "illustrator-set",
+        "type": "core/set",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "brief": "Thẻ trích dẫn trên nền mực: câu trích chiếm trọn khung, một vạch màu accent, tên nguồn nhỏ bên dưới; tối giản, nhiều khoảng trống.",
+          "frame": "9:16",
+          "character": "",
+          "ground": "solid",
+          "form": "",
+          "language": "auto",
+          "members": []
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1360,
+          "y": 931
+        }
+      },
+      {
+        "id": "illustrator-plates",
+        "type": "core/plates",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "redraw": false
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1360,
+          "y": 671
+        }
+      },
+      {
+        "id": "illustrator",
+        "type": "core/compose",
+        "params": {
+          "transition": "fade",
+          "transitionSeconds": 0.4
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1700,
+          "y": 671
+        }
       }
     ],
     "edges": [
-      {
-        "id": "scenes",
-        "source": "screenwriter",
-        "sourcePort": "scenes",
-        "target": "illustrator",
-        "targetPort": "scenes"
-      },
       {
         "id": "c1",
         "source": "tts",
@@ -190,15 +180,8 @@
         "targetPort": "script"
       },
       {
-        "id": "c3",
-        "source": "transcribe",
-        "sourcePort": "voiceover",
-        "target": "captions",
-        "targetPort": "voiceover"
-      },
-      {
         "id": "c4",
-        "source": "captions",
+        "source": "transcribe",
         "sourcePort": "captions",
         "target": "assembler",
         "targetPort": "captions"
@@ -211,32 +194,11 @@
         "targetPort": "source"
       },
       {
-        "id": "e2",
-        "source": "llm-provider",
-        "sourcePort": "llm",
-        "target": "screenwriter",
-        "targetPort": "llm"
-      },
-      {
         "id": "e3",
         "source": "screenwriter",
         "sourcePort": "script",
         "target": "tts",
         "targetPort": "script"
-      },
-      {
-        "id": "e4",
-        "source": "tts-provider",
-        "sourcePort": "tts",
-        "target": "tts",
-        "targetPort": "tts"
-      },
-      {
-        "id": "plan",
-        "source": "illustrator",
-        "sourcePort": "plan",
-        "target": "assembler",
-        "targetPort": "plan"
       },
       {
         "id": "e6",
@@ -253,18 +215,53 @@
         "targetPort": "ir"
       },
       {
-        "id": "e8",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "output",
-        "targetPort": "engine"
+        "id": "screenwriter-scenes-illustrator-plates-scenes",
+        "source": "screenwriter",
+        "sourcePort": "scenes",
+        "target": "illustrator-plates",
+        "targetPort": "scenes"
       },
       {
-        "id": "illustrator-llm",
-        "source": "llm-provider",
-        "sourcePort": "llm",
+        "id": "screenwriter-scenes-illustrator-scenes",
+        "source": "screenwriter",
+        "sourcePort": "scenes",
         "target": "illustrator",
-        "targetPort": "llm"
+        "targetPort": "scenes"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-plates-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator-plates",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-layers-illustrator-plates-layers",
+        "source": "illustrator-set",
+        "sourcePort": "layers",
+        "target": "illustrator-plates",
+        "targetPort": "layers"
+      },
+      {
+        "id": "illustrator-plates-plates-illustrator-plates",
+        "source": "illustrator-plates",
+        "sourcePort": "plates",
+        "target": "illustrator",
+        "targetPort": "plates"
+      },
+      {
+        "id": "illustrator-plan-assembler-plan",
+        "source": "illustrator",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
       }
     ]
   }

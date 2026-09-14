@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import type { AudioScript, TTSRef, Voiceover } from '@/core/types/payloads';
+import { ProviderPick } from '@/components/node-runtime/provider-pick';
+import type { AudioScript, TTSRef, Voiceover } from '@/contracts/types/payloads';
 import { Kv, useT, stopFlow } from '@/components/ui';
 import { useInputPayload, useOutputPayload, useStudio } from '@/store/useStudio';
 import { useParams, type BodyProps } from '@/nodes/kit';
@@ -41,6 +42,7 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
   const auto = ref ? (() => { try { return pickVoice(ref, lang, p.voice); } catch { return null; } })() : null;
   return (
     <>
+      <ProviderPick nodeId={nodeId} kind="tts" />
       <Kv k={t('node.voice')} v={<select className={`nc-select ${stopFlow}`} value={p.voice ?? ''} onChange={(e) => set({ voice: e.target.value || undefined })}>
         <option value="">{t('node.auto')}{auto && !p.voice ? ` · ${auto.voice.displayName}` : ''}</option>
         {matching.length > 0 && <optgroup label={lang}>{matching.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}</optgroup>}

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import type { Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { makeFakeServices } from './fakes';
+import { makeFakeServices } from '@/contracts/__tests__/fakes';
 
 /**
  * A node may change its own parameters while it runs (RunContext.patchParams): the patch goes

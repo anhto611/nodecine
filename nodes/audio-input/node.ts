@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { ErrorCode } from '@/core/errors';
+import { ErrorCode } from '@/contracts/errors';
 import type { NodeDefinition } from '@/core/nodes/definition';
-import { OUTPUT_LANGUAGES } from '@/core/text/languages';
+import { OUTPUT_LANGUAGES } from '@/contracts/text/languages';
 
 const LANGUAGES = OUTPUT_LANGUAGES.filter((language) => language !== 'auto') as [string, ...string[]];
 const Params = z.object({

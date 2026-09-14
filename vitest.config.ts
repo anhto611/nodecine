@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   esbuild: { jsx: 'automatic' },
   test: {
-    include: ['core/**/*.test.ts?(x)', 'nodes/**/*.test.ts?(x)', 'templates/**/*.test.ts?(x)', 'lib/**/*.test.ts?(x)', 'providers/**/*.test.ts?(x)', 'server/**/*.test.ts?(x)', 'store/**/*.test.ts?(x)', 'components/**/*.test.ts?(x)'],
+    include: ['core/**/*.test.ts?(x)', 'contracts/**/*.test.ts?(x)', 'nodes/**/*.test.ts?(x)', 'templates/**/*.test.ts?(x)', 'lib/**/*.test.ts?(x)', 'providers/**/*.test.ts?(x)', 'server/**/*.test.ts?(x)', 'store/**/*.test.ts?(x)', 'components/**/*.test.ts?(x)'],
     environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
     setupFiles: ['./vitest.setup.ts'],
   },

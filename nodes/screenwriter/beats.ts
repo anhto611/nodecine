@@ -1,5 +1,5 @@
 import { z, type ZodTypeAny } from 'zod';
-import { CONTENT_KEYS, EntryContentSchema, SceneContentSchema, factListAt, type AudioScript, type ContentKey, type FactItem, type FactSheet, type SceneContent, type SceneScript, type WrittenKey } from '@/core/types/payloads';
+import { CONTENT_KEYS, EntryContentSchema, SceneContentSchema, factListAt, type AudioScript, type ContentKey, type FactItem, type FactSheet, type SceneContent, type SceneScript, type WrittenKey } from '@/contracts/types/payloads';
 
 /**
  * What the model says over one scene: its narration plus what is on screen. Files are not its to
@@ -95,7 +95,30 @@ export type SpokenScene = SceneContent & { narration: string };
 export type DirectorOutput = { language: string; scenes: SpokenScene[] };
 
 /** Words a scene of this weight gets to say: about five seconds of speech per unit of weight. */
-export const wordBudget = (weight: number): { min: number; max: number } => ({ min: Math.max(6, Math.round(13 * weight)), max: Math.max(10, Math.round(17 * weight)) });
+/**
+ * Roughly how fast a voice reads, in words a second. Used only to turn a length somebody asked for
+ * into a number of words to write; the film's real clock is still measured off the audio that comes
+ * back (CORE_CONTRACTS §5.4). Around 2.6 holds for both English and Vietnamese at normal speed.
+ */
+export const WORDS_PER_SECOND = 2.6;
+
+/**
+ * How many words a scene says. By weight, as it always was — but a form may ask for a different
+ * shape of scene, and a film may have a length to hit.
+ *
+ * The length is the reason this has options at all: a scene's duration comes from how long its
+ * narration takes to read, so "make it twenty seconds" is not a note anybody downstream can act on.
+ * Written as a word count, the model can act on it — and a form of four-word phrases can stop
+ * inheriting a budget meant for a paragraph, which is what kept kinetic type at seven seconds a scene.
+ */
+export const wordBudget = (weight: number, o: { words?: { min: number; max: number }; totalSeconds?: number; weightSum?: number } = {}): { min: number; max: number } => {
+  if (o.words) return { min: Math.max(1, Math.round(o.words.min * weight)), max: Math.max(2, Math.round(o.words.max * weight)) };
+  if (o.totalSeconds && o.weightSum) {
+    const share = (o.totalSeconds * WORDS_PER_SECOND * weight) / o.weightSum;
+    return { min: Math.max(2, Math.round(share * 0.85)), max: Math.max(4, Math.round(share * 1.15)) };
+  }
+  return { min: Math.max(6, Math.round(13 * weight)), max: Math.max(10, Math.round(17 * weight)) };
+};
 
 /** Fact keys the beats read; they go to the assembler, never into the prompt. */
 export function boundFactKeys(beats: Beat[]): Set<string> {

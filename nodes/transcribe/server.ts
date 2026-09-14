@@ -1,11 +1,11 @@
 import path from 'node:path';
 import { access } from 'node:fs/promises';
-import { ErrorCode } from '@/core/errors';
+import { ErrorCode } from '@/contracts/errors';
 import { TranscribeErrorCode } from './errors';
-import type { Word } from '@/core/types/payloads';
+import type { Word } from '@/contracts/types/payloads';
 import { exec, findBinary } from '@/server/exec';
 import { fileNameFromMediaUrl, mediaPath } from '@/server/paths';
-import { NodeError } from '@/core/errors';
+import { NodeError } from '@/contracts/errors';
 
 /**
  * Forced alignment on the server (CORE_CONTRACTS §5.12): a stable-ts script reads the narration on

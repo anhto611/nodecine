@@ -1,6 +1,6 @@
-import { NodeError } from '@/core/errors';
+import { NodeError } from '@/contracts/errors';
 import { downloadImageAsset, getVetted, readCapped, saveAsset } from '@/server/fetch-media';
-import { parsePageUrl } from '@/core/network/public-url';
+import { parsePageUrl } from '@/contracts/network/public-url';
 import type { StockRequest, StockResult } from './types';
 import { clipSearchUrl, parseClips, parseStock, pick, pickClip, searchUrl, STOCK_KEY_ENV } from './providers';
 

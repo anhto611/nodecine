@@ -3,9 +3,9 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { z } from 'zod';
-import { registerLLMProvider } from '@/core/providers/registry';
-import type { LLMProvider } from '@/core/providers/types';
-import type { LLMRef } from '@/core/types/payloads';
+import { registerLLMProvider } from '@/contracts/providers/registry';
+import type { LLMProvider } from '@/contracts/providers/types';
+import type { LLMRef } from '@/contracts/types/payloads';
 
 /**
  * The answers the server keeps on disk are keyed by what was asked *and* by the provider that was

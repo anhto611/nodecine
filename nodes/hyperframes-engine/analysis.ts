@@ -1,4 +1,4 @@
-import type { VideoIR } from '@/core/types/ir';
+import type { VideoIR } from '@/contracts/types/ir';
 
 /**
  * The analysis JSON of every track that has one, by track id, through whatever can read a media

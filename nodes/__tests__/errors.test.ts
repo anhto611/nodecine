@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NODE_ERROR_CODES } from '@/nodes/.generated/definitions';
 import { NODE_TRANSLATIONS } from '@/nodes/.generated/locales';
-import { ErrorCode } from '@/core/errors';
+import { ErrorCode } from '@/contracts/errors';
 import { en } from '@/locales/en';
 import { vi } from '@/locales/vi';
 

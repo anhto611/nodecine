@@ -5,27 +5,25 @@ import { audioInputTranslations } from '../audio-input/locales';
 import { audioMixTranslations } from '../audio-mix/locales';
 import { sceneBreakdownTranslations } from '../breakdown/locales';
 import { captionExportTranslations } from '../caption-export/locales';
-import { captionsTranslations } from '../captions/locales';
-import { githubFetcherTranslations } from '../github/locales';
+import { composeTranslations } from '../compose/locales';
 import { hyperframesEngineTranslations } from '../hyperframes-engine/locales';
-import { illustratorTranslations } from '../illustrator/locales';
 import { inputTriggerTranslations } from '../input/locales';
 import { layerTranslations } from '../layer/locales';
-import { llmProviderTranslations } from '../llm-provider/locales';
 import { mp4ExportTranslations } from '../mp4-export/locales';
+import { platesTranslations } from '../plates/locales';
 import { remotionEngineTranslations } from '../remotion-engine/locales';
 import { screenwriterTranslations } from '../screenwriter/locales';
 import { staticScriptTranslations } from '../script/locales';
+import { setTranslations } from '../set/locales';
 import { stockMediaTranslations } from '../stock/locales';
 import { transcribeTranslations } from '../transcribe/locales';
 import { ttsTranslations } from '../tts/locales';
-import { ttsProviderTranslations } from '../tts-provider/locales';
 import { videoOutputTranslations } from '../video-output/locales';
 import { webFetcherTranslations } from '../web/locales';
 
 /** Every string a node shows, by language: its name and description (node.<id>, node.desc.<id>) and its own labels. */
 export const NODE_TRANSLATIONS: Record<string, Record<string, string>> = { en: {}, vi: {} };
-for (const extension of [assemblerTranslations, audioAnalysisTranslations, audioInputTranslations, audioMixTranslations, sceneBreakdownTranslations, captionExportTranslations, captionsTranslations, githubFetcherTranslations, hyperframesEngineTranslations, illustratorTranslations, inputTriggerTranslations, layerTranslations, llmProviderTranslations, mp4ExportTranslations, remotionEngineTranslations, screenwriterTranslations, staticScriptTranslations, stockMediaTranslations, transcribeTranslations, ttsTranslations, ttsProviderTranslations, videoOutputTranslations, webFetcherTranslations]) {
+for (const extension of [assemblerTranslations, audioAnalysisTranslations, audioInputTranslations, audioMixTranslations, sceneBreakdownTranslations, captionExportTranslations, composeTranslations, hyperframesEngineTranslations, inputTriggerTranslations, layerTranslations, mp4ExportTranslations, platesTranslations, remotionEngineTranslations, screenwriterTranslations, staticScriptTranslations, setTranslations, stockMediaTranslations, transcribeTranslations, ttsTranslations, videoOutputTranslations, webFetcherTranslations]) {
   Object.assign(NODE_TRANSLATIONS.en!, extension.en);
   Object.assign(NODE_TRANSLATIONS.vi!, extension.vi);
 }

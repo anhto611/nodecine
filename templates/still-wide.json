@@ -40,7 +40,8 @@
         "position": {
           "x": 40,
           "y": 40
-        }
+        },
+        "version": 4
       },
       {
         "id": "stock",
@@ -51,61 +52,25 @@
           "orientation": "landscape",
           "longEdge": 1920,
           "replaceExisting": false,
-          "media": "clip"
+          "media": "clip",
+          "llmProvider": "claude-code",
+          "llmSettings": {}
         },
         "bypassed": false,
         "position": {
           "x": 370,
           "y": 40
-        }
-      },
-      {
-        "id": "llm-provider",
-        "type": "core/llm-provider",
-        "params": {
-          "providerId": "claude-code",
-          "settings": {}
-        },
-        "bypassed": false,
-        "position": {
-          "x": 370,
-          "y": 560
-        }
-      },
-      {
-        "id": "illustrator",
-        "type": "core/illustrator",
-        "params": {
-          "brief": "Ảnh hoặc clip kín khung bo góc lớn, phụ đề một dòng ở đáy có viền đen để đọc trên mọi ảnh; không có gì khác trên hình.",
-          "frame": "16:9",
-          "character": ""
-        },
-        "bypassed": false,
-        "position": {
-          "x": 700,
-          "y": 40
-        }
-      },
-      {
-        "id": "tts-provider",
-        "type": "core/tts-provider",
-        "params": {
-          "providerId": "system-tts",
-          "settings": {
-            "rate": 1
-          }
-        },
-        "bypassed": false,
-        "position": {
-          "x": 1030,
-          "y": 640
         }
       },
       {
         "id": "tts",
         "type": "core/tts-engine",
         "params": {
-          "speed": 1
+          "speed": 1,
+          "ttsProvider": "system-tts",
+          "ttsSettings": {
+            "rate": 1
+          }
         },
         "bypassed": false,
         "position": {
@@ -117,25 +82,15 @@
         "id": "transcribe",
         "type": "core/transcribe",
         "params": {
-          "model": "small"
+          "model": "small",
+          "maxChars": 52
         },
         "bypassed": false,
         "position": {
           "x": 1360,
           "y": 40
-        }
-      },
-      {
-        "id": "captions",
-        "type": "core/captions",
-        "params": {
-          "maxChars": 52
         },
-        "bypassed": false,
-        "position": {
-          "x": 1690,
-          "y": 40
-        }
+        "version": 2
       },
       {
         "id": "music",
@@ -151,7 +106,8 @@
         "position": {
           "x": 1360,
           "y": 400
-        }
+        },
+        "version": 2
       },
       {
         "id": "assembler",
@@ -159,28 +115,23 @@
         "params": {
           "fps": 30,
           "minTotalFrames": 180,
-          "title": "Still wide"
+          "title": "Still wide",
+          "snapToBeat": false
         },
         "bypassed": false,
         "position": {
           "x": 2020,
           "y": 260
-        }
-      },
-      {
-        "id": "engine",
-        "type": "core/hyperframes-engine",
-        "params": {},
-        "bypassed": false,
-        "position": {
-          "x": 2350,
-          "y": 900
-        }
+        },
+        "version": 3
       },
       {
         "id": "output",
         "type": "core/video-output",
-        "params": {},
+        "params": {
+          "engineId": "hyperframes",
+          "engineSettings": {}
+        },
         "bypassed": false,
         "position": {
           "x": 2350,
@@ -194,11 +145,60 @@
           "codec": "h264",
           "quality": "high",
           "fileName": "still-wide",
-          "resolution": "1080p"
+          "resolution": "1080p",
+          "engineId": "hyperframes",
+          "engineSettings": {}
         },
         "bypassed": true,
         "position": {
           "x": 2680,
+          "y": 40
+        }
+      },
+      {
+        "id": "illustrator-set",
+        "type": "core/set",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "brief": "Ảnh hoặc clip kín khung bo góc lớn, phụ đề một dòng ở đáy có viền đen để đọc trên mọi ảnh; không có gì khác trên hình.",
+          "frame": "16:9",
+          "character": "",
+          "ground": "solid",
+          "form": "",
+          "language": "auto",
+          "members": []
+        },
+        "bypassed": false,
+        "position": {
+          "x": 700,
+          "y": 300
+        }
+      },
+      {
+        "id": "illustrator-plates",
+        "type": "core/plates",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "redraw": false
+        },
+        "bypassed": false,
+        "position": {
+          "x": 700,
+          "y": 40
+        }
+      },
+      {
+        "id": "illustrator",
+        "type": "core/compose",
+        "params": {
+          "transition": "fade",
+          "transitionSeconds": 0.4
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1040,
           "y": 40
         }
       }
@@ -210,20 +210,6 @@
         "sourcePort": "scenes",
         "target": "stock",
         "targetPort": "scenes"
-      },
-      {
-        "id": "e1",
-        "source": "stock",
-        "sourcePort": "scenes",
-        "target": "illustrator",
-        "targetPort": "scenes"
-      },
-      {
-        "id": "e2",
-        "source": "llm-provider",
-        "sourcePort": "llm",
-        "target": "stock",
-        "targetPort": "llm"
       },
       {
         "id": "e3",
@@ -247,25 +233,11 @@
         "targetPort": "voiceover"
       },
       {
-        "id": "e6",
-        "source": "transcribe",
-        "sourcePort": "voiceover",
-        "target": "captions",
-        "targetPort": "voiceover"
-      },
-      {
         "id": "e7",
-        "source": "captions",
+        "source": "transcribe",
         "sourcePort": "captions",
         "target": "assembler",
         "targetPort": "captions"
-      },
-      {
-        "id": "e8",
-        "source": "tts-provider",
-        "sourcePort": "tts",
-        "target": "tts",
-        "targetPort": "tts"
       },
       {
         "id": "e9",
@@ -273,13 +245,6 @@
         "sourcePort": "voiceover",
         "target": "music",
         "targetPort": "voiceover"
-      },
-      {
-        "id": "e10",
-        "source": "illustrator",
-        "sourcePort": "plan",
-        "target": "assembler",
-        "targetPort": "plan"
       },
       {
         "id": "e11",
@@ -303,25 +268,53 @@
         "targetPort": "ir"
       },
       {
-        "id": "e16",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "output",
-        "targetPort": "engine"
+        "id": "stock-scenes-illustrator-plates-scenes",
+        "source": "stock",
+        "sourcePort": "scenes",
+        "target": "illustrator-plates",
+        "targetPort": "scenes"
       },
       {
-        "id": "e17",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "export",
-        "targetPort": "engine"
-      },
-      {
-        "id": "e-llm-ad1",
-        "source": "llm-provider",
-        "sourcePort": "llm",
+        "id": "stock-scenes-illustrator-scenes",
+        "source": "stock",
+        "sourcePort": "scenes",
         "target": "illustrator",
-        "targetPort": "llm"
+        "targetPort": "scenes"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-plates-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator-plates",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-layers-illustrator-plates-layers",
+        "source": "illustrator-set",
+        "sourcePort": "layers",
+        "target": "illustrator-plates",
+        "targetPort": "layers"
+      },
+      {
+        "id": "illustrator-plates-plates-illustrator-plates",
+        "source": "illustrator-plates",
+        "sourcePort": "plates",
+        "target": "illustrator",
+        "targetPort": "plates"
+      },
+      {
+        "id": "illustrator-plan-assembler-plan",
+        "source": "illustrator",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
       }
     ]
   }

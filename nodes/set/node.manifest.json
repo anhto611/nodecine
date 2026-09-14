@@ -1,0 +1,1 @@
+{"id": "core/set", "definition": "set", "body": "SetBody", "icon": "brush", "group": "visual", "translations": "setTranslations", "overlay": "SetMemberDialog", "overlayModule": "MemberDialog"}

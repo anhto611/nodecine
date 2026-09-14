@@ -3,11 +3,11 @@ import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { z, type ZodTypeAny } from 'zod';
 import { claudeCodeSettings } from './settings';
-import { registerLLMProvider } from '@/core/providers/registry';
-import { ErrorCode, NodeError } from '@/core/errors';
-import { extractJson } from '@/core/ai/structured-completion';
-import type { LLMProvider } from '@/core/providers/types';
-import type { Capability, LLMRef } from '@/core/types/payloads';
+import { registerLLMProvider } from '@/contracts/providers/registry';
+import { ErrorCode, NodeError } from '@/contracts/errors';
+import { extractJson } from '@/contracts/ai/structured-completion';
+import type { LLMProvider } from '@/contracts/providers/types';
+import type { Capability, LLMRef } from '@/contracts/types/payloads';
 import { exec, findBinary } from '@/server/exec';
 
 /**
@@ -89,7 +89,18 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
           throw new NodeError('LLM_UPSTREAM', `claude did not answer within ${Math.round(CLAUDE_TIMEOUT_MS / 1000)}s`, true)
             .withFix(`give it longer with ${CLAUDE_TIMEOUT_ENV}, or ask for less in one go`);
         }
-        if (r.code !== 0) throw new NodeError('LLM_UPSTREAM', `claude exited ${r.code}: ${r.stderr.trim() || 'no output'}`, true);
+        if (r.code !== 0) {
+          let msg = r.stderr.trim();
+          if (!msg && r.stdout) {
+            try {
+              const env = JSON.parse(r.stdout) as { result?: string };
+              if (env.result) msg = env.result;
+            } catch {
+              msg = r.stdout.trim();
+            }
+          }
+          throw new NodeError('LLM_UPSTREAM', `claude exited ${r.code}: ${msg || 'no output'}`, true);
+        }
         const envelope = JSON.parse(r.stdout) as { result?: string; is_error?: boolean };
         if (envelope.is_error || typeof envelope.result !== 'string') throw Object.assign(new Error('claude returned an error envelope'), { code: 'LLM_UPSTREAM' });
         const text = extractJson(envelope.result);

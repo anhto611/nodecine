@@ -20,7 +20,7 @@ const graphWith = (params: Record<string, unknown>): Graph => ({
 beforeEach(() => {
   _resetNodeRegistry();
   registerNodeType(inputTrigger as unknown as AnyNodeDefinition);
-  useStudio.setState({ graph: graphWith({ value: '', perRun: false }), tabs: [], activeTab: 'input-test', executor: null, locale: 'en' });
+  useStudio.setState({ graph: graphWith({ value: '' }), tabs: [], activeTab: 'input-test', executor: null, locale: 'en' });
 });
 
 const paramsNow = () => useStudio.getState().graph.nodes[0]!.params;
@@ -33,21 +33,9 @@ describe('the Input Trigger body', () => {
     expect(screen.getByText('5 characters')).toBeDefined();
   });
 
-  it('counts runs instead of characters once every line is its own run', async () => {
-    useStudio.setState({ graph: graphWith({ value: 'first\n\nsecond\nthird ', perRun: false }) });
-    render(<InputTriggerBody nodeId="in" />);
-    expect(screen.getByText(/characters/)).toBeDefined();
-
-    await userEvent.click(screen.getByRole('checkbox'));
-    expect(paramsNow().perRun).toBe(true);
-    // Blank lines are not runs, and neither is trailing space on one.
-    expect(screen.getByText('3 runs')).toBeDefined();
-  });
-
   it('speaks the language the Studio is set to', () => {
-    useStudio.setState({ locale: 'vi', graph: graphWith({ value: 'xin chào', perRun: false }) });
+    useStudio.setState({ locale: 'vi', graph: graphWith({ value: 'xin chào' }) });
     render(<InputTriggerBody nodeId="in" />);
-    expect(screen.getByText('mỗi dòng một lần chạy')).toBeDefined();
     expect(screen.getByText('8 ký tự')).toBeDefined();
   });
 

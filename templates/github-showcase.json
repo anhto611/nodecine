@@ -12,20 +12,6 @@
   "graph": {
     "nodes": [
       {
-        "id": "illustrator",
-        "type": "core/illustrator",
-        "params": {
-          "brief": "Phong cách lập trình viên nền tối: JetBrains Mono, accent tím, thẻ có viền mảnh, số liệu to; kicker nhỏ ở góc trên.",
-          "frame": "9:16",
-          "character": ""
-        },
-        "bypassed": false,
-        "position": {
-          "x": 1690,
-          "y": 671
-        }
-      },
-      {
         "id": "input",
         "type": "core/input-trigger",
         "params": {
@@ -39,31 +25,26 @@
       },
       {
         "id": "fetcher",
-        "type": "core/github-fetcher",
-        "params": {},
+        "type": "core/web-fetcher",
+        "params": {
+          "screenshot": false,
+          "width": 1280,
+          "height": 800,
+          "maxPages": 10
+        },
         "bypassed": false,
         "position": {
           "x": 370,
           "y": 270
-        }
-      },
-      {
-        "id": "llm-provider",
-        "type": "core/llm-provider",
-        "params": {
-          "providerId": "claude-code",
-          "settings": {}
         },
-        "bypassed": false,
-        "position": {
-          "x": 700,
-          "y": 947
-        }
+        "version": 2
       },
       {
         "id": "screenwriter",
         "type": "core/screenwriter",
         "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
           "prompt": "A one-minute showcase of this software project for developers scrolling past. Open with what it is, walk through what it does, show how to install it, prove it with the numbers, say who it is for, then invite them in. Confident, specific, no hype; every claim must come from the facts. The install command, the star count and the link are added later from GitHub — do not write them.",
           "outputLanguage": "auto",
           "beats": [
@@ -125,34 +106,26 @@
                 "source": "url"
               }
             }
-          ]
+          ],
+          "form": "",
+          "targetSeconds": 0
         },
         "bypassed": false,
         "position": {
           "x": 700,
           "y": 358
-        }
-      },
-      {
-        "id": "tts-provider",
-        "type": "core/tts-provider",
-        "params": {
-          "providerId": "system-tts",
-          "settings": {
-            "rate": 1
-          }
         },
-        "bypassed": false,
-        "position": {
-          "x": 1030,
-          "y": 303
-        }
+        "version": 3
       },
       {
         "id": "tts",
         "type": "core/tts-engine",
         "params": {
-          "speed": 1
+          "speed": 1,
+          "ttsProvider": "system-tts",
+          "ttsSettings": {
+            "rate": 1
+          }
         },
         "bypassed": false,
         "position": {
@@ -164,27 +137,15 @@
         "id": "transcribe",
         "type": "core/transcribe",
         "params": {
-          "model": "small"
+          "model": "small",
+          "maxChars": 26
         },
         "bypassed": false,
         "position": {
           "x": 1360,
           "y": 438
-        }
-      },
-      {
-        "id": "captions",
-        "type": "core/captions",
-        "params": {
-          "style": "karaoke",
-          "position": "bottom",
-          "maxChars": 26
         },
-        "bypassed": false,
-        "position": {
-          "x": 1690,
-          "y": 447
-        }
+        "version": 2
       },
       {
         "id": "assembler",
@@ -192,28 +153,23 @@
         "params": {
           "fps": 30,
           "minTotalFrames": 270,
-          "title": "GitHub showcase"
+          "title": "GitHub showcase",
+          "snapToBeat": false
         },
         "bypassed": false,
         "position": {
           "x": 2020,
           "y": 424
-        }
-      },
-      {
-        "id": "engine",
-        "type": "core/hyperframes-engine",
-        "params": {},
-        "bypassed": false,
-        "position": {
-          "x": 2350,
-          "y": 1133
-        }
+        },
+        "version": 3
       },
       {
         "id": "output",
         "type": "core/video-output",
-        "params": {},
+        "params": {
+          "engineId": "hyperframes",
+          "engineSettings": {}
+        },
         "bypassed": false,
         "position": {
           "x": 2350,
@@ -226,23 +182,65 @@
         "params": {
           "codec": "h264",
           "quality": "high",
-          "fileName": "github-showcase.mp4"
+          "fileName": "github-showcase.mp4",
+          "engineId": "hyperframes",
+          "engineSettings": {}
         },
         "bypassed": false,
         "position": {
           "x": 2400,
           "y": 148
         }
+      },
+      {
+        "id": "illustrator-set",
+        "type": "core/set",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "brief": "Phong cách lập trình viên nền tối: JetBrains Mono, accent tím, thẻ có viền mảnh, số liệu to; kicker nhỏ ở góc trên.",
+          "frame": "9:16",
+          "character": "",
+          "ground": "solid",
+          "form": "",
+          "language": "auto",
+          "members": []
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1690,
+          "y": 931
+        }
+      },
+      {
+        "id": "illustrator-plates",
+        "type": "core/plates",
+        "params": {
+          "llmProvider": "claude-code",
+          "llmSettings": {},
+          "redraw": false
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1690,
+          "y": 671
+        }
+      },
+      {
+        "id": "illustrator",
+        "type": "core/compose",
+        "params": {
+          "transition": "fade",
+          "transitionSeconds": 0.4
+        },
+        "bypassed": false,
+        "position": {
+          "x": 2030,
+          "y": 671
+        }
       }
     ],
     "edges": [
-      {
-        "id": "scenes",
-        "source": "screenwriter",
-        "sourcePort": "scenes",
-        "target": "illustrator",
-        "targetPort": "scenes"
-      },
       {
         "id": "c1",
         "source": "tts",
@@ -258,15 +256,8 @@
         "targetPort": "script"
       },
       {
-        "id": "c3",
-        "source": "transcribe",
-        "sourcePort": "voiceover",
-        "target": "captions",
-        "targetPort": "voiceover"
-      },
-      {
         "id": "c4",
-        "source": "captions",
+        "source": "transcribe",
         "sourcePort": "captions",
         "target": "assembler",
         "targetPort": "captions"
@@ -286,32 +277,11 @@
         "targetPort": "facts"
       },
       {
-        "id": "e3",
-        "source": "llm-provider",
-        "sourcePort": "llm",
-        "target": "screenwriter",
-        "targetPort": "llm"
-      },
-      {
         "id": "e4",
         "source": "screenwriter",
         "sourcePort": "script",
         "target": "tts",
         "targetPort": "script"
-      },
-      {
-        "id": "e5",
-        "source": "tts-provider",
-        "sourcePort": "tts",
-        "target": "tts",
-        "targetPort": "tts"
-      },
-      {
-        "id": "plan",
-        "source": "illustrator",
-        "sourcePort": "plan",
-        "target": "assembler",
-        "targetPort": "plan"
       },
       {
         "id": "e7",
@@ -342,25 +312,53 @@
         "targetPort": "ir"
       },
       {
-        "id": "e11",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "output",
-        "targetPort": "engine"
+        "id": "screenwriter-scenes-illustrator-plates-scenes",
+        "source": "screenwriter",
+        "sourcePort": "scenes",
+        "target": "illustrator-plates",
+        "targetPort": "scenes"
       },
       {
-        "id": "e12",
-        "source": "engine",
-        "sourcePort": "engine",
-        "target": "export",
-        "targetPort": "engine"
-      },
-      {
-        "id": "illustrator-llm",
-        "source": "llm-provider",
-        "sourcePort": "llm",
+        "id": "screenwriter-scenes-illustrator-scenes",
+        "source": "screenwriter",
+        "sourcePort": "scenes",
         "target": "illustrator",
-        "targetPort": "llm"
+        "targetPort": "scenes"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-plates-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator-plates",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-style-illustrator-style",
+        "source": "illustrator-set",
+        "sourcePort": "style",
+        "target": "illustrator",
+        "targetPort": "style"
+      },
+      {
+        "id": "illustrator-set-layers-illustrator-plates-layers",
+        "source": "illustrator-set",
+        "sourcePort": "layers",
+        "target": "illustrator-plates",
+        "targetPort": "layers"
+      },
+      {
+        "id": "illustrator-plates-plates-illustrator-plates",
+        "source": "illustrator-plates",
+        "sourcePort": "plates",
+        "target": "illustrator",
+        "targetPort": "plates"
+      },
+      {
+        "id": "illustrator-plan-assembler-plan",
+        "source": "illustrator",
+        "sourcePort": "plan",
+        "target": "assembler",
+        "targetPort": "plan"
       }
     ]
   }

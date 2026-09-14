@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { layoutGraph } from '../layout';
 import githubShowcase from '@/templates/github-showcase.json';
-import { edgeKind, type Graph } from '@/core/engine/graph';
+import type { Graph } from '@/core/engine/graph';
 import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
 
@@ -19,24 +19,19 @@ describe('layoutGraph', () => {
   it('lays the flow out left to right along its wires without overlaps', () => {
     const pos = layoutGraph(graph, sizes);
     expect(Object.keys(pos)).toHaveLength(graph.nodes.length);
-    for (const e of graph.edges.filter((e) => edgeKind(graph, e) === 'flow')) expect(pos[e.source]!.x, `${e.source} → ${e.target}`).toBeLessThan(pos[e.target]!.x);
+    for (const e of graph.edges) expect(pos[e.source]!.x, `${e.source} → ${e.target}`).toBeLessThan(pos[e.target]!.x);
     const boxes = graph.nodes.map((n) => ({ ...pos[n.id]!, w: sizes[n.id]!.width, h: sizes[n.id]!.height }));
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) expect(overlaps(boxes[i]!, boxes[j]!), `${graph.nodes[i]!.id} vs ${graph.nodes[j]!.id}`).toBe(false);
     expect(Math.min(...boxes.map((b) => b.x))).toBeGreaterThanOrEqual(0);
   });
 
-  it('hangs each resource node directly below the node that uses it, and keeps the Illustrator in the flow', () => {
+  it('lays the whole pipeline along one path, left to right', () => {
+    // There used to be a second shape here: resource nodes hanging in a band below their consumer.
+    // A model or an engine is a node's own setting now (§1.3), so every node is on the path.
     const pos = layoutGraph(graph, sizes);
-    // The Illustrator sits between the screenwriter and the assembler on the main path, not hanging off anything.
     expect(pos.illustrator!.x).toBeGreaterThan(pos.screenwriter!.x);
     expect(pos.illustrator!.x).toBeLessThan(pos.assembler!.x);
-    // llm-provider feeds the screenwriter; tts-provider feeds tts; engine feeds output (its first consumer).
-    for (const [resource, consumer] of [['llm-provider', 'screenwriter'], ['tts-provider', 'tts'], ['engine', 'output']] as const) {
-      const r = pos[resource]!, c = pos[consumer]!;
-      expect(r.y, `${resource} below ${consumer}`).toBeGreaterThanOrEqual(c.y + sizes[consumer]!.height);
-      // Horizontally within the consumer's slot: no wire runs backwards across the canvas.
-      expect(r.x, `${resource} starts with ${consumer}`).toBeGreaterThanOrEqual(c.x);
-    }
+    for (const id of Object.keys(sizes)) expect(pos[id], `${id} was left unplaced`).toBeDefined();
   });
 
   it('copes with nodes that have no wires and no measured size', () => {

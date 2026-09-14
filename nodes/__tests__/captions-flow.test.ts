@@ -2,18 +2,22 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Executor } from '@/core/engine/executor';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
 import { registerNodes } from '@/nodes';
-import { makeFakeServices, registerFakeEngineSupport, resetEngineSupport } from '@/core/__tests__/fakes';
-import { SCENE_SOURCE, STYLE, illustratorAnswers } from '@/core/__tests__/scene-fixtures';
+import { makeFakeServices, registerFakeEngineSupport, resetEngineSupport } from '@/contracts/__tests__/fakes';
+import { SCENE_SOURCE, STYLE, illustratorAnswers } from '@/contracts/__tests__/scene-fixtures';
 import { captionsToFrames } from '@/nodes/assembler/build-ir';
 import { buildHyperframesDocument } from '@/nodes/hyperframes-engine/document';
 import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
-import { beatClipsOf, type VideoIR } from '@/core/types/ir';
-import type { Voiceover } from '@/core/types/payloads';
+import { beatClipsOf, type VideoIR } from '@/contracts/types/ir';
+import type { Voiceover } from '@/contracts/types/payloads';
 
 /**
- * The whole subtitle path on the shipped Static Script template: Transcribe aligns (fake service),
- * Captions lays lines out, the Assembler puts them on the frame clock, the document draws them.
+ * The whole subtitle path on the shipped Static Script template: Transcribe aligns (fake service)
+ * and cuts the lines, the Assembler puts them on the frame clock, the document draws them.
+ *
+ * Aligning and cutting were two nodes until 2026-09-12. They are one now, which is what makes the
+ * old failure here impossible: nothing else produces a voice carrying words, so the node that cuts
+ * the lines is always the node that timed them.
  */
 const graph = () => structuredClone(staticScript.graph) as Graph;
 const on = (g: Graph, ...ids: string[]) => { for (const n of g.nodes) if (ids.includes(n.id)) n.bypassed = false; return g; };
@@ -28,13 +32,12 @@ beforeEach(() => {
 
 describe('captions on the Static Script template', () => {
   it('ships on, and switched off the Assembler still renders without subtitles and nothing is blocked', async () => {
-    expect(graph().nodes.filter((n) => n.id === 'transcribe' || n.id === 'captions').every((n) => !n.bypassed)).toBe(true);
+    expect(graph().nodes.filter((n) => n.id === 'transcribe').every((n) => !n.bypassed)).toBe(true);
     const services = makeFakeServices({ complete: illustratorAnswers() });
-    const ex = new Executor(off(graph(), 'transcribe', 'captions'), services);
+    const ex = new Executor(off(graph(), 'transcribe'), services);
     const { ok } = await ex.run();
     expect(ok).toBe(true);
     expect(ex.runtime('transcribe').state).toBe('bypassed');
-    expect(ex.runtime('captions').state).toBe('bypassed');
     expect(ex.runtime('assembler').state).toBe('success');
     expect((ex.runtime('assembler').outputs.ir!.payload as VideoIR).captions).toBeUndefined();
     expect(services.calls.some((c) => c.name === 'alignWords')).toBe(false);
@@ -42,7 +45,7 @@ describe('captions on the Static Script template', () => {
 
   it('turned on: aligns the script words, lays out lines, and the IR carries them on the frame clock', async () => {
     const services = makeFakeServices({ complete: illustratorAnswers() });
-    const ex = new Executor(on(graph(), 'transcribe', 'captions'), services);
+    const ex = new Executor(on(graph(), 'transcribe'), services);
     const { ok } = await ex.run();
     expect(ok).toBe(true);
     const align = services.calls.find((c) => c.name === 'transcribe/align')!;
@@ -60,24 +63,26 @@ describe('captions on the Static Script template', () => {
     }
   });
 
-  it('Captions without word timings fails with a fix, and a provider that already timed the words skips alignment', async () => {
+  it('cannot be asked for lines from a voice that has no words, which used to be a whole error code', async () => {
+    // Captions were their own node, wired behind Transcribe, and a person could wire them straight
+    // to the TTS engine instead: CAPTIONS_NO_WORDS with a fix telling them to go back and wire the
+    // other node. One node, and the mistake has nowhere left to happen.
     const services = makeFakeServices({ complete: illustratorAnswers() });
-    const g = off(on(graph(), 'captions'), 'transcribe');
-    // Wire Captions straight to the TTS engine, skipping Transcribe.
-    g.edges = g.edges.filter((e) => e.id !== 'c3');
-    g.edges.push({ id: 'x', source: 'tts', sourcePort: 'voiceover', target: 'captions', targetPort: 'voiceover' });
-    const ex = new Executor(g, services);
-    await ex.run();
-    expect(ex.runtime('captions').state).toBe('error');
-    expect(ex.runtime('captions').error).toMatchObject({ code: 'CAPTIONS_NO_WORDS' });
+    const ex = new Executor(on(graph(), 'transcribe'), services);
+    const { ok } = await ex.run();
+    expect(ok).toBe(true);
+    const ir = ex.runtime('assembler').outputs.ir!.payload as VideoIR;
+    expect(ir.captions!.cues.length).toBeGreaterThan(0);
+  });
 
+  it('skips alignment when the provider already timed the words, and still cuts the lines', async () => {
     const timed = makeFakeServices();
     const synth = timed.synthesize.bind(timed);
     timed.synthesize = async (...a) => ({ ...(await synth(...a)), words: [{ text: 'Hello', start: 0, end: 0.4 }, { text: 'there.', start: 0.4, end: 0.8 }] });
-    const ex2 = new Executor(on(graph(), 'transcribe', 'captions'), timed);
+    const ex2 = new Executor(on(graph(), 'transcribe'), timed);
     const { ok } = await ex2.run();
     expect(ok).toBe(true);
-    expect(timed.calls.some((c) => c.name === 'alignWords')).toBe(false);
+    expect(timed.calls.some((c) => c.name === 'transcribe/align')).toBe(false);
     expect((ex2.runtime('assembler').outputs.ir!.payload as VideoIR).captions!.cues[0]!.words.map((w) => w.text)).toEqual(['Hello', 'there.']);
   });
 });
@@ -94,7 +99,7 @@ describe('captionsToFrames', () => {
 describe('the HyperFrames document with captions', () => {
   it('draws each line inside the caption slot of every scene it overlaps, with a span per word, and hands the timings to the bootstrap', async () => {
     const services = makeFakeServices({ complete: illustratorAnswers() });
-    const ex = new Executor(on(graph(), 'transcribe', 'captions'), services);
+    const ex = new Executor(on(graph(), 'transcribe'), services);
     await ex.run();
     const ir = ex.runtime('assembler').outputs.ir!.payload as VideoIR;
     // The fake illustrator draws no caption slot, so every scene gets the default band; give the first its own slot.
@@ -110,7 +115,11 @@ describe('the HyperFrames document with captions', () => {
     // The first scene declares its own slot, so its lines sit inside it; the others get the default band.
     expect(html).toMatch(/<div class="captions" data-slot="captions"><div id="nc-cap-0-0" class="nc-cap-line">/);
     expect(html.split('class="nc-captions-default" data-slot="captions"').length - 1).toBe(ir.beats.length - 1);
-    expect(html).toContain('.nc-captions-default { position: absolute; left: 72px; right: 168px; bottom: 720px;');
+    // The band sits where the film's style agreed it, not where this build would have guessed.
+    expect(html).toContain('.nc-captions-default { position: absolute; left: 96px; right: 96px; bottom: 150px;');
+    // A film drawn before the style agreed one keeps the build's own default.
+    const { captions: _agreed, ...older } = ir.style;
+    expect(buildHyperframesDocument({ ...ir, style: older }, { gsapSource: '/*gsap*/', runtimeSource: '/*rt*/', fontBase: '/fonts' })).toContain('.nc-captions-default { position: absolute; left: 72px; right: 168px; bottom: 720px;');
     expect(html).toMatch(/@layer nc-base \{\n\.nc-cap-line/);
     const data = JSON.parse(/<script type="application\/json" id="nodecine-data">([\s\S]*?)<\/script>/.exec(html)![1]!) as { scenes: { captions: { id: string; show: number; hide: number; style: string; words: { id: string; at: number }[] }[] }[] };
     expect(data.scenes[0]!.captions[0]).toMatchObject({ id: 'nc-cap-0-0', style: 'karaoke' });
@@ -120,7 +129,7 @@ describe('the HyperFrames document with captions', () => {
 
   it('honours data-caption-style on a scene\'s own slot', async () => {
     const services = makeFakeServices({ complete: illustratorAnswers() });
-    const ex = new Executor(on(graph(), 'transcribe', 'captions'), services);
+    const ex = new Executor(on(graph(), 'transcribe'), services);
     await ex.run();
     const ir = ex.runtime('assembler').outputs.ir!.payload as VideoIR;
     const reveal: VideoIR = { ...ir, tracks: ir.tracks.map((t) => ({ ...t, clips: t.clips.map((c) => (c.kind === 'code' ? { ...c, source: `${c.source}<div data-slot="captions" data-caption-style="reveal"></div>` } : c)) })) };

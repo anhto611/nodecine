@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { timecode, toSubtitles } from '../subtitles';
-import type { CaptionTrack } from '@/core/types/payloads';
+import type { CaptionTrack } from '@/contracts/types/payloads';
 
 const w = (text: string, start: number, end: number) => ({ text, start, end });
 const track: CaptionTrack = {

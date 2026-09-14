@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
-import { REQUIRED_TRANSITIONS } from '@/core/types/ir';
-import { registerTransition } from '@/core/visual/transitions';
+import { REQUIRED_TRANSITIONS } from '@/contracts/types/ir';
+import { registerTransition } from '@/contracts/visual/transitions';
 import { REMOTION_ENGINE_ID } from './constants';
 
 /**

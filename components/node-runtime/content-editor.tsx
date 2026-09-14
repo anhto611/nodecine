@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { CONTENT_KEYS, type ContentKey, type EntryContent, type SceneContent } from '@/core/types/payloads';
+import { CONTENT_KEYS, type ContentKey, type EntryContent, type SceneContent } from '@/contracts/types/payloads';
 import { Kv, Btn, useT, stopFlow } from '@/components/ui';
 import { Icon } from '@/components/icons';
 import { uploadImage, takeLibraryFile } from '@/lib/assets.client';

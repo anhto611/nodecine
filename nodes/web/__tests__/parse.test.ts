@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPrivateHost, parsePageUrl, parsePageUrls } from '@/core/network/public-url';
+import { isPrivateHost, parsePageUrl, parsePageUrls } from '@/contracts/network/public-url';
 import { parsePageMeta } from '../parse-meta';
 
 describe('parsePageUrl', () => {

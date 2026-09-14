@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { expandBeats, listBeats, toPackets, type Beat } from '../beats';
-import { readFactPath, factListAt } from '@/core/types/payloads';
+import { readFactPath, factListAt } from '@/contracts/types/payloads';
 
 const beat = (over: Partial<Beat> = {}): Beat => ({ role: 'item', brief: '', weight: 1, count: 5, factBindings: {}, ...over });
 const facts = {

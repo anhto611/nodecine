@@ -1,1 +1,1 @@
-{"id": "core/remotion-engine", "definition": "remotionEngine", "body": "RemotionEngineBody", "icon": "chip", "group": "resource", "translations": "remotionEngineTranslations", "register": {"server": "registerRemotionServer", "client": "registerRemotionClient"}}
+{"id": "core/remotion-engine", "icon": "chip", "group": "resource", "translations": "remotionEngineTranslations", "register": {"server": "registerRemotionServer", "client": "registerRemotionClient"}}

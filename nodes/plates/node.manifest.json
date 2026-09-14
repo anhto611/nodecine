@@ -1,0 +1,1 @@
+{"id": "core/plates", "definition": "plates", "body": "PlatesBody", "icon": "brush", "group": "visual", "translations": "platesTranslations", "overlay": "PlateStore", "overlayModule": "PlateStore"}

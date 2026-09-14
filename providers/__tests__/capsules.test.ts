@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll } from 'vitest';
 import { PROVIDERS, providersOfKind, findProvider } from '@/providers/installed';
 import { installProviders } from '@/providers/.generated/server';
-import { getLLMProvider, getTTSProvider, _resetProviderRegistries } from '@/core/providers/registry';
+import { getLLMProvider, getTTSProvider, _resetProviderRegistries } from '@/contracts/providers/registry';
 import { PROVIDER_TRANSLATIONS } from '@/providers/.generated/locales';
 import { schemaFields } from '@/core/schema-form';
 

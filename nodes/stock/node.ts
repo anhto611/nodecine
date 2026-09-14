@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { LLMRef, SceneScript } from '@/core/types/payloads';
+import { resolveLLM } from '@/contracts/resources';
+import type { LLMRef, SceneScript } from '@/contracts/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { STOCK_PROVIDERS } from './providers';
 import { STOCK_STYLE_IDS } from './styles';
@@ -7,6 +8,9 @@ import { buildStockPrompt, StockQueriesSchema } from './prompt';
 import type { StockResult } from './types';
 
 const Params = z.object({
+  /** Optional: a model to write the search words. Empty and the node falls back to the scene's own text. */
+  llmProvider: z.string().max(60).default(''),
+  llmSettings: z.record(z.string(), z.unknown()).default({}),
   provider: z.enum(STOCK_PROVIDERS).default('pexels'),
   /** Which kind of place the pictures come from. Steers the model; without one wired in it does nothing. */
   style: z.enum(STOCK_STYLE_IDS).default('auto'),
@@ -48,14 +52,13 @@ export const stockMedia: NodeDefinition<typeof Params> = {
   kind: 'process',
   inputs: [
     { name: 'scenes', type: 'SceneScript' },
-    { name: 'llm', type: 'LLMRef', required: false, requires: ['installed', 'authenticated'] },
   ],
   outputs: [{ name: 'scenes', type: 'SceneScript' }],
   paramsSchema: Params,
-  defaultParams: { provider: 'pexels', style: 'auto', orientation: 'landscape', longEdge: 1920, replaceExisting: false, media: 'auto' },
+  defaultParams: { llmProvider: '', llmSettings: {}, provider: 'pexels', style: 'auto', orientation: 'landscape', longEdge: 1920, replaceExisting: false, media: 'auto' },
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const script = inputs.scenes!.payload as SceneScript;
-    const ref = inputs.llm?.payload as LLMRef | undefined;
+    const ref = params.llmProvider.trim() ? await resolveLLM(services, params) : undefined;
 
     const has = (i: number) => !!script.scenes[i]!.content.image || !!script.scenes[i]!.content.clip;
     const wanted = script.scenes.map((_, i) => (params.replaceExisting || !has(i) ? i : -1)).filter((i) => i >= 0);

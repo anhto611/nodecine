@@ -2,8 +2,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Player, type PlayerRef } from '@remotion/player';
-import type { VideoIR } from '@/core/types/ir';
-import type { PlayerHandle } from '@/core/adapters/types';
+import type { VideoIR } from '@/contracts/types/ir';
+import type { PlayerHandle } from '@/contracts/adapters/types';
 import { NodeCineVideo, type VideoProps } from './Video';
 import type { MountPlayer } from './adapter';
 

@@ -1,4 +1,4 @@
-import type { CaptionTrack } from '@/core/types/payloads';
+import type { CaptionTrack } from '@/contracts/types/payloads';
 
 /**
  * A caption track as a subtitle file (CORE_CONTRACTS §5.16). Pure, so the shapes below are what a
