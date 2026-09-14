@@ -29,10 +29,10 @@ export const composition: NodeDefinition<typeof Params> = {
     }
     const inspection = await services.invoke<Inspection>('composition/inspect', [params.files]);
     const errors = inspection.findings.filter((f) => f.severity === 'error');
-    for (const f of inspection.findings.filter((x) => x.severity === 'warning')) log('warn', `${f.code}: ${f.message}`, f.code);
+    for (const f of inspection.findings.filter((x) => x.severity === 'warning')) log('warn', `${f.file ? `${f.file} · ` : ''}${f.code}: ${f.message}`, f.code);
     if (errors.length) {
       const first = errors[0]!;
-      throw new NodeError(CompositionErrorCode.COMPOSITION_INVALID, `${first.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`, false, errors).withFix(first.fixHint ?? 'fix the composition and run again');
+      throw new NodeError(CompositionErrorCode.COMPOSITION_INVALID, `${first.file ? `${first.file}: ` : ''}${first.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`, false, errors).withFix(first.fixHint ?? 'fix the composition and run again');
     }
     const out: Composition = {
       engine: 'hyperframes',

@@ -67,6 +67,22 @@ export const filmRecorder: JobRecorder = {
   },
 };
 
+/**
+ * The fingerprint of the code this hub was built with, measured once, now.
+ *
+ * The hub lives on globalThis and keeps running the node code it was created with, while Next reloads
+ * modules around it. Measured on every run instead, the fingerprint followed the files on disk: an
+ * edit gave a new signature to a result the old code produced, and that stale result was then kept
+ * under the new code's name — after a restart the fixed node was never run, and its old output came
+ * back from the cache. Frozen here, a signature always names the code that actually ran; an edit
+ * reaches the hub, and the cache, with a restart.
+ */
+function frozenFingerprints(sources: Readonly<Record<string, string>>): (type: string) => string | undefined {
+  const measure = fingerprintFor(sources);
+  const frozen = new Map(Object.keys(sources).map((type) => [type, measure(type)] as const));
+  return (type) => frozen.get(type);
+}
+
 /** One hub per process. Kept on globalThis so Next's dev reloads do not orphan a running queue. */
 export function jobHub(): JobHub {
   const g = globalThis as unknown as { __nodecineJobHub?: JobHub };
@@ -74,7 +90,7 @@ export function jobHub(): JobHub {
     g.__nodecineJobHub = new JobHub((workflow) => createServerServices({ workflow }), {
       recorder: filmRecorder,
       prepare: ensureServerRegistrations,
-      fingerprint: fingerprintFor(NODE_SOURCES),
+      fingerprint: frozenFingerprints(NODE_SOURCES),
     });
   }
   return g.__nodecineJobHub;

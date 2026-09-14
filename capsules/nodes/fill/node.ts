@@ -6,16 +6,28 @@ import type { NodeDefinition } from '@/core/nodes/definition';
 import { FillErrorCode } from './errors';
 
 /**
- * Where what the steps before produced lands in a composition. Files the composition reads by name,
- * and a variable it may declare to learn the voice's length — the one number a timeline built
- * before the voice existed cannot know.
+ * Where what the steps before produced lands in a composition. The composition reads these by name;
+ * each is written only when there is something to write.
+ *
+ * - `voiceover.<ext>`: the voice-over, beside the composition's own files.
+ * - `voiceover` variable: that file's path, for an `<audio data-var-src="voiceover">`. Declaring it
+ *   is how a composition says it plays the voice; without a voice it stays unset and renders silent.
+ * - `voiceoverSeconds` variable: the voice's length, when declared.
+ * - `voiceover.json`: `{ durationSeconds, segments?, words? }` — the voice's length, where each
+ *   narration segment starts and how long it lasts, and the words' timings, for a timeline that
+ *   follows the voice.
+ * - `captions.json`: the caption lines.
  */
 export const FILLED = {
   voiceover: 'voiceover',
   voiceoverSeconds: 'voiceoverSeconds',
-  transcript: 'transcript.json',
+  timing: 'voiceover.json',
   captions: 'captions.json',
+  images: 'images',
 } as const;
+
+/** A file this machine holds, named by the app: an upload or something a node made. */
+const APP_FILE = /^\/api\/(?:assets|media)\/[a-f0-9]{16,64}\.([a-z0-9]+)$/;
 
 const Params = z.object({
   /** Values for the composition's variables, by id. What is not set keeps the declared default. */
@@ -35,8 +47,9 @@ function suits(value: unknown, variable: CompositionVariable): boolean {
 }
 
 /**
- * A composition with what this run made poured in: the voice-over as a file beside it, the word
- * timings and caption lines as JSON it can read, and values for its variables. The composition
+ * A composition with what this run made poured in: the voice-over as a file beside it, its timings
+ * and the caption lines as JSON it can read, uploaded pictures copied into it, and values for its
+ * variables. The composition
  * decides what to do with each; this node only puts them where the composition looks.
  */
 export const fill: NodeDefinition<typeof Params> = {
@@ -64,11 +77,30 @@ export const fill: NodeDefinition<typeof Params> = {
 
     const files = { ...base.files };
     const media = { ...base.media };
+
+    // An uploaded picture is a URL of this app, which the engine's renderer cannot reach: it goes
+    // into the project beside the composition, and the variable names it there.
+    for (const [id, value] of Object.entries(values)) {
+      if (declared.get(id)?.type !== 'image') continue;
+      const url = typeof value === 'string' ? value : (value as { url?: unknown } | null)?.url;
+      const m = typeof url === 'string' ? APP_FILE.exec(url) : null;
+      if (!m) continue;
+      const inProject = `${FILLED.images}/${id}.${m[1]}`;
+      media[inProject] = url as Composition['media'][string];
+      values[id] = typeof value === 'string' ? inProject : { ...(value as object), url: inProject };
+    }
+
     if (voice) {
       const ext = voice.audioUrl.split('.').pop() ?? 'mp3';
-      media[`${FILLED.voiceover}.${ext}`] = voice.audioUrl;
+      const file = `${FILLED.voiceover}.${ext}`;
+      media[file] = voice.audioUrl;
+      if (declared.has(FILLED.voiceover)) values[FILLED.voiceover] = file;
       if (declared.has(FILLED.voiceoverSeconds)) values[FILLED.voiceoverSeconds] = voice.durationSeconds;
-      if (voice.words?.length) files[FILLED.transcript] = JSON.stringify(voice.words);
+      files[FILLED.timing] = JSON.stringify({
+        durationSeconds: voice.durationSeconds,
+        ...(voice.segments ? { segments: voice.segments } : {}),
+        ...(voice.words?.length ? { words: voice.words } : {}),
+      });
     }
     if (captions) files[FILLED.captions] = JSON.stringify(captions.cues);
 

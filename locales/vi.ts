@@ -74,6 +74,7 @@ export const vi: Record<DictKey, string> = {
   'port.audioScript': 'Lời thoại',
   'port.voiceover': 'Âm thanh & Thời lượng',
   'port.composition': 'Composition',
+  'port.storyboard': 'Storyboard',
   'port.captionTrack': 'Phụ đề',
   'port.optional': 'tùy chọn',
   'node.retry': 'Thử lại riêng node này',

@@ -10,6 +10,7 @@ import { keepWebGlobals } from '@/server/web-globals';
 import { createHyperframesAdapter, type ServerPreview, type ServerRender } from './adapter';
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { writeProject } from './project.server';
+import { hoistNestedCompositions } from './hoist.server';
 
 const QUALITY: Record<ExportSettings['quality'], 'high' | 'standard' | 'draft'> = { high: 'high', medium: 'standard', low: 'draft' };
 
@@ -29,7 +30,11 @@ export const previewWithBundler: ServerPreview = async (composition) => {
   const name = `preview-${contentHash(values)}.html`;
   const target = projectFilePath(key, name);
   if (!(await stat(target).then(() => true, () => false))) {
-    const bundled = await bundleToSingleHtml(dir, { entryFile: COMPOSITION_ENTRY, runtime: 'inline' });
+    // Nested sub-compositions lose their values in the bundle; flatten them first (see hoist.server.ts).
+    const { html, hoisted } = hoistNestedCompositions(composition.files[COMPOSITION_ENTRY] ?? '', (src) => composition.files[src]);
+    const entryFile = hoisted ? `preview-entry-${contentHash(html)}.html` : COMPOSITION_ENTRY;
+    if (hoisted) await writeFile(projectFilePath(key, entryFile), html, 'utf8');
+    const bundled = await bundleToSingleHtml(dir, { entryFile, runtime: 'inline' });
     // `<` escaped so a value holding `</script>` cannot close the tag it is written into.
     const assignment = `<script>window.__hfVariables = ${JSON.stringify(values).replace(/</g, '\\u003c')};</script>`;
     await writeFile(target, injectTagsAtHeadStart(bundled, assignment), 'utf8');
@@ -37,19 +42,38 @@ export const previewWithBundler: ServerPreview = async (composition) => {
   return { url: projectUrl(key, name) };
 };
 
+/**
+ * The producer keeps every captured frame on disk before encoding, which a long film cannot afford:
+ * an 85-second portrait film asked for over 100 GB. It says so before capturing, and its low-memory
+ * mode streams frames straight into the encoder instead, slower but within any disk.
+ */
+const OUT_OF_FRAME_STORAGE = /temporary frame storage|low-memory-mode/i;
+
 /** The composition rendered by `@hyperframes/producer`, with its values as the render's variables. */
 export const renderWithProducer: ServerRender = async (composition, settings, onProgress, signal) => {
-  const { createRenderJob, executeRenderJob } = await import('@hyperframes/producer');
+  const { createRenderJob, executeRenderJob, resolveConfig } = await import('@hyperframes/producer');
   const { dir } = await writeProject(composition);
   const tmp = await ensureTmpDir();
   const fileName = `${contentHash({ project: dir, values: valuesOf(composition), fps: composition.fps, quality: settings.quality })}.mp4`;
   const outputPath = path.join(tmp, fileName);
-  const job = createRenderJob({ fps: composition.fps, quality: QUALITY[settings.quality], format: 'mp4', entryFile: COMPOSITION_ENTRY, variables: valuesOf(composition) });
-  // The producer's file server would swap the global Request/Response out from under Next (see server/web-globals.ts).
-  await keepWebGlobals(() => executeRenderJob(job, dir, outputPath, (j, message) => {
-    const fraction = j.progress > 1 ? j.progress / 100 : j.progress;
-    onProgress({ fraction: Math.max(0, Math.min(1, fraction)), message });
-  }, signal));
+  const run = async (lowMemoryMode: boolean) => {
+    const job = createRenderJob({
+      fps: composition.fps, quality: QUALITY[settings.quality], format: 'mp4', entryFile: COMPOSITION_ENTRY, variables: valuesOf(composition),
+      ...(lowMemoryMode ? { producerConfig: resolveConfig({ lowMemoryMode: true }) } : {}),
+    });
+    // The producer's file server would swap the global Request/Response out from under Next (see server/web-globals.ts).
+    await keepWebGlobals(() => executeRenderJob(job, dir, outputPath, (j, message) => {
+      const fraction = j.progress > 1 ? j.progress / 100 : j.progress;
+      onProgress({ fraction: Math.max(0, Math.min(1, fraction)), message });
+    }, signal));
+  };
+  try {
+    await run(false);
+  } catch (e) {
+    if (signal.aborted || !OUT_OF_FRAME_STORAGE.test(e instanceof Error ? e.message : String(e))) throw e;
+    onProgress({ fraction: 0, message: 'streaming frames to the encoder' });
+    await run(true);
+  }
   const s = await stat(outputPath);
   return { outputUrl: mediaUrl(fileName), bytes: s.size };
 };

@@ -22,6 +22,14 @@ export interface RenderResult {
   bytes: number;
 }
 
+export interface PlayerOptions {
+  url: string;
+  width: number;
+  height: number;
+  controls?: boolean;
+  still?: number;
+}
+
 /** What a player node gets back from mounting a preview. */
 export interface PlayerHandle {
   unmount(): void;
@@ -39,8 +47,11 @@ export interface EngineAdapter {
   probe(): Promise<{ preview: Capability; render: Capability }>;
   /** Server-side: a page the player can load for this composition, filled with its values. */
   preview(composition: Composition, signal: AbortSignal): Promise<{ url: string }>;
-  /** Client-side: play a prepared preview inside `element`. */
-  mountPlayer(element: HTMLElement, preview: { url: string; width: number; height: number }): PlayerHandle;
+  /**
+   * Client-side: play a prepared preview inside `element`. `controls: false` draws the picture alone;
+   * `still` holds it paused at that second once loaded, for a thumbnail.
+   */
+  mountPlayer(element: HTMLElement, preview: PlayerOptions): PlayerHandle;
   /** Server-side: the composition, filled with its values, as a video file. */
   render(composition: Composition, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal): Promise<RenderResult>;
 }

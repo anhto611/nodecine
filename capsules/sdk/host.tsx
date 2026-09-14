@@ -30,6 +30,15 @@ export interface NodeHost {
   useLocale(): string;
   translate(locale: string, key: string, vars?: Record<string, string | number>): string;
   hasTranslation(key: string): boolean;
+  /**
+   * The dialog a capsule registers as its overlay (manifest `overlay`), drawn above the canvas rather
+   * than inside the node: which node opened it and with what, and how to open or close it.
+   */
+  useOverlay(): { current: { nodeId: string; data?: unknown } | null; open(nodeId: string, data?: unknown): void; close(): void };
+  /** Ask the server for one of this capsule's actions (`capsule/name` in its manifest's `actions`). */
+  action<T = unknown>(id: string, args: unknown[]): Promise<T>;
+  /** Keep a picture the person chose as a file this machine holds, and return its URL. */
+  uploadImage(file: File): Promise<string>;
   /** The providers of one kind this build ships, for a picker. */
   providers(kind: 'llm' | 'tts'): { id: string; nameKey: string; defaultSettings: Record<string, unknown> }[];
 }
@@ -54,6 +63,7 @@ export const useInputPayload = <T = unknown,>(nodeId: string, port: string): T |
 export const useRun = () => useHost().useRun();
 export const useViewedRun = (): RunRecord | null => useHost().useViewedRun();
 export const useLocale = (): string => useHost().useLocale();
+export const useOverlay = () => useHost().useOverlay();
 
 /** A node's params, and a setter that patches them. */
 export function useParams<T extends Record<string, unknown>>(nodeId: string): [T, (patch: Partial<T>) => void] {

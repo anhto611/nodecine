@@ -1,11 +1,11 @@
-import type { EngineAdapter, ExportSettings, PlayerHandle, RenderProgress, RenderResult } from '@/contracts/adapters/types';
+import type { EngineAdapter, ExportSettings, PlayerHandle, PlayerOptions, RenderProgress, RenderResult } from '@/contracts/adapters/types';
 import type { Composition } from '@/contracts/types/composition';
 import type { Capability } from '@/contracts/types/payloads';
 import { HYPERFRAMES_ADAPTER_VERSION, HYPERFRAMES_ENGINE_ID } from './constants';
 
 export type ServerPreview = (composition: Composition, signal: AbortSignal) => Promise<{ url: string }>;
 export type ServerRender = (composition: Composition, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal) => Promise<RenderResult>;
-export type MountPlayer = (element: HTMLElement, preview: { url: string; width: number; height: number }) => PlayerHandle;
+export type MountPlayer = (element: HTMLElement, preview: PlayerOptions) => PlayerHandle;
 
 const notHere = (what: string, side: string) => Object.assign(new Error(`${what} is only available ${side}`), { code: 'ENGINE_NOT_READY' });
 

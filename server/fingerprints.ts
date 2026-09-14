@@ -15,8 +15,9 @@ import { contentHash, fnv1a64 } from '@/core/hash';
  * version of every package on the way. What does not: a provider or an engine reached through
  * `services`, which the node never imports.
  *
- * Read from disk on demand and remembered per file by modification time, so an edit in development
- * is seen on the next run without restarting, and an unchanged tree costs a `stat` per file.
+ * Read from disk on demand and remembered per file by modification time, so an unchanged tree costs a
+ * `stat` per file. A long-lived host that keeps running the code it loaded should measure once and
+ * keep the answer (server/contracts/hub.ts), or its signatures describe code it is not running.
  */
 
 const root = process.cwd();

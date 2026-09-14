@@ -1,0 +1,1 @@
+{"id": "script", "definition": "script", "body": "ScriptBody", "icon": "doc", "group": "script", "layout": "wide", "translations": "scriptTranslations", "errors": "ScriptErrorCode"}

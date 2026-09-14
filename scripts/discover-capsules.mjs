@@ -55,6 +55,7 @@ for (const item of capsules) {
   for (const key of ['id', 'icon', 'group', 'translations', 'definition', 'body']) if (typeof item[key] !== 'string' || !item[key]) throw new Error(`${item.folder}/node.manifest.json: ${key} is required`);
   if (item.register) throw new Error(`${item.folder}/node.manifest.json: a node registers nothing of its own; an engine is a capsule under capsules/engines`);
   if (item.locales) throw new Error(`${item.folder}/node.manifest.json: put the name and description in locales.ts as node.<id> and node.desc.<id>, not in the manifest`);
+  if (item.actions !== undefined && (typeof item.actions !== 'string' || !item.actions)) throw new Error(`${item.folder}/node.manifest.json: actions must be the name of the table exported from server.ts`);
   if (item.errors !== undefined && (typeof item.errors !== 'string' || !item.errors)) throw new Error(`${item.folder}/node.manifest.json: errors must be the name of the code table exported from errors.ts`);
   if (ids.has(item.id)) throw new Error(`duplicate node id: ${item.id}`);
   if (retired[item.id]) throw new Error(`${item.folder}/node.manifest.json: "${item.id}" is listed in retired.json`);
@@ -91,6 +92,10 @@ function imports(side) {
     for (const item of capsules.filter((entry) => entry.services)) {
       const key = `${item.folder}/${item.servicesModule || 'server'}`;
       modules.set(key, [...(modules.get(key) || []), item.services]);
+    }
+    for (const item of capsules.filter((entry) => entry.actions)) {
+      const key = `${item.folder}/${item.servicesModule || 'server'}`;
+      modules.set(key, [...(modules.get(key) || []), item.actions]);
     }
   }
   if (side === 'client') {
@@ -148,6 +153,15 @@ ${imports('server')}
 
 export const NODE_SERVICE_EXTENSIONS: Record<string, NodeService>[] = [
 ${capsules.filter((item) => item.services).map((item) => `  ${item.services},`).join('\n')}
+];
+
+/**
+ * What a node's body may ask the server for while a person edits it, outside any run: installing a
+ * part into a composition, say. Kept apart from the services so only what a capsule names as an
+ * action is reachable from the canvas.
+ */
+export const NODE_ACTIONS: Record<string, NodeService>[] = [
+${capsules.filter((item) => item.actions).map((item) => `  ${item.actions},`).join('\n')}
 ];
 
 /**

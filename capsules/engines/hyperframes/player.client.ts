@@ -1,5 +1,5 @@
 'use client';
-import type { PlayerHandle } from '@/contracts/adapters/types';
+import type { PlayerHandle, PlayerOptions } from '@/contracts/adapters/types';
 
 type PlayerElement = HTMLElement & { play(): void; pause(): void; seek(seconds: number): void; currentTime: number };
 
@@ -8,16 +8,22 @@ type PlayerElement = HTMLElement & { play(): void; pause(): void; seek(seconds: 
  * composition's values. `sandbox-origin="opaque"` keeps the composition's scripts out of the Studio's
  * own page: a composition is code, and a workflow can come from someone else.
  */
-export function mountHyperframesPlayer(element: HTMLElement, preview: { url: string; width: number; height: number }): PlayerHandle {
+export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOptions): PlayerHandle {
   void import('@hyperframes/player');
   const player = document.createElement('hyperframes-player') as PlayerElement;
   player.setAttribute('src', preview.url);
   player.setAttribute('width', String(preview.width));
   player.setAttribute('height', String(preview.height));
-  player.setAttribute('controls', '');
+  // A picture without controls is a thumbnail: silent, since nobody chose to play it.
+  if (preview.controls !== false) player.setAttribute('controls', '');
+  else player.setAttribute('muted', '');
   player.setAttribute('sandbox-origin', 'opaque');
   player.style.width = '100%';
   player.style.height = '100%';
+  if (preview.still !== undefined) {
+    const still = preview.still;
+    player.addEventListener('ready', () => { player.seek?.(still); player.pause?.(); }, { once: true });
+  }
   element.appendChild(player);
   return {
     unmount: () => player.remove(),

@@ -11,12 +11,15 @@ const composition: Composition = {
     { id: 'title', type: 'string', default: 'Hello' },
     { id: 'accent', type: 'color', default: '#ff0000' },
     { id: FILLED.voiceoverSeconds, type: 'number', default: 5 },
+    { id: FILLED.voiceover, type: 'string', default: '' },
+    { id: 'shot', type: 'image', default: '' },
   ],
   values: {},
 };
 const voice: Voiceover = {
   audioUrl: '/api/media/0123456789abcdef.mp3', durationSeconds: 7.5, voiceName: 'samantha', language: 'en-US', speed: 1,
   words: [{ text: 'Hi', start: 0, end: 0.4 }],
+  segments: [{ start: 0, durationSeconds: 3 }, { start: 3, durationSeconds: 4.5 }],
 };
 const captions: CaptionTrack = { cues: [{ start: 0, end: 0.4, words: [{ text: 'Hi', start: 0, end: 0.4 }] }] };
 
@@ -41,9 +44,22 @@ describe('the Fill node', () => {
       captions: { type: 'CaptionTrack', payload: captions },
     });
     expect(out.media['voiceover.mp3']).toBe(voice.audioUrl);
+    expect(out.values[FILLED.voiceover]).toBe('voiceover.mp3');
     expect(out.values[FILLED.voiceoverSeconds]).toBe(7.5);
-    expect(JSON.parse(out.files[FILLED.transcript]!)).toEqual(voice.words);
+    expect(JSON.parse(out.files[FILLED.timing]!)).toEqual({ durationSeconds: 7.5, segments: voice.segments, words: voice.words });
     expect(JSON.parse(out.files[FILLED.captions]!)).toEqual(captions.cues);
+  });
+
+  it('copies an uploaded picture into the project and points its variable there', async () => {
+    const { composition: out } = await run({ shot: '/api/assets/0123456789abcdef0123.png' });
+    expect(out.values.shot).toBe('images/shot.png');
+    expect(out.media['images/shot.png']).toBe('/api/assets/0123456789abcdef0123.png');
+  });
+
+  it('leaves the voice-over variable unset without a voice, so the composition renders silent', async () => {
+    const { composition: out } = await run({});
+    expect(out.values[FILLED.voiceover]).toBeUndefined();
+    expect(out.files[FILLED.timing]).toBeUndefined();
   });
 
   it('refuses a value for a variable the composition does not declare, or of the wrong type', async () => {

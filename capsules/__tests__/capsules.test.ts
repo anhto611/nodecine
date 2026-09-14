@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { ALL_NODES, NODE_FEATURES } from '@/capsules/nodes';
-import { NODE_SERVICE_EXTENSIONS } from '@/capsules/nodes/.generated/server';
+import { NODE_ACTIONS, NODE_SERVICE_EXTENSIONS } from '@/capsules/nodes/.generated/server';
 import { ENGINE_SERVER_REGISTRATIONS } from '@/capsules/engines/.generated/server';
 import { ENGINE_CLIENT_REGISTRATIONS } from '@/capsules/engines/.generated/client';
 import { _resetEngineRegistry, listEngineIds } from '@/contracts/adapters/registry';
@@ -28,7 +28,8 @@ describe('node capsules', () => {
     const definitions = readFileSync(path.join(root, 'capsules/nodes/.generated/definitions.ts'), 'utf8');
     expect(definitions).not.toMatch(/\/server'/);
     const server = readFileSync(path.join(root, 'capsules/nodes/.generated/server.ts'), 'utf8');
-    expect(server.match(/^import \{ \w+ \} from '\.\.\/[\w-]+\/server';$/gm)).toHaveLength(NODE_SERVICE_EXTENSIONS.length);
+    // One import per capsule's server module, carrying its services and, when it has them, its actions.
+    expect(server.match(/^import \{ \w+(?:, \w+)* \} from '\.\.\/[\w-]+\/server';$/gm)).toHaveLength(NODE_SERVICE_EXTENSIONS.length);
     expect(server).not.toMatch(/\/node'/);
   });
 
@@ -46,6 +47,14 @@ describe('node capsules', () => {
     expect(invoked.size).toBeGreaterThan(0);
     for (const id of invoked) expect(provided, `service "${id}" invoked but no capsule provides it`).toContain(id);
     await expect(makeFakeServices().invoke('nobody/nothing', [])).rejects.toThrow(/unknown/);
+  });
+
+  it('every action a body can call is a named, server-side function, apart from the run services', () => {
+    const actions = Object.assign({}, ...NODE_ACTIONS) as Record<string, unknown>;
+    expect(Object.keys(actions)).toEqual(expect.arrayContaining(['composition/preview-part']));
+    for (const [id, fn] of Object.entries(actions)) expect(typeof fn, id).toBe('function');
+    const services = Object.assign({}, ...NODE_SERVICE_EXTENSIONS) as Record<string, unknown>;
+    for (const id of Object.keys(actions)) expect(services[id], `${id} is an action, not a run service`).toBeUndefined();
   });
 
   it('every node names and describes itself in both languages, from its own locales.ts', () => {

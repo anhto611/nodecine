@@ -1,5 +1,6 @@
 import { registerPortType, type PortType, type PortTypeInfo } from '@/core/types/ports';
 import { CompositionSchema, type Composition } from './types/composition';
+import { StoryboardSchema, type Storyboard } from './types/storyboard';
 import {
   AudioScriptSchema,
   CaptionTrackSchema,
@@ -20,6 +21,7 @@ declare module '@/core/types/ports' {
     Voiceover: Voiceover;
     Composition: Composition;
     CaptionTrack: CaptionTrack;
+    Storyboard: Storyboard;
   }
 }
 
@@ -29,6 +31,7 @@ const PORTS: Record<PortType, PortTypeInfo> = {
   Voiceover: { labelKey: 'port.voiceover', schema: VoiceoverSchema },
   Composition: { labelKey: 'port.composition', schema: CompositionSchema },
   CaptionTrack: { labelKey: 'port.captionTrack', schema: CaptionTrackSchema },
+  Storyboard: { labelKey: 'port.storyboard', schema: StoryboardSchema },
 };
 
 /** Called wherever node types are registered: a node's ports mean nothing until their types are. */
