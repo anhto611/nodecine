@@ -1,3 +1,4 @@
+import { formatVariableValidationIssue, parseCompositionVariables, validateVariables, type CompositionVariable } from '@hyperframes/core/variables';
 import { COMPOSITION_ENTRY, type Composition } from '@/contracts/types/composition';
 import type { Voiceover, Word } from '@/contracts/types/payloads';
 import type { Cue, Mount, Storyboard, StoryboardFrame } from '@/contracts/types/storyboard';
@@ -5,12 +6,12 @@ import type { Cue, Mount, Storyboard, StoryboardFrame } from '@/contracts/types/
 /**
  * Scenes put on the clock. A storyboard says what each frame shows and on which spoken word; a voice
  * says when each word is spoken. This turns the two into HyperFrames files: one sub-composition per
- * frame under `compositions/frames/`, mounting the workflow's components where and when the frame
- * asks, and an `index.html` that plays the frames one after another — each for exactly as long as
+ * frame under `compositions/frames/`, playing the block the frame names with the frame's values or
+ * mounting the workflow's components where and when the frame asks, and an `index.html` that plays the frames one after another — each for exactly as long as
  * its own narration — over the composition's shell (its style, its background, whatever runs
  * the whole film). Deterministic: the same storyboard and voice give the same files.
  *
- * What the composition provides, besides its components:
+ * What the composition provides, besides its blocks and components:
  * - `index.html` with `<!-- nodecine:frames -->` inside its root, where the frames go;
  * - `assemble.json`: `{ slots, overlays, transition }` — named boxes a mount can use, the parts that
  *   run across the film (captions, a channel mark), and the length of a soft transition.
@@ -33,7 +34,7 @@ export interface AssemblyConfig {
 
 export interface Assembly {
   composition: Composition;
-  frames: { number: number; title: string; start: number; duration: number; file: string }[];
+  frames: { number: number; title: string; start: number; duration: number; file: string; block?: string }[];
   problems: string[];
 }
 
@@ -76,10 +77,20 @@ function cueSeconds(cue: Cue, words: FrameWords['words'], after: number): number
 /** The component's own variable declarations, to know which values are image paths and more. */
 const hasComponent = (files: Record<string, string>, name: string) => files[`${COMPONENTS_DIR}${name}.html`] !== undefined;
 
-function clipTag(id: string, mount: { component: string; rect: Rect; values: Record<string, unknown>; start: number; duration: number; track: number }): string {
+/** A block: a whole scene of the workflow's own, at the top of `compositions/`. */
+const blockPath = (name: string) => `compositions/${name}.html`;
+
+/** What a block's `<html>` declares, read the way HyperFrames reads it. */
+function declaredVariables(html: string): CompositionVariable[] {
+  const raw = /<html\b[^>]*\bdata-composition-variables\s*=\s*(['"])([\s\S]*?)\1/i.exec(html)?.[2] ?? null;
+  const decoded = raw?.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&') ?? null;
+  return parseCompositionVariables({ getAttribute: (name: string) => (name === 'data-composition-variables' ? decoded : null) } as unknown as Element) as CompositionVariable[];
+}
+
+function clipTag(id: string, mount: { component: string; src?: string; rect: Rect; values: Record<string, unknown>; start: number; duration: number; track: number }): string {
   const [left, top, width, height] = mount.rect;
   return `  <div id="${id}" class="clip" style="position: absolute; left: ${left}px; top: ${top}px; width: ${width}px; height: ${height}px;"
-    data-composition-id="${mount.component}" data-composition-src="${COMPONENTS_DIR}${mount.component}.html"
+    data-composition-id="${mount.component}" data-composition-src="${mount.src ?? `${COMPONENTS_DIR}${mount.component}.html`}"
     data-variable-values='${escapeAttr(JSON.stringify(mount.values))}'
     data-start="${round(mount.start)}" data-duration="${round(mount.duration)}" data-track-index="${mount.track}" data-width="${width}" data-height="${height}"></div>`;
 }
@@ -172,8 +183,45 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
     const id = `frame-${String(frame.number).padStart(2, '0')}`;
     const file = `compositions/frames/${String(frame.number).padStart(2, '0')}-${slug(frame.title)}.html`;
 
-    // The frame's parts: each on its cue, for as long as it asks, in the order written.
+    const offset = cursor - start;
+    // `@word` values (or comma lists of them) as seconds from `from`, a moment of the frame's narration.
+    const resolveValues = (values: Record<string, unknown>, from: number, label: string): Record<string, unknown> => {
+      const out: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(values)) {
+        if (typeof value === 'string' && /^@/.test(value.trim())) {
+          const parts = value.split(',').map((p) => p.trim());
+          const secs = parts.map((p) => (p ? cueSeconds(p, fw.words, Math.max(0, from)) : 0));
+          const bad = secs.find((x) => typeof x === 'string');
+          if (bad) { problems.push(`${label}, ${key}: ${bad}`); continue; }
+          const rel = (secs as number[]).map((x) => round(Math.max(0, x - from)));
+          out[key] = parts.length > 1 ? rel.join(',') : rel[0];
+        } else out[key] = value;
+      }
+      return out;
+    };
+
+    // The frame's parts: the block it plays, for all of it, or its mounts, each on its cue, in the order written.
     const inner: string[] = [];
+    if (frame.block) {
+      const label = `${where}, ${frame.block}`;
+      const html = kit.files[blockPath(frame.block)];
+      if (html === undefined) problems.push(`${label}: the composition has no block ${frame.block}`);
+      else {
+        const declared = declaredVariables(html);
+        // The block starts with the frame's clip, which a soft transition starts early: its cues count from there.
+        const values = resolveValues(frame.values, -offset, label);
+        if (declared.some((v) => v.id === 'seconds')) values.seconds = round(length);
+        for (const issue of validateVariables(values, declared)) problems.push(`${label}: ${formatVariableValidationIssue(issue)}`);
+        for (const v of declared) {
+          const value = values[v.id];
+          if (v.type === 'string' && v.maxLength && typeof value === 'string' && value.length > v.maxLength) problems.push(`${label}: ${v.id} is ${value.length} characters, the block allows ${v.maxLength}`);
+        }
+        const root = /<template[^>]*>[\s\S]*?(<[a-z][^>]*\bdata-composition-id\s*=[^>]*>)/i.exec(html)?.[1] ?? '';
+        const blockId = /\bdata-composition-id\s*=\s*["']([^"']+)/i.exec(root)?.[1];
+        if (blockId !== frame.block) problems.push(`${label}: its root's data-composition-id must be "${frame.block}", its file name`);
+        else inner.push(clipTag(`${id}-block`, { component: frame.block, src: blockPath(frame.block), rect: [0, 0, width, height], values, start: 0, duration: length, track: 1 }));
+      }
+    }
     frame.mounts.forEach((mount, j) => {
       const label = `${where}, ${mount.component}`;
       if (!hasComponent(kit.files, mount.component)) { problems.push(`${label}: the composition has no component ${mount.component}`); return; }
@@ -183,21 +231,9 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
       if (typeof at === 'string') problems.push(`${label}: ${at}`);
       if (typeof until === 'string') problems.push(`${label}: ${until}`);
       if (!rect || typeof at === 'string' || typeof until === 'string') return;
-      const offset = cursor - start;
       const from = Math.min(at, duration - 0.2);
       const to = Math.max(from + 0.2, Math.min(until, duration));
-      const values: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(mount.values)) {
-        if (typeof value === 'string' && /^@/.test(value.trim())) {
-          const parts = value.split(',').map((p) => p.trim());
-          const secs = parts.map((p) => (p ? cueSeconds(p, fw.words, from) : 0));
-          const bad = secs.find((s) => typeof s === 'string');
-          if (bad) { problems.push(`${label}, ${key}: ${bad}`); continue; }
-          const rel = (secs as number[]).map((s) => round(Math.max(0, s - from)));
-          values[key] = parts.length > 1 ? rel.join(',') : rel[0];
-        } else values[key] = value;
-      }
-      values.seconds = round(to - from);
+      const values = { ...resolveValues(mount.values, from, label), seconds: round(to - from) };
       inner.push(clipTag(`${id}-${j + 1}`, { component: mount.component, rect, values, start: from + offset, duration: to - from, track: mount.layer ?? j + 1 }));
     });
 
@@ -223,7 +259,7 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
       spokenIndex++;
       spokenEnd = cursor + duration;
     }
-    placed.push({ number: frame.number, title: frame.title, start: round(start), duration: round(length), file });
+    placed.push({ number: frame.number, title: frame.title, start: round(start), duration: round(length), file, ...(frame.block ? { block: frame.block } : {}) });
     cursor += duration;
   });
 

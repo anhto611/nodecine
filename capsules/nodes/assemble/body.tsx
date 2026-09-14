@@ -5,7 +5,7 @@ import { useOutputPayload, type BodyProps } from '@/capsules/sdk/host';
 import type { Composition } from '@/contracts/types/composition';
 import { TIMELINE_FILE } from './assemble';
 
-type Placed = { number: number; title: string; start: number; duration: number; file: string };
+type Placed = { number: number; title: string; start: number; duration: number; file: string; block?: string };
 
 export const AssembleBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
@@ -21,7 +21,7 @@ export const AssembleBody: React.FC<BodyProps> = ({ nodeId }) => {
         {timeline.frames.map((f) => (
           <div key={f.number} style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-hint)', color: 'var(--tx-2)' }}>
             <span style={{ width: 86, flex: 'none', color: 'var(--tx-3)' }}>{f.start.toFixed(1)}–{(f.start + f.duration).toFixed(1)}s</span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.number}. {f.title}</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.number}. {f.title}{f.block ? ` · ${f.block}` : ''}</span>
           </div>
         ))}
       </div>

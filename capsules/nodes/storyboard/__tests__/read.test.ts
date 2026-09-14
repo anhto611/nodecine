@@ -46,4 +46,22 @@ describe('reading a storyboard', () => {
     expect(problems.some((p) => p.startsWith('frame 2, mount 1: box'))).toBe(true);
     expect(problems).toContain('frame 2: a silent frame needs a duration');
   });
+
+  it('reads a frame that plays a block, with the json object as its values', () => {
+    const played = md.replace('- type: hook\n', '- type: hook\n- block: hook-question\n')
+      .replace('[{ "component": "hero-badge", "box": "hero", "values": { "badge": "6x" }, "at": "@Kimi" }]', '{ "question": "Code nhanh gấp 6?", "pop_at": "@HighSpeed" }');
+    const { storyboard, problems } = readStoryboard(played);
+    expect(problems).toEqual([]);
+    expect(storyboard!.frames[0]).toMatchObject({ block: 'hook-question', values: { question: 'Code nhanh gấp 6?', pop_at: '@HighSpeed' }, mounts: [] });
+    expect(storyboard!.frames[0]!.extra).toEqual({ type: 'hook' });
+    expect(storyboard!.frames[1]).toMatchObject({ block: undefined, values: {} });
+  });
+
+  it('asks for values as an object under a block, and for a block when a frame gives values', () => {
+    const wrong = md.replace('- type: hook\n', '- block: hook-question\n').replace('[{ "component": "cta-card", "box": "full" }]', '{ "title": "x" }');
+    expect(readStoryboard(wrong).problems).toEqual([
+      'frame 1: a frame that plays "hook-question" gives its values as a json object',
+      'frame 2: values go with a block (add "- block: <name>"); a frame without one lists its mounts',
+    ]);
+  });
 });

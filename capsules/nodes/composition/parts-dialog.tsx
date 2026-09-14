@@ -6,7 +6,7 @@ import { getEngineFactory } from '@/contracts/adapters/registry';
 import type { PlayerHandle } from '@/contracts/adapters/types';
 import type { Composition } from '@/contracts/types/composition';
 import type { PartPreview } from './preview.server';
-import { kindOf, mountSnippet, PART_NAME, pathFor, readPart, scaffoldPart, type Kind, type Project } from './parts';
+import { kindOf, mountSnippet, nameOf, PART_NAME, pathFor, readPart, roleOf, ROLES, scaffoldPart, storyboardSnippet, type Kind, type Project, type Role } from './parts';
 
 /** What the dialog opens on: the kind of part it lists. */
 export type PartsDialogData = { kind: Kind };
@@ -59,7 +59,7 @@ function useSeen<T extends Element>(): [React.RefObject<T | null>, boolean] {
   return [ref, seen];
 }
 
-/** One part as a picture and its name. */
+/** One part as a picture, its name, and what it is for. */
 const Tile: React.FC<{ path: string; project: Project; engine?: string; selected: boolean; onOpen: () => void }> = ({ path, project, engine, selected, onOpen }) => {
   const t = useT();
   const { action } = useHost();
@@ -88,13 +88,15 @@ const Tile: React.FC<{ path: string; project: Project; engine?: string; selected
     >
       <div style={{ position: 'relative', width: '100%', aspectRatio: live ? `${live.width} / ${live.height}` : '9 / 16', maxHeight: 260, background: '#000', borderRadius: 4, overflow: 'hidden' }}>
         {live ? <Player preview={live} still /> : (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, textAlign: 'center', color: failed ? 'var(--err)' : 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, textAlign: 'center', color: failed ? 'var(--err)' : 'var(--tx-3)', fontSize: 'var(--fs-hint)', overflowWrap: 'anywhere' }}>
             {failed ?? '…'}
           </div>
         )}
       </div>
-      <div style={{ color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{path.split('/').pop()!.replace(/\.html?$/i, '')}</div>
-      <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>{part.variables.length} {t('node.compositionVariables')}{part.width ? ` · ${part.width}×${part.height}` : ''}</div>
+      <div style={{ color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(path)}</div>
+      <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>
+        {t(`node.compositionRole.${roleOf(project.files, path)}`)} · {part.variables.length} {t('node.compositionVariables')}{part.width ? ` · ${part.width}×${part.height}` : ''}
+      </div>
     </button>
   );
 };
@@ -109,6 +111,7 @@ export const PartsDialog: React.FC = () => {
   const [p, set] = useParams<Project>(nodeId);
   const out = useOutputPayload<Composition>(nodeId, 'composition');
   const [kind, setKind] = React.useState<Kind>((overlay.current?.data as PartsDialogData | undefined)?.kind ?? 'block');
+  const [role, setRole] = React.useState<Role | null>(null);
   const [query, setQuery] = React.useState('');
   const [openPath, setOpenPath] = React.useState<string | null>(null);
   const [big, setBig] = React.useState<PartPreview | null>(null);
@@ -121,7 +124,9 @@ export const PartsDialog: React.FC = () => {
   const project: Project = { files: p.files ?? {}, media: p.media ?? {} };
   const frame = { width: out?.width ?? 1080, height: out?.height ?? 1920 };
   const q = query.trim().toLowerCase();
-  const paths = Object.keys(project.files).filter((f) => kindOf(f) === kind && (!q || f.toLowerCase().includes(q))).sort();
+  const ofKind = Object.keys(project.files).filter((f) => kindOf(f) === kind).sort();
+  const roles: Record<string, Role> = Object.fromEntries(ofKind.map((f) => [f, roleOf(project.files, f)]));
+  const paths = ofKind.filter((f) => (!q || f.toLowerCase().includes(q)) && (!role || roles[f] === role));
 
   const watch = async (path: string, files = project.files) => {
     setBig(null); setBigError(null);
@@ -129,30 +134,31 @@ export const PartsDialog: React.FC = () => {
     catch (e) { setBigError(e instanceof Error ? e.message : String(e)); }
   };
 
-  const openPart = (path: string) => {
+  const close = () => { setOpenPath(null); setBig(null); };
+
+  const openPart = (path: string, files = project.files) => {
     setOpenPath(path);
     setMessage(null);
-    void watch(path);
+    void watch(path, files);
   };
 
   const create = () => {
     const name = newName.trim();
     const path = pathFor(kind, name);
     if (!PART_NAME.test(name) || project.files[path] !== undefined) { setMessage({ ok: false, text: t('node.compositionBadName') }); return; }
-    const files = { ...project.files, [path]: scaffoldPart(kind, name, frame) };
+    const files = { ...project.files, [path]: scaffoldPart(kind, name, frame, role ?? undefined) };
     set({ files });
     setNewName('');
-    setOpenPath(path);
-    setMessage(null);
-    void watch(path, files);
+    openPart(path, files);
   };
 
   const remove = (path: string) => {
     const { [path]: _gone, ...rest } = project.files;
     set({ files: rest });
-    setOpenPath(null);
-    setBig(null);
+    close();
   };
+
+  const copy = (text: string, done: string) => void navigator.clipboard?.writeText(text).then(() => setMessage({ ok: true, text: done }));
 
   return (
     <Dialog
@@ -163,7 +169,7 @@ export const PartsDialog: React.FC = () => {
       titleExtra={
         <span style={{ display: 'flex', gap: 4, marginLeft: 12, alignItems: 'center' }}>
           {(['block', 'component'] as const).map((k) => (
-            <button key={k} className={`nc-chip ${k === kind ? 'on' : ''}`} onClick={() => { setKind(k); setOpenPath(null); setBig(null); }}>{t(`node.compositionKind.${k}`)}</button>
+            <button key={k} className={`nc-chip ${k === kind ? 'on' : ''}`} onClick={() => { setKind(k); setRole(null); close(); }}>{t(`node.compositionKind.${k}`)}</button>
           ))}
           <input className="nc-input" style={{ width: 200, marginLeft: 8 }} placeholder={t('node.compositionSearch')} value={query} onChange={(e) => setQuery(e.target.value)} />
         </span>
@@ -172,9 +178,17 @@ export const PartsDialog: React.FC = () => {
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ color: 'var(--tx-3)', lineHeight: 1.5 }}>{t(`node.compositionKindHint.${kind}`)}</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            <button className={`nc-chip ${role === null ? 'on' : ''}`} onClick={() => setRole(null)}>{t('node.compositionRoleAll')} · {ofKind.length}</button>
+            {ROLES[kind].map((r) => (
+              <button key={r} className={`nc-chip ${role === r ? 'on' : ''}`} title={t(`node.compositionRoleHint.${r}`)} onClick={() => setRole(r)}>
+                {t(`node.compositionRole.${r}`)} · {ofKind.filter((f) => roles[f] === r).length}
+              </button>
+            ))}
+          </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <input className="nc-input" style={{ width: 260 }} placeholder={t('node.compositionNewName')} value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') create(); }} />
-            <Btn primary onClick={create}>{t(`node.compositionNew.${kind}`)}</Btn>
+            <Btn primary onClick={create}>{t(`node.compositionNew.${kind}`)}{role ? ` · ${t(`node.compositionRole.${role}`)}` : ''}</Btn>
           </div>
           {paths.length ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
@@ -187,15 +201,15 @@ export const PartsDialog: React.FC = () => {
           <div style={{ width: 520, flex: 'none', borderLeft: '1px solid var(--line)', padding: 14, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <b style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{openPath}</b>
-              <button className="nc-chip" onClick={() => { setOpenPath(null); setBig(null); }}>×</button>
+              <button className="nc-chip" onClick={close}>×</button>
             </div>
             <div style={{ position: 'relative', width: '100%', aspectRatio: big ? `${big.width} / ${big.height}` : `${frame.width} / ${frame.height}`, maxHeight: '48vh', background: '#000', borderRadius: 4, overflow: 'hidden' }}>
               {big ? <Player key={big.url} preview={big} /> : (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, textAlign: 'center', color: bigError ? 'var(--err)' : 'var(--tx-3)' }}>{bigError ?? '…'}</div>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, textAlign: 'center', color: bigError ? 'var(--err)' : 'var(--tx-3)', overflowWrap: 'anywhere' }}>{bigError ?? '…'}</div>
               )}
             </div>
             <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)', lineHeight: 1.6 }}>
-              {t('node.compositionVariables')}: {readPart(project.files[openPath]).variables.map((v) => `${v.id} (${v.type})`).join(', ') || t('node.compositionNone')}
+              {t(`node.compositionRole.${roleOf(project.files, openPath)}`)} · {t('node.compositionVariables')}: {readPart(project.files[openPath]).variables.map((v) => `${v.id} (${v.type})`).join(', ') || t('node.compositionNone')}
             </div>
             <textarea
               className="nc-textarea"
@@ -206,7 +220,9 @@ export const PartsDialog: React.FC = () => {
             />
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <Btn primary onClick={() => void watch(openPath)}>{t('node.compositionReplay')}</Btn>
-              <Btn onClick={() => void navigator.clipboard?.writeText(mountSnippet(openPath, project.files[openPath] ?? '', frame)).then(() => setMessage({ ok: true, text: t('node.compositionCopied') }))}>{t('node.compositionCopyMount')}</Btn>
+              {kind === 'block'
+                ? <Btn onClick={() => copy(storyboardSnippet(nameOf(openPath), project.files[openPath] ?? ''), t('node.compositionCopiedFrame'))}>{t('node.compositionCopyFrame')}</Btn>
+                : <Btn onClick={() => copy(mountSnippet(openPath, project.files[openPath] ?? '', frame), t('node.compositionCopied'))}>{t('node.compositionCopyMount')}</Btn>}
               <Btn danger onClick={() => remove(openPath)}>{t('node.compositionRemoveFile')}</Btn>
             </div>
             {message && <div style={{ fontSize: 'var(--fs-hint)', color: message.ok ? 'var(--ok)' : 'var(--err)', overflowWrap: 'anywhere' }}>{message.text}</div>}

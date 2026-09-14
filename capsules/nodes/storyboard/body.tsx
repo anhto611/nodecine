@@ -28,7 +28,7 @@ export const StoryboardBody: React.FC<BodyProps> = ({ nodeId }) => {
       } />
       {reading?.storyboard && (
         <>
-          <Kv k="" v={t('node.storyboardSummary', { frames: frames.length, spoken: frames.filter((f) => f.voiceover).length, mounts: frames.reduce((n, f) => n + f.mounts.length, 0) })} dim />
+          <Kv k="" v={t('node.storyboardSummary', { frames: frames.length, spoken: frames.filter((f) => f.voiceover).length, blocks: frames.filter((f) => f.block).length, mounts: frames.reduce((n, f) => n + f.mounts.length, 0) })} dim />
           <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 180, overflowY: 'auto' }}>
             {frames.map((f) => (
               <div key={f.number} style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

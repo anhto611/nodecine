@@ -18,11 +18,11 @@ const kit: Composition = {
 const storyboard: Storyboard = {
   markdown: '',
   frames: [
-    { number: 1, title: 'Tin mới', voiceover: 'Kimi vừa ra mắt HighSpeed.', mounts: [{ component: 'card', box: 'top', values: { line1: 'Kimi' } }], extra: {} },
+    { number: 1, title: 'Tin mới', voiceover: 'Kimi vừa ra mắt HighSpeed.', mounts: [{ component: 'card', box: 'top', values: { line1: 'Kimi' } }], values: {}, extra: {} },
     { number: 2, title: 'Ai dùng được', voiceover: 'Mở cho Beta, API và Business.', transitionIn: 'crossfade', mounts: [
       { component: 'chips', box: 'top', values: { cues: '@Beta,@API,@Business' }, at: '@Beta' },
-    ], extra: {} },
-    { number: 3, title: 'Kết', durationSeconds: 3, mounts: [{ component: 'card', box: 'full', values: {} }], extra: {} },
+    ], values: {}, extra: {} },
+    { number: 3, title: 'Kết', durationSeconds: 3, mounts: [{ component: 'card', box: 'full', values: {} }], values: {}, extra: {} },
   ],
 };
 
@@ -67,7 +67,7 @@ describe('assembling scenes', () => {
   });
 
   it('cuts the voice only where a silent frame sits between spoken ones', () => {
-    const withPause: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { number: 9, title: 'Nghỉ', durationSeconds: 1.5, mounts: [], extra: {} }, storyboard.frames[1]!] };
+    const withPause: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { number: 9, title: 'Nghỉ', durationSeconds: 1.5, mounts: [], values: {}, extra: {} }, storyboard.frames[1]!] };
     const index = assemble(kit, withPause, voice).composition.files['index.html']!;
     expect(index).toContain('data-start="0" data-duration="2" data-media-start="0"');
     expect(index).toContain('data-start="3.5" data-duration="3" data-media-start="2"');
@@ -78,5 +78,36 @@ describe('assembling scenes', () => {
     const { problems } = assemble(kit, broken, { ...voice, segments: [voice.segments![0]!] });
     expect(problems).toContain('frame 1, card: no slot named "side" (the composition has top, full)');
     expect(problems).toContain('frame 1, card: "Nokia" is not said in this frame');
+  });
+
+  const block = `<!doctype html>
+<html data-composition-id="hook-question" data-composition-variables='[
+  { "id": "question", "type": "string", "label": "Question", "default": "?", "maxLength": 20 },
+  { "id": "pop_at", "type": "number", "label": "When it pops (s)", "default": 0 },
+  { "id": "side", "type": "enum", "label": "Side", "default": "left", "options": [{ "value": "left", "label": "Left" }, { "value": "right", "label": "Right" }] },
+  { "id": "seconds", "type": "number", "label": "Length (s)", "default": 4 }
+]'>
+<body><template><div id="root" data-composition-id="hook-question" data-width="1080" data-height="1920"></div></template></body></html>`;
+  const withBlock: Composition = { ...kit, files: { ...kit.files, 'compositions/hook-question.html': block } };
+
+  it('plays the block a frame names for the whole frame, with the frame\'s values and its words as seconds', () => {
+    const played: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right' } }] };
+    const { composition, frames, problems } = assemble(withBlock, played, voice);
+    expect(problems).toEqual([]);
+    expect(frames[1]!.block).toBe('hook-question');
+    const frame2 = composition.files['compositions/frames/02-ai-dung-duoc.html']!;
+    expect(frame2).toContain('data-composition-id="hook-question" data-composition-src="compositions/hook-question.html"');
+    // "API" is said 1.2s into the narration, which starts 0.4s into the frame's clip; the block runs the whole clip.
+    expect(frame2).toContain(`data-variable-values='{"question":"Ai dùng được?","pop_at":1.6,"side":"right","seconds":3.4}'`);
+    expect(frame2).toContain('data-start="0" data-duration="3.4" data-track-index="1"');
+  });
+
+  it('holds a block\'s values to what the block declares, the way HyperFrames does', () => {
+    const played: Storyboard = { ...storyboard, frames: [{ ...storyboard.frames[0]!, mounts: [], block: 'hook-question', values: { side: 'up', colour: 'red', question: 'Một câu hỏi dài quá khung' } }, { ...storyboard.frames[2]!, mounts: [], block: 'outro' }] };
+    const { problems } = assemble(withBlock, played, { ...voice, segments: [voice.segments![0]!] });
+    expect(problems.some((p) => p.startsWith('frame 1, hook-question:') && p.includes('side'))).toBe(true);
+    expect(problems.some((p) => p.startsWith('frame 1, hook-question:') && p.includes('colour'))).toBe(true);
+    expect(problems).toContain('frame 1, hook-question: question is 25 characters, the block allows 20');
+    expect(problems).toContain('frame 3, outro: the composition has no block outro');
   });
 });

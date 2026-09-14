@@ -6,7 +6,7 @@ import { StoryboardErrorCode } from './errors';
 import { readStoryboard, spokenLines } from './read';
 
 const Params = z.object({
-  /** HyperFrames' STORYBOARD.md, with a ```json block of mounts under each frame. */
+  /** HyperFrames' STORYBOARD.md; under each frame, the block it plays and a ```json block of its values, or its mounts. */
   markdown: z.string().max(200_000).default(''),
   language: z.string().min(2).max(35).default('vi'),
 });
@@ -14,7 +14,7 @@ const Params = z.object({
 /**
  * The plan of a video, one frame per scene, in HyperFrames' own STORYBOARD.md format. Its frames'
  * voiceovers are the narration, one segment per spoken frame, so the voice and the scenes line up
- * by construction; its mounts say what each frame shows and on which word.
+ * by construction; each frame's block and values, or its mounts, say what it shows and on which word.
  */
 export const storyboard: NodeDefinition<typeof Params> = {
   type: 'storyboard', version: 1, kind: 'source',
@@ -37,7 +37,7 @@ export const storyboard: NodeDefinition<typeof Params> = {
     }
     const lines = spokenLines(reading.storyboard);
     const frames = reading.storyboard.frames;
-    log('info', `${frames.length} frames · ${lines.length} spoken · ${frames.reduce((n, f) => n + f.mounts.length, 0)} mounts`);
+    log('info', `${frames.length} frames · ${lines.length} spoken · ${frames.filter((f) => f.block).length} blocks · ${frames.reduce((n, f) => n + f.mounts.length, 0)} mounts`);
     const script: AudioScript | undefined = lines.length ? { text: lines.join(' '), language: params.language, segments: lines } : undefined;
     return { storyboard: reading.storyboard, ...(script ? { script } : {}) };
   },

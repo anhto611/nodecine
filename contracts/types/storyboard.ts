@@ -2,9 +2,10 @@ import { z } from 'zod';
 
 /**
  * A storyboard as it travels on a wire: HyperFrames' `STORYBOARD.md` (its frames, one per scene, in
- * order) as that format's own parser reads it, plus what NodeCine adds per frame — which of the
- * workflow's components the frame shows, where, with what content, and on which spoken word each
- * one appears. The words are the cues; seconds are worked out once the voice exists.
+ * order) as that format's own parser reads it, plus what NodeCine adds per frame — the workflow's
+ * block the frame plays and the values it plays it with, or the components it shows and where, and
+ * on which spoken word each thing happens. The words are the cues; seconds are worked out once the
+ * voice exists.
  */
 
 /** A value that is a moment: seconds from the frame's start, or `@word` — when the voiceover says it. */
@@ -35,6 +36,11 @@ export const StoryboardFrameSchema = z.object({
   voiceover: z.string().max(4000).optional(),
   durationSeconds: z.number().positive().optional(),
   transitionIn: z.string().max(60).optional(),
+  /** The block this frame plays: the name of a file under `compositions/`. */
+  block: z.string().regex(/^[a-z][a-z0-9-]{1,40}$/).optional(),
+  /** The block's variables for this frame. A string `@word` (or a comma list of them) becomes seconds from the frame's start. */
+  values: z.record(z.string(), z.unknown()).default({}),
+  /** Components placed by hand, for a frame that plays no block. */
   mounts: z.array(MountSchema).max(24).default([]),
   /** Every other field of the frame, kept as written. */
   extra: z.record(z.string(), z.string()).default({}),
