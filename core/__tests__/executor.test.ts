@@ -1,98 +1,67 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import { validateGraph, GraphInvalidError, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition } from '../nodes/definition';
+import { _resetPortTypes } from '../types/ports';
 import { canTransition } from '../engine/state';
 import { NodeError } from '../errors';
-import { registerNodes } from '@/nodes';
-import staticScriptJson from '@/lib/first-run.json';
-const staticScriptTemplate = (): Graph => structuredClone(staticScriptJson.graph as Graph);
-import { validateIR } from '@/contracts/types/validate-ir';
-import type { VideoIR } from '@/contracts/types/ir';
-import { makeFakeServices, registerFakeEngineSupport, resetEngineSupport } from '@/contracts/__tests__/fakes';
+import { pipeline, registerTestKit, testServices } from './kit';
 
-function setup(opts: Parameters<typeof makeFakeServices>[0] = {}, withRenderer = true) {
+function setup() {
   _resetNodeRegistry();
-  resetEngineSupport();
-  registerNodes();
-  if (withRenderer) registerFakeEngineSupport();
-  const services = makeFakeServices(opts);
-  const graph = staticScriptTemplate();
+  _resetPortTypes();
+  registerTestKit();
+  const services = testServices();
+  const graph = pipeline();
   const states: string[] = [];
   const executor = new Executor(graph, services, { onStateChange: (id, rt) => states.push(`${id}:${rt.state}`) });
   return { services, graph, executor, states };
 }
 
-beforeEach(() => { /* per-test setup() */ });
+const count = (services: ReturnType<typeof testServices>, name: string) => services.calls.filter((c) => c.name === name).length;
+const failure = (code: string, message: string, fix?: string) => Object.assign(new Error(message), { code, ...(fix ? { fix } : {}) });
 
 describe('graph validation', () => {
-  it('the Phase A template is valid with no blocking issues', () => {
-    setup();
-    const issues = validateGraph(staticScriptTemplate());
-    expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
-  });
-  it('an unconnected required input disables Run', () => {
+  it('a wired pipeline has no blocking issues', () => {
     const { graph } = setup();
-    graph.edges = graph.edges.filter((e) => e.id !== 'e2');
-    const issues = validateGraph(graph);
-    expect(issues.some((i) => i.code === 'GRAPH_PORT_UNCONNECTED' && i.nodeId === 'tts')).toBe(true);
+    expect(validateGraph(graph).filter((i) => i.severity === 'error')).toEqual([]);
+  });
+  it('an unconnected required input is said on its node', () => {
+    const { graph } = setup();
+    graph.edges = graph.edges.filter((e) => e.id !== 'e1');
+    expect(validateGraph(graph).some((i) => i.code === 'GRAPH_PORT_UNCONNECTED' && i.nodeId === 'voice')).toBe(true);
   });
   it('detects cycles and reports the offending edges', () => {
     const { graph } = setup();
-    graph.edges.push({ id: 'cyc', source: 'assembler', sourcePort: 'ir', target: 'script', targetPort: 'x' });
-    const issues = validateGraph(graph);
-    expect(issues.find((i) => i.code === 'GRAPH_CYCLE')?.edgeIds).toContain('cyc');
+    graph.edges.push({ id: 'cyc', source: 'join', sourcePort: 'out', target: 'source', targetPort: 'x' });
+    expect(validateGraph(graph).find((i) => i.code === 'GRAPH_CYCLE')?.edgeIds).toContain('cyc');
   });
   it('a graph with no sink only warns', () => {
     const { graph } = setup();
-    graph.nodes = graph.nodes.filter((n) => n.id !== 'output' && n.id !== 'export');
-    graph.edges = graph.edges.filter((e) => !['e5', 'e6', 'e7', 'e8'].includes(e.id));
+    graph.nodes = graph.nodes.filter((n) => n.id !== 'sink' && n.id !== 'export');
+    graph.edges = graph.edges.filter((e) => !['e3', 'e4'].includes(e.id));
     const issues = validateGraph(graph);
     expect(issues.find((i) => i.code === 'GRAPH_NO_SINK')?.severity).toBe('warning');
     expect(issues.some((i) => i.severity === 'error')).toBe(false);
   });
-  it('an empty Input Trigger is a continuous INPUT_EMPTY error', () => {
+  it('a node\'s own check on its parameters is continuous', () => {
     setup();
-    const g: Graph = { nodes: [{ id: 'in', type: 'core/input-trigger', params: { value: '  ' }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] };
+    const g: Graph = { nodes: [{ id: 'in', type: 'test/source', params: { value: '  ' }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] };
     expect(validateGraph(g).some((i) => i.code === 'INPUT_EMPTY')).toBe(true);
   });
 });
 
-describe('Phase A run', () => {
-  it('runs six nodes, leaves the export alone, and produces a valid IR in the player node', async () => {
+describe('a run', () => {
+  it('runs every node in the flow and leaves the on-demand node alone', async () => {
     const { executor, services } = setup();
     const { ok } = await executor.run();
     expect(ok).toBe(true);
-    for (const id of ['script', 'tts', 'assembler', 'output']) expect(executor.runtime(id).state).toBe('success');
+    for (const id of ['source', 'voice', 'join', 'sink']) expect(executor.runtime(id).state).toBe('success');
     // Untouched rather than skipped: a Run never reaches an on-demand node at all.
     expect(executor.runtime('export').state).toBe('idle');
-    const ir = executor.runtime('assembler').outputs.ir!.payload as VideoIR;
-    expect(validateIR(ir)).toEqual({ ok: true, warnings: [] });
-    expect(ir.beats).toHaveLength(3);
-    expect(ir.beats.reduce((a, b) => a + b.durationInFrames, 0)).toBe(ir.meta.totalDurationInFrames);
-    expect(services.calls.filter((c) => c.name === 'render')).toHaveLength(0);
-  });
-
-  it('gathers Layer nodes on the assembler\'s layers port, in wire order, into tracks around the scenes', async () => {
-    const { executor, graph } = setup();
-    const clip = '/api/assets/' + 'c'.repeat(16) + '.mp4';
-    graph.nodes.push(
-      { id: 'bg', type: 'core/layer', params: { kind: 'media', url: clip, placement: 'under', fit: 'cover', loop: true, offsetSeconds: 0, gain: 0, startSeconds: 0, source: '' }, bypassed: false, position: { x: 0, y: 0 } },
-      { id: 'phone', type: 'core/layer', params: { kind: 'code', source: '<div class="phone"></div>', placement: 'over', fit: 'cover', loop: true, offsetSeconds: 0, gain: 0, startSeconds: 0, url: '' }, bypassed: false, position: { x: 0, y: 0 } },
-    );
-    graph.edges.push(
-      { id: 'l1', source: 'bg', sourcePort: 'layers', target: 'assembler', targetPort: 'layers' },
-      { id: 'l2', source: 'phone', sourcePort: 'layers', target: 'assembler', targetPort: 'layers' },
-    );
-    expect(validateGraph(graph).filter((i) => i.severity === 'error')).toEqual([]);
-    executor.setGraph(graph);
-    const { ok } = await executor.run();
-    expect(ok).toBe(true);
-    const ir = executor.runtime('assembler').outputs.ir!.payload as VideoIR;
-    expect(ir.tracks.map((t) => t.id)).toEqual(['layer-1', 'scenes', 'layer-2']);
-    expect(ir.tracks[0]!.clips[0]).toMatchObject({ kind: 'media', url: clip, durationInFrames: ir.meta.totalDurationInFrames });
-    expect(validateIR(ir)).toEqual({ ok: true, warnings: [] });
+    expect(executor.runtime('join').outputs.out!.payload).toEqual({ text: 'hello@1' });
+    expect(count(services, 'export')).toBe(0);
   });
 
   it('keeps what an on-demand node produced when the canvas pushes a graph', async () => {
@@ -104,137 +73,114 @@ describe('Phase A run', () => {
     await executor.runNode('export');
     expect(executor.runtime('export').state).toBe('success');
     const before = executor.runtime('export').result;
-
-    const moved = { ...graph, nodes: graph.nodes.map((n) => (n.id === 'export' ? { ...n, position: { x: n.position.x + 120, y: n.position.y + 40 } } : n)) };
-    executor.setGraph(moved);
-
+    executor.setGraph({ ...graph, nodes: graph.nodes.map((n) => (n.id === 'export' ? { ...n, position: { x: 120, y: 40 } } : n)) });
     expect(executor.runtime('export').state).toBe('success');
     expect(executor.runtime('export').result).toBe(before);
   });
 
-  it('second run reuses everything; changing TTS speed re-runs only TTS and downstream', async () => {
+  it('reuses everything on a second run; a changed parameter re-runs only its node and what follows', async () => {
     const { executor, services, graph } = setup();
     await executor.run();
-    const probes = () => services.calls.filter((c) => c.name.startsWith('probe')).length;
-    // Three scenes, three narrations: the TTS engine voices each and joins them.
-    const synths = () => services.calls.filter((c) => c.name === 'synthesize').length;
-    expect(synths()).toBe(3);
-    expect(services.calls.filter((c) => c.name === 'concatAudio')).toHaveLength(1);
+    expect(count(services, 'voice')).toBe(1);
 
     await executor.run();
-    expect(executor.runtime('script').reused).toBe(true);
-    expect(executor.runtime('tts').reused).toBe(true);
-    expect(executor.runtime('assembler').reused).toBe(true);
-    expect(synths()).toBe(3);
-    // A node probes what it needs when it runs, so a reused node probes nothing. Five across two
-    // passes: the model twice on the first (the set draws the look, the plate maker the layouts) and
-    // the voice once, then the engine on both, because a sink has no outputs to reuse and always runs.
-    expect(probes()).toBe(5);
-    expect(services.calls.filter((c) => c.name === 'probeLLM')).toHaveLength(2);
+    for (const id of ['source', 'voice', 'join']) expect(executor.runtime(id).reused).toBe(true);
+    expect(count(services, 'voice')).toBe(1);
+    // A sink has no outputs to reuse, so it always runs.
+    expect(count(services, 'show')).toBe(2);
 
-    graph.nodes.find((n) => n.id === 'tts')!.params.speed = 1.15;
-    executor.invalidate('tts');
-    expect(executor.runtime('assembler').state).toBe('stale');
+    graph.nodes.find((n) => n.id === 'voice')!.params.speed = 1.15;
+    executor.invalidate('voice');
+    expect(executor.runtime('join').state).toBe('stale');
     await executor.run();
-    expect(synths()).toBe(6);
-    expect(executor.runtime('script').reused).toBe(true);
-    expect(executor.runtime('tts').reused).toBe(false);
-    expect(executor.runtime('assembler').reused).toBe(false);
-    expect(executor.runtime('output').reused).toBe(false);
+    expect(count(services, 'voice')).toBe(2);
+    expect(executor.runtime('source').reused).toBe(true);
+    expect(executor.runtime('voice').reused).toBe(false);
+    expect(executor.runtime('join').reused).toBe(false);
+    expect(executor.runtime('join').outputs.out!.payload).toEqual({ text: 'hello@1.15' });
   });
 
-  it('a Vietnamese script is detected and picks a Vietnamese voice with no extra input', async () => {
-    const { executor, graph, services } = setup();
-    const vi = graph.nodes.find((n) => n.id === 'script')!.params as { scenes: { narration: string }[] };
-    vi.scenes = vi.scenes.map((s) => ({ ...s, narration: 'Gặp NodeCine. Dựng video ngắn từ đồ thị node.' }));
-    await executor.run();
-    const synth = services.calls.find((c) => c.name === 'synthesize')!;
-    expect(synth.args[1]).toBe('linh');
-  });
-
-  it('missing voice for the language falls back and logs TTS_VOICE_LANGUAGE_MISMATCH without failing', async () => {
-    const { executor, graph } = setup({ voices: [{ id: 'samantha', displayName: 'Samantha', language: 'en-US' }] });
-    const ja = graph.nodes.find((n) => n.id === 'script')!.params as { scenes: { narration: string }[] };
-    ja.scenes = ja.scenes.map((s) => ({ ...s, narration: 'ノードグラフから短い動画を作る。' }));
+  it('collects what a node warns about on the node, and clears it once the cause is gone', async () => {
+    const { executor, graph } = setup();
+    graph.nodes.find((n) => n.id === 'join')!.params.wantsExtra = true;
+    executor.setGraph(graph);
     const { ok } = await executor.run();
+    // Degraded, not failed: the node still produced its result.
     expect(ok).toBe(true);
-    expect(executor.logs.all().some((l) => l.code === 'TTS_VOICE_LANGUAGE_MISMATCH')).toBe(true);
+    expect(executor.runtime('join').state).toBe('success');
+    expect(executor.runtime('join').warnings?.[0]?.code).toBe('EXTRA_NOT_CONNECTED');
+
+    graph.nodes.push({ id: 'second', type: 'test/source', params: { value: 'two' }, bypassed: false, position: { x: 0, y: 0 } });
+    graph.edges.push({ id: 'e5', source: 'second', sourcePort: 'out', target: 'join', targetPort: 'extra' });
+    executor.setGraph(graph);
+    await executor.run();
+    expect(executor.runtime('join').warnings).toBeUndefined();
+    expect(executor.runtime('join').outputs.out!.payload).toEqual({ text: 'hello@1+two' });
   });
 });
 
 describe('a part a node needs that is not ready (EXECUTION_ENGINE §1.1)', () => {
-  it('missing ffmpeg: the node that wanted the voice fails, with the remedy on it', async () => {
-    const { executor, services } = setup({ encoder: false });
-    const { ok } = await executor.run();
-    expect(ok).toBe(false);
-    // The voice is this node's own now (§1.3), so the failure is reported here and not one node back.
-    const tts = executor.runtime('tts');
-    expect(tts.state).toBe('error');
-    expect(tts.error).toMatchObject({ code: 'PROVIDER_NOT_INSTALLED', fix: 'brew install ffmpeg' });
-    expect(services.calls.some((c) => c.name === 'synthesize')).toBe(false);
-    expect(executor.runtime('assembler').state).toBe('blocked');
-    expect(executor.runtime('assembler').blockedBy?.kind).toBe('upstream');
+  const partGraph = (ready: boolean): Graph => ({
+    nodes: [
+      { id: 'source', type: 'test/source', params: { value: 'x' }, bypassed: false, position: { x: 0, y: 0 } },
+      { id: 'part', type: 'test/part', params: { ready }, bypassed: false, position: { x: 0, y: 0 } },
+      { id: 'use', type: 'test/uses-part', params: {}, bypassed: false, position: { x: 0, y: 0 } },
+    ],
+    edges: [
+      { id: 'a', source: 'source', sourcePort: 'out', target: 'use', targetPort: 'in' },
+      { id: 'b', source: 'part', sourcePort: 'part', target: 'use', targetPort: 'part' },
+    ],
   });
 
-  it('a node blocked behind another reports the original cause, not an unwired port', async () => {
-    const { executor } = setup({ encoder: false });
+  it('blocks the node by capability, with the reason and the remedy the part gave', async () => {
+    const { services } = setup();
+    const executor = new Executor(partGraph(false), services);
     await executor.run();
-    // The assembler is three steps from the missing encoder, and still names it.
-    expect(executor.runtime('assembler').blockedBy).toMatchObject({
-      code: 'PROVIDER_NOT_INSTALLED',
-      fix: 'brew install ffmpeg',
-      nodeId: 'tts',
-    });
+    expect(executor.runtime('use').state).toBe('blocked');
+    // The part named no code of its own, so the core's own fallback is used — never a video one.
+    expect(executor.runtime('use').blockedBy).toMatchObject({ kind: 'capability', code: 'NODE_NOT_READY', message: 'no renderer', fix: 'install one' });
+  });
+
+  it('runs once the part is ready', async () => {
+    const { services } = setup();
+    const executor = new Executor(partGraph(true), services);
+    await executor.run();
+    expect(executor.runtime('use').state).toBe('success');
+  });
+
+  it('a failure carries its code and remedy to the node, and every node behind it names the original cause', async () => {
+    const { executor, services } = setup();
+    services.fail('voice', failure('PROVIDER_NOT_INSTALLED', 'ffmpeg not found', 'brew install ffmpeg'));
+    const { ok } = await executor.run();
+    expect(ok).toBe(false);
+    expect(executor.runtime('voice').error).toMatchObject({ code: 'PROVIDER_NOT_INSTALLED', fix: 'brew install ffmpeg' });
+    // Two steps from the failure, and still naming it rather than an unwired port.
+    expect(executor.runtime('sink').blockedBy).toMatchObject({ kind: 'upstream', code: 'PROVIDER_NOT_INSTALLED', fix: 'brew install ffmpeg' });
+    expect(executor.runtime('join').blockedBy).toMatchObject({ nodeId: 'voice' });
   });
 
   it('the world changing between runs is caught on the next run of the node that asks', async () => {
     const { executor, services, graph } = setup();
     await executor.run();
-    services.setOptions({ encoder: false });
+    services.fail('voice', failure('PROVIDER_NOT_INSTALLED', 'ffmpeg not found'));
     // A reused node asks nothing, which is the point of the cache; the node has to run to find out.
-    graph.nodes.find((n) => n.id === 'tts')!.params.speed = 1.2;
-    executor.invalidate('tts');
+    graph.nodes.find((n) => n.id === 'voice')!.params.speed = 1.2;
+    executor.invalidate('voice');
     await executor.run();
-    expect(executor.runtime('tts').state).toBe('error');
-    expect(executor.runtime('tts').error?.code).toBe('PROVIDER_NOT_INSTALLED');
-  });
-
-  it('swapping to Remotion blocks the player by capability (no html-gsap renderer) and re-runs nothing upstream', async () => {
-    const { executor, graph, services } = setup();
-    await executor.run();
-    graph.nodes.find((n) => n.id === 'output')!.params.engineId = 'remotion';
-    executor.invalidate('output');
-    const synthsBefore = services.calls.filter((c) => c.name === 'synthesize').length;
-    await executor.run();
-    expect(executor.runtime('output').state).toBe('blocked');
-    expect(executor.runtime('output').blockedBy?.code).toBe('ENGINE_SCENE_UNSUPPORTED');
-    expect(services.calls.filter((c) => c.name === 'synthesize').length).toBe(synthsBefore);
-    expect(executor.runtime('assembler').reused).toBe(true);
-  });
-
-  it('a scene-code format the engine cannot draw blocks the player with ENGINE_SCENE_UNSUPPORTED', async () => {
-    const { executor } = setup({}, false);
-    await executor.run();
-    const out = executor.runtime('output');
-    expect(out.state).toBe('blocked');
-    expect(out.blockedBy?.code).toBe('ENGINE_SCENE_UNSUPPORTED');
-    expect(out.blockedBy?.message).toContain('html-gsap');
+    expect(executor.runtime('voice').error?.code).toBe('PROVIDER_NOT_INSTALLED');
   });
 });
 
-describe('on-demand export and single-node runs (EXECUTION_ENGINE §3)', () => {
-  it('Render runs only the export node using the packets already on its inputs', async () => {
+describe('on-demand and single-node runs (EXECUTION_ENGINE §3)', () => {
+  it('runs only the on-demand node, using the packets already on its inputs', async () => {
     const { executor, services } = setup();
     await executor.run();
     const before = services.calls.length;
-    const state = await executor.runNode('export');
-    expect(state).toBe('success');
-    expect(executor.runtime('export').result).toMatchObject({ bytes: 4_800_000, fileName: 'static-script.mp4' });
-    const after = services.calls.slice(before).map((c) => c.name);
-    // The engine is this node's own, so a render probes it and then renders: two calls, no more.
-    expect(after).toEqual(['probeEngine', 'render']);
+    expect(await executor.runNode('export')).toBe('success');
+    expect(executor.runtime('export').result).toMatchObject({ fileName: 'film.mp4', bytes: 4800 });
+    expect(services.calls.slice(before).map((c) => c.name)).toEqual(['export']);
   });
-  it('Render before any run is refused with the missing port', async () => {
+  it('is refused before any run, naming the missing port', async () => {
     const { executor } = setup();
     await expect(executor.runNode('export')).rejects.toThrow(/has no packet/);
   });
@@ -245,81 +191,69 @@ describe('on-demand export and single-node runs (EXECUTION_ENGINE §3)', () => {
     executor.setBypassed('export', false);
     await executor.run();
     expect(executor.runtime('export').state).not.toBe('success');
-    expect(services.calls.some((c) => c.name === 'render')).toBe(false);
+    expect(count(services, 'export')).toBe(0);
   });
-
   it('is not counted among the steps of a Run, so the progress reads true', async () => {
     const { graph, services } = setup();
     let stepTotal = -1;
     const executor = new Executor(graph, services, { onRunStart: (i) => { stepTotal = i.stepTotal; } });
     await executor.run();
-    expect(stepTotal).toBe(graph.nodes.filter((n) => n.type !== 'core/mp4-export' && !n.bypassed).length);
+    expect(stepTotal).toBe(4);
   });
-  it('a render with the engine lacking render capability says so on the export node', async () => {
-    const { executor } = setup({ renderReady: false });
+  it('a failure on its own button says so on that node', async () => {
+    const { executor, services } = setup();
     await executor.run();
+    services.fail('export', failure('ENGINE_NOT_READY', 'render is only available on the server'));
     await expect(executor.runNode('export')).resolves.toBe('error');
     expect(executor.runtime('export').error?.code).toBe('ENGINE_NOT_READY');
   });
 });
 
 describe('errors and cancellation', () => {
-  it('a node error blocks downstream, keeps earlier results, and retry fixes it', async () => {
+  it('a node error blocks downstream, keeps earlier results, and a retry fixes it', async () => {
     const { executor, services } = setup();
-    let fail = true;
-    const realSynth = services.synthesize.bind(services);
-    services.synthesize = async (...args) => {
-      if (fail) throw Object.assign(new Error('say exited 1'), { code: 'PROVIDER_PROCESS_FAILED' });
-      return realSynth(...args);
-    };
+    services.fail('voice', failure('PROVIDER_PROCESS_FAILED', 'say exited 1'));
     const { ok } = await executor.run();
     expect(ok).toBe(false);
-    expect(executor.runtime('tts').state).toBe('error');
-    expect(executor.runtime('tts').error?.code).toBe('PROVIDER_PROCESS_FAILED');
-    expect(executor.runtime('assembler').state).toBe('blocked');
-    expect(executor.runtime('script').state).toBe('success');
-    fail = false;
-    await executor.runNode('tts');
-    expect(executor.runtime('tts').state).toBe('success');
+    expect(executor.runtime('voice').error?.code).toBe('PROVIDER_PROCESS_FAILED');
+    expect(executor.runtime('join').state).toBe('blocked');
+    expect(executor.runtime('source').state).toBe('success');
+    services.fail('voice', null);
+    await executor.runNode('voice');
+    expect(executor.runtime('voice').state).toBe('success');
+  });
+
+  it('a throw with no code is the core\'s own failure, not a provider\'s', async () => {
+    const { executor, services } = setup();
+    services.fail('voice', new Error('something broke'));
+    await executor.run();
+    expect(executor.runtime('voice').error?.code).toBe('NODE_RUN_FAILED');
   });
 
   it('cancel marks the running node cancelled and the rest blocked', async () => {
     const { executor, services } = setup();
-    services.synthesize = () => new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('aborted'), { code: 'RUN_CANCELLED' })), 5));
+    services.delay('voice', 5);
+    services.fail('voice', failure('RUN_CANCELLED', 'aborted'));
     const p = executor.run();
     await new Promise((r) => setTimeout(r, 1));
     executor.cancel();
     const { ok } = await p;
     expect(ok).toBe(false);
-    expect(executor.runtime('tts').state).toBe('cancelled');
-    expect(executor.runtime('assembler').state).toBe('blocked');
+    expect(executor.runtime('voice').state).toBe('cancelled');
+    expect(executor.runtime('join').state).toBe('blocked');
   });
 
   it('run() refuses a graph that is malformed, not one that is merely unfinished', async () => {
     const { executor, graph } = setup();
     // An empty port stops that node and says so there (§1.4); a cycle is a graph that cannot be run
     // at all, and that is what a refusal is for.
-    graph.edges = graph.edges.filter((e) => !(e.target === 'illustrator' && e.targetPort === 'scenes'));
-    const { ok } = await executor.run();
-    expect(ok).toBe(false);
-    expect(executor.runtime('illustrator').blockedBy?.code).toBe('GRAPH_PORT_UNCONNECTED');
-
-    graph.edges.push({ id: 'cyc', source: 'assembler', sourcePort: 'ir', target: 'script', targetPort: 'x' });
-    await expect(executor.run()).rejects.toThrow(GraphInvalidError);
-  });
-
-  it('starts, and stops on the node that is actually broken (§1.4)', async () => {
-    const { executor, graph } = setup();
-    // Nothing between the voice and the Assembler is required, so this no longer refuses to start.
-    // It runs, and the voice node says what is wrong with it — which is the difference: a reason on
-    // a node, instead of a Run button that will not press and a list of codes above the canvas.
     graph.edges = graph.edges.filter((e) => e.id !== 'e2');
     const { ok } = await executor.run();
     expect(ok).toBe(false);
-    expect(executor.runtime('tts').state).toBe('blocked');
-    expect(executor.runtime('tts').blockedBy?.code).toBe('GRAPH_PORT_UNCONNECTED');
-    // A wire the person drew and that then failed is not dropped in silence: the film waits.
-    expect(executor.runtime('assembler').blockedBy?.kind).toBe('upstream');
+    expect(executor.runtime('join').blockedBy?.code).toBe('GRAPH_PORT_UNCONNECTED');
+
+    graph.edges.push({ id: 'cyc', source: 'voice', sourcePort: 'out', target: 'source', targetPort: 'x' });
+    await expect(executor.run()).rejects.toThrow(GraphInvalidError);
   });
 });
 
@@ -330,13 +264,8 @@ describe('a run always ends', () => {
   function withThrowingPreflight() {
     const { services } = setup();
     registerNodeType({
-      type: 'test/boom',
-      version: 1,
-      kind: 'source',
-      inputs: [],
-      outputs: [],
-      paramsSchema: z.object({}),
-      defaultParams: {},
+      type: 'test/boom', version: 1, kind: 'source', inputs: [], outputs: [],
+      paramsSchema: z.object({}), defaultParams: {},
       preflight: () => { throw new Error('preflight blew up'); },
       run: async () => ({}),
     } as unknown as AnyNodeDefinition);
@@ -354,11 +283,10 @@ describe('a run always ends', () => {
 
   it('params the schema refuses fail their own node, not the run', async () => {
     const { services, graph } = setup();
-    graph.nodes.find((n) => n.id === 'assembler')!.params.fps = 0;
+    graph.nodes.find((n) => n.id === 'join')!.params.fps = 0;
     const executor = new Executor(graph, services);
-    const state = await executor.runNode('assembler');
-    expect(state).toBe('error');
-    expect(executor.runtime('assembler').error?.code).toBe('NODE_PARAMS_INVALID');
+    expect(await executor.runNode('join')).toBe('error');
+    expect(executor.runtime('join').error?.code).toBe('NODE_PARAMS_INVALID');
     expect(executor.isRunning()).toBe(false);
   });
 });
@@ -381,7 +309,7 @@ describe('the node state machine', () => {
     const { executor } = setup();
     // `setState` is private on purpose; this reaches it the way a new code path would.
     const setState = (executor as unknown as { setState: (id: string, patch: { state: string }) => void }).setState.bind(executor);
-    expect(() => setState('script', { state: 'success' })).toThrow(/illegal state change on script: idle → success/);
+    expect(() => setState('source', { state: 'success' })).toThrow(/illegal state change on source: idle → success/);
   });
 });
 

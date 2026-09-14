@@ -4,7 +4,6 @@ import { _resetTransitions, registerTransition } from '../visual/transitions';
 import { contentHash } from '@/core/hash';
 import type { NodeServices } from '@/core/engine/services';
 import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover } from '../types/payloads';
-import { illustratorAnswers } from './scene-fixtures';
 
 /** Deterministic fake services for executor tests. Records every call. */
 export function makeFakeServices(overrides: Partial<{
@@ -26,8 +25,8 @@ export function makeFakeServices(overrides: Partial<{
     renderReady: true,
     claudeAuthenticated: true,
     secondsPerChar: 0.07,
-    // The Illustrator asks a model on every run, so even a core test that only wants a plan needs one: the fake draws a default style.
-    complete: illustratorAnswers() as (prompt: string) => Promise<unknown>,
+    // No shipped node asks a model today; a test that wants an answer passes its own.
+    complete: (async () => { throw new Error('no model answer was faked for this test'); }) as (prompt: string) => Promise<unknown>,
     ...overrides,
   };
   const calls: { name: string; args: unknown[] }[] = [];
@@ -90,39 +89,6 @@ export function makeFakeServices(overrides: Partial<{
     },
     async invoke<T>(serviceId: string, args: unknown[]): Promise<T> {
       calls.push({ name: serviceId, args });
-      if (serviceId === 'audio-mix/mix') {
-        const [voiceoverUrl, opts] = args;
-        return { audioUrl: `/api/media/${contentHash({ voiceoverUrl, opts })}.mp3`, durationSeconds: 63.18 } as T;
-      }
-      if (serviceId === 'audio-analysis/analyze') {
-        const [url, fps] = args;
-        return { analysisUrl: `/api/media/${contentHash({ analysis: url, fps })}.json`, frames: 900, beatSeconds: [0.5, 1, 1.5, 2] } as T;
-      }
-      if (serviceId === 'layer/measure') {
-        const [url] = args;
-        return { sourceSeconds: String(url).endsWith('.mp4') ? 6.5 : null } as T;
-      }
-      if (serviceId === 'audio-mix/import') {
-        const [fileName] = args;
-        return { audioUrl: `/api/media/${contentHash({ music: fileName })}.mp3`, durationSeconds: 184.2 } as T;
-      }
-      if (serviceId === 'audio-input/import') {
-        const [fileName] = args;
-        return { audioUrl: `/api/media/${contentHash({ fileName })}.mp3`, durationSeconds: 42.5 } as T;
-      }
-      if (serviceId === 'stock-media/fetch') {
-        const req = args[0] as { provider: string; query: string; orientation: string; want: string };
-        const h = contentHash({ query: req.query }).slice(0, 40);
-        const result = req.want === 'still'
-          ? { kind: 'photo', assetUrl: `/api/assets/${h}.jpg`, author: 'A Photographer', page: `https://example.com/${h}`, width: 1920, height: 1280 }
-          : { kind: 'clip', assetUrl: `/api/assets/${h}.mp4`, author: 'A Film-maker', page: `https://example.com/${h}`, width: 1920, height: 1080, durationSec: 12 };
-        return result as T;
-      }
-      if (serviceId === 'web-fetcher/read') {
-        const [url, options] = args as [string, { screenshot: boolean }];
-        const domain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]!;
-        return { url, domain, title: `Title of ${domain}`, description: 'What the page says about itself.', siteName: domain, pictureAsset: '/api/assets/1111111111111111111111111111111111111111.png', ...(options.screenshot ? { screenshotAsset: '/api/assets/2222222222222222222222222222222222222222.png' } : {}) } as T;
-      }
       if (serviceId === 'transcribe/align') {
         const [, text] = args as [string, string];
         const words = text.trim().split(/\s+/).filter(Boolean);

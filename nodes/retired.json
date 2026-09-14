@@ -2,17 +2,28 @@
   "core/art-director": {
     "since": "2026-09-10"
   },
+  "core/audio-analysis": {
+    "since": "2026-09-14"
+  },
+  "core/audio-input": {
+    "since": "2026-09-14"
+  },
+  "core/audio-mix": {
+    "since": "2026-09-14"
+  },
   "core/captions": {
     "since": "2026-09-12"
   },
   "core/cast": {
     "since": "2026-09-12"
   },
+  "core/compose": {
+    "since": "2026-09-14"
+  },
   "core/cover-export": {
     "since": "2026-09-10"
   },
   "core/github-fetcher": {
-    "replacedBy": "core/web-fetcher",
     "since": "2026-09-13"
   },
   "core/hyperframes-engine": {
@@ -21,17 +32,46 @@
   "core/illustrator": {
     "since": "2026-09-13"
   },
+  "core/input-trigger": {
+    "since": "2026-09-14"
+  },
+  "core/layer": {
+    "since": "2026-09-14"
+  },
   "core/llm-provider": {
     "since": "2026-09-12"
+  },
+  "core/plates": {
+    "since": "2026-09-14"
   },
   "core/remotion-engine": {
     "since": "2026-09-12"
   },
+  "core/scene-breakdown": {
+    "since": "2026-09-14"
+  },
+  "core/screenwriter": {
+    "since": "2026-09-14"
+  },
+  "core/set": {
+    "since": "2026-09-14"
+  },
+  "core/static-script": {
+    "since": "2026-09-14"
+  },
+  "core/stock-media": {
+    "since": "2026-09-14"
+  },
   "core/style": {
-    "replacedBy": "core/set",
     "since": "2026-09-12"
+  },
+  "core/timeline-assembler": {
+    "since": "2026-09-14"
   },
   "core/tts-provider": {
     "since": "2026-09-12"
+  },
+  "core/web-fetcher": {
+    "since": "2026-09-14"
   }
 }

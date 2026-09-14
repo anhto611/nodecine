@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import type { Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { makeFakeServices } from '@/contracts/__tests__/fakes';
+import { TEXT, testServices } from './kit';
 
 /**
  * A node may change its own parameters while it runs (RunContext.patchParams): the patch goes
@@ -17,7 +17,7 @@ const learner: NodeDefinition<typeof Params> = {
   version: 1,
   kind: 'source',
   inputs: [],
-  outputs: [{ name: 'out', type: 'SourceRef' }],
+  outputs: [{ name: 'out', type: TEXT }],
   paramsSchema: Params,
   defaultParams: { seen: [] },
   run: async ({ params, patchParams }) => {
@@ -34,7 +34,7 @@ describe('a node that patches its own params', () => {
 
   it('lands the patch in the executor\'s graph and the hook, and is reused on the next run', async () => {
     const patches: unknown[] = [];
-    const ex = new Executor(graph(), makeFakeServices(), { onParamsPatch: (id, p) => patches.push([id, p]) });
+    const ex = new Executor(graph(), testServices(), { onParamsPatch: (id, p) => patches.push([id, p]) });
     await ex.run();
     expect(patches).toEqual([['l', { seen: ['x'] }]]);
     expect(ex.getGraph().nodes[0]!.params).toEqual({ seen: ['x'] });

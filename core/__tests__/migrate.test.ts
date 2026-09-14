@@ -12,8 +12,7 @@ import {
   type SavedDoc,
 } from '../engine/migrate';
 import { validateGraph, hasBlockingIssues, type Graph } from '../engine/graph';
-import { PAYLOAD_SCHEMAS } from '@/contracts/types/payloads';
-import { _resetNodeRegistry, registerNodeType, registerRetiredNodeType, type AnyNodeDefinition } from '../nodes/definition';
+import { _resetNodeRegistry, getNodeType, getRetiredNodeType, registerNodeType, registerRetiredNodeType, type AnyNodeDefinition } from '../nodes/definition';
 import { registerNodes } from '@/nodes';
 import perVendorProviders from './fixtures/format-1-per-vendor-providers.json';
 import retiredNodes from './fixtures/format-2-retired-nodes.json';
@@ -39,8 +38,8 @@ describe('a file from an older format', () => {
     const types = doc.graph.nodes.map((n) => n.type);
     expect(types).not.toContain('core/system-tts-provider');
     expect(types).not.toContain('core/claude-code-provider');
-    // Whatever else changed, the graph has to be one this build can run.
-    for (const issue of validateGraph(doc.graph)) expect(issue.code, issue.message).not.toBe('NODE_TYPE_UNKNOWN');
+    // Whatever else changed, every node is one this build has, or one it can say is gone and since when.
+    for (const n of doc.graph.nodes) expect(getNodeType(n.type) ?? getRetiredNodeType(n.type), n.type).toBeDefined();
     expect(validateGraph(doc.graph).some((i) => i.code === 'NODE_PARAMS_INVALID')).toBe(false);
   });
 
@@ -49,15 +48,15 @@ describe('a file from an older format', () => {
     // folded onto its consumer, because a model is a node's own setting now and not a node (§1.3).
     const doc0 = structuredClone(perVendorProviders) as SavedDoc;
     const g = doc0.graph as { nodes: unknown[]; edges: unknown[] };
-    g.nodes.push({ id: 'writer', type: 'core/screenwriter', params: {}, bypassed: false, position: { x: 0, y: 0 } });
-    g.edges.push({ id: 'e1', source: 'brain', sourcePort: 'llm', target: 'writer', targetPort: 'llm' });
+    g.nodes.push({ id: 'speaker', type: 'core/tts-engine', params: {}, bypassed: false, position: { x: 0, y: 0 } });
+    g.edges.push({ id: 'e1', source: 'voice', sourcePort: 'tts', target: 'speaker', targetPort: 'tts' });
     const { doc } = migrateDoc(doc0);
-    expect(doc.graph.nodes.map((n) => n.id), 'a provider node survived the fold').not.toContain('brain');
+    expect(doc.graph.nodes.map((n) => n.id), 'a provider node survived the fold').not.toContain('voice');
     expect(doc.graph.edges, 'a wire to a node that is gone survived').toHaveLength(0);
-    const writer = doc.graph.nodes.find((n) => n.id === 'writer')!;
-    expect(writer.params).toMatchObject({ llmProvider: 'claude-code', llmSettings: { model: 'sonnet' } });
+    const speaker = doc.graph.nodes.find((n) => n.id === 'speaker')!;
+    expect(speaker.params).toMatchObject({ ttsProvider: 'system-tts', ttsSettings: { rate: 1.15 } });
     // One nobody was using goes too, quietly: there is nothing left for it to hand out.
-    expect(doc.graph.nodes.map((n) => n.id)).not.toContain('voice');
+    expect(doc.graph.nodes.map((n) => n.id)).not.toContain('brain');
   });
 
   it('refuses a format with no way forward, and names the formats it does open', () => {
@@ -70,20 +69,6 @@ describe('a file from an older format', () => {
 });
 
 describe('a node type that is gone', () => {
-  it('becomes the nodes that replaced it, and says so', () => {
-    // The Art Director drew scenes, then the Illustrator did, and now a Set, a Plate Maker and a
-    // Scene Builder do. A graph saved under the first name comes forward the whole way.
-    const { notes, graph } = migrateGraph(structuredClone(retiredNodes.graph) as Graph);
-    const art = graph.nodes.find((n) => n.id === 'art')!;
-    expect(art.type).toBe('core/compose');
-    expect(graph.nodes.map((n) => n.type)).toContain('core/plates');
-    expect(graph.nodes.map((n) => n.type)).toContain('core/set');
-    expect(notes.find((n) => n.code === 'NODE_REPLACED')?.message).toContain('core/art-director');
-    for (const n of graph.nodes) {
-      expect(hasBlockingIssues(validateGraph({ nodes: [n], edges: [] }).filter((i) => i.code === 'NODE_PARAMS_INVALID')), n.type).toBe(false);
-    }
-  });
-
   it('stays put when nothing replaced it, with a reason instead of an unknown type', () => {
     const { notes, graph } = migrateGraph(structuredClone(retiredNodes.graph) as Graph);
     expect(graph.nodes.find((n) => n.id === 'cover')!.type).toBe('core/cover-export');
@@ -153,9 +138,10 @@ describe('a node type whose parameters changed', () => {
 describe('saving', () => {
   it('stamps every node with the version that wrote its parameters', () => {
     registerRetiredNodeType('test/ghost', { since: '2026-01-01' });
+    registerNodeType({ type: 'test/current', version: 1, kind: 'source', inputs: [], outputs: [], paramsSchema: z.object({}), defaultParams: {}, run: async () => ({}) } as unknown as AnyNodeDefinition);
     const graph: Graph = {
       nodes: [
-        { id: 'a', type: 'core/input-trigger', params: { value: 'x' }, bypassed: false, position: { x: 0, y: 0 } },
+        { id: 'a', type: 'test/current', params: {}, bypassed: false, position: { x: 0, y: 0 } },
         { id: 'b', type: 'test/ghost', params: {}, bypassed: false, position: { x: 0, y: 0 } },
       ],
       edges: [],
@@ -174,92 +160,23 @@ describe('the migration chain itself', () => {
   });
 });
 
-describe('two nodes that became one', () => {
-  it('merges a Style and its Cast into one Set, and re-points the wires', () => {
-    const graph = {
-      nodes: [
-        { id: 'style', type: 'core/style', params: { brief: 'nền kem', frame: '9:16' }, bypassed: false, position: { x: 0, y: 0 } },
-        { id: 'cast', type: 'core/cast', params: { members: [{ id: 'phone', brief: 'điện thoại', placement: 'over', width: 0, height: 0, source: '' }] }, bypassed: false, position: { x: 1, y: 0 } },
-        { id: 'ill', type: 'core/illustrator', params: {}, bypassed: false, position: { x: 2, y: 0 } },
-      ],
-      edges: [
-        { id: 'a', source: 'style', sourcePort: 'style', target: 'cast', targetPort: 'style' },
-        { id: 'b', source: 'style', sourcePort: 'style', target: 'ill', targetPort: 'style' },
-        { id: 'c', source: 'cast', sourcePort: 'cast', target: 'ill', targetPort: 'cast' },
-      ],
-    } as Graph;
-    const { graph: after, notes } = migrateGraph(structuredClone(graph));
-    // The Illustrator became three nodes of its own in the same pass; what this test is about is
-    // that the cast joined the style rather than staying a node.
-    expect(after.nodes.map((n) => n.type)).toContain('core/set');
-    expect(after.nodes.map((n) => n.type)).not.toContain('core/cast');
-    // The style's own settings stay, and the cast's members move onto it.
-    const set = after.nodes.find((n) => n.type === 'core/set')!;
-    expect(set.params).toMatchObject({ brief: 'nền kem', members: [{ id: 'phone' }] });
-    // The wire between them is gone; the one that fed the Illustrator now leaves the same node.
-    expect(after.edges.every((e) => e.source === 'style' || after.nodes.some((n) => n.id === e.source))).toBe(true);
-    expect(after.edges.filter((e) => e.source === 'style').map((e) => e.sourcePort).sort()).toContain('layers');
-    expect(notes.some((n) => n.message.includes('core/set'))).toBe(true);
-  });
-
-  it('leaves a Style with no Cast alone but for its own name', () => {
-    const { graph } = migrateGraph({
-      nodes: [{ id: 's', type: 'core/style', params: { brief: 'x' }, bypassed: false, position: { x: 0, y: 0 } }],
-      edges: [],
-    } as Graph);
-    expect(graph.nodes[0]!.type).toBe('core/set');
-    expect(graph.nodes[0]!.params).toMatchObject({ brief: 'x', members: [] });
-  });
-});
-
 describe('a file already at this format', () => {
   it('still has its graph brought forward, because most node changes never touch the format', () => {
     // The bug this holds shut: a workflow saved this morning, opened this afternoon, came back with
     // node types the build no longer had — the doc version matched, so nothing ran.
+    registerNodeType({
+      type: 'test/renamed-field', version: 2, kind: 'source', inputs: [], outputs: [],
+      paramsSchema: z.object({ headline: z.string().default('') }), defaultParams: { headline: '' },
+      migrate: (params: Record<string, unknown>) => ({ headline: params.title ?? '' }),
+      run: async () => ({}),
+    } as unknown as AnyNodeDefinition);
     const doc = {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       id: 'x', name: 'x', category: 'mine',
-      graph: { nodes: [{ id: 's', type: 'core/style', params: { brief: 'x' }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] },
+      graph: { nodes: [{ id: 's', type: 'test/renamed-field', version: 1, params: { title: 'x' }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] },
     } as unknown as SavedDoc;
     const { doc: after, notes } = migrateDoc(doc);
-    expect(after.graph.nodes[0]!.type).toBe('core/set');
+    expect(after.graph.nodes[0]!.params).toEqual({ headline: 'x' });
     expect(notes.some((n) => n.code === 'DOC_FORMAT'), 'nothing about the format changed').toBe(false);
-  });
-});
-
-/**
- * The cast and the layers were two payloads for one idea, on two ports of the assembler, which
- * converted one into the other on the way in. One payload now, one port — and a pin is keyed by
- * port name, so a pinned set has to move with it or it emits something nothing reads.
- */
-describe('two payloads that became one', () => {
-  const at = '2026-09-12T00:00:00.000Z';
-  const old = () => ({
-    nodes: [
-      {
-        id: 'set', type: 'core/set', params: {}, bypassed: false, position: { x: 0, y: 0 },
-        pinned: { outputs: { style: { name: 's' }, cast: { members: [{ id: 'phone', brief: 'b', placement: 'over', width: 300, height: 600, source: '<div></div>' }] } }, at },
-      },
-      { id: 'lay', type: 'core/layer', params: {}, bypassed: false, position: { x: 0, y: 0 } },
-      { id: 'asm', type: 'core/timeline-assembler', params: {}, bypassed: false, position: { x: 0, y: 0 } },
-    ],
-    edges: [
-      { id: 'a', source: 'set', sourcePort: 'cast', target: 'asm', targetPort: 'cast' },
-      { id: 'b', source: 'lay', sourcePort: 'layer', target: 'asm', targetPort: 'layers' },
-    ],
-  });
-
-  it('re-points every wire at the one port that is left', () => {
-    const { graph } = migrateGraph(old() as Graph);
-    expect(graph.edges.map((e) => `${e.sourcePort}->${e.targetPort}`)).toEqual(['layers->layers', 'layers->layers']);
-  });
-
-  it('moves a pinned cast across, so a pinned set still emits something the assembler reads', () => {
-    const { graph } = migrateGraph(old() as Graph);
-    const pinned = graph.nodes.find((n) => n.id === 'set')!.pinned!.outputs as Record<string, { layers?: unknown[] }>;
-    expect(pinned.cast).toBeUndefined();
-    expect(pinned.style).toBeDefined();
-    expect(PAYLOAD_SCHEMAS.LayerSheet.safeParse(pinned.layers).success).toBe(true);
-    expect(pinned.layers!.layers![0]).toMatchObject({ kind: 'code', id: 'phone', width: 300, startSeconds: 0 });
   });
 });

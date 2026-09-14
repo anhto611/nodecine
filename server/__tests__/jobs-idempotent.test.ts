@@ -3,10 +3,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { JobHub } from '@/server/jobs';
-import staticScript from '@/lib/first-run.json';
-import type { Graph } from '@/core/engine/graph';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
-import { registerNodes } from '@/nodes';
+import { pipeline, registerTestKit } from '@/core/__tests__/kit';
 
 /**
  * The client retries a request the server answered with an empty 5xx, on the reading that the route
@@ -20,8 +18,8 @@ describe('submitting the same request twice', () => {
   beforeAll(() => { dir = mkdtempSync(path.join(tmpdir(), 'nodecine-jobs-')); process.env.NODECINE_JOBS_DIR = dir; });
   afterAll(() => { if (previous === undefined) delete process.env.NODECINE_JOBS_DIR; else process.env.NODECINE_JOBS_DIR = previous; rmSync(dir, { recursive: true, force: true }); });
 
-  const graph = () => structuredClone(staticScript.graph) as Graph;
-  const hub = () => { _resetNodeRegistry(); registerNodes(); return new JobHub(() => ({}) as never); };
+  const graph = () => pipeline();
+  const hub = () => { _resetNodeRegistry(); registerTestKit(); return new JobHub(() => ({}) as never); };
 
   it('queues one job and hands the same one back', () => {
     const h = hub();

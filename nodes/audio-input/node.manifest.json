@@ -1,1 +1,0 @@
-{"id": "core/audio-input", "definition": "audioInput", "body": "AudioInputBody", "icon": "mic", "group": "audio", "translations": "audioInputTranslations", "services": "audioInputServices", "libraries": {"voice": {"env": "NODECINE_VOICE_DIR", "extensions": ["mp3", "m4a", "aac", "wav", "ogg", "flac"]}}}

@@ -1,1 +1,0 @@
-{"id": "core/screenwriter", "definition": "screenwriter", "body": "ScreenwriterBody", "icon": "bot", "group": "script", "translations": "screenwriterTranslations", "overlayModule": "BeatEditorDialog", "overlay": "BeatEditorDialog"}

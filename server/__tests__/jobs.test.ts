@@ -3,14 +3,11 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { JobHub, type HubEvent, type Job } from '../jobs';
-import { registerNodes } from '@/nodes';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
-import { registerFakeEngineSupport, resetEngineSupport } from '@/contracts/__tests__/fakes';
-import { makeFakeServices } from '@/contracts/__tests__/fakes';
-import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
+import { pipeline, registerTestKit, testServices } from '@/core/__tests__/kit';
 
-const graph = () => structuredClone(staticScript.graph) as Graph;
+const graph = () => pipeline();
 async function until(pred: () => boolean, ms = 5000): Promise<void> {
   const t0 = Date.now();
   while (!pred()) {
@@ -25,9 +22,7 @@ describe('JobHub', () => {
     dir = await mkdtemp(path.join(os.tmpdir(), 'nodecine-jobs-'));
     process.env.NODECINE_JOBS_DIR = dir;
     _resetNodeRegistry();
-    resetEngineSupport();
-    registerNodes();
-    registerFakeEngineSupport();
+    registerTestKit();
   });
   afterEach(async () => {
     delete process.env.NODECINE_JOBS_DIR;
@@ -35,7 +30,7 @@ describe('JobHub', () => {
   });
 
   it('runs a submitted graph, streams node states and job status, and keeps the executor for the key', async () => {
-    const hub = new JobHub(() => makeFakeServices());
+    const hub = new JobHub(() => testServices());
     const events: HubEvent[] = [];
     hub.subscribe((e) => events.push(e));
     const job = hub.submit({ key: 'tab-1', kind: 'run', graph: graph(), name: 'Static' });
@@ -43,27 +38,27 @@ describe('JobHub', () => {
     await until(() => hub.get(job.id)?.status === 'done');
     expect(hub.get(job.id)?.ok).toBe(true);
     expect(events.some((e) => e.type === 'run:start')).toBe(true);
-    expect(events.some((e) => e.type === 'node' && e.nodeId === 'assembler' && e.runtime.state === 'success')).toBe(true);
+    expect(events.some((e) => e.type === 'node' && e.nodeId === 'join' && e.runtime.state === 'success')).toBe(true);
     expect(events.filter((e) => e.type === 'job').map((e) => (e as { job: { status: string } }).job.status)).toEqual(['pending', 'running', 'done']);
     const snap = hub.snapshot('tab-1')!;
-    expect(snap.runtimes.assembler!.state).toBe('success');
+    expect(snap.runtimes.join!.state).toBe('success');
     expect(snap.logs.length).toBeGreaterThan(0);
     // A second run on the same key reuses what did not change.
     const again = hub.submit({ key: 'tab-1', kind: 'run', graph: graph() });
     await until(() => hub.get(again.id)?.status === 'done');
-    expect(hub.snapshot('tab-1')!.runtimes.assembler!.reused).toBe(true);
+    expect(hub.snapshot('tab-1')!.runtimes.join!.reused).toBe(true);
   });
 
   it('refuses a graph that cannot run, with its issues, instead of queueing it', () => {
-    const hub = new JobHub(() => makeFakeServices());
+    const hub = new JobHub(() => testServices());
     const g = graph();
-    g.edges.push({ id: 'cyc', source: 'assembler', sourcePort: 'ir', target: 'script', targetPort: 'x' });
+    g.edges.push({ id: 'cyc', source: 'join', sourcePort: 'out', target: 'source', targetPort: 'x' });
     expect(() => hub.submit({ key: 'tab-2', kind: 'run', graph: g })).toThrow(/GRAPH_PORT_UNCONNECTED|invalid/i);
     expect(() => hub.submit({ key: '../x', kind: 'run', graph: graph() })).toThrow(/key/);
   });
 
   it('queues jobs one after another and drops a pending one on cancel', async () => {
-    const hub = new JobHub(() => makeFakeServices({ secondsPerChar: 0.01 }));
+    const hub = new JobHub(() => testServices());
     const a = hub.submit({ key: 'tab-3', kind: 'run', graph: graph() });
     const b = hub.submit({ key: 'tab-4', kind: 'run', graph: graph() });
     const c = hub.submit({ key: 'tab-5', kind: 'run', graph: graph() });
@@ -77,7 +72,7 @@ describe('JobHub', () => {
   });
 
   it('runs one node on demand', async () => {
-    const hub = new JobHub(() => makeFakeServices());
+    const hub = new JobHub(() => testServices());
     const run = hub.submit({ key: 'tab-6', kind: 'run', graph: graph() });
     await until(() => hub.get(run.id)?.status === 'done');
     const exp = hub.submit({ key: 'tab-6', kind: 'node', graph: graph(), nodeId: 'export' });
@@ -86,31 +81,22 @@ describe('JobHub', () => {
     expect(hub.snapshot('tab-6')!.runtimes.export!.state).toBe('success');
   });
 
-  it('writes every job to disk, keeps the run in the history, and reads it all back after a restart', async () => {
-    const hub = new JobHub(() => makeFakeServices());
-    const events: HubEvent[] = [];
-    hub.subscribe((e) => events.push(e));
+  it('writes every job to disk and reads it all back after a restart', async () => {
+    // What goes into the run history needs a node that carries a film; none ships today, so this
+    // holds only the half that is the runtime's: the job files and reading them back.
+    const hub = new JobHub(() => testServices());
     const job = hub.submit({ key: 'tab-1', kind: 'run', graph: graph(), name: 'Static' });
     await until(() => hub.get(job.id)?.status === 'done');
     const onDisk = JSON.parse(await readFile(path.join(dir, `${job.id}.json`), 'utf8')) as Job;
     expect(onDisk.status).toBe('done');
-    expect(onDisk.result?.ir.beats.length).toBeGreaterThan(0);
-    expect(onDisk.result?.engineId).toBe('hyperframes');
-    expect(events.some((e) => e.type === 'history' && e.history.length === 1)).toBe(true);
-    expect(hub.snapshot('tab-1')!.history[0]!.seq).toBe(1);
-
-    // An export that follows is filed under that run.
     const exp = hub.submit({ key: 'tab-1', kind: 'node', graph: graph(), name: 'Static', nodeId: 'export' });
     await until(() => hub.get(exp.id)?.status === 'done');
     expect(hub.get(exp.id)?.ok).toBe(true);
-    expect(hub.history('tab-1')[0]!.exports).toEqual([expect.objectContaining({ fileName: expect.any(String), outputUrl: expect.stringMatching(/^\/api\/media\//) })]);
 
-    // A new process reads the same directory: the history is still there, no executor needed.
-    const again = new JobHub(() => makeFakeServices());
+    // A new process reads the same directory, no executor needed.
+    const again = new JobHub(() => testServices());
     expect(again.list().map((j) => j.id).sort()).toEqual([exp.id, job.id].sort());
-    expect(again.history('tab-1')).toHaveLength(1);
-    expect(again.history('tab-1')[0]!.exports).toHaveLength(1);
-    expect(again.history('tab-1')[0]!.ir).toEqual(onDisk.result!.ir);
+    expect(again.get(job.id)?.status).toBe('done');
   });
 
   it('marks a job the previous process died on as cancelled, and ignores files that are not jobs', async () => {
@@ -118,7 +104,7 @@ describe('JobHub', () => {
     await writeFile(path.join(dir, 'job-stale.json'), JSON.stringify(stale));
     await writeFile(path.join(dir, 'half-written.json'), '{"id": "job-x", ');
     await writeFile(path.join(dir, 'notes.txt'), 'not a job');
-    const hub = new JobHub(() => makeFakeServices());
+    const hub = new JobHub(() => testServices());
     const job = hub.get('job-stale')!;
     expect(job.status).toBe('cancelled');
     expect(job.error?.code).toBe('RUN_CANCELLED');
@@ -136,7 +122,6 @@ describe('JobHub on a cold process', () => {
     process.env.NODECINE_JOBS_DIR = dir;
     // Nothing registered: exactly what a freshly started server looks like before a request lands.
     _resetNodeRegistry();
-    resetEngineSupport();
   });
   afterEach(async () => {
     delete process.env.NODECINE_JOBS_DIR;
@@ -144,10 +129,11 @@ describe('JobHub on a cold process', () => {
   });
 
   it('registers the node types before it reads a graph against them', () => {
-    const hub = new JobHub(() => makeFakeServices());
+    const hub = new JobHub(() => testServices());
     // Registration used to happen inside the executor's services, which are built after this
     // validation: the first submission a server ever saw called every node NODE_TYPE_UNKNOWN.
-    const job = hub.submit({ key: 'cold-1', kind: 'run', graph: graph(), name: 'Static' });
+    const shipped: Graph = { nodes: [{ id: 'captions', type: 'core/caption-export', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] };
+    const job = hub.submit({ key: 'cold-1', kind: 'run', graph: shipped, name: 'Static' });
     expect(job.status).toBe('pending');
     hub.cancel(job.id);
   });

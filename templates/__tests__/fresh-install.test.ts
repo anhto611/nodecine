@@ -6,37 +6,24 @@ import { listNodeTypes, _resetNodeRegistry } from '@/core/nodes/definition';
  * What a person who has just installed the app finds in the Library, before they do anything.
  * Everything the app ships is on by default; nothing has to be enabled, fetched or configured to
  * build any of the shipped templates from a blank canvas. This test pins that set, so shipping a
- * template that needs something not listed here fails loudly. Scene drawings are not in this list:
- * the Illustrator creates them per run from the brief instead of loading registered code.
+ * template that needs something not listed here fails loudly. Since 2026-09-14 it is only the
+ * plumbing every film needs — a voice, word timings, a player, the exports — while the nodes of the
+ * first genre are written.
  */
 
 beforeEach(() => {
   _resetNodeRegistry();
-      registerNodes();
+  registerNodes();
 });
 
 describe('a fresh install', () => {
   it('offers these node types in the Library, and no fewer', () => {
     expect(listNodeTypes().map((d) => d.type).sort()).toEqual([
-      'core/audio-analysis',
-      'core/audio-input',
-      'core/audio-mix',
       'core/caption-export',
-      'core/compose',
-      'core/input-trigger',
-      'core/layer',
       'core/mp4-export',
-      'core/plates',
-      'core/scene-breakdown',
-      'core/screenwriter',
-      'core/set',
-      'core/static-script',
-      'core/stock-media',
-      'core/timeline-assembler',
       'core/transcribe',
       'core/tts-engine',
       'core/video-output',
-      'core/web-fetcher',
     ]);
   });
 });

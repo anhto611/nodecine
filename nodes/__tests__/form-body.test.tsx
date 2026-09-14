@@ -50,7 +50,8 @@ describe('a form read off a schema', () => {
     render(<FormBody nodeId="n" fields={['fps', 'codec']} />);
     expect(screen.queryByRole('checkbox')).toBeNull();
     const labels = [...document.querySelectorAll('.nc-k')].map((e) => e.textContent);
-    expect(labels).toEqual(['fps', 'codec']);
+    // `node.codec` has a string in a dictionary; `node.fps` has none, so its key shows.
+    expect(labels).toEqual(['node.fps', 'codec']);
   });
 
   it('writes a choice back to the node', async () => {

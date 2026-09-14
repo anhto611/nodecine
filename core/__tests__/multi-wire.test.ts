@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import { validateGraph, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { makeFakeServices } from '@/contracts/__tests__/fakes';
+import { TEXT, testServices } from './kit';
 
 /**
  * A `multiple` port takes any number of wires and hands the packets to run() as a list, in edge
@@ -16,7 +16,7 @@ const source: NodeDefinition<typeof Params> = {
   version: 1,
   kind: 'source',
   inputs: [],
-  outputs: [{ name: 'out', type: 'SourceRef' }],
+  outputs: [{ name: 'out', type: TEXT }],
   paramsSchema: Params,
   defaultParams: { value: '' },
   run: async ({ params }) => ({ out: { value: params.value } }),
@@ -27,10 +27,10 @@ const collector: NodeDefinition<typeof NoParams> = {
   version: 1,
   kind: 'process',
   inputs: [
-    { name: 'head', type: 'SourceRef' },
-    { name: 'parts', type: 'SourceRef', multiple: true },
+    { name: 'head', type: TEXT },
+    { name: 'parts', type: TEXT, multiple: true },
   ],
-  outputs: [{ name: 'out', type: 'SourceRef' }],
+  outputs: [{ name: 'out', type: TEXT }],
   paramsSchema: NoParams,
   defaultParams: {},
   run: async ({ inputs, lists }) => {
@@ -72,7 +72,7 @@ describe('multiple-wire ports', () => {
   });
 
   it('delivers the packets as a list in edge order', async () => {
-    const ex = new Executor(graph(), makeFakeServices());
+    const ex = new Executor(graph(), testServices());
     const { ok } = await ex.run();
     expect(ok).toBe(true);
     expect(valueOut(ex)).toBe('head:b1+b2+b3');
@@ -81,7 +81,7 @@ describe('multiple-wire ports', () => {
   it('is satisfied by one wire, and is unwired with none', async () => {
     const g = graph();
     g.edges = g.edges.filter((e) => e.id !== 'e2' && e.id !== 'e3');
-    const ex = new Executor(g, makeFakeServices());
+    const ex = new Executor(g, testServices());
     await ex.run();
     expect(valueOut(ex)).toBe('head:b1');
 
@@ -96,7 +96,7 @@ describe('multiple-wire ports', () => {
   it('re-runs when a wire is added and reuses when the list is unchanged', async () => {
     const g = graph();
     g.edges = g.edges.filter((e) => e.id !== 'e3');
-    const ex = new Executor(g, makeFakeServices());
+    const ex = new Executor(g, testServices());
     await ex.run();
     await ex.run();
     expect(ex.runtime('col').reused).toBe(true);
@@ -111,7 +111,7 @@ describe('multiple-wire ports', () => {
   it('blocks on a bypassed part upstream and names it', async () => {
     const g = graph();
     g.nodes.find((n) => n.id === 'b2')!.bypassed = true;
-    const ex = new Executor(g, makeFakeServices());
+    const ex = new Executor(g, testServices());
     await ex.run();
     const rt = ex.runtime('col');
     expect(rt.state).toBe('blocked');
@@ -130,7 +130,7 @@ describe('a wire from a port the upstream left silent', () => {
     version: 1,
     kind: 'source',
     inputs: [],
-    outputs: [{ name: 'out', type: 'SourceRef' }, { name: 'extra', type: 'SourceRef' }],
+    outputs: [{ name: 'out', type: TEXT }, { name: 'extra', type: TEXT }],
     paramsSchema: Params,
     defaultParams: { value: '' },
     run: async ({ params }) => (params.value ? { out: { value: params.value }, extra: { value: 'extra' } } : { out: { value: 'plain' } }),
@@ -140,11 +140,11 @@ describe('a wire from a port the upstream left silent', () => {
     version: 1,
     kind: 'process',
     inputs: [
-      { name: 'head', type: 'SourceRef' },
-      { name: 'parts', type: 'SourceRef', required: false, multiple: true },
-      { name: 'one', type: 'SourceRef', required: false },
+      { name: 'head', type: TEXT },
+      { name: 'parts', type: TEXT, required: false, multiple: true },
+      { name: 'one', type: TEXT, required: false },
     ],
-    outputs: [{ name: 'out', type: 'SourceRef' }],
+    outputs: [{ name: 'out', type: TEXT }],
     paramsSchema: NoParams,
     defaultParams: {},
     run: async ({ inputs, lists }) => ({ out: { value: `${(inputs.head!.payload as { value: string }).value}:${(lists.parts ?? []).length}:${inputs.one ? 'one' : 'none'}` } }),
@@ -169,13 +169,13 @@ describe('a wire from a port the upstream left silent', () => {
   });
 
   it('runs the consumer with that input simply absent', async () => {
-    const ex = new Executor(g(''), makeFakeServices());
+    const ex = new Executor(g(''), testServices());
     expect((await ex.run()).ok).toBe(true);
     expect((ex.runtime('take').outputs.out!.payload as { value: string }).value).toBe('plain:0:none');
   });
 
   it('carries the packet when the upstream does produce one', async () => {
-    const ex = new Executor(g('yes'), makeFakeServices());
+    const ex = new Executor(g('yes'), testServices());
     expect((await ex.run()).ok).toBe(true);
     expect((ex.runtime('take').outputs.out!.payload as { value: string }).value).toBe('yes:1:one');
   });

@@ -7,7 +7,6 @@ import type { RunRecord } from '@/contracts/history';
 import { UndoStack } from '@/lib/undo-stack';
 import { contentHash } from '@/core/hash';
 import { getNodeType } from '@/core/nodes/definition';
-import firstRunGraph from '@/lib/first-run.json';
 import { getTemplate, templateGraph, type TemplateDefinition, localized } from '@/core/templates/registry';
 import { bootstrapClient } from '@/lib/bootstrap.client';
 import { loadUserTemplates, saveUserTemplates, loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
@@ -239,10 +238,9 @@ export const useStudio = create<StudioState>((set, get) => {
       // A tab stored clean is, by definition, at its saved state: give it the hash it predates.
       const tabs: WorkflowTab[] = stored?.tabs.length
         ? stored.tabs.map((t) => (t.savedHash || t.dirty ? t : { ...t, savedHash: savedHashOf(t.name, t.graph) }))
-        // Nothing stored: the app opens on a graph that runs with no network, no model and no key —
-        // seven nodes from typed lines to an MP4. It is not in the template browser (a person opens
-        // the app to *their* work, not to a demo they must delete first), it is what "first run" is.
-        : [{ key: tabKey(), fileId: null, name: 'Static Script', graph: structuredClone(firstRunGraph.graph) as Graph, dirty: false }];
+        // Nothing stored: an empty canvas. The first-run film went with the nodes it was built from
+        // on 2026-09-14; the next one comes with the first genre's nodes.
+        : [{ key: tabKey(), fileId: null, name: 'Untitled', graph: { nodes: [], edges: [] }, dirty: false }];
       const active = tabs.find((t) => t.key === stored?.active) ?? tabs[0]!;
       const graph = active.graph;
       const executor = new RemoteExecutor(active.key, graph, active.name, {

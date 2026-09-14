@@ -32,9 +32,10 @@ describe('node capsules', () => {
     expect(server).not.toMatch(/\/node'/);
   });
 
-  it('the hub can find the one node that carries the IR, the one that previews it, and the one that exports a file', () => {
+  it('the hub can find the one node that previews the film and the one that exports a file, and at most one carries the IR', () => {
     const carriers = (feature: string) => Object.entries(NODE_FEATURES).filter(([, f]) => f.includes(feature)).map(([id]) => id);
-    expect(carriers('history-ir')).toEqual(['core/timeline-assembler']);
+    // No node builds a film today; the one that does next declares `history-ir` and the run history picks it up.
+    expect(carriers('history-ir').length).toBeLessThanOrEqual(1);
     expect(carriers('history-preview')).toEqual(['core/video-output']);
     expect(carriers('history-file-export')).toEqual(['core/mp4-export']);
     expect(Object.keys(NODE_FEATURES).sort()).toEqual(ALL_NODES.map((n) => n.type).sort());

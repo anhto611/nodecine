@@ -1,10 +1,9 @@
 import type { Graph } from '@/core/engine/graph';
 
 /**
- * The video's frame size is the Illustrator's `frame` parameter (a preset id): the scenes it draws are
- * drawn for that frame, and the Assembler takes the video's size from the plan. Everything
- * that needs the size before a run — previews, the safe-zone guides, the prompt sent to a model —
- * reads the same parameter. No Illustrator in the graph: portrait.
+ * The video's frame size is a node's `frame` parameter (a preset id): whichever node draws the film
+ * says what it is drawn for. Everything that needs the size before a run — previews, the safe-zone
+ * guides — reads the same parameter. No node says: portrait.
  */
 export interface FrameSize { width: number; height: number }
 

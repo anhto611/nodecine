@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { describeFrame, frameOf } from '../frame';
-import staticScript from '@/lib/first-run.json';
 import type { Graph } from '@/core/engine/graph';
 
 describe('frameOf', () => {
-  it('reads the Illustrator frame, falls back to portrait, and ignores junk', () => {
-    expect(frameOf(staticScript.graph as Graph)).toEqual({ width: 1080, height: 1920 });
+  it('reads a node\'s frame, falls back to portrait, and ignores junk', () => {
     expect(frameOf({ nodes: [] })).toEqual({ width: 1080, height: 1920 });
-    const g = { nodes: [{ id: 'a', type: 'core/illustrator', params: { frame: '16:9' }, bypassed: false, position: { x: 0, y: 0 } }] } as unknown as Graph;
+    const g = { nodes: [{ id: 'a', type: 'test/any', params: { frame: '16:9' }, bypassed: false, position: { x: 0, y: 0 } }] } as unknown as Graph;
     expect(frameOf(g)).toEqual({ width: 1920, height: 1080 });
-    const bad = { nodes: [{ id: 'a', type: 'core/illustrator', params: { frame: 'nope' }, bypassed: false, position: { x: 0, y: 0 } }] } as unknown as Graph;
+    const bad = { nodes: [{ id: 'a', type: 'test/any', params: { frame: 'nope' }, bypassed: false, position: { x: 0, y: 0 } }] } as unknown as Graph;
     expect(frameOf(bad)).toEqual({ width: 1080, height: 1920 });
   });
   it('names the orientation', () => {

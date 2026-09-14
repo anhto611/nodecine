@@ -1,1 +1,0 @@
-{"id": "core/timeline-assembler", "definition": "timelineAssembler", "body": "AssemblerBody", "icon": "layers", "group": "output", "translations": "assemblerTranslations", "features": ["history-ir"], "errors": "AssemblerErrorCode"}

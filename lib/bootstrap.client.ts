@@ -2,7 +2,6 @@
 import { registerNodes } from '@/nodes';
 import { NODE_CLIENT_REGISTRATIONS } from '@/nodes/index.client';
 import { registerTemplates } from '@/templates';
-import { registerForms } from '@/forms';
 
 /**
  * Browser-side registrations: every node, whatever a capsule registers of its own (an engine's player
@@ -16,5 +15,4 @@ export function bootstrapClient(): void {
   registerNodes();
   for (const register of NODE_CLIENT_REGISTRATIONS) register();
   registerTemplates();
-  registerForms();
 }

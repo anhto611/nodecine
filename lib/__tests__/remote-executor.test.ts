@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RETRY, RemoteExecutor } from '../remote-executor';
-import staticScript from '@/lib/first-run.json';
-import type { Graph } from '@/core/engine/graph';
+import { pipeline } from '@/core/__tests__/kit';
 
 /**
  * The browser side of the executor talks to the server over fetch; here fetch is a log. What is
@@ -38,7 +37,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 
 describe('RemoteExecutor request order', () => {
   it('sends an invalidate before the node job that follows it, even while the first request is still in flight', async () => {
-    const graph = structuredClone(staticScript.graph) as Graph;
+    const graph = pipeline();
     const ex = new RemoteExecutor('k', graph, 'Static');
     await flush();
     expect(calls.map((c) => c.body.action)).toEqual(['graph']);
@@ -62,7 +61,7 @@ describe('RemoteExecutor request order', () => {
 
 describe('RemoteExecutor job completion', () => {
   it('resolves a node run whose done event arrives before the POST answers', async () => {
-    const graph = structuredClone(staticScript.graph) as Graph;
+    const graph = pipeline();
     const ex = new RemoteExecutor('k', graph, 'Static');
     await flush();
     const es = FakeEventSource.instances.at(-1)!;
@@ -92,7 +91,7 @@ describe('RemoteExecutor when the server is not ready', () => {
   afterEach(() => { RETRY.delaysMs = realDelays; });
 
   it('retries an empty 500, and carries the same requestId so the job cannot be queued twice', async () => {
-    const graph = structuredClone(staticScript.graph) as Graph;
+    const graph = pipeline();
     const ex = new RemoteExecutor('k', graph, 'Static');
     await flush();
     release.shift()?.();
@@ -114,7 +113,7 @@ describe('RemoteExecutor when the server is not ready', () => {
   });
 
   it('keeps trying through a rebuild, then gives up with a code that says what happened', async () => {
-    const graph = structuredClone(staticScript.graph) as Graph;
+    const graph = pipeline();
     const ex = new RemoteExecutor('k', graph, 'Static');
     await flush();
     release.shift()?.();
@@ -126,7 +125,7 @@ describe('RemoteExecutor when the server is not ready', () => {
   });
 
   it('does not retry a refusal the route wrote itself', async () => {
-    const graph = structuredClone(staticScript.graph) as Graph;
+    const graph = pipeline();
     const ex = new RemoteExecutor('k', graph, 'Static');
     await flush();
     release.shift()?.();

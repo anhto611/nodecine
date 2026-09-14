@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import { pinNode, unpinNode, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { makeFakeServices } from '@/contracts/__tests__/fakes';
 import { GraphSchema } from '../templates/registry';
 import { _resetPortTypes, registerPortType } from '../types/ports';
+import { TEXT, testServices } from './kit';
 
 /**
  * Pinning (CORE_CONTRACTS §1.4): a node's outputs frozen into the graph, handed back instead of run.
@@ -24,7 +24,7 @@ const source: NodeDefinition<typeof Params> = {
   version: 1,
   kind: 'source',
   inputs: [],
-  outputs: [{ name: 'out', type: 'SourceRef' }],
+  outputs: [{ name: 'out', type: TEXT }],
   paramsSchema: Params,
   defaultParams: { value: '' },
   run: async ({ params }) => { ran++; return { out: { value: params.value } }; },
@@ -35,8 +35,8 @@ const sink: NodeDefinition<typeof NoParams> = {
   type: 'test/sink',
   version: 1,
   kind: 'process',
-  inputs: [{ name: 'in', type: 'SourceRef' }],
-  outputs: [{ name: 'out', type: 'SourceRef' }],
+  inputs: [{ name: 'in', type: TEXT }],
+  outputs: [{ name: 'out', type: TEXT }],
   paramsSchema: NoParams,
   defaultParams: {},
   run: async ({ inputs }) => { downstream++; return { out: inputs.in!.payload }; },
@@ -55,7 +55,7 @@ beforeEach(() => {
   _resetNodeRegistry();
   // The wire's own schema is what a stale pin is checked against; the core registers none itself.
   _resetPortTypes();
-  registerPortType('SourceRef', { labelKey: 'port.sourceRef', schema: z.object({ value: z.string() }) });
+  registerPortType(TEXT, { labelKey: 'port.testText', schema: z.object({ value: z.string() }) });
   registerNodeType(source as unknown as AnyNodeDefinition);
   registerNodeType(sink as unknown as AnyNodeDefinition);
   ran = 0;
@@ -64,7 +64,7 @@ beforeEach(() => {
 
 describe('a pinned node', () => {
   it('hands back what was frozen and does not run, even when its parameters change', async () => {
-    const first = new Executor(graph(), makeFakeServices());
+    const first = new Executor(graph(), testServices());
     await first.run();
     expect(ran).toBe(1);
 
@@ -73,7 +73,7 @@ describe('a pinned node', () => {
     const g = { ...pinnedGraph, nodes: pinnedGraph.nodes.map((n) => (n.id === 'a' ? { ...n, params: { value: 'rewritten' } } : n)) };
 
     ran = 0;
-    const ex = new Executor(g, makeFakeServices());
+    const ex = new Executor(g, testServices());
     const { ok } = await ex.run();
     expect(ok).toBe(true);
     expect(ran, 'the pinned node ran anyway').toBe(0);
@@ -82,21 +82,21 @@ describe('a pinned node', () => {
   });
 
   it('is not thawed by a forced run, which is the point of pinning rather than caching', async () => {
-    const first = new Executor(graph(), makeFakeServices());
+    const first = new Executor(graph(), testServices());
     await first.run();
     const g = pinNode(first.getGraph(), 'a', first.runtime('a').outputs, '2026-09-12T09:00:00.000Z');
     ran = 0;
-    const ex = new Executor(g, makeFakeServices());
+    const ex = new Executor(g, testServices());
     await ex.run({ force: true });
     expect(ran).toBe(0);
     expect(valueOf(ex, 'a')).toBe('first');
   });
 
   it('gives downstream the same packet twice, so the rest of the film is reused rather than redone', async () => {
-    const first = new Executor(graph(), makeFakeServices());
+    const first = new Executor(graph(), testServices());
     await first.run();
     const g = pinNode(first.getGraph(), 'a', first.runtime('a').outputs, '2026-09-12T09:00:00.000Z');
-    const ex = new Executor(g, makeFakeServices());
+    const ex = new Executor(g, testServices());
     await ex.run();
     const hash = ex.runtime('a').outputs.out!.contentHash;
     downstream = 0;
@@ -106,12 +106,12 @@ describe('a pinned node', () => {
   });
 
   it('runs again the moment it is unpinned', async () => {
-    const first = new Executor(graph(), makeFakeServices());
+    const first = new Executor(graph(), testServices());
     await first.run();
     const g = unpinNode(pinNode(first.getGraph(), 'a', first.runtime('a').outputs, '2026-09-12T09:00:00.000Z'), 'a');
     expect(g.nodes.find((n) => n.id === 'a')!.pinned).toBeUndefined();
     ran = 0;
-    const ex = new Executor(g, makeFakeServices());
+    const ex = new Executor(g, testServices());
     await ex.run();
     expect(ran).toBe(1);
   });
@@ -119,7 +119,7 @@ describe('a pinned node', () => {
   it('says so rather than feeding the film a shape this build cannot read', async () => {
     const g = graph();
     g.nodes[0] = { ...g.nodes[0]!, pinned: { outputs: { out: { nonsense: true } }, at: '2026-09-12T09:00:00.000Z' } };
-    const ex = new Executor(g, makeFakeServices());
+    const ex = new Executor(g, testServices());
     await ex.run();
     expect(ex.runtime('a').state).toBe('error');
     expect(ex.runtime('a').error?.fix).toContain('unpin');
@@ -135,7 +135,7 @@ describe('what a pin is made of', () => {
   });
 
   it('goes to disk with the workflow and comes back whole', async () => {
-    const first = new Executor(graph(), makeFakeServices());
+    const first = new Executor(graph(), testServices());
     await first.run();
     const g = pinNode(first.getGraph(), 'a', first.runtime('a').outputs, '2026-09-12T09:00:00.000Z');
     const round = GraphSchema.parse(JSON.parse(JSON.stringify(g)));

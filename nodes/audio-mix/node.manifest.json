@@ -1,1 +1,0 @@
-{"id": "core/audio-mix", "definition": "audioMix", "body": "AudioMixBody", "icon": "wave", "group": "audio", "translations": "audioMixTranslations", "services": "audioMixServices", "libraries": {"music": {"env": "NODECINE_MUSIC_DIR", "extensions": ["mp3", "m4a", "aac", "wav", "ogg", "flac"]}}}

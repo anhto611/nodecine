@@ -1,9 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { libraryDir, libraryPath, registerLibrary } from '../paths';
-import { NODE_LIBRARIES } from '@/nodes';
 
 // The folders come from the capsules that read them; the server registers them at startup, a test here.
-beforeAll(() => { for (const [name, spec] of Object.entries(NODE_LIBRARIES)) registerLibrary(name, spec); });
+const AUDIO = ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'];
+beforeAll(() => {
+  registerLibrary('music', { env: 'NODECINE_MUSIC_DIR', extensions: AUDIO });
+  registerLibrary('voice', { env: 'NODECINE_VOICE_DIR', extensions: AUDIO });
+  registerLibrary('clips', { env: 'NODECINE_CLIPS_DIR', extensions: ['mp4', 'webm', 'mov', 'm4v'] });
+});
 
 describe('libraryPath', () => {
   it('resolves a plain file name inside the folder it belongs to', () => {

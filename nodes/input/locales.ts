@@ -1,1 +1,0 @@
-export const inputTriggerTranslations = { en: { 'node.core/input-trigger': 'Input Trigger', 'node.desc.core/input-trigger': 'A text box; no interpretation.', 'node.chars': '{n} characters' }, vi: { 'node.core/input-trigger': 'Nhập Liệu', 'node.desc.core/input-trigger': 'Ô văn bản, không diễn giải.', 'node.chars': '{n} ký tự' } };

@@ -2,7 +2,6 @@ import { NODE_LIBRARIES, registerNodes } from '@/nodes';
 import { registerLibrary } from '@/server/paths';
 import { installProviders } from '@/providers/.generated/server';
 import { NODE_SERVER_REGISTRATIONS } from '@/nodes/.generated/server';
-import { registerForms } from '@/forms';
 
 /**
  * Server-side registration of every node, provider, and whatever a capsule registers of its own — an
@@ -24,7 +23,6 @@ import { registerForms } from '@/forms';
  */
 export function ensureServerRegistrations(): void {
   registerNodes();
-  registerForms();
   for (const [name, spec] of Object.entries(NODE_LIBRARIES)) registerLibrary(name, spec);
   installProviders();
   for (const register of NODE_SERVER_REGISTRATIONS) register();

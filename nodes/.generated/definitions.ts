@@ -2,121 +2,43 @@
 import { registerNodeType, registerRetiredNodeType, type AnyNodeDefinition, type RetiredNodeType } from '@/core/nodes/definition';
 import { registerContracts } from '@/contracts';
 import { registerDocMigrations } from '../migrations';
-import { timelineAssembler } from '../assembler/node';
-import { audioAnalysis } from '../audio-analysis/node';
-import { audioInput } from '../audio-input/node';
-import { audioMix } from '../audio-mix/node';
-import { sceneBreakdown } from '../breakdown/node';
 import { captionExport } from '../caption-export/node';
-import { compose } from '../compose/node';
-import { inputTrigger } from '../input/node';
-import { layer } from '../layer/node';
 import { mp4Export } from '../mp4-export/node';
-import { plates } from '../plates/node';
-import { screenwriter } from '../screenwriter/node';
-import { staticScript } from '../script/node';
-import { set } from '../set/node';
-import { stockMedia } from '../stock/node';
 import { transcribe } from '../transcribe/node';
 import { ttsEngine } from '../tts/node';
 import { videoOutput } from '../video-output/node';
-import { webFetcher } from '../web/node';
-import { AssemblerErrorCode } from '../assembler/errors';
 import { CaptionExportErrorCode } from '../caption-export/errors';
 import { Mp4ExportErrorCode } from '../mp4-export/errors';
 import { TranscribeErrorCode } from '../transcribe/errors';
 import { TtsErrorCode } from '../tts/errors';
-import { WebErrorCode } from '../web/errors';
 
 export const ALL_NODES: AnyNodeDefinition[] = [
-  timelineAssembler,
-  audioAnalysis,
-  audioInput,
-  audioMix,
-  sceneBreakdown,
   captionExport,
-  compose,
-  inputTrigger,
-  layer,
   mp4Export,
-  plates,
-  screenwriter,
-  staticScript,
-  set,
-  stockMedia,
   transcribe,
   ttsEngine,
   videoOutput,
-  webFetcher,
 ] as unknown as AnyNodeDefinition[];
 
-const expectedIds = ["core/timeline-assembler","core/audio-analysis","core/audio-input","core/audio-mix","core/scene-breakdown","core/caption-export","core/compose","core/input-trigger","core/layer","core/mp4-export","core/plates","core/screenwriter","core/static-script","core/set","core/stock-media","core/transcribe","core/tts-engine","core/video-output","core/web-fetcher"];
+const expectedIds = ["core/caption-export","core/mp4-export","core/transcribe","core/tts-engine","core/video-output"];
 ALL_NODES.forEach((definition, index) => {
   if (definition.type !== expectedIds[index]) throw new Error('node manifest id "' + expectedIds[index] + '" does not match definition type "' + definition.type + '"');
 });
 
 /** The folders of user-brought files a node reads (music, voice, clips): name → env override and file kinds. */
-export const NODE_LIBRARIES: Record<string, { env: string; extensions: readonly string[] }> = {
-  "voice": {
-    "env": "NODECINE_VOICE_DIR",
-    "extensions": [
-      "mp3",
-      "m4a",
-      "aac",
-      "wav",
-      "ogg",
-      "flac"
-    ]
-  },
-  "music": {
-    "env": "NODECINE_MUSIC_DIR",
-    "extensions": [
-      "mp3",
-      "m4a",
-      "aac",
-      "wav",
-      "ogg",
-      "flac"
-    ]
-  },
-  "clips": {
-    "env": "NODECINE_CLIPS_DIR",
-    "extensions": [
-      "mp4",
-      "webm",
-      "mov",
-      "m4v"
-    ]
-  }
-};
+export const NODE_LIBRARIES: Record<string, { env: string; extensions: readonly string[] }> = {};
 
 /** What a node declares about itself beyond its ports, for the hub: which node carries the IR, the preview, the file export. */
 export const NODE_FEATURES: Record<string, string[]> = {
-  "core/timeline-assembler": [
-    "history-ir"
-  ],
-  "core/audio-analysis": [],
-  "core/audio-input": [],
-  "core/audio-mix": [],
-  "core/scene-breakdown": [],
   "core/caption-export": [],
-  "core/compose": [],
-  "core/input-trigger": [],
-  "core/layer": [],
   "core/mp4-export": [
     "history-file-export"
   ],
-  "core/plates": [],
-  "core/screenwriter": [],
-  "core/static-script": [],
-  "core/set": [],
-  "core/stock-media": [],
   "core/transcribe": [],
   "core/tts-engine": [],
   "core/video-output": [
     "history-preview"
-  ],
-  "core/web-fetcher": []
+  ]
 };
 
 /**
@@ -125,24 +47,29 @@ export const NODE_FEATURES: Record<string, string[]> = {
  * layer raise. Listed here so a test can check every one of them can be shown to a person.
  */
 export const NODE_ERROR_CODES: Record<string, string[]> = {
-  "core/timeline-assembler": [],
   "core/caption-export": [],
   "core/mp4-export": [],
   "core/transcribe": [],
-  "core/tts-engine": [],
-  "core/web-fetcher": []
+  "core/tts-engine": []
 };
-NODE_ERROR_CODES['core/timeline-assembler'] = Object.values(AssemblerErrorCode);
 NODE_ERROR_CODES['core/caption-export'] = Object.values(CaptionExportErrorCode);
 NODE_ERROR_CODES['core/mp4-export'] = Object.values(Mp4ExportErrorCode);
 NODE_ERROR_CODES['core/transcribe'] = Object.values(TranscribeErrorCode);
 NODE_ERROR_CODES['core/tts-engine'] = Object.values(TtsErrorCode);
-NODE_ERROR_CODES['core/web-fetcher'] = Object.values(WebErrorCode);
 
 /** Node types that are gone, and what became of them (nodes/retired.json). */
 export const RETIRED_NODES: Record<string, RetiredNodeType> = {
   "core/art-director": {
     "since": "2026-09-10"
+  },
+  "core/audio-analysis": {
+    "since": "2026-09-14"
+  },
+  "core/audio-input": {
+    "since": "2026-09-14"
+  },
+  "core/audio-mix": {
+    "since": "2026-09-14"
   },
   "core/captions": {
     "since": "2026-09-12"
@@ -150,11 +77,13 @@ export const RETIRED_NODES: Record<string, RetiredNodeType> = {
   "core/cast": {
     "since": "2026-09-12"
   },
+  "core/compose": {
+    "since": "2026-09-14"
+  },
   "core/cover-export": {
     "since": "2026-09-10"
   },
   "core/github-fetcher": {
-    "replacedBy": "core/web-fetcher",
     "since": "2026-09-13"
   },
   "core/hyperframes-engine": {
@@ -163,18 +92,47 @@ export const RETIRED_NODES: Record<string, RetiredNodeType> = {
   "core/illustrator": {
     "since": "2026-09-13"
   },
+  "core/input-trigger": {
+    "since": "2026-09-14"
+  },
+  "core/layer": {
+    "since": "2026-09-14"
+  },
   "core/llm-provider": {
     "since": "2026-09-12"
+  },
+  "core/plates": {
+    "since": "2026-09-14"
   },
   "core/remotion-engine": {
     "since": "2026-09-12"
   },
+  "core/scene-breakdown": {
+    "since": "2026-09-14"
+  },
+  "core/screenwriter": {
+    "since": "2026-09-14"
+  },
+  "core/set": {
+    "since": "2026-09-14"
+  },
+  "core/static-script": {
+    "since": "2026-09-14"
+  },
+  "core/stock-media": {
+    "since": "2026-09-14"
+  },
   "core/style": {
-    "replacedBy": "core/set",
     "since": "2026-09-12"
+  },
+  "core/timeline-assembler": {
+    "since": "2026-09-14"
   },
   "core/tts-provider": {
     "since": "2026-09-12"
+  },
+  "core/web-fetcher": {
+    "since": "2026-09-14"
   }
 };
 
