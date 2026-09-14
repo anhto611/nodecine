@@ -1,8 +1,7 @@
 /**
- * What a drawn scene may rely on and what an engine must honour (CORE_CONTRACTS §2.8): the hooks
- * in the markup and the helpers in the script. The Illustrator writes to this contract and every
- * engine implements it; the names live here so the prompt, the lint and the page builder can
- * never disagree about them.
+ * What a drawn scene may rely on and what an engine must honour: the hooks
+ * in the markup and the helpers in the script. Whatever writes a scene writes to this contract and
+ * every engine implements it; the names live here so the two can never disagree about them.
  */
 
 /** The class on the root element of every scene; the style sheet sets its ground, colours and type there. */
@@ -22,7 +21,7 @@ export const STYLE_VARS = ['bg', 'fg', 'accent', 'muted', 'line', 'font-display'
 /** What a scene's script finds on `nodecine`. */
 export const SCENE_SCRIPT_API = ['timeline', 'root', 'index', 'duration', 'words', 'when', 'count', 'beats', 'beat', 'audio', 'frame'] as const;
 /**
- * The scene-code formats the core knows how to prepare (CORE_CONTRACTS §2.8): `html-gsap` is an HTML
+ * The scene-code formats the core knows how to prepare: `html-gsap` is an HTML
  * fragment with a gsap script; `html-three` the same fragment with `THREE` in scope, rendering on
  * `nodecine.frame`; `lottie` is the animation's JSON, played frame by frame. Which engine draws which
  * is the renderer registry's business.

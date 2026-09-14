@@ -2,7 +2,7 @@ import { CAPTION_STYLES, type CaptionBand, type CaptionStyle, type Style } from 
 import { CAPTION_SLOT, DEFAULT_CAPTION_BAND_CLASS, EMPH_CLASS, FACT_ATTR, SCENE_ROOT_CLASS, VAR_ATTR } from './contract';
 
 /**
- * The markup side of a scene (CORE_CONTRACTS §2.8), shared by every engine and by the Studio's
+ * The markup side of a scene, shared by every engine and by the Studio's
  * previews: how a scene's source splits into markup, style and script; where captions go; the
  * fonts every page bundles; the script that binds the video's values into the markup inside the
  * page; and the script that runs a scene's own code with a gsap scoped to it. Pure strings; no DOM,
@@ -39,7 +39,7 @@ export const scopedCss = (selector: string, css: string): string => (css ? `@sco
 export const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /**
- * The typefaces every page bundles (ARCHITECTURE §6). Files, not links: a render must not depend on
+ * The typefaces every page bundles. Files, not links: a render must not depend on
  * Google Fonts answering, and `font-display: block` keeps a frame from being captured mid-swap with
  * the fallback still on screen.
  *
@@ -75,7 +75,7 @@ export const fontFaces = (base: string): string =>
   ].join('\n');
 
 /**
- * The cascade every page shares (CORE_CONTRACTS §2.8): the engine's defaults in the lowest layer,
+ * The cascade every page shares: the engine's defaults in the lowest layer,
  * the film's style sheet above them, and each scene's own styles unlayered on top. Layers, not
  * specificity: a scene's `.card { top: 480px }` beats the sheet's `.nc-scene .card` whatever
  * either was written as, and the sheet's `.nc-captions-default` beats the engine's.
@@ -117,7 +117,7 @@ export const TRANSPARENT_GROUND_CSS = `[data-composition-id] .${SCENE_ROOT_CLASS
 export const styleCss = (style: Style): string => (style.css.trim() ? `@layer nc-style {\n${scopedCss('[data-composition-id]', style.css)}\n}` : '');
 
 /**
- * Give every `<video>` in a scene the scene's own place on the timeline (CORE_CONTRACTS §2.9).
+ * Give every `<video>` in a scene the scene's own place on the timeline.
  *
  * The producer reads `data-start` and `data-duration` straight off the video element to know which
  * seconds of the clip to pull frames for; a video without them is taken to start at zero and run for
@@ -281,7 +281,7 @@ export function captionBandBox(width: number, height: number, band?: CaptionBand
  * it in its own CSS and may set `--caption-on` for the highlight.
  */
 export function captionStyles(width: number, height: number, withDefaultSlot: boolean, band?: CaptionBand): string {
-  const { portrait, size, left, right, bottom } = bandMetrics(width, height, band);
+  const { size, left, right, bottom } = bandMetrics(width, height, band);
   return [
     // Hidden lines must not take up room: every line is anchored to the slot's bottom edge, so the
     // one that is showing sits where the scene put the slot, whatever came before it.
@@ -342,7 +342,7 @@ function mountScene(gsap, root, scene, data, unwrap) {
     return { fps: an.fps, frames: an.frames.length, bands: row, at: function (t) { return row((scene.start + (t || 0)) * an.fps); } };
   };
   // A clip on the beat track sees its own beat; a clip that spans the film sees them all and
-  // reads each beat's stage to know where the script wants it (docs/IR_V3.md §5.2).
+  // reads each beat's stage to know where the script wants it.
   var nodecine = { timeline: function (tl) { collected.push(unwrap.get(tl) || tl); }, root: root, index: scene.index || 0, duration: scene.duration || 0, words: scene.words || [], beats: data.beats || [], beat: beat, audio: audioOf };
   __SCENE_HELPERS__
   // A scene that draws itself each frame — a canvas, a Lottie player, a Three.js renderer — hands a

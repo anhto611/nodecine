@@ -1,7 +1,7 @@
 import type { CaptionTrack, Word } from '@/contracts/types/payloads';
 
 /**
- * Grouping words into caption lines (CORE_CONTRACTS §2.10). Ported from cutdown's
+ * Grouping words into caption lines. Ported from cutdown's
  * `template/shared/captions.ts`, which earned these rules on real Vietnamese narration.
  *
  * Sentences first, and a sentence that fits is left whole. A line that ends on "và" or in the
@@ -76,7 +76,7 @@ function layout(words: Word[], maxChars: number): Word[][] {
 }
 
 /** Groups words into caption lines: by sentence, then by cost. */
-export function toCues(words: Word[], maxChars: number): Word[][] {
+function toCues(words: Word[], maxChars: number): Word[][] {
   const sentences: Word[][] = [];
   let current: Word[] = [];
   for (const w of words) {

@@ -1,6 +1,6 @@
 import type { EngineAdapter, EngineAdapterFactory } from './types';
 
-/** Empty registry; the engine capsules self-register at startup (ARCHITECTURE §2). */
+/** Empty registry; the engine capsules self-register at startup. */
 const factories = new Map<string, EngineAdapterFactory>();
 let stillDrawer: string | null = null;
 

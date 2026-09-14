@@ -2,8 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { CURRENT_WORKFLOW_ID, deleteWorkflow, listWorkflows, readWorkflow, toWorkflowFile, workflowIdFor, workflowsDir, writeWorkflow } from '../workflows';
-import { PROJECT_SCHEMA_VERSION } from '@/lib/storage';
+import { CURRENT_WORKFLOW_ID, workflowIdFor, workflowsDir, workflowStore } from '../workflows';
+import { PROJECT_SCHEMA_VERSION } from '@/core/engine/migrate';
+import { ensureServerRegistrations } from '@/server/contracts/register';
+
+const { deleteWorkflow, listWorkflows, readWorkflow, toWorkflowFile, writeWorkflow } = workflowStore(ensureServerRegistrations);
 
 let dir = '';
 beforeAll(async () => {

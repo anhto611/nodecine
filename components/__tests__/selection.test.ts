@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dropOffersNode, panelTarget } from '../Canvas';
 
 /**
- * What a gesture on the canvas means (USER_FLOWS §1.2).
+ * What a gesture on the canvas means.
  *
  * Dragging a node and choosing one are different gestures, and React Flow reports the first as the
  * second: pressing on a card selects it, so every drag used to light the card up as chosen. A drag

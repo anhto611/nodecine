@@ -1,7 +1,7 @@
 import type { Packet } from '../types/packet';
 import type { BlockReason } from '../nodes/definition';
 
-/** The nine node states (EXECUTION_ENGINE §1). */
+/** The nine node states. */
 export type NodeState =
   | 'idle'
   | 'queued'
@@ -36,7 +36,7 @@ export function initialRuntime(bypassed: boolean): NodeRuntime {
 }
 
 /**
- * Where a node may go next (EXECUTION_ENGINE §1 table). The executor checks this on every state it
+ * Where a node may go next. The executor checks this on every state it
  * writes, outside production, so a state change with no path to it shows up as a warning in the log
  * bar rather than as a badge nobody can explain.
  *

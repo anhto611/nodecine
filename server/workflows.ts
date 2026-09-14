@@ -1,14 +1,12 @@
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { TemplateDefinitionSchema, type TemplateDefinition } from '@/core/templates/registry';
-import { PROJECT_SCHEMA_VERSION } from '@/lib/storage';
-import { migrateDoc, stampVersions, type SavedDoc } from '@/core/engine/migrate';
-import { ensureServerRegistrations } from '@/server/register';
+import { WorkflowDocumentSchema, type WorkflowDocument } from '@/core/engine/document';
+import { migrateDoc, PROJECT_SCHEMA_VERSION, stampVersions, type SavedDoc } from '@/core/engine/migrate';
 
 /**
- * Workflows as files on the server (CORE_CONTRACTS §10.1) — the way ComfyUI keeps a user's
+ * Workflows as files on the server — the way ComfyUI keeps a user's
  * workflows under `userdata/workflows/`. One JSON file per workflow, the same shape as a shipped
- * template plus a schema version and a timestamp, so a file here, a file in `templates/` and a file
+ * template plus a schema version and a timestamp, so a file here, a shipped template and a file
  * someone shares are interchangeable. The id is the file name and is validated by the schema; the
  * path is built here and nowhere else, so a request can never name a file outside the directory.
  *
@@ -19,7 +17,7 @@ import { ensureServerRegistrations } from '@/server/register';
 export const CURRENT_WORKFLOW_ID = 'current';
 export const MAX_WORKFLOW_BYTES = 4_000_000;
 
-export interface WorkflowFile extends TemplateDefinition {
+export interface WorkflowFile extends WorkflowDocument {
   schemaVersion: number;
   updatedAt: string;
   /** What had to change for this file to open today; absent when nothing did. */
@@ -40,11 +38,10 @@ function fileFor(id: string): string {
   return p;
 }
 
-/** Validate an incoming definition and stamp it; `category` defaults to `mine`. */
-export function toWorkflowFile(input: unknown, now = new Date()): WorkflowFile {
-  ensureServerRegistrations();
+function toWorkflowFile(prepare: () => void, input: unknown, now = new Date()): WorkflowFile {
+  prepare();
   const raw = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>;
-  const def = TemplateDefinitionSchema.parse({ category: 'mine', ...raw });
+  const def = WorkflowDocumentSchema.parse({ category: 'mine', ...raw });
   const from = typeof raw.schemaVersion === 'number' ? raw.schemaVersion : PROJECT_SCHEMA_VERSION;
   // An imported file is brought forward here, once, on its way to disk. Stamping it current without
   // migrating it would be worse than refusing it: the file would look right and be wrong.
@@ -54,7 +51,7 @@ export function toWorkflowFile(input: unknown, now = new Date()): WorkflowFile {
   return { ...def, graph: stampVersions(doc.graph), schemaVersion: PROJECT_SCHEMA_VERSION, updatedAt: now.toISOString(), ...(notes.length ? { migrations: notes } : {}) };
 }
 
-async function readFileAs(p: string): Promise<WorkflowFile | null> {
+async function readFileAs(prepare: () => void, p: string): Promise<WorkflowFile | null> {
   let text: string;
   try {
     text = await readFile(p, 'utf8');
@@ -72,8 +69,8 @@ async function readFileAs(p: string): Promise<WorkflowFile | null> {
     throw Object.assign(new Error(`this file is not JSON: ${e instanceof Error ? e.message : String(e)}`), { code: 'WORKFLOW_MALFORMED' });
   }
   // The node types have to be known before a graph can be brought forward against them.
-  ensureServerRegistrations();
-  const parsed = TemplateDefinitionSchema.safeParse(doc);
+  prepare();
+  const parsed = WorkflowDocumentSchema.safeParse(doc);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     throw Object.assign(new Error(`${first?.path.join('.') || 'file'}: ${first?.message ?? 'not a workflow'}`), { code: 'WORKFLOW_MALFORMED' });
@@ -89,11 +86,11 @@ async function readFileAs(p: string): Promise<WorkflowFile | null> {
   };
 }
 
-export async function readWorkflow(id: string): Promise<WorkflowFile | null> {
-  return readFileAs(fileFor(id));
+async function readWorkflow(prepare: () => void, id: string): Promise<WorkflowFile | null> {
+  return readFileAs(prepare, fileFor(id));
 }
 
-export async function listWorkflows(): Promise<WorkflowSummary[]> {
+async function listWorkflows(prepare: () => void): Promise<WorkflowSummary[]> {
   const dir = workflowsDir();
   await mkdir(dir, { recursive: true });
   const out: WorkflowSummary[] = [];
@@ -102,7 +99,7 @@ export async function listWorkflows(): Promise<WorkflowSummary[]> {
     const id = name.slice(0, -5);
     if (id === CURRENT_WORKFLOW_ID || !ID.test(id)) continue;
     try {
-      const wf = await readFileAs(path.join(dir, name));
+      const wf = await readFileAs(prepare, path.join(dir, name));
       if (wf) out.push({ id: wf.id, name: wf.name, description: wf.description, category: wf.category, updatedAt: wf.updatedAt, nodes: wf.graph.nodes.length });
     } catch {
       /* a hand-edited file that no longer parses is skipped, not fatal */
@@ -112,7 +109,7 @@ export async function listWorkflows(): Promise<WorkflowSummary[]> {
 }
 
 /** Atomic: written beside the target and renamed over it, so a crash never leaves half a file. */
-export async function writeWorkflow(wf: WorkflowFile): Promise<WorkflowFile> {
+async function writeWorkflow(wf: WorkflowFile): Promise<WorkflowFile> {
   const target = fileFor(wf.id);
   const text = JSON.stringify(wf, null, 2);
   if (Buffer.byteLength(text) > MAX_WORKFLOW_BYTES) throw Object.assign(new Error('workflow is too large'), { code: 'WORKFLOW_TOO_LARGE' });
@@ -123,7 +120,7 @@ export async function writeWorkflow(wf: WorkflowFile): Promise<WorkflowFile> {
   return wf;
 }
 
-export async function deleteWorkflow(id: string): Promise<boolean> {
+async function deleteWorkflow(id: string): Promise<boolean> {
   const p = fileFor(id);
   try {
     await rm(p);
@@ -133,6 +130,23 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
     throw e;
   }
 }
+
+/**
+ * The workflow files, read and written against registries that `prepare` fills. Graphs are brought
+ * forward as they come in and go out, and that needs every node type known; the host does not know
+ * which there are, so whoever builds the store says how to register them (`server/contracts/workflows.ts`).
+ */
+export function workflowStore(prepare: () => void) {
+  return {
+    /** Validate an incoming definition and stamp it; `category` defaults to `mine`. */
+    toWorkflowFile: (input: unknown, now = new Date()) => toWorkflowFile(prepare, input, now),
+    readWorkflow: (id: string) => readWorkflow(prepare, id),
+    listWorkflows: () => listWorkflows(prepare),
+    writeWorkflow,
+    deleteWorkflow,
+  };
+}
+export type WorkflowStore = ReturnType<typeof workflowStore>;
 
 /** A file-name-safe id from a human name, suffixed so two saves with the same name do not collide. */
 export function workflowIdFor(name: string, now = Date.now()): string {

@@ -8,11 +8,11 @@ const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta
  * Lint is here for the mistakes a type checker and a test cannot see: a hook called conditionally, a
  * variable left behind by an edit, an `any` that quietly switches type checking off. Style is
  * Prettier's job, and the rules that belong to this project — a capsule reaching into its neighbour,
- * core importing a node — are `npm run nodes:check`, which understands them far better than a plugin
+ * core importing a node — are `npm run capsules:check`, which understands them far better than a plugin
  * would. Nothing here repeats either of those.
  */
 export default [
-  { ignores: ['.next/**', '.nodecine/**', 'node_modules/**', 'nodes/.generated/**', 'next-env.d.ts'] },
+  { ignores: ['.next/**', '.nodecine/**', 'node_modules/**', 'capsules/nodes/.generated/**', 'capsules/engines/.generated/**', 'capsules/providers/.generated/**', 'next-env.d.ts'] },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     rules: {

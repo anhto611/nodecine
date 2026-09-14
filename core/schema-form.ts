@@ -1,10 +1,10 @@
 import type { ZodTypeAny } from 'zod';
 
 /**
- * A form read off a Zod schema (ARCHITECTURE §2): the schema already says a codec is one of two
+ * A form read off a Zod schema: the schema already says a codec is one of two
  * values, a count sits between 8 and 80, a title is a string — so nothing else need say it again in
  * JSX. Node bodies reach it through `FormBody`; the provider nodes draw their chosen provider's
- * settings from the same reading, which is why it sits in core rather than in `nodes/`. Pure, so it
+ * settings from the same reading, which is why it sits in core rather than in `capsules/nodes/`. Pure, so it
  * can be tested without React. Kinds a form cannot draw (records, arrays, objects) are left out and
  * are drawn by hand.
  */

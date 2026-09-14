@@ -1,7 +1,7 @@
 import type { ZodTypeAny } from 'zod';
 
 /**
- * Port types (CORE_CONTRACTS §1.1): what may run on a wire. The core runs wires and knows none by
+ * Port types: what may run on a wire. The core runs wires and knows none by
  * name; `contracts/ports.ts` names them and registers them at startup, like every other registry here.
  *
  * `PortTypes` is filled the same way, by module augmentation, so a node that declares a port with a

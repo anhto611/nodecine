@@ -15,6 +15,7 @@ import {
 } from './graph';
 import { canTransition, initialRuntime, type NodeRuntime, type NodeState } from './state';
 import { computeSignature } from './signature';
+import { MemoryResultCache, type CachedResult, type ResultCache } from './result-cache';
 import { LogBuffer } from './log';
 import type { NodeServices } from './services';
 
@@ -32,9 +33,22 @@ export interface RunOptions {
   force?: boolean;
 }
 
+export interface ExecutorOptions {
+  /** Where results are kept by signature. One in memory for this executor when the host gives none. */
+  cache?: ResultCache;
+  /** How many nodes may run at once. Only nodes that do not wait on each other ever do. */
+  maxParallel?: number;
+  /** A hash of the code that runs a node type, when the host can measure it; part of every signature. */
+  fingerprint?: (type: string) => string | undefined;
+}
+
+/** Enough to run a voice and a drawing side by side, not so many that one film starves the machine. */
+export const DEFAULT_MAX_PARALLEL = 4;
+
 /**
- * Graph executor (EXECUTION_ENGINE §2–§4). Runs on the server behind the job queue (server/jobs.ts); sequential topological order;
- * signature cache with resource nodes always re-probed; bypass; blocked propagation; single-node runs.
+ * Graph executor. Runs on the server behind the job queue (server/jobs.ts).
+ * A node starts once everything it waits on has finished, several at a time; results are kept by
+ * signature; bypass; blocked propagation; single-node runs.
  */
 type Gathered = { inputs: Record<string, Packet>; lists: Record<string, Packet[]>; blockedBy?: BlockReason; missing?: string };
 
@@ -43,14 +57,17 @@ export class Executor {
   private runtimes = new Map<string, NodeRuntime>();
   private abort: AbortController | null = null;
   private runId = 0;
+  private readonly cache: ResultCache;
 
   constructor(
     private graph: Graph,
     private readonly services: NodeServices,
     private readonly hooks: ExecutorHooks = {},
     logs?: LogBuffer,
+    private readonly options: ExecutorOptions = {},
   ) {
     this.logs = logs ?? new LogBuffer();
+    this.cache = options.cache ?? new MemoryResultCache();
     this.syncRuntimes();
   }
 
@@ -124,7 +141,7 @@ export class Executor {
 
   // ---------- user actions ----------
 
-  /** A param changed: this node and everything downstream becomes stale (EXECUTION_ENGINE §1). */
+  /** A param changed: this node and everything downstream becomes stale. */
   invalidate(nodeId: string): void {
     for (const id of [nodeId, ...downstreamOf(this.graph, nodeId)]) {
       const rt = this.runtime(id);
@@ -144,7 +161,10 @@ export class Executor {
     this.abort?.abort();
   }
 
-  /** Runs the whole graph in topological order. */
+  /**
+   * Runs the flow. A node starts as soon as every node it waits on has finished, up to `maxParallel`
+   * at a time, so a voice and a drawing that share nothing do not queue behind each other.
+   */
   async run(opts: RunOptions = {}): Promise<{ ok: boolean }> {
     if (this.abort) throw new Error('A run is already in progress');
     const issues = validateGraph(this.graph);
@@ -155,51 +175,85 @@ export class Executor {
 
     const runId = ++this.runId;
     const startedAt = this.services.now();
-    this.abort = new AbortController();
+    const abort = new AbortController();
+    this.abort = abort;
     // Only the flow runs: a node with no wire on it is not part of the film, so it is not started
-    // and cannot report a failure after a run it was never in (CORE_CONTRACTS §1.4).
+    // and cannot report a failure after a run it was never in.
     // "Not in the flow" only means something once there is a flow: a graph where nothing is wired
     // at all is run whole, which is what a single node on its own is.
     const flow = flowNodes(this.graph);
     const inFlow = (id: string) => flow.size === 0 || flow.has(id);
     /**
-     * An on-demand node is never part of a Run (EXECUTION_ENGINE §3). Its bypass flag is a property
+     * An on-demand node is never part of a Run. Its bypass flag is a property
      * of the type, not a switch, so honouring the flag here let a saved graph put a render at the
      * end of every Run with the player waiting behind it. Its own button still runs it, via runNode.
      */
     const onDemand = (id: string) => getNodeType(nodeById(this.graph, id)!.type)?.kind === 'ondemand';
-    // Bypassed nodes stay in the list: the loop logs them and moves on, which is how a person sees
-    // that the node they switched off was reached and skipped. They are not queued, and not counted.
+    // Bypassed nodes stay in the list: they are logged and skipped, which is how a person sees that
+    // the node they switched off was reached. They are not queued, and not counted.
     const toRun = sorted.order.filter((id) => inFlow(id) && !onDemand(id));
     const willRun = toRun.filter((id) => !nodeById(this.graph, id)!.bypassed);
     for (const id of willRun) this.setState(id, { state: 'queued', reused: false, error: undefined, blockedBy: undefined, progress: undefined });
     this.hooks.onRunStart?.({ runId, stepTotal: willRun.length });
     this.log('run', 'info', `run #${runId} started · ${willRun.length} nodes`);
 
+    // What each node waits on, among the nodes of this run. A wire from outside the run — an
+    // on-demand node's old result — is read when the node starts, not waited for.
+    const members = new Set(toRun);
+    const waitsOn = new Map(toRun.map((id) => [id, new Set(incomingEdges(this.graph, id).map((e) => e.source).filter((src) => members.has(src)))] as const));
+    const limit = Math.max(1, Math.floor(this.options.maxParallel ?? DEFAULT_MAX_PARALLEL));
+
     let ok = true;
     let step = 0;
     let cancelledAt: string | undefined;
+    let thrown: { error: unknown } | undefined;
     // Whatever happens in here, the run has to end: an escaping throw used to leave `abort` set, and
     // from then on every Run answered "A run is already in progress" until the server was restarted.
     try {
-      for (const nodeId of toRun) {
-        const node = nodeById(this.graph, nodeId);
-        // The canvas can push a graph while this runs; a node that left it has nothing to run.
-        if (!node) continue;
-        if (node.bypassed) {
-          this.log(nodeId, 'info', 'bypassed');
-          continue;
-        }
-        if (cancelledAt) {
-          this.setState(nodeId, { state: 'blocked', blockedBy: { kind: 'upstream', code: ErrorCode.RUN_CANCELLED, message: 'run cancelled', nodeId: cancelledAt } });
-          continue;
-        }
-        step += 1;
-        this.hooks.onStep?.({ nodeId, step, stepTotal: willRun.length });
-        const outcome = await this.executeNode(nodeId, { force: opts.force ?? false });
-        if (outcome === 'cancelled') { cancelledAt = nodeId; ok = false; }
-        else if (outcome === 'error' || outcome === 'blocked') ok = false;
-      }
+      await new Promise<void>((settle) => {
+        const pending = [...toRun];
+        const finished = new Set<string>();
+        let running = 0;
+        const pump = (): void => {
+          for (let i = 0; i < pending.length && !thrown && running < limit; ) {
+            const nodeId = pending[i]!;
+            if (![...waitsOn.get(nodeId)!].every((id) => finished.has(id))) { i++; continue; }
+            pending.splice(i, 1);
+            // Something may have become ready by this one finishing on the spot; look again from the top.
+            i = 0;
+            const node = nodeById(this.graph, nodeId);
+            // The canvas can push a graph while this runs; a node that left it has nothing to run.
+            if (!node) { finished.add(nodeId); continue; }
+            if (node.bypassed) {
+              this.log(nodeId, 'info', 'bypassed');
+              finished.add(nodeId);
+              continue;
+            }
+            if (cancelledAt || abort.signal.aborted) {
+              this.setState(nodeId, { state: 'blocked', blockedBy: { kind: 'upstream', code: ErrorCode.RUN_CANCELLED, message: 'run cancelled', ...(cancelledAt ? { nodeId: cancelledAt } : {}) } });
+              finished.add(nodeId);
+              continue;
+            }
+            step += 1;
+            running += 1;
+            this.hooks.onStep?.({ nodeId, step, stepTotal: willRun.length });
+            this.executeNode(nodeId, { force: opts.force ?? false }).then(
+              (outcome) => {
+                if (outcome === 'cancelled') { cancelledAt ??= nodeId; ok = false; }
+                else if (outcome === 'error' || outcome === 'blocked') ok = false;
+              },
+              (error: unknown) => { ok = false; thrown ??= { error }; },
+            ).finally(() => {
+              running -= 1;
+              finished.add(nodeId);
+              pump();
+            });
+          }
+          if (running === 0 && (pending.length === 0 || thrown)) settle();
+        };
+        pump();
+      });
+      if (thrown) throw thrown.error;
     } catch (err) {
       ok = false;
       throw err;
@@ -212,10 +266,9 @@ export class Executor {
     return { ok };
   }
 
-
   /**
    * Runs exactly one node with whatever packets are on its inputs, bypassing the cache
-   * (retry, "Check again" on resource nodes, "Render" on MP4 Export). EXECUTION_ENGINE §3.
+   * (retry, "Check again" on resource nodes, "Render" on MP4 Export).
    */
   async runNode(nodeId: string): Promise<NodeState> {
     if (this.abort) throw new Error('A run is already in progress');
@@ -256,14 +309,14 @@ export class Executor {
         if (!packet && single) return { inputs, lists, missing: port.name };
         if (!single) {
           if (upstreamNode.bypassed) {
-            // An optional port behind a bypassed node is an unwired optional port: a workflow ships
-            // its Captions nodes bypassed and the Assembler renders without subtitles.
+            // An optional port behind a bypassed node is an unwired optional port: switch off what
+            // makes the subtitles and the film is still made, without them.
             if (port.required === false && !port.multiple) continue;
             return fail({ kind: 'upstream', code: ErrorCode.NODE_BYPASSED_UPSTREAM, message: `upstream node ${edge.source} is bypassed`, nodeId: edge.source });
           }
-          // A node that ran and chose to say nothing on that port is not a failure: the Illustrator
-          // emits a layer only for a film that has one, and a wire to an optional port must not turn
-          // that silence into a blocked consumer. A node that did not run, or failed, still blocks.
+          // A node that ran and chose to say nothing on that port is not a failure: an output that
+          // exists only for some films is empty for the rest, and a wire to an optional port must not
+          // turn that silence into a blocked consumer. A node that did not run, or failed, still blocks.
           if (!packet && port.required === false && upstream.state === 'success') continue;
           if (!packet || upstream.state === 'error' || upstream.state === 'cancelled' || upstream.state === 'blocked') {
             // Carry the original reason down the chain, whichever way it was reported: blocked
@@ -365,22 +418,30 @@ export class Executor {
     const inputHashes: Record<string, string> = {};
     for (const [port, packet] of Object.entries(gathered.inputs)) inputHashes[port] = packet.contentHash;
     for (const [port, packets] of Object.entries(gathered.lists)) inputHashes[port] = packets.map((p) => p.contentHash).join(',');
-    const signature = computeSignature({ type: def.type, version: def.version, params, inputHashes });
+    const fingerprint = this.options.fingerprint?.(def.type);
+    const signature = computeSignature({ type: def.type, version: def.version, fingerprint, params, inputHashes });
 
     const prev = this.runtime(nodeId);
-    const cacheable = def.kind !== 'resource' && !opts.force;
-    if (cacheable && prev.signature === signature && Object.keys(prev.outputs).length > 0 && prev.state !== 'error') {
-      this.setState(nodeId, { state: 'success', reused: true, error: undefined, blockedBy: undefined });
-      this.log(nodeId, 'info', 'reused (signature unchanged)');
-      return 'success';
+    // A sink shows or writes something every time; a resource asks the world again. Neither is kept.
+    const cacheable = def.kind !== 'resource' && def.outputs.length > 0;
+    if (cacheable && !opts.force) {
+      if (prev.signature === signature && Object.keys(prev.outputs).length > 0 && prev.state !== 'error') {
+        this.setState(nodeId, { state: 'success', reused: true, error: undefined, blockedBy: undefined });
+        this.log(nodeId, 'info', 'reused (signature unchanged)');
+        return 'success';
+      }
+      const kept = await this.readCache(nodeId, def, signature);
+      if (kept) {
+        this.setState(nodeId, { state: 'success', outputs: kept.outputs, signature, reused: true, durationMs: kept.durationMs, warnings: kept.warnings, result: undefined, error: undefined, blockedBy: undefined, progress: undefined });
+        this.log(nodeId, 'info', 'reused (kept result)');
+        return 'success';
+      }
     }
 
     const signal = this.abort!.signal;
     const startedAt = this.services.now();
     this.setState(nodeId, { state: 'running', reused: false, progress: undefined, warnings: undefined });
     const warnings: { code?: string; message: string }[] = [];
-    // A forced run (Shift+Run, Retry, a single node) wants a new answer, not the one on disk.
-    const services: NodeServices = opts.force ? { ...this.services, complete: (ref, prompt, schema, sig) => this.services.complete(ref, prompt, schema, sig, { fresh: true }) } : this.services;
     let patched: Record<string, unknown> | null = null;
     try {
       const raw = await def.run({
@@ -389,7 +450,10 @@ export class Executor {
         inputs: gathered.inputs,
         lists: gathered.lists,
         signal,
-        services,
+        services: this.services,
+        // A forced run (Shift+Run, Retry, a single node) wants a new answer from whatever the node
+        // asks, not the one a service kept. The core does not know which services keep answers.
+        fresh: opts.force,
         log: (level, message, code) => {
           if (level === 'warn') warnings.push({ code, message });
           this.log(nodeId, level, message, code);
@@ -417,9 +481,10 @@ export class Executor {
       const result = def.outputs.length === 0 ? raw : undefined;
       const durationMs = this.services.now() - startedAt;
       // Signed over what the node ended up with, so a run after a self-patch reuses this one.
-      const finalSignature = patched ? computeSignature({ type: def.type, version: def.version, params: nodeById(this.graph, nodeId)!.params, inputHashes }) : signature;
+      const finalSignature = patched ? computeSignature({ type: def.type, version: def.version, fingerprint, params: nodeById(this.graph, nodeId)!.params, inputHashes }) : signature;
       this.setState(nodeId, { state: 'success', outputs, signature: finalSignature, durationMs, reused: false, result, progress: undefined, warnings: warnings.length ? warnings : undefined });
       this.log(nodeId, 'info', `done in ${durationMs}ms`);
+      if (cacheable) await this.writeCache(nodeId, finalSignature, { outputs: Object.fromEntries(Object.entries(outputs).map(([port, p]) => [port, { payloadType: p.payloadType, payload: p.payload, contentHash: p.contentHash }])), durationMs, ...(warnings.length ? { warnings } : {}) });
       return 'success';
     } catch (err) {
       const e = toNodeError(err, ErrorCode.NODE_RUN_FAILED);
@@ -431,6 +496,42 @@ export class Executor {
       this.setState(nodeId, { state: 'error', error: { code: e.code, message: e.message, retryable: e.retryable, details: e.details, ...(e.fix ? { fix: e.fix } : {}) }, progress: undefined });
       this.log(nodeId, 'error', e.message, e.code);
       return 'error';
+    }
+  }
+
+  /**
+   * A kept result, as packets — or nothing, when there is none or it no longer fits.
+   *
+   * Checked against the port schemas the way a pin is: a result kept by an older build that no
+   * longer parses is a miss, and the node runs, rather than a wrong shape fed downstream.
+   */
+  private async readCache(nodeId: string, def: AnyNodeDefinition, signature: string): Promise<CachedResult & { outputs: Record<string, Packet> } | undefined> {
+    let kept: CachedResult | undefined;
+    try {
+      kept = await this.cache.get(signature);
+    } catch (err) {
+      this.log(nodeId, 'warn', `could not read the kept result: ${err instanceof Error ? err.message : String(err)}`);
+      return undefined;
+    }
+    if (!kept) return undefined;
+    const outputs: Record<string, Packet> = {};
+    for (const port of def.outputs) {
+      const entry = kept.outputs[port.name];
+      if (!entry) continue;
+      const schema = getPortType(port.type)?.schema;
+      if (entry.payloadType !== port.type || (schema && !schema.safeParse(entry.payload).success)) return undefined;
+      outputs[port.name] = { sourceNodeId: nodeId, sourcePort: port.name, targetPort: '', payloadType: port.type, timestamp: this.services.now(), payload: entry.payload, contentHash: entry.contentHash };
+    }
+    if (Object.keys(outputs).length === 0) return undefined;
+    return { ...kept, outputs };
+  }
+
+  /** Keeping a result is a saving, never a condition: a store that cannot write costs the next run, not this one. */
+  private async writeCache(nodeId: string, signature: string, result: CachedResult): Promise<void> {
+    try {
+      await this.cache.set(signature, result);
+    } catch (err) {
+      this.log(nodeId, 'warn', `could not keep the result: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

@@ -14,7 +14,7 @@ import process from 'node:process';
  */
 
 const root = process.cwd();
-const providersDir = path.join(root, 'providers');
+const providersDir = path.join(root, 'capsules', 'providers');
 const generatedDir = path.join(providersDir, '.generated');
 const folders = (await readdir(providersDir, { withFileTypes: true }))
   .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('_'))

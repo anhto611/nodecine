@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useStudio } from '@/store/useStudio';
 import { workflowsApi } from '@/lib/workflows.client';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
-import { registerNodes } from '@/nodes';
+import { registerNodes } from '@/capsules/nodes';
 
 /**
  * A file that will not open has a reason, and clicking it must not simply do nothing. The store used

@@ -1,0 +1,1 @@
+{"id": "remotion", "translations": "remotionEngineTranslations", "register": {"server": "registerRemotionServer", "client": "registerRemotionClient"}}

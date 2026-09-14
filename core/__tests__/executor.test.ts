@@ -119,7 +119,7 @@ describe('a run', () => {
   });
 });
 
-describe('a part a node needs that is not ready (EXECUTION_ENGINE §1.1)', () => {
+describe('a part a node needs that is not ready', () => {
   const partGraph = (ready: boolean): Graph => ({
     nodes: [
       { id: 'source', type: 'test/source', params: { value: 'x' }, bypassed: false, position: { x: 0, y: 0 } },
@@ -171,7 +171,7 @@ describe('a part a node needs that is not ready (EXECUTION_ENGINE §1.1)', () =>
   });
 });
 
-describe('on-demand and single-node runs (EXECUTION_ENGINE §3)', () => {
+describe('on-demand and single-node runs', () => {
   it('runs only the on-demand node, using the packets already on its inputs', async () => {
     const { executor, services } = setup();
     await executor.run();
@@ -245,7 +245,7 @@ describe('errors and cancellation', () => {
 
   it('run() refuses a graph that is malformed, not one that is merely unfinished', async () => {
     const { executor, graph } = setup();
-    // An empty port stops that node and says so there (§1.4); a cycle is a graph that cannot be run
+    // An empty port stops that node and says so there; a cycle is a graph that cannot be run
     // at all, and that is what a refusal is for.
     graph.edges = graph.edges.filter((e) => e.id !== 'e2');
     const { ok } = await executor.run();

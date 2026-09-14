@@ -1,10 +1,10 @@
 'use client';
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
-import { Icon } from '../icons';
-import { useT } from '../ui';
+import { Icon } from '@/capsules/sdk/icons';
+import { useT } from '@/capsules/sdk/ui';
 
-/** Bottom logs panel (USER_FLOWS §1.7): filter by node, search, copy all, clear. */
+/** Bottom logs panel: filter by node, search, copy all, clear. */
 export const LogsPanel: React.FC = () => {
   const t = useT();
   const executor = useStudio((s) => s.executor);

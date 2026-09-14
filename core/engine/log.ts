@@ -8,7 +8,7 @@ export interface LogEntry {
   message: string;
 }
 
-/** In-memory ring buffer (EXECUTION_ENGINE §8.2). */
+/** In-memory ring buffer. */
 export class LogBuffer {
   private entries: LogEntry[] = [];
   private listeners = new Set<(e: LogEntry) => void>();

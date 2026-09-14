@@ -1,7 +1,7 @@
 import type { ZodTypeAny, z } from 'zod';
 import type { LLMRef, TTSRef, Voice } from '../types/payloads';
 
-/** Provider interfaces (CORE_CONTRACTS §7.2, §8). */
+/** Provider interfaces. */
 
 export interface LLMProvider {
   readonly providerId: string;

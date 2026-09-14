@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { AssetUrlSchema, MediaUrlSchema, SCENE_FORMAT, SCENE_SOURCE_MAX, StyleSchema, VarsSchema } from './payloads';
 
 /**
- * Universal Video IR, version 3 (docs/IR_V3.md). One idea over version 2: the flat `timeline[]`
+ * Universal Video IR, version 3. One idea over version 2: the flat `timeline[]`
  * becomes tracks of clips, and a clip may be as long as the film. Version 2 could say nothing that
  * outlived a scene; this is where a background that runs under every scene, a device that flies
  * from one pose to the next, and a second audio track get their place.
@@ -44,7 +44,7 @@ export const CodeClipSchema = z.object({
   durationInFrames: Frames,
   /** An engine without a renderer for this format blocks the output node; `html-gsap` is the one every engine must have. */
   format: z.string().min(1).max(60).default(SCENE_FORMAT),
-  /** The clip's HTML fragment, complete (CORE_CONTRACTS §2.8). */
+  /** The clip's HTML fragment, complete. */
   source: z.string().min(1).max(SCENE_SOURCE_MAX),
   /** Verified values the clip's `data-fact` elements take, by fact key. */
   facts: z.record(z.string(), z.unknown()).optional(),

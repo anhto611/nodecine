@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { Executor } from '../engine/executor';
 import { pinNode, unpinNode, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, registerNodeType, type AnyNodeDefinition, type NodeDefinition } from '../nodes/definition';
-import { GraphSchema } from '../templates/registry';
+import { GraphSchema } from '../engine/document';
 import { _resetPortTypes, registerPortType } from '../types/ports';
 import { TEXT, testServices } from './kit';
 
 /**
- * Pinning (CORE_CONTRACTS §1.4): a node's outputs frozen into the graph, handed back instead of run.
+ * Pinning: a node's outputs frozen into the graph, handed back instead of run.
  *
  * A workflow used to keep only instructions. The look of a film was a sentence, derived again on
  * every run, so two videos from one workflow were two near-misses rather than one house style — and

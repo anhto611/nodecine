@@ -1,4 +1,5 @@
-import { jobHub, type HubEvent } from '@/server/jobs';
+import { jobHub } from '@/server/contracts/hub';
+import type { HubEvent } from '@/server/jobs';
 
 export const dynamic = 'force-dynamic';
 

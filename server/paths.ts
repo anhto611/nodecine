@@ -1,7 +1,7 @@
 import { mkdir, readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 
-/** Temp-file lifecycle (ARCHITECTURE §6). All media URLs are `/api/media/<hash>.<ext>`; only this module maps them to disk. */
+/** Temp-file lifecycle. All media URLs are `/api/media/<hash>.<ext>`; only this module maps them to disk. */
 
 export function tmpDir(): string {
   return path.resolve(process.cwd(), process.env.NODECINE_TMP_DIR ?? '.nodecine/tmp');
@@ -32,57 +32,6 @@ export function fileNameFromMediaUrl(url: string): string {
   const m = /^\/api\/media\/([a-f0-9]{16,64}\.[a-z0-9]+)$/.exec(url);
   if (!m) throw new Error(`Not a media URL: ${url}`);
   return m[1]!;
-}
-
-/**
- * Big files the user brings themselves: music beds, their own recordings, video clips. None of them
- * is uploaded through the app — somebody's licensed track, their own voice or a 200 MB clip stays
- * where they put it, and only the file name travels in a graph they may share. Empty registry: the
- * node that reads a kind of file declares its folder in its manifest (`libraries`), and server
- * registration fills this in at startup.
- */
-export interface LibrarySpec { env: string; extensions: readonly string[] }
-const LIBRARIES = new Map<string, LibrarySpec>();
-export type Library = string;
-
-export function registerLibrary(name: Library, spec: LibrarySpec): void {
-  if (!/^[a-z][a-z0-9-]{0,30}$/.test(name)) throw new Error(`Invalid library name: ${name}`);
-  LIBRARIES.set(name, spec);
-}
-export const isLibrary = (v: string): v is Library => LIBRARIES.has(v);
-const specOf = (library: Library): LibrarySpec => {
-  const spec = LIBRARIES.get(library);
-  if (!spec) throw new Error(`Unknown library: ${library}`);
-  return spec;
-};
-
-/** Letters, digits and the punctuation a person actually types in a file name — nothing that could be a path. */
-const STEM = /^[A-Za-z0-9][A-Za-z0-9 ._'()-]{0,80}$/;
-
-export function libraryDir(library: Library): string {
-  return path.resolve(process.cwd(), process.env[specOf(library).env] ?? `.nodecine/${library}`);
-}
-
-const namedForLibrary = (library: Library, fileName: string): boolean => {
-  const dot = fileName.lastIndexOf('.');
-  if (dot <= 0) return false;
-  return STEM.test(fileName.slice(0, dot)) && specOf(library).extensions.includes(fileName.slice(dot + 1).toLowerCase());
-};
-
-/** Resolve a file name to a path inside one of those folders; anything that could leave it is refused. */
-export function libraryPath(library: Library, fileName: string): string {
-  if (!namedForLibrary(library, fileName)) throw new Error(`Invalid ${library} file name: ${fileName}`);
-  const dir = libraryDir(library);
-  const p = path.join(dir, fileName);
-  if (path.dirname(p) !== dir) throw new Error(`Path escapes the ${library} folder`);
-  return p;
-}
-
-/** What that folder holds on this machine, by name, sorted; an absent folder simply has nothing. */
-export async function listLibrary(library: Library): Promise<string[]> {
-  return readdir(libraryDir(library))
-    .then((names) => names.filter((n) => namedForLibrary(library, n)).sort((a, b) => a.localeCompare(b)))
-    .catch(() => []);
 }
 
 /**

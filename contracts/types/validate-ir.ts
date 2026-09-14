@@ -3,7 +3,7 @@ import { VideoIRSchema, allClips, type VideoIR } from './ir';
 import { IR_V2_VERSION, VideoIRV2Schema, type VideoIRV2 } from './ir-v2';
 
 /**
- * The nine IR invariants (docs/IR_V3.md §6). Run before an IR leaves the assembler and before any
+ * The nine IR invariants. Run before an IR leaves the assembler and before any
  * adapter loads one; an IR that fails never leaves the node. Warnings are things that are legal
  * but pointless — an empty track — and never stop a film. Nothing here reads a clip's `format` or a
  * transition's name: whether the connected engine has them is the output node's question.

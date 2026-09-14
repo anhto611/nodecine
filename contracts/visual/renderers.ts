@@ -1,5 +1,5 @@
 /**
- * Which engines can draw which scene-code format (CORE_CONTRACTS §2.8, §4). Every clip of an IR names
+ * Which engines can draw which scene-code format. Every clip of an IR names
  * its format, `html-gsap` today; an engine registers one renderer per format it understands, and the
  * output nodes stop by capability when the chosen engine lacks one (`unsupportedFilmBlock` in
  * `transitions.ts` asks both questions). The core imports no engine: renderers are `unknown` here,

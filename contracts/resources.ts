@@ -4,7 +4,7 @@ import type { EngineRef, LLMRef, TTSRef } from './types/payloads';
 import { readCapability } from '@/core/nodes/definition';
 
 /**
- * A node's own model, voice or engine (CORE_CONTRACTS §1.3).
+ * A node's own model, voice or engine.
  *
  * These used to be nodes of their own, wired in on a second kind of port: one Language Model node
  * feeding five others. It made the graph read as a machine with parts, but it cost every workflow

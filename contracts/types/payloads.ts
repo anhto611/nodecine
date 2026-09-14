@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-/** Payload schemas for the video port types and the parts a node probes (CORE_CONTRACTS §2, §7.1, §8.1). */
+/** Payload schemas for the video port types and the parts a node probes. */
 
 const bcp47 = z.string().min(2).max(35);
 
 /**
  * A file a scene carries: an image uploaded through `POST /api/assets`, or a clip taken in from the
  * user's own folder through `POST /api/assets/from-library`. Either way it is addressed by its hash
- * (ARCHITECTURE §6) — a scene may only show a file this machine is already holding.
+ * — a scene may only show a file this machine is already holding.
  */
 const HASHED_ASSET = /^\/api\/assets\/[a-f0-9]{16,64}\.[a-z0-9]+$/;
 /**
@@ -25,7 +25,7 @@ export const isAssetUrl = (s: string): boolean => HASHED_ASSET.test(s) || isInli
 
 const IDENT = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 
-/** The one scene-code format there is: an HTML fragment with inline style and an optional GSAP timeline (CORE_CONTRACTS §2.8). */
+/** The one scene-code format there is: an HTML fragment with inline style and an optional GSAP timeline. */
 export const SCENE_FORMAT = 'html-gsap' as const;
 export const SCENE_SOURCE_MAX = 200_000;
 
@@ -48,7 +48,7 @@ export const CaptionBandSchema = z.object({
 export type CaptionBand = z.infer<typeof CaptionBandSchema>;
 
 /**
- * What every scene of a video shares (CORE_CONTRACTS §2.6): a name, and one sheet of CSS — the
+ * What every scene of a video shares: a name, and one sheet of CSS — the
  * colours, the type, the classes the scenes' markup uses.
  */
 export const StyleSchema = z.object({
@@ -60,7 +60,7 @@ export const StyleSchema = z.object({
 export type Style = z.infer<typeof StyleSchema>;
 
 /**
- * How one scene gives way to the next (CORE_CONTRACTS §2.6): a name in the transition registry, which
+ * How one scene gives way to the next: a name in the transition registry, which
  * the engine wired in must have. `cut`, `fade`, `slide` and `zoom` every engine has; the rest is the
  * engine's own catalogue, and the output node blocks with ENGINE_TRANSITION_UNSUPPORTED otherwise.
  */
@@ -68,7 +68,7 @@ export const TransitionSchema = z.object({ type: z.string().min(1).max(60), seco
 export type Transition = z.infer<typeof TransitionSchema>;
 
 /**
- * Values of the whole video (CORE_CONTRACTS §2.6): a channel name, an episode number, and a
+ * Values of the whole video: a channel name, an episode number, and a
  * character or a logo as a picture. The same in every scene; a scene draws one with `data-var`.
  */
 export const VarsSchema = z.record(z.string().regex(IDENT), z.union([z.string().max(200), AssetUrlSchema]));
@@ -77,12 +77,12 @@ export const AudioScriptSchema = z.object({
   /** The whole narration; with `segments`, their join. */
   text: z.string().min(1),
   language: bcp47,
-  /** The narration scene by scene, in scene order: the TTS Engine voices each one and the cut follows (CORE_CONTRACTS §2.4). */
+  /** The narration scene by scene, in scene order: the TTS Engine voices each one and the cut follows. */
   segments: z.array(z.string().min(1)).min(1).optional(),
 });
 export type AudioScript = z.infer<typeof AudioScriptSchema>;
 
-/** Media URLs are always app-relative (ARCHITECTURE §6). Never a filesystem path. */
+/** Media URLs are always app-relative. Never a filesystem path. */
 export const MediaUrlSchema = z.string().regex(/^\/api\/media\/[a-f0-9]{16,64}\.[a-z0-9]+$/);
 
 /** One spoken word: seconds from the start of the voice-over. */
@@ -105,13 +105,13 @@ export type Voiceover = z.infer<typeof VoiceoverSchema>;
 /** How the spoken word is marked; read off the scene's caption slot, never carried by the track. */
 export const CAPTION_STYLES = ['karaoke', 'reveal'] as const;
 export type CaptionStyle = (typeof CAPTION_STYLES)[number];
-/** Caption lines on the voice-over's clock (CORE_CONTRACTS §2.10): what is said, when. Where and how is the scene's. */
+/** Caption lines on the voice-over's clock: what is said, when. Where and how is the scene's. */
 export const CaptionTrackSchema = z.object({
   cues: z.array(z.object({ start: z.number().nonnegative(), end: z.number().nonnegative(), words: z.array(WordSchema).min(1) })),
 });
 export type CaptionTrack = z.infer<typeof CaptionTrackSchema>;
 
-/** One capability as reported by probe() (EXECUTION_ENGINE §1.1). */
+/** One capability as reported by probe(). */
 export const CapabilitySchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('ready') }),
   z.object({

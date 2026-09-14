@@ -1,5 +1,5 @@
 /**
- * A name a browser can save a download under (CORE_CONTRACTS §5.6, §5.16).
+ * A name a browser can save a download under.
  *
  * The file on disk is named by its hash, so this name only ever travels in a `download` attribute —
  * it need not be ASCII, and stripping it to ASCII would be wrong in an app whose users write

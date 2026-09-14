@@ -1,13 +1,13 @@
 import type { Capability, Style, EngineRef } from '../types/payloads';
 import type { VideoIR } from '../types/ir';
 
-/** Engine adapter interface (CORE_CONTRACTS §6.1). Implementations live outside core/ and self-register. */
+/** Engine adapter interface. Implementations live outside core/ and self-register. */
 
 export interface ExportSettings {
   codec: 'h264' | 'h265';
   quality: 'high' | 'medium' | 'low';
   fileName: string;
-  /** Output resolution by short side; the design coordinates stay the plan's and are scaled at render (CORE_CONTRACTS §5.6). */
+  /** Output resolution by short side; the design coordinates stay the plan's and are scaled at render. */
   resolution?: '1080p' | '1440p' | '2160p';
 }
 
@@ -31,7 +31,7 @@ export interface PlayerHandle {
   onFrame(listener: (frame: number) => void): () => void;
 }
 
-/** One scene to look at outside a film (CORE_CONTRACTS §2.8): the style, the drawing, the video's values, optional sample facts and caption. */
+/** One scene to look at outside a film: the style, the drawing, the video's values, optional sample facts and caption. */
 export interface ScenePreviewOptions {
   style: Style;
   source: string;

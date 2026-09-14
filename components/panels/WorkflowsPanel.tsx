@@ -2,12 +2,12 @@
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
 import { workflowsApi, type WorkflowSummary } from '@/lib/workflows.client';
-import { localized } from '@/core/templates/registry';
-import { Icon } from '../icons';
-import { Btn, useT } from '../ui';
+import { localized } from '@/core/engine/document';
+import { Icon } from '@/capsules/sdk/icons';
+import { Btn, useT } from '@/capsules/sdk/ui';
 
 /**
- * The user's workflow files (USER_FLOWS §1.6), like ComfyUI's Workflows sidebar: what is open, and
+ * The user's workflow files, like ComfyUI's Workflows sidebar: what is open, and
  * every file on disk with open, rename, download and delete. The list is read from the server each
  * time it is shown and after any save, so it never disagrees with the directory.
  */

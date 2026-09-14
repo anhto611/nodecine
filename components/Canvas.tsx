@@ -23,8 +23,8 @@ import { NODE_META } from '@/lib/node-meta';
 import { layoutGraph } from '@/lib/layout';
 import { useStudio } from '@/store/useStudio';
 import { NodeCard, type NcNode } from './nodes/NodeCard';
-import { Icon } from './icons';
-import { useT } from './ui';
+import { Icon } from '@/capsules/sdk/icons';
+import { useT } from '@/capsules/sdk/ui';
 
 const nodeTypes = { nc: NodeCard };
 

@@ -1,7 +1,7 @@
 import { detectLanguage } from './detect-language';
 
 /**
- * Output-language policy for anything that writes a video with a model (CORE_CONTRACTS §5.8).
+ * Output-language policy for anything that writes a video with a model.
  *
  * What "auto" means, how two language tags compare, and what a language is called in a picker are
  * the same questions whatever the video is about, so they are answered once here. A caller states

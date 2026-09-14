@@ -4,7 +4,7 @@ import { IR_V3_VERSION, VideoIRV3Schema, secondsToFrames, type VideoIRV3 } from 
 import { SCENE_FORMAT } from './payloads';
 
 /**
- * Bringing an IR forward (docs/IR_V3.md §9). An IR is not in a workflow file; it lives in the job
+ * Bringing an IR forward. An IR is not in a workflow file; it lives in the job
  * history, in the tag inside an exported MP4, and in an open player. Each of those reads through
  * here, so a film made by an older build still plays in this one.
  *

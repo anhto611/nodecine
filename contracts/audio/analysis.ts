@@ -1,6 +1,6 @@
 /**
- * Per-frame loudness and three bands of a sound, for clips that move to the music (docs/IR_V3.md
- * §5.3, `analysisUrl`). Pure: samples in, one row per video frame out, every value 0..1 against
+ * Per-frame loudness and three bands of a sound, for clips that move to the music (the IR track's
+ * `analysisUrl`). Pure: samples in, one row per video frame out, every value 0..1 against
  * the file's own peak so a quiet track still moves. The Audio Analysis node decodes the file and
  * writes what this returns as JSON beside the media; the engines inline it and a scene reads it as
  * `nodecine.audio(id)`.
@@ -108,7 +108,7 @@ export function fft(re: Float32Array, im: Float32Array): void {
 }
 
 /**
- * Where the beat falls, in seconds, from an analysis (docs/IR_V3.md §5.3). Onset detection, the
+ * Where the beat falls, in seconds, from an analysis. Onset detection, the
  * plain kind: the rise in low and mid energy from one frame to the next is the flux; a frame is an
  * onset when its flux is a local peak and stands above the running mean of its neighbourhood. No
  * tempo model — a cut wants the moment the drum lands, not a grid, and a track that speeds up or

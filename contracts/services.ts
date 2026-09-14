@@ -27,13 +27,13 @@ declare module '@/core/engine/services' {
       signal: AbortSignal,
     ): Promise<RenderResult>;
     /**
-     * Text kept as a file the browser can download, named by its own content (CORE_CONTRACTS §5.16).
+     * Text kept as a file the browser can download, named by its own content.
      * `extension` is the kind of file it is — `srt`, `vtt` — and never a path.
      */
     saveText(text: string, extension: string): Promise<{ url: string; bytes: number }>;
     /**
      * One file from several, in order, with a pause after each part. Returns the file, its measured
-     * length and where each part starts and how long it lasts, pause included (CORE_CONTRACTS §5.3).
+     * length and where each part starts and how long it lasts, pause included.
      */
     concatAudio(parts: { audioUrl: string; durationSeconds: number }[], gapSeconds: number, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number; segments: { start: number; durationSeconds: number }[] }>;
   }

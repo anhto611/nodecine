@@ -4,10 +4,10 @@ import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { getNodeType } from '@/core/nodes/definition';
 import { portLabelKey } from '@/core/types/ports';
 import { NODE_META } from '@/lib/node-meta';
-import { Icon } from '@/components/icons';
-import { useT, Btn } from '@/components/ui';
+import { Icon } from '@/capsules/sdk/icons';
+import { useT, Btn } from '@/capsules/sdk/ui';
 import { useNode, useRuntime, useStudio } from '@/store/useStudio';
-import { NODE_BODIES } from '@/nodes/index.client';
+import { NODE_BODIES } from '@/capsules/nodes/index.client';
 
 export type NcNode = Node<{ nodeId: string }, 'nc'>;
 
@@ -16,7 +16,7 @@ const PORT_PAD = 4;
 const PORT_ROW = 18;
 const handleTop = (i: number) => HDR_H + PORT_PAD + i * PORT_ROW + PORT_ROW / 2;
 
-/** Every node on the canvas: header with state badge, type-specific body, left/right ports (USER_FLOWS §2). */
+/** Every node on the canvas: header with state badge, type-specific body, left/right ports. */
 export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
   const t = useT();
   const node = useNode(data.nodeId);
@@ -24,7 +24,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
   const allIssues = useStudio((s) => s.issues);
   // Both kinds are drawn: an error is a graph that cannot run, a warning is this node saying it is
   // not finished — an empty port, a setting still blank. Filtering warnings out left the card silent
-  // until a run reached the node and blocked, which is exactly when it is too late to be told (§1.4).
+  // until a run reached the node and blocked, which is exactly when it is too late to be told.
   const issues = React.useMemo(() => allIssues.filter((i) => i.nodeId === data.nodeId), [allIssues, data.nodeId]);
   const runNode = useStudio((s) => s.runNode);
   const running = useStudio((s) => s.running);

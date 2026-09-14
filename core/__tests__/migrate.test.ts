@@ -11,9 +11,9 @@ import {
   PROJECT_SCHEMA_VERSION,
   type SavedDoc,
 } from '../engine/migrate';
-import { validateGraph, hasBlockingIssues, type Graph } from '../engine/graph';
+import { validateGraph, type Graph } from '../engine/graph';
 import { _resetNodeRegistry, getNodeType, getRetiredNodeType, registerNodeType, registerRetiredNodeType, type AnyNodeDefinition } from '../nodes/definition';
-import { registerNodes } from '@/nodes';
+import { registerNodes } from '@/capsules/nodes';
 import perVendorProviders from './fixtures/format-1-per-vendor-providers.json';
 import retiredNodes from './fixtures/format-2-retired-nodes.json';
 
@@ -45,10 +45,10 @@ describe('a file from an older format', () => {
 
   it('carries the settings across, onto whatever was using them', () => {
     // Two steps in one pass: a per-vendor provider becomes the plain one, and the plain one is then
-    // folded onto its consumer, because a model is a node's own setting now and not a node (§1.3).
+    // folded onto its consumer, because a model is a node's own setting now and not a node.
     const doc0 = structuredClone(perVendorProviders) as SavedDoc;
     const g = doc0.graph as { nodes: unknown[]; edges: unknown[] };
-    g.nodes.push({ id: 'speaker', type: 'core/tts-engine', params: {}, bypassed: false, position: { x: 0, y: 0 } });
+    g.nodes.push({ id: 'speaker', type: 'tts', params: {}, bypassed: false, position: { x: 0, y: 0 } });
     g.edges.push({ id: 'e1', source: 'voice', sourcePort: 'tts', target: 'speaker', targetPort: 'tts' });
     const { doc } = migrateDoc(doc0);
     expect(doc.graph.nodes.map((n) => n.id), 'a provider node survived the fold').not.toContain('voice');
@@ -178,5 +178,22 @@ describe('a file already at this format', () => {
     const { doc: after, notes } = migrateDoc(doc);
     expect(after.graph.nodes[0]!.params).toEqual({ headline: 'x' });
     expect(notes.some((n) => n.code === 'DOC_FORMAT'), 'nothing about the format changed').toBe(false);
+  });
+});
+
+describe('a node type that was only renamed', () => {
+  it('takes the new name and keeps its parameters and their version, running no migration', () => {
+    let migrated = false;
+    registerNodeType({
+      type: 'test/new-name', version: 2, kind: 'source', inputs: [], outputs: [],
+      paramsSchema: z.object({ model: z.string() }), defaultParams: { model: 'small' },
+      migrate: (params: Record<string, unknown>) => { migrated = true; return params; },
+      run: async () => ({}),
+    } as unknown as AnyNodeDefinition);
+    registerRetiredNodeType('test/old-name', { since: '2026-09-14', renamedTo: 'test/new-name' });
+    const { graph, notes } = migrateGraph({ nodes: [{ id: 'n', type: 'test/old-name', version: 2, params: { model: 'large-v3' }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] });
+    expect(graph.nodes[0]).toMatchObject({ type: 'test/new-name', version: 2, params: { model: 'large-v3' } });
+    expect(migrated).toBe(false);
+    expect(notes.find((n) => n.code === 'NODE_RENAMED')?.message).toContain('test/new-name');
   });
 });

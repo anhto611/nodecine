@@ -5,10 +5,10 @@ import { listNodeTypes, type AnyNodeDefinition } from '@/core/nodes/definition';
 import { portLabelKey } from '@/core/types/ports';
 import { GROUP_ORDER, NODE_META, type LibraryGroup } from '@/lib/node-meta';
 import { useStudio } from '@/store/useStudio';
-import { Icon } from '../icons';
-import { useT } from '../ui';
+import { Icon } from '@/capsules/sdk/icons';
+import { useT } from '@/capsules/sdk/ui';
 
-/** Node library (USER_FLOWS §1.6): grouped, searchable, drag onto the canvas or double-click to drop at center. */
+/** Node library: grouped, searchable, drag onto the canvas or double-click to drop at center. */
 export const LibraryPanel: React.FC = () => {
   const t = useT();
   const [q, setQ] = React.useState('');

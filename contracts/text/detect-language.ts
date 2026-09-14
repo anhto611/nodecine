@@ -1,5 +1,5 @@
 /**
- * Script-based language detection (CORE_CONTRACTS §5.2).
+ * Script-based language detection.
  *
  * Deliberately tiny and dependency-free: it looks at which writing system dominates the text and,
  * for Latin text, whether Vietnamese-only letters are present. It returns a BCP 47 primary subtag

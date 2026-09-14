@@ -7,7 +7,7 @@ import { initialRuntime, type NodeRuntime } from '@/core/engine/state';
 import type { Job } from '@/server/jobs';
 
 /**
- * The browser's view of an executor that runs on the server (ARCHITECTURE §1.2). It offers the
+ * The browser's view of an executor that runs on the server. It offers the
  * store the surface the in-browser executor had — runtimes, logs, run, runNode, invalidate,
  * bypass, cancel — and behind it submits jobs, listens to the event stream and mirrors what comes
  * back. One instance follows the active tab: switching tabs switches the key it speaks for.

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { GraphSchema } from '@/core/templates/registry';
-import { jobHub } from '@/server/jobs';
+import { GraphSchema } from '@/core/engine/document';
+import { jobHub } from '@/server/contracts/hub';
 
 type Ctx = { params: Promise<{ key: string }> };
 

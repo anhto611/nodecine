@@ -88,8 +88,8 @@ describe('multiple-wire ports', () => {
     g.edges = g.edges.filter((e) => e.targetPort !== 'parts');
     const issue = validateGraph(g).find((i) => i.port === 'parts');
     expect(issue?.code).toBe('GRAPH_PORT_UNCONNECTED');
-    // Nothing downstream of this collector ends at a sink, so its empty port is said, not obeyed
-    // (§1.4): a node that cannot reach the film cannot stop the run.
+    // Nothing downstream of this collector ends at a sink, so its empty port is said, not obeyed:
+    // a node that cannot reach the film cannot stop the run.
     expect(issue?.severity).toBe('warning');
   });
 

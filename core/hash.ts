@@ -1,6 +1,5 @@
 /**
- * Stable content hashing for edge packets and node signatures
- * (CORE_CONTRACTS §1.2, EXECUTION_ENGINE §3).
+ * Stable content hashing for edge packets and node signatures.
  *
  * Not for security — only for content comparison and cache keys.
  * Runs in both browser and Node, synchronously, with no dependencies.

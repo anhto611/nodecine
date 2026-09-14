@@ -7,7 +7,7 @@ import type { NodeServices } from '@/core/engine/services';
 
 /**
  * Ask a language model for a structured answer and hold it to the shape and the language that
- * were asked for (CORE_CONTRACTS §5.8).
+ * were asked for.
  *
  * The provider is asked for unvalidated JSON on purpose. Validating here keeps the retry decision
  * and the raw text in one place, so a failure can show the user what the model actually wrote.
@@ -15,7 +15,7 @@ import type { NodeServices } from '@/core/engine/services';
 
 const RAW = z.unknown();
 
-export interface ScreenwriterSpec<S extends ZodTypeAny> {
+export interface StructuredSpec<S extends ZodTypeAny> {
   /** What a good answer looks like. Anything else earns one retry, then fails with the raw text. */
   outputSchema: S;
   /** `strict` is set for the retry after a language mismatch; say it more firmly. */
@@ -25,16 +25,16 @@ export interface ScreenwriterSpec<S extends ZodTypeAny> {
 }
 
 /** The parts of a node's run context this needs; a node passes itself. */
-export type ScreenwriterContext = Pick<RunContext, 'signal' | 'progress'> & {
+export type StructuredContext = Pick<RunContext, 'signal' | 'progress' | 'fresh'> & {
   services: Pick<NodeServices, 'complete'>;
   log: (level: LogLevel, message: string, code?: string) => void;
 };
 
 /** One retry for the wrong shape and one for the wrong language, then give up with the raw text. */
-export async function runScreenwriter<S extends ZodTypeAny>(
-  ctx: ScreenwriterContext,
+export async function completeStructured<S extends ZodTypeAny>(
+  ctx: StructuredContext,
   ref: LLMRef,
-  spec: ScreenwriterSpec<S>,
+  spec: StructuredSpec<S>,
   language: string,
 ): Promise<z.infer<S>> {
   let strict = false;
@@ -46,7 +46,7 @@ export async function runScreenwriter<S extends ZodTypeAny>(
     ctx.progress(0.2 + attempt * 0.2, `attempt ${attempt}`);
     let raw: unknown;
     try {
-      raw = await ctx.services.complete(ref, spec.buildPrompt(language, strict), RAW, ctx.signal);
+      raw = await ctx.services.complete(ref, spec.buildPrompt(language, strict), RAW, ctx.signal, { fresh: ctx.fresh });
     } catch (e) {
       const err = toNodeError(e, ErrorCode.LLM_UPSTREAM);
       // The provider itself can fail to get JSON out of the model; that is the same kind of miss.

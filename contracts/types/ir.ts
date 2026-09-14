@@ -1,5 +1,5 @@
 /**
- * Universal Video IR (CORE_CONTRACTS §3, docs/IR_V3.md) — the current shape, by its plain names.
+ * Universal Video IR — the current shape, by its plain names.
  * Everything that writes or reads a film imports from here; the versioned modules behind it are for
  * the migration only. `ir-v3.ts` is what this is today; `ir-v2.ts` is what a film made by an older
  * build looks like on its way in.

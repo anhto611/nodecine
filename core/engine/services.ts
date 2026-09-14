@@ -1,6 +1,6 @@
 /**
- * Everything a node needs from outside the graph. The executor runs on the server (ARCHITECTURE
- * §1.2); `server/services.server.ts` implements this with the providers and engines directly.
+ * Everything a node needs from outside the graph. The executor runs on the server;
+ * `server/contracts/services.server.ts` implements this with the providers and engines directly.
  * Tests implement it with fakes.
  *
  * The core declares only what running a node needs whatever the node is about: a way to call a

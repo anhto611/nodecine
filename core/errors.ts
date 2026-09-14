@@ -1,10 +1,10 @@
 /**
- * Stable error and reason codes (EXECUTION_ENGINE §6). UI messages come from locale dictionaries
+ * Stable error and reason codes. UI messages come from locale dictionaries
  * keyed by code.
  *
  * Only what running a graph raises: a wire, a node, a run. What a model, a voice, an engine or an IR
  * raises is the video contracts' (`contracts/errors.ts`), and a failure of one node belongs in that
- * node's capsule — `nodes/<name>/errors.ts` beside its strings in the capsule's own locales.
+ * node's capsule — `capsules/nodes/<name>/errors.ts` beside its strings in the capsule's own locales.
  */
 export const ErrorCode = {
   INPUT_EMPTY: 'INPUT_EMPTY',

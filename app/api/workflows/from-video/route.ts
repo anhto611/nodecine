@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { readWorkflowTag } from '@/server/video-meta';
-import { toWorkflowFile } from '@/server/workflows';
+import { readWorkflowTag } from '@/server/contracts/video-meta';
+import { workflows } from '@/server/contracts/workflows';
 
 const MAX_UPLOAD_BYTES = 512 * 1024 * 1024;
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     await writeFile(p, Buffer.from(await file.arrayBuffer()));
     const tag = await readWorkflowTag(p, req.signal);
     if (!tag) return NextResponse.json({ error: 'WORKFLOW_NOT_FOUND', message: 'this video carries no NodeCine workflow' }, { status: 404 });
-    return NextResponse.json(toWorkflowFile(tag));
+    return NextResponse.json(workflows.toWorkflowFile(tag));
   } catch (e) {
     return NextResponse.json({ error: (e as { code?: string }).code ?? 'WORKFLOW_INVALID', message: e instanceof Error ? e.message : String(e) }, { status: 400 });
   } finally {

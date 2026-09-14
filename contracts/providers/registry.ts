@@ -2,7 +2,7 @@ import type { ZodTypeAny } from 'zod';
 import type { LLMProviderFactory, TTSProviderFactory } from './types';
 
 /**
- * Provider registries (ARCHITECTURE §2). Empty in the core; `providers/*` self-register at startup.
+ * Provider registries. Empty here; `capsules/providers/*` self-register at startup.
  *
  * A registration carries more than a factory, because there is one node per port type rather than
  * one node per provider: the node renders the provider list and the fields of whichever provider is

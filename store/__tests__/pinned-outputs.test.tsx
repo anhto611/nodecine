@@ -7,7 +7,7 @@ import { registerTestKit } from '@/core/__tests__/kit';
 import type { Graph } from '@/core/engine/graph';
 
 /**
- * What a pinned node shows before anything has run (CORE_CONTRACTS §1.5).
+ * What a pinned node shows before anything has run.
  *
  * A pin is how a result becomes part of the workflow: the node hands its stored outputs back and
  * never runs. Reading only the live runtime meant that opening a workflow with pinned nodes showed

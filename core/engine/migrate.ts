@@ -2,14 +2,14 @@ import { getNodeType, getRetiredNodeType } from '../nodes/definition';
 import type { Graph, NodeInstance } from './graph';
 
 /**
- * Bringing a saved workflow forward (ARCHITECTURE §2). A file somebody saved months ago has to open
+ * Bringing a saved workflow forward. A file somebody saved months ago has to open
  * today, and there are three separate ways it can be behind:
  *
  * 1. The **document** around the graph changed shape. That is `schemaVersion`, and it moves one step
  *    at a time through `DOC_MIGRATIONS`.
  * 2. A **node type** changed what its parameters mean. That is `NodeDefinition.version` against the
  *    `version` stamped on the saved node, and the capsule's own `migrate` closes the gap.
- * 3. A **node type is gone**. Nothing can be derived there, so it is declared: `nodes/retired.json`
+ * 3. A **node type is gone**. Nothing can be derived there, so it is declared: `capsules/retired.json`
  *    says what replaced it, or says plainly that nothing did.
  *
  * Everything here is a pure function of the graph and the registries. What it cannot do it reports
@@ -30,7 +30,7 @@ export interface SavedDoc {
 
 /**
  * One step each, `from` → `from + 1`. Empty here like every other registry: a migration has to name
- * the node types it moved between, and those names belong outside the core (`nodes/migrations.ts`).
+ * the node types it moved between, and those names belong outside the core (`capsules/migrations.ts`).
  */
 export type DocMigration = (doc: SavedDoc) => SavedDoc;
 const steps = new Map<number, DocMigration>();
@@ -61,7 +61,7 @@ export class DocVersionUnsupportedError extends Error {
 /** What changed on the way forward, so the person can be told rather than surprised. */
 export interface MigrationNote {
   nodeId?: string;
-  code: 'DOC_FORMAT' | 'NODE_VERSION' | 'NODE_REPLACED' | 'NODE_RETIRED' | 'PARAMS_RESET' | 'PARAMS_DROPPED' | 'NODE_RESOURCE_FOLDED';
+  code: 'DOC_FORMAT' | 'NODE_VERSION' | 'NODE_REPLACED' | 'NODE_RENAMED' | 'NODE_RETIRED' | 'PARAMS_RESET' | 'PARAMS_DROPPED' | 'NODE_RESOURCE_FOLDED';
   message: string;
 }
 
@@ -102,7 +102,7 @@ export function migrateGraph(graph: Graph): { graph: Graph; notes: MigrationNote
 
 /**
  * A model, a voice or an engine used to be a node of its own, wired into everything that needed it.
- * Each is now a setting on the node that needs it (CORE_CONTRACTS §1.3), so a saved graph has its
+ * Each is now a setting on the node that needs it, so a saved graph has its
  * providers folded into its consumers and the four old nodes, with every wire they were on, removed.
  * Folding has to happen here and not in a node's own `migrate`: the id being moved lives in a
  * different node, which a per-node migration never sees.
@@ -111,14 +111,14 @@ const folds = new Map<string, (params: Record<string, unknown>) => Record<string
 
 /**
  * Say that a node type is gone and what its settings became on whoever it fed. Filled by
- * `nodes/migrations.ts`, the one file whose subject is node ids across time; core holds the
+ * `capsules/migrations.ts`, the one file whose subject is node ids across time; core holds the
  * mechanism and names none of them.
  */
 const graphSteps: ((graph: Graph, notes: MigrationNote[]) => Graph)[] = [];
 
 /**
  * A change to the shape of a graph that no single node can make: two nodes becoming one, a wire
- * moving. Filled by `nodes/migrations.ts`, the one file whose subject is node ids across time.
+ * moving. Filled by `capsules/migrations.ts`, the one file whose subject is node ids across time.
  */
 export function registerGraphStep(step: (graph: Graph, notes: MigrationNote[]) => Graph): void {
   graphSteps.push(step);
@@ -160,7 +160,10 @@ function migrateNode(node: NodeInstance, notes: MigrationNote[]): NodeInstance {
   let current = node;
 
   const retired = getRetiredNodeType(current.type);
-  if (retired) {
+  if (retired?.renamedTo) {
+    notes.push({ nodeId: current.id, code: 'NODE_RENAMED', message: `"${current.type}" is called "${retired.renamedTo}" since ${retired.since}` });
+    current = { ...current, type: retired.renamedTo };
+  } else if (retired) {
     if (!retired.replacedBy) {
       notes.push({ nodeId: current.id, code: 'NODE_RETIRED', message: `"${current.type}" was removed in ${retired.since} and nothing replaced it` });
       return current;

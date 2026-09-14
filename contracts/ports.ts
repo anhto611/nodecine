@@ -10,7 +10,7 @@ import {
 } from './types/payloads';
 
 /**
- * The port types a video workflow speaks (CORE_CONTRACTS §1.1): the core runs wires, this names what
+ * The port types a video workflow speaks: the core runs wires, this names what
  * runs on them. Each name maps to the payload its packets carry. Only what a shipped node puts on a
  * wire is here; a new node brings its type with it.
  */
@@ -23,7 +23,7 @@ declare module '@/core/types/ports' {
   }
 }
 
-/** Every port type with its label and schema. The IR is validated by its own checks (§3.1), not here. */
+/** Every port type with its label and schema. The IR is validated by its own checks, not here. */
 const PORTS: Record<PortType, PortTypeInfo> = {
   AudioScript: { labelKey: 'port.audioScript', schema: AudioScriptSchema },
   Voiceover: { labelKey: 'port.voiceover', schema: VoiceoverSchema },

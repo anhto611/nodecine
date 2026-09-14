@@ -5,7 +5,7 @@ import { mediaPath } from '@/server/paths';
 
 const MIME: Record<string, string> = { mp3: 'audio/mpeg', mp4: 'video/mp4', aiff: 'audio/aiff', wav: 'audio/wav', png: 'image/png', srt: 'application/x-subrip', vtt: 'text/vtt' };
 
-/** Read-only file serving from the temp dir; the name must be a bare hash (ARCHITECTURE §6). */
+/** Read-only file serving from the temp dir; the name must be a bare hash. */
 export async function GET(_req: Request, ctx: { params: Promise<{ path: string[] }> }) {
   const { path: segments } = await ctx.params;
   if (segments.length !== 1) return new Response('not found', { status: 404 });

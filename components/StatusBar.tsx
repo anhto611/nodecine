@@ -1,8 +1,8 @@
 'use client';
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
-import { Icon } from './icons';
-import { useT } from './ui';
+import { Icon } from '@/capsules/sdk/icons';
+import { useT } from '@/capsules/sdk/ui';
 
 /**
  * The strip under the canvas: where the logs live, so their toggle sits right where they open,

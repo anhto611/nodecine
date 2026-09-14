@@ -1,7 +1,7 @@
 import { contentHash } from '../hash';
 import type { PortType } from './ports';
 
-/** Edge packet (CORE_CONTRACTS §1.2). Payloads must be JSON-serializable. */
+/** Edge packet. Payloads must be JSON-serializable. */
 export interface Packet<T = unknown> {
   sourceNodeId: string;
   sourcePort: string;

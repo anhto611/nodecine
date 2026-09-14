@@ -1,1 +1,0 @@
-{"id": "core/video-output", "definition": "videoOutput", "body": "VideoOutputBody", "icon": "screen", "group": "output", "layout": "wide", "translations": "videoOutputTranslations", "features": ["history-preview"]}

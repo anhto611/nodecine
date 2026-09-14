@@ -1,9 +1,9 @@
 import { ErrorCode } from '../errors';
 import { getNodeType, type AnyNodeDefinition, type NodeIssue } from '../nodes/definition';
 
-/** Serializable graph document (EXECUTION_ENGINE §7.1). */
+/** Serializable graph document. */
 /**
- * Freeze a node's last outputs into the graph, and thaw them again (CORE_CONTRACTS §1.5).
+ * Freeze a node's last outputs into the graph, and thaw them again.
  *
  * `outputs` is the node's runtime outputs, so a pin is always something that actually ran and was
  * looked at. A port that produced nothing is not pinned, and a node that produced nothing at all is
@@ -40,7 +40,7 @@ export interface NodeInstance {
    */
   version?: number;
   /**
-   * Outputs frozen into the graph: the node hands these back and does not run (CORE_CONTRACTS §1.5).
+   * Outputs frozen into the graph: the node hands these back and does not run.
    *
    * A workflow used to keep only instructions — a sentence describing the look — and derive the look
    * again on every run. Two videos from one workflow were therefore two near-misses rather than one
@@ -130,7 +130,7 @@ export function topoSort(graph: Graph): { order: string[] } | { cycleEdges: stri
 }
 
 /**
- * The flow: every node with a wire on it (CORE_CONTRACTS §1.4).
+ * The flow: every node with a wire on it.
  *
  * A node with nothing in any port and nothing leaving it is not part of the film. Dropping one from
  * the library and wiring it up takes several gestures, and in between it used to stop the whole
@@ -144,9 +144,8 @@ export function flowNodes(graph: Graph): Set<string> {
 }
 
 /**
- * Whether there is anything to run: a node that takes no input at all — today the Input Trigger and
- * the Static Script — with its result wired into something. Nothing else can begin a film, and a
- * canvas of unwired cards has nothing to do.
+ * Whether there is anything to run: a node that takes no input at all, with its result wired into
+ * something. Nothing else can begin a film, and a canvas of unwired cards has nothing to do.
  */
 export function canRun(graph: Graph): boolean {
   return graph.nodes.some((n) => {
@@ -157,7 +156,7 @@ export function canRun(graph: Graph): boolean {
 }
 
 /**
- * Continuous graph validation (EXECUTION_ENGINE §2). Errors disable Run; warnings do not.
+ * Continuous graph validation. Errors disable Run; warnings do not.
  */
 export function validateGraph(graph: Graph): GraphIssue[] {
   const issues: GraphIssue[] = [];
@@ -195,8 +194,8 @@ export function validateGraph(graph: Graph): GraphIssue[] {
     for (const port of def.inputs) {
       const edges = incoming.filter((e) => e.targetPort === port.name);
       // A pinned node hands back what the graph keeps and never runs, so it never reads this port.
-      // Warning about it is telling somebody to wire up an input nothing will ever look at — and on
-      // a pinned plate maker the only honest wire would close a cycle.
+      // Warning about it is telling somebody to wire up an input nothing will ever look at — and
+      // sometimes the only honest wire would close a cycle.
       if (edges.length === 0 && port.required !== false && !n.pinned) {
         issues.push({
           // Said on the node, not held against the run: a port with nothing in it stops that node

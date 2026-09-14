@@ -8,7 +8,7 @@ export const STYLE: Style = {
     '.title { font: 800 88px/1.05 var(--font-display); }',
     '.card { position: absolute; left: 72px; right: 168px; top: 320px; padding: 48px; border: 1px solid var(--line); border-radius: 24px; }',
   ].join('\n'),
-  // Low in the frame, the way a film agrees it (CORE_CONTRACTS §2.6): everything above is free.
+  // Low in the frame, the way a film agrees it: everything above is free.
   captions: { left: 96, right: 96, bottom: 150, size: 46 },
 };
 

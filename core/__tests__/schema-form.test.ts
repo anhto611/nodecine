@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { schemaFields, settleNumber } from '@/core/schema-form';
-import { registerNodes } from '@/nodes';
+import { registerNodes } from '@/capsules/nodes';
 import { _resetNodeRegistry, listNodeTypes } from '@/core/nodes/definition';
 
 describe('schemaFields', () => {

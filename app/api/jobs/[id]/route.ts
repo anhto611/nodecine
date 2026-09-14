@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { jobHub } from '@/server/jobs';
+import { jobHub } from '@/server/contracts/hub';
 
 type Ctx = { params: Promise<{ id: string }> };
 

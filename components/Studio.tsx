@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
-import { NODE_OVERLAYS } from '@/nodes/index.client';
+import { NODE_OVERLAYS } from '@/capsules/nodes/index.client';
 import { Header } from './Header';
 import { Rail } from './Rail';
 import { Canvas } from './Canvas';
@@ -11,8 +11,8 @@ import { WorkflowsPanel } from './panels/WorkflowsPanel';
 import { LibraryPanel } from './panels/LibraryPanel';
 import { HistoryPanel } from './panels/HistoryPanel';
 import { LogsPanel } from './panels/LogsPanel';
-import { TemplateBrowser } from './panels/TemplateBrowser';
 import { SettingsDialog } from './panels/SettingsDialog';
+import { StudioNodeHost } from './node-host';
 
 /** Studio shell: header, rail, optional left panel, canvas, optional bottom logs, modals. */
 export const Studio: React.FC = () => {
@@ -21,7 +21,6 @@ export const Studio: React.FC = () => {
   const panel = useStudio((s) => s.panel);
   const overlay = useStudio((s) => s.overlay);
   const logsOpen = useStudio((s) => s.logsOpen);
-  const templatesOpen = useStudio((s) => s.templatesOpen);
   const settingsOpen = useStudio((s) => s.settingsOpen);
 
   React.useEffect(() => {
@@ -30,7 +29,7 @@ export const Studio: React.FC = () => {
     if (process.env.NODE_ENV !== 'production') (window as unknown as { __nodecine?: unknown }).__nodecine = useStudio;
   }, [init]);
 
-  // Keyboard shortcuts (USER_FLOWS §4). Ctrl means Cmd on macOS.
+  // Keyboard shortcuts. Ctrl means Cmd on macOS.
   // Keyed on `init` so a hot-reloaded store never leaves the listener bound to a stale module.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -44,19 +43,20 @@ export const Studio: React.FC = () => {
       if (mod && e.key.toLowerCase() === 'j') { e.preventDefault(); s.toggleLogs(); return; }
       if (mod && e.key === ',') { e.preventDefault(); s.setSettingsOpen(true); return; }
       if (mod && e.key.toLowerCase() === 'b' && s.selectedNodeId) { e.preventDefault(); s.toggleBypass(s.selectedNodeId); return; }
-      if (e.key === 'Escape') { s.setTemplatesOpen(false); s.setSettingsOpen(false); s.setOverlay(null); if (s.panel) s.setPanel(s.panel); return; }
+      if (e.key === 'Escape') { s.setSettingsOpen(false); s.setOverlay(null); if (s.panel) s.setPanel(s.panel); return; }
       if (inField || mod) return;
       if (e.key.toLowerCase() === 'w') s.setPanel('workflows');
       if (e.key.toLowerCase() === 'n') s.setPanel('library');
       if (e.key.toLowerCase() === 'h') s.setPanel('history');
-      if (e.key.toLowerCase() === 't') s.setTemplatesOpen(true);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [init]);
 
   if (!ready) return null;
+  // The whole shell, not only the canvas: the Studio draws with the same kit the node bodies do.
   return (
+    <StudioNodeHost>
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Header />
       <WorkflowTabs />
@@ -72,8 +72,8 @@ export const Studio: React.FC = () => {
         </div>
       </div>
       {overlay && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
-      {templatesOpen && <TemplateBrowser />}
       {settingsOpen && <SettingsDialog />}
     </div>
+    </StudioNodeHost>
   );
 };

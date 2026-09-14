@@ -7,7 +7,7 @@ import type { RunRecord } from '@/contracts/history';
 import { UndoStack } from '@/lib/undo-stack';
 import { contentHash } from '@/core/hash';
 import { getNodeType } from '@/core/nodes/definition';
-import { getTemplate, templateGraph, type TemplateDefinition, localized } from '@/core/templates/registry';
+import { localized, type WorkflowDocument } from '@/core/engine/document';
 import { bootstrapClient } from '@/lib/bootstrap.client';
 import { loadUserTemplates, saveUserTemplates, loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 import { workflowsApi } from '@/lib/workflows.client';
@@ -15,7 +15,7 @@ import type { Locale } from '@/lib/i18n';
 
 export type Panel = 'workflows' | 'library' | 'history' | null;
 
-/** One open workflow: a saved file, a template just opened, or a draft that has never been saved. */
+/** One open workflow: a saved file, or a draft that has never been saved. */
 export interface WorkflowTab {
   key: string;
   /** The file on the server this tab is, or null for a draft. */
@@ -24,7 +24,7 @@ export interface WorkflowTab {
   graph: Graph;
   dirty: boolean;
   /**
-   * Hash of name + graph as last saved (or as opened, for a clean template). `dirty` is derived from
+   * Hash of name + graph as last saved (or as opened). `dirty` is derived from
    * it, so undoing back to the saved state clears the dot; absent means "always dirty" (a draft).
    */
   savedHash?: string;
@@ -33,8 +33,6 @@ export interface WorkflowTab {
 /** What "unsaved" compares against: the name and the graph, the two things a file holds. */
 export const savedHashOf = (name: string, graph: Graph): string => contentHash({ name, graph });
 const dirtyOf = (tab: WorkflowTab, name: string, graph: Graph): boolean => (tab.savedHash ? savedHashOf(name, graph) !== tab.savedHash : true);
-/** A registered template id (core/templates/registry). */
-export type TemplateId = string;
 
 export interface StudioState {
   ready: boolean;
@@ -53,18 +51,15 @@ export interface StudioState {
   locale: Locale;
   panel: Panel;
   logsOpen: boolean;
-  templatesOpen: boolean;
-  /** Bumped whenever the template list changes, so the browser re-reads the registry. */
   /** Bumps whenever a workflow file changes, so lists re-read the directory. */
   workflowsTick: number;
   settingsOpen: boolean;
-  /** One scene of a Static Script node, open in the scene editor. */
   /** The node whose overlay (a dialog the node's capsule registers) is open, and what it opened on. Null when none. */
   overlay: { nodeId: string; data?: unknown } | null;
   selectedNodeId: string | null;
   canUndo: boolean;
   canRedo: boolean;
-  /** The server-side executor for the active tab, mirrored here (ARCHITECTURE §1.2). */
+  /** The server-side executor for the active tab, mirrored here. */
   executor: RemoteExecutor | null;
 
   init(): void;
@@ -83,7 +78,7 @@ export interface StudioState {
   reconnect(edgeId: string, edge: { source: string; sourcePort: string; target: string; targetPort: string }): boolean;
   toggleBypass(nodeId: string): void;
   /**
-   * Freeze this node's last outputs into the graph, or thaw them (CORE_CONTRACTS §1.4). A pinned
+   * Freeze this node's last outputs into the graph, or thaw them. A pinned
    * node hands those outputs back on every run and never asks the model again, which is how a look
    * you approved becomes the workflow's own rather than something derived afresh each time.
    */
@@ -97,8 +92,6 @@ export interface StudioState {
   run(opts?: { force?: boolean }): Promise<void>;
   cancel(): void;
   runNode(nodeId: string): Promise<void>;
-  loadTemplate(id: TemplateId): void;
-  /** Package the current graph as a template the browser lists and a file that can be shared. */
   /** Tab bar, ComfyUI-style. */
   newWorkflow(): void;
   /**
@@ -113,7 +106,6 @@ export interface StudioState {
   saveWorkflowAs(name: string): Promise<void>;
   renameWorkflow(id: string, name: string): Promise<void>;
   deleteWorkflow(id: string): Promise<void>;
-  /** Add a template from JSON text; returns a message when it is not one, else null. */
   /** Imports a workflow file, or the workflow a NodeCine MP4 carries; returns why it failed, or null. */
   importWorkflow(json: string): Promise<string | null>;
   importWorkflowVideo(file: File): Promise<string | null>;
@@ -122,7 +114,6 @@ export interface StudioState {
   setProjectName(name: string): void;
   setPanel(panel: Panel): void;
   toggleLogs(): void;
-  setTemplatesOpen(open: boolean): void;
   setSettingsOpen(open: boolean): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
@@ -136,7 +127,7 @@ const newId = (type: string) => `${type.split('/')[1] ?? 'node'}-${Date.now().to
  * a new wire and moving the end of an existing one can ask for the result before anything is
  * committed — and each of them then lands as exactly one change, one undo step.
  *
- * One edge per input: a new connection replaces the old one (USER_FLOWS Scenario 2) — except on a
+ * One edge per input: a new connection replaces the old one — except on a
  * `multiple` port, which keeps every wire and only refuses the very same wire twice.
  */
 const withEdge = (g: Graph, { source, sourcePort, target, targetPort }: { source: string; sourcePort: string; target: string; targetPort: string }): Graph | null => {
@@ -219,7 +210,6 @@ export const useStudio = create<StudioState>((set, get) => {
     locale: 'en',
     panel: null,
     logsOpen: false,
-    templatesOpen: false,
     workflowsTick: 0,
     settingsOpen: false,
     overlay: null,
@@ -232,8 +222,8 @@ export const useStudio = create<StudioState>((set, get) => {
       if (get().ready) return;
       bootstrapClient();
       const prefs = loadUiPrefs();
-      // The tabs that were open, or the single project an older build saved, or a first open: the
-      // core template as data, so no registry has to be ready yet.
+      // The tabs that were open, or the single project an older build saved, or a first open: an
+      // empty canvas.
       const stored = loadTabs();
       // A tab stored clean is, by definition, at its saved state: give it the hash it predates.
       const tabs: WorkflowTab[] = stored?.tabs.length
@@ -272,7 +262,7 @@ export const useStudio = create<StudioState>((set, get) => {
       void (async () => {
         const leftovers = loadUserTemplates();
         if (!leftovers.length) return;
-        for (const t of leftovers) await workflowsApi.save(t as TemplateDefinition).catch(() => undefined);
+        for (const t of leftovers) await workflowsApi.save(t as WorkflowDocument).catch(() => undefined);
         saveUserTemplates([]);
         set({ workflowsTick: get().workflowsTick + 1 });
       })();
@@ -504,7 +494,7 @@ export const useStudio = create<StudioState>((set, get) => {
         return 'not JSON';
       }
       try {
-        const def = parsed as TemplateDefinition;
+        const def = parsed as WorkflowDocument;
         const saved = await workflowsApi.save({ ...def, id: `${def.id ?? 'workflow'}-${Date.now().toString(36)}`.slice(0, 64), category: 'mine' });
         set({ workflowsTick: get().workflowsTick + 1 });
         // Saving brought it forward already, so anything left here is a refusal.
@@ -525,14 +515,6 @@ export const useStudio = create<StudioState>((set, get) => {
       } catch (e) {
         return e instanceof Error ? e.message : String(e);
       }
-    },
-
-    loadTemplate(id) {
-      set({ templatesOpen: false });
-      const def = getTemplate(id);
-      if (!def) return;
-      // A shipped template opens as a fresh draft named after it; saving makes it the user's own file.
-      addTab({ fileId: null, name: localized(def.name, get().locale, id), graph: templateGraph(def), dirty: true });
     },
 
     viewRun(seq) {
@@ -556,9 +538,6 @@ export const useStudio = create<StudioState>((set, get) => {
     toggleLogs() {
       set((s) => ({ logsOpen: !s.logsOpen, unreadErrors: 0 }));
       persistUi();
-    },
-    setTemplatesOpen(open) {
-      set({ templatesOpen: open });
     },
     setOverlay(target) {
       set({ overlay: target });
@@ -595,9 +574,9 @@ export function useOutputPayload<T = unknown>(nodeId: string, port: string): T |
 /**
  * What a pin holds, for a node that has not run in this session.
  *
- * A pinned node's stored outputs are its outputs: it hands them back and never runs (§1.5). Reading
- * only the runtime meant that opening a workflow whose set and plates were pinned showed two empty
- * cards, with the drawings sitting right there in the file — and the only way to see them was to
+ * A pinned node's stored outputs are its outputs: it hands them back and never runs. Reading
+ * only the runtime meant that opening a workflow with pinned nodes showed empty cards, with the
+ * results sitting right there in the file — and the only way to see them was to
  * start a run, which is the one thing a pin exists to make unnecessary.
  */
 function pinnedOutput(graph: Graph, nodeId: string, port: string): unknown {

@@ -1,1 +1,0 @@
-{"id": "core/tts-engine", "definition": "ttsEngine", "body": "TtsBody", "icon": "wave", "group": "audio", "translations": "ttsTranslations", "errors": "TtsErrorCode"}

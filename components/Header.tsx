@@ -2,10 +2,10 @@
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
 import { canRun } from '@/core/engine/graph';
-import { Btn, useT } from './ui';
-import { Icon } from './icons';
+import { Btn, useT } from '@/capsules/sdk/ui';
+import { Icon } from '@/capsules/sdk/icons';
 
-/** Header keeps only what must always be visible: project name and Run (USER_FLOWS §1.1). */
+/** Header keeps only what must always be visible: project name and Run. */
 export const Header: React.FC = () => {
   const t = useT();
   const running = useStudio((s) => s.running);
@@ -17,7 +17,7 @@ export const Header: React.FC = () => {
   const projectName = useStudio((s) => s.projectName);
   const setProjectName = useStudio((s) => s.setProjectName);
   const [editing, setEditing] = React.useState(false);
-  // Run is lit when there is something to run: a source wired into the flow (§1.4). A node with an
+  // Run is lit when there is something to run: a source wired into the flow. A node with an
   // empty port is not held against the whole workflow any more — it says so on its own card.
   const graph = useStudio((s) => s.graph);
   const disabled = !canRun(graph);
@@ -36,7 +36,7 @@ export const Header: React.FC = () => {
         <span onDoubleClick={() => setEditing(true)} title={t('header.projectName')} style={{ fontSize: 'var(--fs-title)', color: 'var(--tx-2)', padding: '4px 8px', border: '1px solid transparent', borderRadius: 4, cursor: 'text' }}>{projectName}</span>
       )}
       <div style={{ flex: 1 }} />
-        {/* Shift skips the signature cache and runs every node again (EXECUTION_ENGINE §4). The
+        {/* Shift skips the signature cache and runs every node again. The
             cache cannot see a reason to re-run that lives outside the graph — a model that would
             answer differently today, a file changed under a path — so a person needs a way to say so. */}
       {running ? (

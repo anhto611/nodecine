@@ -2,10 +2,10 @@
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
 import { LOCALES, type Locale } from '@/lib/i18n';
-import { Icon } from '../icons';
-import { Btn, Dialog, useT } from '../ui';
+import { Icon } from '@/capsules/sdk/icons';
+import { Btn, Dialog, useT } from '@/capsules/sdk/ui';
 
-/** Settings (USER_FLOWS §1.6): no API keys in v0.1 — locale plus read-only tool information. */
+/** Settings: no API keys in v0.1 — locale plus read-only tool information. */
 export const SettingsDialog: React.FC = () => {
   const t = useT();
   const close = useStudio((s) => s.setSettingsOpen);

@@ -4,16 +4,16 @@ import type { Packet } from '../types/packet';
 import type { NodeServices } from '../engine/services';
 
 /**
- * Node type definition (CORE_CONTRACTS §5).
+ * Node type definition.
  * `run` returns outputs keyed by output port name; the executor wraps them into packets.
  */
 
 export type NodeKind =
-  /** No inputs, user-provided data (Input Trigger, Static Script). */
+  /** No inputs: what a person typed or chose starts the flow. */
   | 'source'
   /** Transforms inputs to outputs. */
   | 'process'
-  /** No inputs; run() = probe(); always re-run (EXECUTION_ENGINE §1.1). */
+  /** No inputs; run() = probe(); always re-run. */
   | 'resource'
   /** Consumes without producing packets (Video Output). */
   | 'sink'
@@ -32,7 +32,7 @@ export interface PortDef {
   multiple?: boolean;
   /**
    * For reference inputs: capability keys (under payload.capabilities) that must be `ready`
-   * for this node to run; otherwise the node is blocked by capability (EXECUTION_ENGINE §1.1 rule 3).
+   * for this node to run; otherwise the node is blocked by capability.
    */
   requires?: string[];
 }
@@ -62,12 +62,17 @@ export interface RunContext<P = Record<string, unknown>> {
   lists: Record<string, Packet[]>;
   signal: AbortSignal;
   services: NodeServices;
+  /**
+   * The run was forced (Shift+Run, Retry, a single node): whatever the node asks, it wants a new
+   * answer rather than one a service kept. Passed on to a service that keeps answers.
+   */
+  fresh: boolean;
   log: (level: LogLevel, message: string, code?: string) => void;
   /** Report progress for long-running nodes (0..1). */
   progress: (fraction: number, message?: string) => void;
   /**
-   * Change this node's own parameters as a result of running (EXECUTION_ENGINE §3). No core node
-   * does today; the retired Art Director kept what a model drew. The patch lands in the graph at once — the
+   * Change this node's own parameters as a result of running — to keep what a model drew, say. No
+   * shipped node does today. The patch lands in the graph at once — the
    * workflow shows as unsaved, the edit is undoable — and the run's signature is taken over the
    * patched parameters, so the next run reuses this result instead of doing the work again.
    */
@@ -76,7 +81,7 @@ export interface RunContext<P = Record<string, unknown>> {
 
 export interface NodeDefinition<S extends ZodTypeAny = ZodTypeAny> {
   type: string;
-  /** Bumped when run() semantics change, so cached results are invalidated (EXECUTION_ENGINE §3). */
+  /** Bumped when run() semantics change, so cached results are invalidated. */
   version: number;
   kind: NodeKind;
   inputs: PortDef[];
@@ -84,7 +89,7 @@ export interface NodeDefinition<S extends ZodTypeAny = ZodTypeAny> {
   paramsSchema: S;
   defaultParams: z.infer<S>;
   defaultBypassed?: boolean;
-  /** Continuous validation of params (EXECUTION_ENGINE §2 item 2). */
+  /** Continuous validation of params, shown on the node as warnings. */
   validate?: (params: z.infer<S>) => NodeIssue[];
   /**
    * Bring parameters written by an older version of this node up to `version` (core/engine/migrate).
@@ -112,13 +117,19 @@ export function listNodeTypes(): AnyNodeDefinition[] {
 }
 /**
  * Node types that no longer exist, and what became of them. Empty here like every other registry;
- * `nodes/retired.json` fills it at startup. A type that is simply gone cannot be derived from
+ * `capsules/retired.json` fills it at startup. A type that is simply gone cannot be derived from
  * anything, so it has to be written down — otherwise a workflow that used it reports an unknown
  * node type, which tells the person nothing they can act on.
  */
 export interface RetiredNodeType {
-  /** The type that took over, when one did. */
+  /** The type that took over, when one did: a different node, whose parameters start from its first version. */
   replacedBy?: string;
+  /**
+   * The same node under a new name. Its parameters and their version travel unchanged — a rename is
+   * not a new node, and treating it as one would run the node's own migration from version 1 over
+   * parameters that are already current.
+   */
+  renamedTo?: string;
   /** When it went, so the message can say so. */
   since: string;
 }

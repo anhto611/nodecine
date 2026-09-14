@@ -1,4 +1,4 @@
-import { ensureServerRegistrations } from '@/server/register';
+import { ensureServerRegistrations } from '@/server/contracts/register';
 import { hasVendorSource, vendorSource } from '@/server/vendor';
 
 /** Serves the scripts the browser-side engines registered; nothing else. */

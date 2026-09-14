@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { layoutGraph } from '../layout';
 import type { Graph } from '@/core/engine/graph';
-import { registerNodes } from '@/nodes';
+import { registerNodes } from '@/capsules/nodes';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
 
 const overlaps = (a: { x: number; y: number; w: number; h: number }, b: typeof a) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -15,13 +15,13 @@ describe('layoutGraph', () => {
   const at = { x: 0, y: 0 };
   const node = (id: string, type: string) => ({ id, type, params: {}, bypassed: false, position: at });
   const graph: Graph = {
-    nodes: [node('export', 'core/caption-export'), node('transcribe', 'core/transcribe'), node('tts', 'core/tts-engine'), node('mp4', 'core/mp4-export')],
+    nodes: [node('export', 'caption-export'), node('transcribe', 'transcribe'), node('tts', 'tts'), node('mp4', 'mp4-export')],
     edges: [
       { id: 'e1', source: 'tts', sourcePort: 'voiceover', target: 'transcribe', targetPort: 'voiceover' },
       { id: 'e2', source: 'transcribe', sourcePort: 'captions', target: 'export', targetPort: 'captions' },
     ],
   };
-  const sizes = Object.fromEntries(graph.nodes.map((n) => [n.id, { width: 220, height: n.type === 'core/transcribe' ? 320 : 180 }]));
+  const sizes = Object.fromEntries(graph.nodes.map((n) => [n.id, { width: 220, height: n.type === 'transcribe' ? 320 : 180 }]));
 
   it('lays the flow out left to right along its wires without overlaps', () => {
     const pos = layoutGraph(graph, sizes);
@@ -34,7 +34,7 @@ describe('layoutGraph', () => {
 
   it('lays the whole pipeline along one path, left to right', () => {
     // There used to be a second shape here: resource nodes hanging in a band below their consumer.
-    // A model or an engine is a node's own setting now (§1.3), so every node is on the path.
+    // A model or an engine is a node's own setting now, so every node is on the path.
     const pos = layoutGraph(graph, sizes);
     expect(pos.transcribe!.x).toBeGreaterThan(pos.tts!.x);
     expect(pos.transcribe!.x).toBeLessThan(pos.export!.x);
@@ -42,7 +42,7 @@ describe('layoutGraph', () => {
   });
 
   it('copes with nodes that have no wires and no measured size', () => {
-    const pos = layoutGraph({ nodes: [{ id: 'a', type: 'core/tts-engine', params: {}, bypassed: false, position: { x: 0, y: 0 } }, { id: 'b', type: 'core/tts-engine', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] }, {});
+    const pos = layoutGraph({ nodes: [{ id: 'a', type: 'tts', params: {}, bypassed: false, position: { x: 0, y: 0 } }, { id: 'b', type: 'tts', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] }, {});
     expect(pos.a!.y).not.toBe(pos.b!.y);
   });
 });

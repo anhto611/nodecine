@@ -1,8 +1,8 @@
 'use client';
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
-import { Icon } from './icons';
-import { Btn, useT } from './ui';
+import { Icon } from '@/capsules/sdk/icons';
+import { Btn, useT } from '@/capsules/sdk/ui';
 
 /**
  * The open workflows, ComfyUI-style, under the header: one tab each with an unsaved mark, a close
@@ -106,7 +106,7 @@ export const WorkflowTabs: React.FC = () => {
           <>
             <input className="nc-input" style={{ width: 220, height: 24 }} autoFocus placeholder={t('tabs.saveName')} value={naming} onChange={(e) => setNaming(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void doSaveAs(); if (e.key === 'Escape') setNaming(null); }} />
             <Btn small primary disabled={!naming.trim() || busy} onClick={() => void doSaveAs()}>{t('tabs.saveDo')}</Btn>
-            <Btn small onClick={() => setNaming(null)}>{t('templates.cancel')}</Btn>
+            <Btn small onClick={() => setNaming(null)}>{t('common.cancel')}</Btn>
           </>
         ) : (
           <>

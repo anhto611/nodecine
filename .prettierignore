@@ -1,6 +1,6 @@
 .next
 .nodecine
 node_modules
-nodes/.generated
+capsules/*/.generated
 package-lock.json
 tsconfig.tsbuildinfo

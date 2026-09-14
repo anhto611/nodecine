@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { GraphSchema } from '@/core/templates/registry';
+import { GraphSchema } from '@/core/engine/document';
 import { GraphInvalidError } from '@/core/engine/graph';
-import { jobHub } from '@/server/jobs';
+import { jobHub } from '@/server/contracts/hub';
 
 const Body = z.object({
   key: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),

@@ -7,7 +7,7 @@ import type { Graph } from '@/core/engine/graph';
  *
  * There used to be a second shape here — a band of resource nodes hanging below the node that used
  * them, the way an n8n sub-node hangs under its consumer. A model or an engine is a thing a node
- * names for itself now (CORE_CONTRACTS §1.3), so every node is on the path and there is one shape.
+ * names for itself now, so every node is on the path and there is one shape.
  */
 export interface NodeSize { width: number; height: number }
 

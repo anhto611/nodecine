@@ -1,0 +1,96 @@
+import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { keepWebGlobals } from '@/server/web-globals';
+import path from 'node:path';
+import { registerEngine } from '@/contracts/adapters/registry';
+import { registerCodeRenderer } from '@/contracts/visual/renderers';
+import type { ExportSettings, RenderProgress, RenderResult } from '@/contracts/adapters/types';
+import { allClips, type VideoIR } from '@/contracts/types/ir';
+import { contentHash } from '@/core/hash';
+import { ensureTmpDir, fileNameFromMediaUrl, mediaPath, mediaUrl } from '@/server/paths';
+import { createHyperframesAdapter } from './adapter';
+import { HYPERFRAMES_ENGINE_ID } from './constants';
+import { buildHyperframesDocument } from './document';
+import { analysisOf } from './analysis';
+import { loadLibs } from './libs';
+import { registerVendorSources, vendorSource } from './vendor.server';
+import { registerHyperframesTransitions } from './transitions';
+import { registerVendorSource } from '@/server/vendor';
+import { renderScaleFor } from '@/contracts/visual/frame';
+import { FONT_FILES } from './markup';
+import { assetNamesIn, assetPath } from '@/server/paths';
+
+/**
+ * Server registration: real render through @hyperframes/producer. The composition is written as a
+ * small project directory under the temp dir — index.html, the voice-over next to it, the fonts —
+ * because the producer serves a directory to its headless Chrome. Output lands in the temp dir under
+ * a content hash like every other media file.
+ */
+
+const QUALITY: Record<ExportSettings['quality'], 'high' | 'standard' | 'draft'> = { high: 'high', medium: 'standard', low: 'draft' };
+
+
+/**
+ * The project directory a headless Chrome is pointed at: index.html, the voice-over beside it, the
+ * fonts and any images the scenes refer to.
+ */
+async function buildProjectDir(ir: VideoIR, settings: Pick<ExportSettings, 'resolution'>, key: string): Promise<{ projectDir: string; scale: number }> {
+  const tmp = await ensureTmpDir();
+  const projectDir = path.join(tmp, `hf-${key}`);
+  await mkdir(path.join(projectDir, 'fonts'), { recursive: true });
+
+  // Every sound and every media clip that lives in the temp dir comes along under its own name, and
+  // the page is told the new name for each; assets keep their hashed names and are copied below.
+  const local = new Map<string, string>();
+  const bring = async (url: string, stem: string) => {
+    if (!url.startsWith('/api/media/')) return;
+    const name = fileNameFromMediaUrl(url);
+    const target = `${stem}${path.extname(name)}`;
+    await copyFile(mediaPath(name), path.join(projectDir, target));
+    local.set(url, target);
+  };
+  for (const a of ir.audio) await bring(a.url, `audio-${a.id}`);
+  for (const c of allClips(ir)) if (c.kind === 'media') await bring(c.url, `media-${c.id}`);
+  for (const f of FONT_FILES) await copyFile(path.resolve(process.cwd(), 'public/fonts', f), path.join(projectDir, 'fonts', f));
+  // Images the scenes, the style sheet or the video's values refer to come along, by their hashed names:
+  // an asset named anywhere in the IR and left behind is a hole in the MP4.
+  const assets = assetNamesIn(JSON.stringify([ir.style.css, ir.tracks, ir.vars ?? {}]));
+  if (assets.length) await mkdir(path.join(projectDir, 'assets'), { recursive: true });
+  for (const a of assets) await copyFile(assetPath(a), path.join(projectDir, 'assets', a)).catch(() => undefined);
+
+  const [gsapSource, runtimeSource] = await Promise.all([vendorSource('gsap.js'), vendorSource('hyperframes-runtime.js')]);
+  const scale = renderScaleFor({ width: ir.meta.width, height: ir.meta.height }, settings.resolution ?? '1080p');
+  const analysis = await analysisOf(ir, (url) => readFile(mediaPath(fileNameFromMediaUrl(url)), 'utf8').then((s) => JSON.parse(s) as unknown));
+  const libs = await loadLibs(ir, vendorSource);
+  const html = buildHyperframesDocument(ir, { gsapSource, runtimeSource, mediaSrc: (url) => local.get(url) ?? url, fontBase: 'fonts', scale, assetBase: 'assets', analysis, libs });
+  await writeFile(path.join(projectDir, 'index.html'), html, 'utf8');
+  return { projectDir, scale };
+}
+
+export async function renderWithProducer(ir: VideoIR, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal): Promise<RenderResult> {
+  const { createRenderJob, executeRenderJob } = await import('@hyperframes/producer');
+  const tmp = await ensureTmpDir();
+  const key = contentHash({ ir, settings, engine: HYPERFRAMES_ENGINE_ID });
+  const { projectDir } = await buildProjectDir(ir, settings, key);
+
+  const fileName = `${key}.mp4`;
+  const outputPath = path.join(tmp, fileName);
+  const total = ir.meta.totalDurationInFrames;
+  const job = createRenderJob({ fps: ir.meta.fps, quality: QUALITY[settings.quality], format: 'mp4' });
+  // The producer's file server would swap the global Request/Response out from under Next (see server/web-globals.ts).
+  await keepWebGlobals(() => executeRenderJob(job, projectDir, outputPath, (j) => {
+    const fraction = j.progress > 1 ? j.progress / 100 : j.progress;
+    onProgress({ renderedFrames: Math.min(total, Math.round(fraction * total)), totalFrames: total });
+  }, signal));
+  const s = await stat(outputPath);
+  return { outputUrl: mediaUrl(fileName), bytes: s.size };
+}
+
+export function registerHyperframesServer(): void {
+  registerVendorSources(registerVendorSource);
+  registerCodeRenderer('html-gsap', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
+  // The same page draws the two other formats; the libraries are inlined only when a clip asks (libs.ts).
+  registerCodeRenderer('html-three', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
+  registerCodeRenderer('lottie', HYPERFRAMES_ENGINE_ID, 'hyperframes-producer');
+  registerHyperframesTransitions();
+  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ render: renderWithProducer }));
+}

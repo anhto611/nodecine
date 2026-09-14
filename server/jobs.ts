@@ -1,31 +1,30 @@
 import { mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { Executor } from '@/core/engine/executor';
-import type { RunRecord } from '@/contracts/history';
-import type { VideoIR } from '@/contracts/types/ir';
-import type { EngineRef } from '@/contracts/types/payloads';
+import { Executor, type ExecutorOptions } from '@/core/engine/executor';
 import { GraphInvalidError, validateGraph, hasBlockingIssues, type Graph, type GraphIssue } from '@/core/engine/graph';
 import { LogBuffer, type LogEntry } from '@/core/engine/log';
 import type { NodeRuntime } from '@/core/engine/state';
 import type { NodeServices } from '@/core/engine/services';
-import { createServerServices } from './services.server';
-import { migrateIR } from '@/contracts/types/migrate-ir';
-import { ensureServerRegistrations } from './register';
-import { NODE_FEATURES } from '@/nodes';
-
-const hasNodeFeature = (type: string, feature: string): boolean => NODE_FEATURES[type]?.includes(feature) ?? false;
+import { DiskResultCache } from './result-cache';
 
 /**
- * The graph executor lives on the server, behind a queue, the way ComfyUI's prompt queue does
- * (ARCHITECTURE §1.2). The browser edits a graph and submits jobs; one executor per workflow key
- * keeps that graph's runtimes and signature cache between jobs, so a second run re-uses what did not
- * change exactly as before. Jobs run one at a time in the order they arrived. Everything that
- * happens — node states, steps, logs, job status — goes out as events, and the browser mirrors them.
+ * The graph executor lives on the server, behind a queue, the way ComfyUI's prompt queue does.
+ * The browser edits a graph and submits jobs; one executor per workflow key
+ * keeps that graph's runtimes between jobs, and every executor shares one store of results kept by
+ * signature, on disk, so a second run — or a run after a restart — re-uses what did not change.
+ *
+ * Each workflow has its own line: two jobs of one workflow run in the order they arrived, because
+ * they share an executor, while different workflows run side by side, up to `maxJobs` at once. One
+ * queue for the whole server made a caption export wait behind another workflow's render. Everything
+ * that happens — node states, steps, logs, job status — goes out as events, and the browser mirrors them.
  *
  * Disk is the truth for jobs, the way cutdown keeps a `job.json` per job: every status change is
- * written to `.nodecine/jobs/<id>.json` (write-then-rename), a run that produced a video keeps its
- * IR and exports there, and a restart reads them all back — so the run history survives the
- * process, and a job the process died on comes back marked cancelled rather than forever running.
+ * written to `.nodecine/jobs/<id>.json` (write-then-rename), and a restart reads them all back — so
+ * a job the process died on comes back marked cancelled rather than forever running.
+ *
+ * The hub knows nothing of what a run makes. What a finished job keeps — a film and its exports, for
+ * the history panel — is the `JobRecorder`'s business, given by whoever builds the hub
+ * (`server/contracts/hub.ts`).
  */
 
 export type JobKind = 'run' | 'node';
@@ -43,8 +42,23 @@ export interface Job {
   finishedAt?: number;
   ok?: boolean;
   error?: { code: string; message: string; issues?: GraphIssue[] };
-  /** What a `run` produced, kept so the history outlives the process. */
-  result?: { ir: VideoIR; engineId?: string; durationMs: number; exports: { fileName: string; bytes: number; outputUrl: string }[] };
+  /** What a `run` produced, as the recorder kept it, so the history outlives the process. */
+  result?: unknown;
+}
+
+/**
+ * What a finished job leaves behind beyond its status (the run history). The hub calls it and writes
+ * whatever it says to disk with the job; it never looks inside.
+ */
+export interface JobRecorder {
+  /** A run ended: what to keep on the job, or nothing. */
+  run(job: Job, executor: Executor): unknown | undefined;
+  /** A single node ended: amend the result of the last run of the same workflow; true if it changed. */
+  node(job: Job, executor: Executor, lastRun: Job | undefined): boolean;
+  /** A result read back from disk: brought forward to this build, or nothing to drop it. */
+  load(result: unknown): unknown | undefined;
+  /** The history a workflow's panel lists, from its jobs. */
+  history(jobs: Job[], key: string): unknown[];
 }
 
 export type HubEvent =
@@ -54,7 +68,7 @@ export type HubEvent =
   | { type: 'run:end'; key: string; runId: number; ok: boolean; durationMs: number }
   | { type: 'log'; key: string; entry: LogEntry }
   | { type: 'job'; key: string; job: Job }
-  | { type: 'history'; key: string; history: RunRecord[] }
+  | { type: 'history'; key: string; history: unknown[] }
   | { type: 'params'; key: string; nodeId: string; patch: Record<string, unknown> };
 
 interface Slot {
@@ -82,34 +96,57 @@ export interface JobSubmission {
   requestId?: string;
 }
 
+export interface HubOptions {
+  /** Where results are kept by signature. On disk under `.nodecine/cache/results` by default. */
+  cache?: ExecutorOptions['cache'];
+  /** The fingerprint of a node type's code, when the host can measure it. */
+  fingerprint?: ExecutorOptions['fingerprint'];
+  /** How many workflows may run a job at the same time. `NODECINE_MAX_PARALLEL_JOBS`, else 2. */
+  maxJobs?: number;
+  /** What a finished job keeps. Nothing but its status when absent. */
+  recorder?: JobRecorder;
+  /**
+   * Fill the registries a graph is read against — node types, port types, engines. Called before
+   * every submission is validated and every executor is built, not once: see `server/contracts/register.ts`.
+   */
+  prepare?: () => void;
+}
+
 const KEY = /^[a-zA-Z0-9_-]{1,80}$/;
 const MAX_JOB_FILES = 200;
-const HISTORY_PER_KEY = 20;
 
 export function jobsDir(): string {
   return path.resolve(process.cwd(), process.env.NODECINE_JOBS_DIR ?? '.nodecine/jobs');
-}
-
-/** History entries for a key, newest first, read off the run jobs that produced a video. */
-function historyOf(jobs: Iterable<Job>, key: string): RunRecord[] {
-  const runs = [...jobs].filter((j) => j.key === key && j.kind === 'run' && j.result).sort((a, b) => a.createdAt - b.createdAt);
-  return runs.map((j, i) => ({ seq: i + 1, startedAt: j.startedAt ?? j.createdAt, durationMs: j.result!.durationMs, ir: j.result!.ir, engineId: j.result!.engineId, exports: j.result!.exports })).reverse().slice(0, HISTORY_PER_KEY);
 }
 
 export class JobHub {
   private slots = new Map<string, Slot>();
   private queue: Job[] = [];
   private jobs = new Map<string, Job>();
-  private current: Job | null = null;
+  /** The job each workflow is running now; a workflow runs one at a time. */
+  private active = new Map<string, Job>();
   private listeners = new Set<(e: HubEvent) => void>();
   private seq = 0;
-  private pumping = false;
+  private readonly cache: NonNullable<ExecutorOptions['cache']>;
+  private readonly fingerprint: ExecutorOptions['fingerprint'];
+  private readonly maxJobs: number;
+  private readonly recorder: JobRecorder | undefined;
+  private readonly prepare: () => void;
   /** The last run job per key, so an export that follows can be filed under it. */
   private lastRun = new Map<string, string>();
   /** Submissions already accepted, by the browser's request id: a retry must not queue a second job. */
   private byRequest = new Map<string, string>();
 
-  constructor(private readonly servicesFor: (slot: () => Slot | undefined) => NodeServices = (slot) => createServerServices({ workflow: () => { const s = slot(); return s ? { name: s.name, graph: s.executor.getGraph() } : null; } })) {
+  constructor(
+    /** The services a workflow's nodes are given; `slot` is that workflow, read when a service needs it. */
+    private readonly servicesFor: (slot: () => { name: string; graph: Graph } | null) => NodeServices,
+    options: HubOptions = {},
+  ) {
+    this.recorder = options.recorder;
+    this.prepare = options.prepare ?? (() => {});
+    this.cache = options.cache ?? new DiskResultCache();
+    this.fingerprint = options.fingerprint;
+    this.maxJobs = Math.max(1, Math.floor(options.maxJobs ?? (Number(process.env.NODECINE_MAX_PARALLEL_JOBS) || 2)));
     this.load();
   }
 
@@ -130,11 +167,12 @@ export class JobHub {
           job.error = { code: 'RUN_CANCELLED', message: 'the server restarted while this job was in flight' };
           this.write(job);
         }
-        // A run recorded by an older build carries its film in that build's shape. Brought forward
-        // here, once, as it comes off disk; a film no version of this app can read is dropped from
-        // the history rather than left to break the panel that lists it.
-        if (job.result) {
-          try { job.result = { ...job.result, ir: migrateIR(job.result.ir) }; } catch { delete job.result; }
+        // A result recorded by an older build is brought forward here, once, as it comes off disk;
+        // one this build cannot read is dropped rather than left to break the panel that lists it.
+        if (job.result !== undefined) {
+          let kept: unknown;
+          try { kept = this.recorder ? this.recorder.load(job.result) : undefined; } catch { kept = undefined; }
+          if (kept === undefined) delete job.result; else job.result = kept;
         }
         this.jobs.set(job.id, job);
         if (job.kind === 'run' && job.result) {
@@ -171,8 +209,8 @@ export class JobHub {
     if (gone.size) for (const [requestId, jobId] of this.byRequest) if (gone.has(jobId)) this.byRequest.delete(requestId);
   }
 
-  history(key: string): RunRecord[] {
-    return historyOf(this.jobs.values(), key);
+  history(key: string): unknown[] {
+    return this.recorder ? this.recorder.history([...this.jobs.values()], key) : [];
   }
 
   subscribe(listener: (e: HubEvent) => void): () => void {
@@ -188,19 +226,19 @@ export class JobHub {
 
   /** The executor for a key, created on first sight with the graph given. */
   slot(key: string, graph?: Graph, name?: string): Slot {
-    ensureServerRegistrations();
+    this.prepare();
     if (!KEY.test(key)) throw Object.assign(new Error(`invalid executor key "${key}"`), { code: 'JOB_KEY_INVALID' });
     let slot = this.slots.get(key);
     if (!slot) {
       const logs = new LogBuffer();
       const holder: { slot?: Slot } = {};
-      const executor = new Executor(graph ?? { nodes: [], edges: [] }, this.servicesFor(() => holder.slot), {
+      const executor = new Executor(graph ?? { nodes: [], edges: [] }, this.servicesFor(() => (holder.slot ? { name: holder.slot.name, graph: holder.slot.executor.getGraph() } : null)), {
         onStateChange: (nodeId, runtime) => this.emit({ type: 'node', key, nodeId, runtime }),
         onParamsPatch: (nodeId, patch) => this.emit({ type: 'params', key, nodeId, patch }),
         onRunStart: (info) => this.emit({ type: 'run:start', key, ...info }),
         onStep: (info) => this.emit({ type: 'run:step', key, ...info }),
         onRunEnd: (info) => this.emit({ type: 'run:end', key, ...info }),
-      }, logs);
+      }, logs, { cache: this.cache, fingerprint: this.fingerprint });
       logs.subscribe((entry) => this.emit({ type: 'log', key, entry }));
       slot = { executor, logs, name: name ?? key, running: false };
       holder.slot = slot;
@@ -216,7 +254,7 @@ export class JobHub {
     return this.slots.has(key);
   }
 
-  snapshot(key: string): { runtimes: Record<string, NodeRuntime>; logs: readonly LogEntry[]; running: boolean; pending: Job[]; history: RunRecord[] } | null {
+  snapshot(key: string): { runtimes: Record<string, NodeRuntime>; logs: readonly LogEntry[]; running: boolean; pending: Job[]; history: unknown[] } | null {
     const slot = this.slots.get(key);
     if (!slot) return null;
     const runtimes: Record<string, NodeRuntime> = {};
@@ -229,7 +267,7 @@ export class JobHub {
     // Before the graph is read against the node registry, not after: validating first and
     // registering later (inside the executor's services) meant a cold process could answer the very
     // first submission with every node reported NODE_TYPE_UNKNOWN.
-    ensureServerRegistrations();
+    this.prepare();
     if (input.kind === 'run') {
       const issues = validateGraph(input.graph);
       if (hasBlockingIssues(issues)) throw new GraphInvalidError(issues.filter((i) => i.severity === 'error'));
@@ -246,7 +284,7 @@ export class JobHub {
     this.prune();
     this.emit({ type: 'job', key: job.key, job: { ...job } });
     // Start on the next tick so the caller sees the job as queued, the way ComfyUI answers /prompt.
-    queueMicrotask(() => void this.pump());
+    queueMicrotask(() => this.pump());
     return job;
   }
 
@@ -267,7 +305,7 @@ export class JobHub {
       job.status = 'cancelled';
       job.finishedAt = Date.now();
       this.write(job);
-    this.emit({ type: 'job', key: job.key, job: { ...job } });
+      this.emit({ type: 'job', key: job.key, job: { ...job } });
       return 'pending';
     }
     if (job.status === 'running') {
@@ -280,7 +318,8 @@ export class JobHub {
   /** Cancel whatever is running or pending for a key — the Stop button. */
   cancelKey(key: string): void {
     for (const j of [...this.queue]) if (j.key === key) this.cancel(j.id);
-    if (this.current?.key === key) this.cancel(this.current.id);
+    const running = this.active.get(key);
+    if (running) this.cancel(running.id);
   }
 
   /** Graph edits that must reach the executor immediately, between jobs. */
@@ -292,73 +331,69 @@ export class JobHub {
     this.slots.get(key)?.executor.setBypassed(nodeId, bypassed);
   }
 
-  private async pump(): Promise<void> {
-    if (this.pumping) return;
-    this.pumping = true;
-    try {
-      while (this.queue.length) {
-        const job = this.queue.shift()!;
-        const slot = this.slots.get(job.key)!;
-        this.current = job;
-        job.status = 'running';
-        job.startedAt = Date.now();
-        slot.running = true;
-        this.write(job);
-    this.emit({ type: 'job', key: job.key, job: { ...job } });
-        try {
-          if (job.kind === 'run') {
-            const { ok } = await slot.executor.run({ force: job.force });
-            job.ok = ok;
-            this.recordRun(job, slot);
-          } else {
-            const state = await slot.executor.runNode(job.nodeId!);
-            job.ok = state === 'success';
-            this.recordExport(job, slot);
-          }
-          job.status = job.ok === false && this.wasCancelled(slot) ? 'cancelled' : 'done';
-        } catch (e) {
-          const err = e as { code?: string; message?: string; issues?: GraphIssue[] };
-          job.status = err.code === 'RUN_CANCELLED' ? 'cancelled' : 'failed';
-          job.ok = false;
-          job.error = { code: err.code ?? 'JOB_FAILED', message: err.message ?? String(e), ...(err.issues ? { issues: err.issues } : {}) };
-        } finally {
-          slot.running = false;
-          job.finishedAt = Date.now();
-          this.current = null;
-          this.write(job);
-    this.emit({ type: 'job', key: job.key, job: { ...job } });
-        }
-      }
-    } finally {
-      this.pumping = false;
+  /**
+   * Start every job that may start: the oldest pending job of each workflow that is not already
+   * running one, while fewer than `maxJobs` workflows are busy. Called whenever a job arrives or ends.
+   */
+  private pump(): void {
+    for (const job of [...this.queue]) {
+      if (this.active.size >= this.maxJobs) return;
+      if (this.active.has(job.key)) continue;
+      this.queue = this.queue.filter((j) => j !== job);
+      this.active.set(job.key, job);
+      void this.execute(job).finally(() => {
+        this.active.delete(job.key);
+        this.pump();
+      });
     }
   }
 
-  /** A run that reached an IR goes into the history, with the engine the player used. */
+  private async execute(job: Job): Promise<void> {
+    const slot = this.slots.get(job.key)!;
+    job.status = 'running';
+    job.startedAt = Date.now();
+    slot.running = true;
+    this.write(job);
+    this.emit({ type: 'job', key: job.key, job: { ...job } });
+    try {
+      if (job.kind === 'run') {
+        const { ok } = await slot.executor.run({ force: job.force });
+        job.ok = ok;
+        this.recordRun(job, slot);
+      } else {
+        const state = await slot.executor.runNode(job.nodeId!);
+        job.ok = state === 'success';
+        this.recordNode(job, slot);
+      }
+      job.status = job.ok === false && this.wasCancelled(slot) ? 'cancelled' : 'done';
+    } catch (e) {
+      const err = e as { code?: string; message?: string; issues?: GraphIssue[] };
+      job.status = err.code === 'RUN_CANCELLED' ? 'cancelled' : 'failed';
+      job.ok = false;
+      job.error = { code: err.code ?? 'JOB_FAILED', message: err.message ?? String(e), ...(err.issues ? { issues: err.issues } : {}) };
+    } finally {
+      slot.running = false;
+      job.finishedAt = Date.now();
+      this.write(job);
+      this.emit({ type: 'job', key: job.key, job: { ...job } });
+    }
+  }
+
+  /** A run that the recorder keeps something of goes into the history. */
   private recordRun(job: Job, slot: Slot): void {
-    const graph = slot.executor.getGraph();
-    const asm = graph.nodes.find((n) => hasNodeFeature(n.type, 'history-ir'));
-    const ir = asm ? (slot.executor.runtime(asm.id).outputs.ir?.payload as VideoIR | undefined) : undefined;
-    if (!ir) return;
-    // The engine is the player node's own setting now (§1.4), so it is read off that node rather
-    // than followed back along a wire.
-    const out = graph.nodes.find((n) => hasNodeFeature(n.type, 'history-preview') && slot.executor.runtime(n.id).state === 'success');
-    const engineId = out ? String((out.params as { engineId?: string }).engineId ?? '') : '';
-    job.result = { ir, ...(engineId ? { engineId } : {}), durationMs: Date.now() - (job.startedAt ?? job.createdAt), exports: [] };
+    const kept = this.recorder?.run(job, slot.executor);
+    if (kept === undefined) return;
+    job.result = kept;
     this.lastRun.set(job.key, job.id);
     this.emit({ type: 'history', key: job.key, history: this.history(job.key) });
   }
 
-  /** An MP4 export files its result under the run it came from. */
-  private recordExport(job: Job, slot: Slot): void {
-    if (!job.ok || !job.nodeId) return;
-    const node = slot.executor.getGraph().nodes.find((n) => n.id === job.nodeId);
-    if (!node || !hasNodeFeature(node.type, 'history-file-export')) return;
-    const result = slot.executor.runtime(job.nodeId).result as { fileName?: string; bytes?: number; outputUrl?: string } | undefined;
+  /** A single node may add to the run it followed — an export filed under its film. */
+  private recordNode(job: Job, slot: Slot): void {
+    if (!this.recorder) return;
     const runId = this.lastRun.get(job.key);
     const run = runId ? this.jobs.get(runId) : undefined;
-    if (!result?.outputUrl || !run?.result) return;
-    run.result.exports = [...run.result.exports.filter((x) => x.outputUrl !== result.outputUrl), { fileName: result.fileName ?? 'video.mp4', bytes: result.bytes ?? 0, outputUrl: result.outputUrl }];
+    if (!this.recorder.node(job, slot.executor, run) || !run) return;
     this.write(run);
     this.emit({ type: 'history', key: job.key, history: this.history(job.key) });
   }
@@ -367,11 +402,4 @@ export class JobHub {
     for (const rt of slot.executor.runtimes_().values()) if (rt.state === 'cancelled') return true;
     return false;
   }
-}
-
-/** One hub per process. Kept on globalThis so Next's dev reloads do not orphan a running queue. */
-export function jobHub(): JobHub {
-  const g = globalThis as unknown as { __nodecineJobHub?: JobHub };
-  if (!g.__nodecineJobHub) g.__nodecineJobHub = new JobHub();
-  return g.__nodecineJobHub;
 }

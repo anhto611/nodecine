@@ -1,11 +1,11 @@
 'use client';
 import React from 'react';
 import { useStudio } from '@/store/useStudio';
-import { Icon } from '../icons';
-import { useT } from '../ui';
+import { Icon } from '@/capsules/sdk/icons';
+import { useT } from '@/capsules/sdk/ui';
 import { voiceTrackOf } from '@/contracts/types/ir';
 
-/** In-session run history (USER_FLOWS §1.6): click an entry to load its IR into the player nodes without re-running. */
+/** In-session run history: click an entry to load its IR into the player nodes without re-running. */
 export const HistoryPanel: React.FC = () => {
   const t = useT();
   const history = useStudio((s) => s.history);

@@ -5,7 +5,7 @@ import { REQUIRED_TRANSITIONS, type VideoIR } from '../types/ir';
 import { missingCodeRenderers } from './renderers';
 
 /**
- * Which engines can draw which transition, by name (docs/IR_V3.md §5.4). The same shape as the
+ * Which engines can draw which transition, by name. The same shape as the
  * renderer table: empty in the core, filled by each engine at startup, asked by the output nodes
  * before a film is put in front of an engine. What an engine registers is its own — a snippet of
  * timeline code for HyperFrames, a presentation for Remotion — and `unknown` here. The four names

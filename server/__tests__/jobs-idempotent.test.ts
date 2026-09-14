@@ -5,6 +5,7 @@ import path from 'node:path';
 import { JobHub } from '@/server/jobs';
 import { _resetNodeRegistry } from '@/core/nodes/definition';
 import { pipeline, registerTestKit } from '@/core/__tests__/kit';
+import { MemoryResultCache } from '@/core/engine/result-cache';
 
 /**
  * The client retries a request the server answered with an empty 5xx, on the reading that the route
@@ -19,7 +20,7 @@ describe('submitting the same request twice', () => {
   afterAll(() => { if (previous === undefined) delete process.env.NODECINE_JOBS_DIR; else process.env.NODECINE_JOBS_DIR = previous; rmSync(dir, { recursive: true, force: true }); });
 
   const graph = () => pipeline();
-  const hub = () => { _resetNodeRegistry(); registerTestKit(); return new JobHub(() => ({}) as never); };
+  const hub = () => { _resetNodeRegistry(); registerTestKit(); return new JobHub(() => ({}) as never, { cache: new MemoryResultCache() }); };
 
   it('queues one job and hands the same one back', () => {
     const h = hub();

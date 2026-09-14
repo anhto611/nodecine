@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 /**
- * Subprocess helper enforcing CORE_CONTRACTS §9: argument arrays (never a shell string),
+ * Subprocess helper enforcing the rules every child process follows: argument arrays (never a shell string),
  * user content via stdin, timeouts, abort, capped output, secret scrubbing.
  */
 
@@ -12,7 +12,7 @@ export interface ExecOptions {
   env?: Record<string, string | undefined>;
   timeoutMs?: number;
   signal?: AbortSignal;
-  /** Cap on captured stdout/stderr bytes (EXECUTION_ENGINE §8.2: 8 KB per call into logs). */
+  /** Cap on captured stdout/stderr bytes (8 KB per call into logs). */
   maxOutput?: number;
 }
 
@@ -34,7 +34,7 @@ export class ExecError extends Error {
 
 const SECRET = /(sk-[a-zA-Z0-9_-]{8,}|ghp_[a-zA-Z0-9]{8,}|Bearer\s+[A-Za-z0-9._-]{8,})/g;
 
-/** Strip anything that looks like a key or token before it reaches logs or the client (ARCHITECTURE §4). */
+/** Strip anything that looks like a key or token before it reaches logs or the client. */
 export function scrub(text: string): string {
   return text.replace(SECRET, '[redacted]');
 }

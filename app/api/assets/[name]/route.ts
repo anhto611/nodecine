@@ -5,7 +5,7 @@ import { ASSET_TYPES, assetPath } from '@/server/paths';
 import { byteRange } from '@/server/byte-range';
 
 /**
- * Read-only serving of scene assets; the name must be a bare hash (ARCHITECTURE §6).
+ * Read-only serving of scene assets; the name must be a bare hash.
  *
  * Ranges are answered here because a video that cannot be ranged cannot be streamed; the reading of
  * the header itself lives in `server/byte-range.ts`.
