@@ -8,8 +8,8 @@ const nextConfig = {
   async headers() {
     return [{ source: '/fonts/:file*', headers: [{ key: 'Access-Control-Allow-Origin', value: '*' }, { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }];
   },
-  // Remotion's bundler/renderer ship their own webpack and native binaries;
-  // Next.js must not bundle them. Puppeteer is here for the same reason: it downloads its own browser.
-  serverExternalPackages: ['@remotion/bundler', '@remotion/renderer', '@hyperframes/producer', '@hyperframes/engine', '@hyperframes/core', 'puppeteer', 'puppeteer-core'],
+  // The HyperFrames producer drives a browser and ships its own runtime files; Next.js must not
+  // bundle it. Puppeteer is here for the same reason: it downloads its own browser.
+  serverExternalPackages: ['@hyperframes/producer', '@hyperframes/engine', '@hyperframes/core', 'puppeteer', 'puppeteer-core'],
 };
 export default nextConfig;

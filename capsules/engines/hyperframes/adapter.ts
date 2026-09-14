@@ -12,7 +12,7 @@ export type PreviewScene = (options: ScenePreviewOptions) => string;
  * HyperFrames: the engine for `html-gsap`. Every scene is its own HTML and
  * GSAP timeline in the film's style; this engine builds one composition page per IR and hands it to the
  * HyperFrames player in the browser and to the HyperFrames producer on the server. Isomorphic like
- * the Remotion adapter: the two environment-specific halves are injected by the registrations.
+ * any engine adapter: the two environment-specific halves are injected by the registrations.
  */
 export function createHyperframesAdapter(impl: { mountPlayer?: MountPlayer; previewScene?: PreviewScene; render?: ServerRender } = {}): EngineAdapter {
   const ready: Capability = { status: 'ready' };

@@ -13,11 +13,11 @@ describe('the transition registry', () => {
     expect(listTransitions()).toEqual([]);
     registerTransition('wipe-left', 'hyperframes', 'x');
     registerTransition('fade', 'hyperframes', 'x');
-    registerTransition('fade', 'remotion', 'x');
-    registerTransition('cut', 'remotion', 'x');
+    registerTransition('fade', 'other-engine', 'x');
+    registerTransition('cut', 'other-engine', 'x');
     expect(listTransitions()).toEqual(['cut', 'fade', 'wipe-left']);
-    expect(listTransitions('remotion')).toEqual(['cut', 'fade']);
-    expect(missingTransitions(['fade', 'wipe-left', 'iris'], 'remotion')).toEqual(['wipe-left', 'iris']);
+    expect(listTransitions('other-engine')).toEqual(['cut', 'fade']);
+    expect(missingTransitions(['fade', 'wipe-left', 'iris'], 'other-engine')).toEqual(['wipe-left', 'iris']);
   });
 
   it('reads the names a film asks for off the film: the default and each override, once', () => {

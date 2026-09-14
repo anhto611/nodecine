@@ -22,7 +22,7 @@ const saved: Graph = {
     { id: 'voice', type: 'core/tts-engine', version: 1, params: { ttsProvider: 'system-tts', ttsSettings: {}, speed: 1.2 }, bypassed: false, position: at },
     { id: 'align', type: 'core/transcribe', version: 2, params: { model: 'large-v3' }, bypassed: false, position: at },
     { id: 'subs', type: 'core/caption-export', version: 1, params: { format: 'vtt', fileName: 'phụ đề' }, bypassed: false, position: at },
-    { id: 'player', type: 'core/video-output', params: { engineId: 'remotion' }, bypassed: false, position: at },
+    { id: 'player', type: 'core/video-output', params: { engineId: 'hyperframes' }, bypassed: false, position: at },
     { id: 'mp4', type: 'core/mp4-export', params: {}, bypassed: true, position: at },
   ],
   edges: [

@@ -72,7 +72,7 @@ export function makeFakeServices(overrides: Partial<{
       const notReady = unavailable('render is only available on the server', 'ENGINE_NOT_READY');
       return {
         engineId,
-        displayName: engineId === 'remotion' ? 'Remotion' : 'Hyperframes',
+        displayName: 'Hyperframes',
         adapterVersion: '1.0.0',
         capabilities: { preview: ready, render: o.renderReady ? ready : notReady },
         settings,

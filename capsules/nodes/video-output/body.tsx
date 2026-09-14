@@ -14,7 +14,7 @@ import type { BodyProps } from '@/capsules/sdk/host';
 import { useFrame } from '@/capsules/sdk/host';
 
 /**
- * The player node. Mounts the engine's player via the adapter registry; never imports Remotion.
+ * The player node. Mounts the engine's player via the adapter registry; never imports an engine.
  * Wrapper carries nodrag/nopan/nowheel so scrubbing does not move the canvas.
  */
 export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {

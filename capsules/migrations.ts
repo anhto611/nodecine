@@ -26,7 +26,6 @@ function registerResourceFolds(): void {
   registerResourceFold('core/llm-provider', (p) => ({ llmProvider: p.providerId ?? '', llmSettings: p.settings ?? {} }));
   registerResourceFold('core/tts-provider', (p) => ({ ttsProvider: p.providerId ?? '', ttsSettings: p.settings ?? {} }));
   registerResourceFold('core/hyperframes-engine', (p) => ({ engineId: 'hyperframes', engineSettings: p ?? {} }));
-  registerResourceFold('core/remotion-engine', (p) => ({ engineId: 'remotion', engineSettings: p ?? {} }));
 }
 
 /**

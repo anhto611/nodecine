@@ -67,7 +67,7 @@ export const MediaClipSchema = z.object({
   /** Seconds into the file the clip starts taking frames from. */
   offsetSeconds: z.number().nonnegative().default(0),
   fit: z.enum(['cover', 'contain']).default('cover'),
-  /** The file's own length in seconds, measured. An engine that repeats the file needs it (Remotion's Loop). */
+  /** The file's own length in seconds, measured. An engine that repeats the file needs it. */
   sourceSeconds: z.number().positive().optional(),
   /** A file shorter than the clip starts over; what a background loop is. */
   loop: z.boolean().default(false),

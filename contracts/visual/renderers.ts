@@ -3,7 +3,7 @@
  * its format, `html-gsap` today; an engine registers one renderer per format it understands, and the
  * output nodes stop by capability when the chosen engine lacks one (`unsupportedFilmBlock` in
  * `transitions.ts` asks both questions). The core imports no engine: renderers are `unknown` here,
- * a React component for Remotion, a mount function for Hyperframes.
+ * a mount function for HyperFrames.
  */
 
 const table = new Map<string, Map<string, unknown>>();

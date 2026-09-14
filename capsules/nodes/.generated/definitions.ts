@@ -109,9 +109,6 @@ export const RETIRED_NODES: Record<string, RetiredNodeType> = {
   "core/plates": {
     "since": "2026-09-14"
   },
-  "core/remotion-engine": {
-    "since": "2026-09-12"
-  },
   "core/scene-breakdown": {
     "since": "2026-09-14"
   },

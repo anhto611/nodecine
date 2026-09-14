@@ -316,7 +316,7 @@ export function sceneMarkup(source: string, o: { captionsHtml?: string; withCapt
  * bound into its markup, its scripts run with a gsap scoped to it and the `nodecine` object —
  * `timeline`, `root`, `index`, `duration`, `words`, `when`, `count`, `beats`, `beat`, `audio` —
  * and every timeline handed to `nodecine.timeline` returned for the caller's master. Declared as a
- * function so the HyperFrames bootstrap and the Remotion clip run the very same code: `scene` is
+ * function so every place a scene is mounted runs the very same code: `scene` is
  * the clip's data row (`id`, `index`, `start`, `duration`, `facts`, `words`, `scripts`), `data`
  * the film's (`vars`, `beats`, `analysis`). Needs `window.__nodecineBind` (BIND_SCRIPT) in place.
  */

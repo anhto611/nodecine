@@ -67,11 +67,11 @@ describe('node capsules', () => {
   });
 
   it('an engine registers itself from its capsule, on both sides, and the Studio finds one that draws a still', () => {
-    expect(ENGINE_SERVER_REGISTRATIONS).toHaveLength(2);
-    expect(ENGINE_CLIENT_REGISTRATIONS).toHaveLength(2);
+    expect(ENGINE_SERVER_REGISTRATIONS).toHaveLength(1);
+    expect(ENGINE_CLIENT_REGISTRATIONS).toHaveLength(1);
     _resetEngineRegistry();
     for (const register of ENGINE_CLIENT_REGISTRATIONS) register();
-    expect(listEngineIds().sort()).toEqual(['hyperframes', 'remotion']);
+    expect(listEngineIds()).toEqual(['hyperframes']);
     const html = previewEngine()!.previewScene!({ style: STYLE, source: SCENE_SOURCE, vars: { channel: 'AIDev' } });
     expect(html).toContain('<h1 class="title">Hello</h1>');
     expect(html).toContain('@layer nc-style');
