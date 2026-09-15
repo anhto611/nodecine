@@ -29,4 +29,11 @@ describe('a part played on its own', () => {
   it('refuses a file that is not a part', () => {
     expect(() => partHost({ 'index.html': entry, 'notes.html': '<p>hi</p>' }, 'notes.html')).toThrow(/data-composition-id/);
   });
+
+  it('plays a part the entry does not mount with its variables\' samples, and its own length', () => {
+    const block = `<html data-composition-id="hook" data-composition-duration="3" data-composition-variables='[{"id":"name","type":"string","label":"Name","default":"","sample":"Pig Money"},{"id":"icon","type":"image","label":"Icon","default":""},{"id":"seconds","type":"number","label":"s","default":4}]'><body><template><div data-composition-id="hook" data-width="1080" data-height="1920"></div></template></body></html>`;
+    const host = partHost({ 'index.html': '<html><head></head><body><div id="root" data-composition-id="film"></div></body></html>', 'compositions/hook.html': block }, 'compositions/hook.html');
+    expect(host.duration).toBe(3);
+    expect(host.html).toContain('data-variable-values="{&quot;name&quot;:&quot;Pig Money&quot;,&quot;seconds&quot;:3}"');
+  });
 });

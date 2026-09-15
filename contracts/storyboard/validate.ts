@@ -1,6 +1,6 @@
 import { layerTrack, type Storyboard } from '@/contracts/types/storyboard';
 import { ASSETS_DIR } from '@/contracts/types/assets';
-import { checkBlockValues, type BlockInfo, type BlockRole } from './blocks';
+import { checkBlockValues, type BlockInfo, type BlockRole, type ComponentInfo } from './blocks';
 
 /**
  * What is wrong with a storyboard before anything is voiced: the rules the Assemble node holds a
@@ -21,6 +21,9 @@ export interface StoryboardRules {
   last?: BlockRole;
   /** How many scenes in a row may play the same block, when the workflow's guide says. */
   repeat?: number;
+  /** The components a frame may mount, and the named boxes it may mount them in. */
+  components?: ComponentInfo[];
+  slots?: string[];
 }
 
 /** Words compared the way cues are matched: case and trailing punctuation aside. */
@@ -76,6 +79,23 @@ export function storyboardProblems(storyboard: Storyboard, rules: StoryboardRule
     problems.push(...unsaid.map((u) => `${label}, ${u}`));
     const declared = block.variables.filter((v) => v.id !== 'seconds');
     problems.push(...checkBlockValues(label, values, declared).problems);
+    // Components mounted over the block, each in a named box, from one word to another.
+    frame.mounts.forEach((mount, j) => {
+      const at = `${where}, ${mount.component} (mount ${j + 1})`;
+      const component = (rules.components ?? []).find((c) => c.name === mount.component);
+      if (!component) { problems.push(`${at}: there is no component ${mount.component} (there are ${(rules.components ?? []).map((c) => c.name).join(', ') || 'none'})`); return; }
+      if (typeof mount.box === 'string' && !(rules.slots ?? []).includes(mount.box)) problems.push(`${at}: there is no slot ${mount.box} (there are ${(rules.slots ?? []).join(', ') || 'none'})`);
+      for (const [edge, cue] of [['at', mount.at], ['until', mount.until]] as const) {
+        if (typeof cue === 'string' && !cueSaid(cue, frame.voiceover ?? '')) problems.push(`${at}, ${edge}: "${cue.replace(/^@/, '')}" is not said in this frame`);
+      }
+      for (const path of assetPaths(mount.values)) {
+        if (!rules.assets.includes(path)) problems.push(`${at}: no asset ${path}`);
+      }
+      const unsaidHere: string[] = [];
+      const mountValues = cuesToNumbers(mount.values, frame.voiceover ?? '', '', unsaidHere) as Record<string, unknown>;
+      problems.push(...unsaidHere.map((u) => `${at}, ${u}`));
+      problems.push(...checkBlockValues(at, mountValues, component.variables.filter((v) => v.id !== 'seconds')).problems);
+    });
     if (block.role === 'overlay') problems.push(`${where}: ${block.name} is an overlay block: it plays over several frames in a layer, not as a frame's block`);
     if (i === 0 && rules.first && block.role !== rules.first) problems.push(`${where}: the first frame must play a ${rules.first} block (it plays ${block.name}, a ${block.role} block)`);
     if (i === frames.length - 1 && rules.last && block.role !== rules.last) problems.push(`${where}: the last frame must play a ${rules.last} block (it plays ${block.name}, a ${block.role} block)`);

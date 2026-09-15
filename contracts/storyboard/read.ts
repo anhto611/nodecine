@@ -54,6 +54,7 @@ function readLayers(text: string, problems: string[]): StoryboardLayer[] {
 }
 /** The first ```json block of a frame's prose: its block's values (an object), or its mounts (a list). */
 const JSON_BLOCK = /```json\s*\n([\s\S]*?)\n```/;
+const JSON_BLOCKS = /```json\s*\n([\s\S]*?)\n```/g;
 
 /**
  * A `STORYBOARD.md` read with HyperFrames' own parser, then checked for what NodeCine needs of it:
@@ -75,15 +76,18 @@ export function readStoryboard(markdown: string): StoryboardReading {
     const { block, ...extra } = f.extra;
     const name = block?.trim() || undefined;
     let data: unknown = name ? {} : [];
-    const raw = JSON_BLOCK.exec(f.narrative)?.[1];
-    if (raw) {
-      try { data = JSON.parse(raw); } catch (e) { problems.push(`frame ${number}: its json block does not parse (${e instanceof Error ? e.message : String(e)})`); }
-    }
+    // A frame that plays a block may mount components over it too: a second json block, a list.
+    const blocks = [...f.narrative.matchAll(JSON_BLOCKS)].map((m) => m[1]!);
+    const parse = (raw: string): unknown => { try { return JSON.parse(raw); } catch (e) { problems.push(`frame ${number}: its json block does not parse (${e instanceof Error ? e.message : String(e)})`); return undefined; } };
+    const raw = blocks[0];
+    if (raw) data = parse(raw) ?? data;
+    const extraMounts = name && blocks[1] ? parse(blocks[1]) : undefined;
+    if (extraMounts !== undefined && !Array.isArray(extraMounts)) problems.push(`frame ${number}: its second json block lists the components it mounts`);
     const isObject = !!data && typeof data === 'object' && !Array.isArray(data);
     if (name && !isObject) problems.push(`frame ${number}: a frame that plays "${name}" gives its values as a json object`);
     if (!name && !Array.isArray(data)) problems.push(`frame ${number}: values go with a block (add "- block: <name>"); a frame without one lists its mounts`);
     const values = name && isObject ? data as Record<string, unknown> : {};
-    const list = !name && Array.isArray(data) ? data : [];
+    const list = !name && Array.isArray(data) ? data : Array.isArray(extraMounts) ? extraMounts : [];
     const parsed = list.map((m, j) => {
       const r = MountSchema.safeParse(m);
       if (!r.success) problems.push(`frame ${number}, mount ${j + 1}: ${r.error.issues.map((x) => `${x.path.join('.') || 'mount'} ${x.message}`).join('; ')}`);

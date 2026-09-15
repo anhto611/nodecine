@@ -14,7 +14,7 @@ import { layerEditKey, type FrameEdit, type WrittenStoryboard } from './output';
 
 type Params = { subject: string; about: string; durationSeconds: number; tone: (typeof TONES)[number]; language: string; notes: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
 const LANGUAGES = ['vi', 'en'] as const;
-interface Scene { title: string; voiceover: string; block: string; values: Record<string, unknown> }
+interface Scene { title: string; voiceover: string; block: string; values: Record<string, unknown>; mounts: { component: string; slot: string; at?: string; until?: string }[] }
 
 /** A value that names a moment: `@word`, set by picking a word the scene says. */
 const isCue = (v: BlockVariable, value: unknown) => (typeof value === 'string' && value.trim().startsWith('@')) || (v.type === 'number' && /(_at|At|_start)$/.test(v.id));
@@ -118,8 +118,8 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
   const failure = runtime?.state === 'error' ? runtime.error : undefined;
   const draft = (failure?.details as { written?: WrittenStoryboard; problems?: string[] } | undefined);
   const scenes: Scene[] = draft?.written
-    ? draft.written.frames.map((f) => ({ title: f.title, voiceover: f.voiceover ?? '', block: f.block, values: f.values }))
-    : (storyboard?.frames ?? []).map((f) => ({ title: f.title, voiceover: f.voiceover ?? '', block: f.block ?? '', values: f.values }));
+    ? draft.written.frames.map((f) => ({ title: f.title, voiceover: f.voiceover ?? '', block: f.block, values: f.values, mounts: (f.mounts ?? []).map((m) => ({ component: m.component, slot: m.slot, at: m.at ?? undefined, until: m.until ?? undefined })) }))
+    : (storyboard?.frames ?? []).map((f) => ({ title: f.title, voiceover: f.voiceover ?? '', block: f.block ?? '', values: f.values, mounts: f.mounts.map((m) => ({ component: m.component, slot: typeof m.box === 'string' ? m.box : m.box.join(','), at: typeof m.at === 'string' ? m.at : undefined, until: typeof m.until === 'string' ? m.until : undefined })) }));
   const problemsOf = (i: number) => (draft?.problems ?? []).filter((m) => m.startsWith(`frame ${i + 1}:`) || m.startsWith(`frame ${i + 1},`));
   // Layers: an overlay block over a run of scenes, shown after them with the scenes they cover.
   const layers = draft?.written
@@ -225,6 +225,14 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
               {(block?.variables ?? []).filter((v) => v.id !== 'seconds' && values[v.id] !== undefined).map((v) => (
                 <ValueField key={v.id} id={fid(v.id)} variable={v} value={values[v.id]} words={words} pictures={pictures} onChange={(value) => edit(i, { values: { [v.id]: value } })} />
               ))}
+              {scene.mounts.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerMounts')}</span>
+                  {scene.mounts.map((m, k) => (
+                    <span key={k} className="nc-chip" title={[m.at && `${m.at}`, m.until && `→ ${m.until}`].filter(Boolean).join(' ')}>{m.component} · {m.slot}{m.at ? ` · ${m.at}` : ''}</span>
+                  ))}
+                </div>
+              )}
               {problems.map((m) => <div key={m} style={{ fontSize: 'var(--fs-hint)', color: 'var(--err)', overflowWrap: 'anywhere' }}>{m}</div>)}
               <div style={{ display: 'flex', gap: 6 }}>
                 <Btn small disabled={running} onClick={() => rewrite(i)}>{t('node.writerRewriteScene')}</Btn>

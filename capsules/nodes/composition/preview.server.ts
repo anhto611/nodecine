@@ -21,6 +21,22 @@ const attr = (tag: string, name: string): string | undefined => new RegExp(`\\b$
 const escapeAttr = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
 export const PREVIEW_ROOT_ID = 'nodecine-part-preview';
+
+/** The part's variables set to their samples, as a values attribute; undefined when it has none. */
+export function sampleValues(part: string, seconds: number): string | undefined {
+  const raw = /<html\b[^>]*\bdata-composition-variables\s*=\s*(['"])([\s\S]*?)\1/i.exec(part)?.[2];
+  if (!raw) return undefined;
+  let declared: { id?: string; sample?: unknown }[];
+  try { declared = JSON.parse(raw.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')) as typeof declared; } catch { return undefined; }
+  if (!Array.isArray(declared)) return undefined;
+  const values: Record<string, unknown> = {};
+  for (const v of declared) {
+    if (!v || typeof v.id !== 'string') continue;
+    if (v.id === 'seconds') values.seconds = seconds;
+    else if (v.sample !== undefined) values[v.id] = v.sample;
+  }
+  return Object.keys(values).length ? JSON.stringify(values) : undefined;
+}
 const DEFAULT_SECONDS = 5;
 
 /** The host page for one part, and the size and length it plays at. */
@@ -38,10 +54,12 @@ export function partHost(files: Record<string, string>, partPath: string): { htm
   const width = size('width', 1080);
   const height = size('height', 1920);
 
-  // Where the entry mounts this part, its values and length are the ones worth seeing.
+  // Where the entry mounts this part, its values and length are the ones worth seeing. Elsewhere the
+  // part plays with its variables' `sample`s: what a part's author put in to show it off, since a
+  // default is empty on purpose (a name, a picture) and shows nothing.
   const mount = [...entry.matchAll(/<[a-z][^>]*\bdata-composition-src\s*=\s*(["'])([^"']+)\1[^>]*>/gi)].find((m) => m[2] === partPath)?.[0];
-  const values = mount ? attr(mount, 'data-variable-values') : undefined;
   const duration = Number(attr(mount ?? '', 'data-duration') ?? /\bdata-composition-duration\s*=\s*["']?([\d.]+)/i.exec(part)?.[1] ?? DEFAULT_SECONDS) || DEFAULT_SECONDS;
+  const values = mount ? attr(mount, 'data-variable-values') : sampleValues(part, duration);
 
   const head = /<head[^>]*>([\s\S]*?)<\/head>/i.exec(entry)?.[1] ?? '';
   const gsap = /gsap(\.min)?\.js/.test(head) ? '' : '<script src="gsap.min.js"></script>';

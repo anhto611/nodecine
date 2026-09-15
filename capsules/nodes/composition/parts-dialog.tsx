@@ -2,113 +2,13 @@
 import React from 'react';
 import { Btn, Dialog, useT } from '@/capsules/sdk/ui';
 import { useHost, useNode, useOutputPayload, useOverlay, useParams } from '@/capsules/sdk/host';
-import { getEngineFactory } from '@/contracts/adapters/registry';
-import type { PlayerHandle } from '@/contracts/adapters/types';
 import type { Composition } from '@/contracts/types/composition';
 import type { PartPreview } from './preview.server';
 import { kindOf, mountSnippet, nameOf, PART_NAME, pathFor, readPart, roleOf, ROLES, scaffoldPart, storyboardSnippet, type Kind, type Project, type Role } from './parts';
+import { frameBox, Player, Thumbnail } from './thumbnail';
 
 /** What the dialog opens on: the kind of part it lists. */
-export type PartsDialogData = { kind: Kind };
-
-/**
- * A thumbnail is a page the engine prepares, so only a few are prepared at once; the rest wait their
- * turn rather than asking the server for every page the moment the dialog opens.
- */
-const THUMBNAILS_AT_ONCE = 3;
-let running = 0;
-const waiting: (() => void)[] = [];
-async function inTurn<T>(work: () => Promise<T>): Promise<T> {
-  if (running >= THUMBNAILS_AT_ONCE) await new Promise<void>((resolve) => waiting.push(resolve));
-  running++;
-  try { return await work(); } finally { running--; waiting.shift()?.(); }
-}
-
-/** A short fingerprint of a file, so a picture is redrawn when the part it shows is edited. */
-const fingerprint = (text: string): string => {
-  let h = 5381;
-  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(36);
-};
-
-/** Mounts the engine's player; `still` makes it a paused picture instead. */
-const Player: React.FC<{ preview: PartPreview; still?: boolean }> = ({ preview, still }) => {
-  const ref = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const factory = getEngineFactory(preview.engineId);
-    if (!ref.current || !factory) return;
-    let handle: PlayerHandle | null = null;
-    try {
-      handle = factory({}).mountPlayer(ref.current, { ...preview, ...(still ? { controls: false, still: Math.max(0, Math.min(preview.duration * 0.6, preview.duration - 0.1)) } : {}) });
-    } catch { handle = null; }
-    return () => handle?.unmount();
-  }, [preview, still]);
-  return <div ref={ref} style={{ position: 'absolute', inset: 0, pointerEvents: still ? 'none' : 'auto' }} />;
-};
-
-/**
- * A box of the picture's own shape, no taller than `maxHeight`: its width follows from that height, so
- * a portrait film is not squeezed into a strip as wide as the panel.
- */
-const frameBox = (size: { width: number; height: number }, maxHeight: string): React.CSSProperties => ({
-  position: 'relative', width: `min(100%, calc(${maxHeight} * ${size.width} / ${size.height}))`, aspectRatio: `${size.width} / ${size.height}`,
-  margin: '0 auto', background: '#000', borderRadius: 4, overflow: 'hidden',
-});
-
-/** Becomes true once the element has scrolled into view, and stays true. */
-function useSeen<T extends Element>(): [React.RefObject<T | null>, boolean] {
-  const ref = React.useRef<T>(null);
-  const [seen, setSeen] = React.useState(false);
-  React.useEffect(() => {
-    if (seen || !ref.current) return;
-    const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) setSeen(true); }, { rootMargin: '200px' });
-    io.observe(ref.current);
-    return () => io.disconnect();
-  }, [seen]);
-  return [ref, seen];
-}
-
-/** One part as a picture, its name, and what it is for. */
-const Tile: React.FC<{ path: string; project: Project; engine?: string; selected: boolean; onOpen: () => void }> = ({ path, project, engine, selected, onOpen }) => {
-  const t = useT();
-  const { action } = useHost();
-  const [ref, seen] = useSeen<HTMLButtonElement>();
-  const [live, setLive] = React.useState<PartPreview | null>(null);
-  const [failed, setFailed] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (!seen) return;
-    let gone = false;
-    setFailed(null);
-    inTurn(() => action<PartPreview>('composition/preview-part', [{ ...project, engine }, path]))
-      .then((preview) => { if (!gone) setLive(preview); }, (e: Error) => { if (!gone) setFailed(e.message); });
-    return () => { gone = true; };
-    // Redrawn when this part's own file changes; an edit elsewhere keeps the picture.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seen, path, fingerprint(project.files[path] ?? '')]);
-
-  const part = readPart(project.files[path] ?? '');
-  return (
-    <button
-      ref={ref}
-      className={`nc-chip ${selected ? 'on' : ''}`}
-      onClick={onOpen}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: 6, textAlign: 'left', whiteSpace: 'normal', minWidth: 0 }}
-    >
-      <div style={frameBox(live ?? { width: 9, height: 16 }, '260px')}>
-        {live ? <Player preview={live} still /> : (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, textAlign: 'center', color: failed ? 'var(--err)' : 'var(--tx-3)', fontSize: 'var(--fs-hint)', overflowWrap: 'anywhere' }}>
-            {failed ?? '…'}
-          </div>
-        )}
-      </div>
-      <div style={{ color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(path)}</div>
-      <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>
-        {t(`node.compositionRole.${roleOf(project.files, path)}`)} · {part.variables.length} {t('node.compositionVariables')}{part.width ? ` · ${part.width}×${part.height}` : ''}
-      </div>
-    </button>
-  );
-};
+export type PartsDialogData = { kind: Kind; path?: string };
 
 /** The project's blocks and components as a wall of pictures: open one to watch it large and edit it. */
 export const PartsDialog: React.FC = () => {
@@ -122,11 +22,22 @@ export const PartsDialog: React.FC = () => {
   const [kind, setKind] = React.useState<Kind>((overlay.current?.data as PartsDialogData | undefined)?.kind ?? 'block');
   const [role, setRole] = React.useState<Role | null>(null);
   const [query, setQuery] = React.useState('');
-  const [openPath, setOpenPath] = React.useState<string | null>(null);
+  const wanted = (overlay.current?.data as PartsDialogData | undefined)?.path;
+  const [openPath, setOpenPath] = React.useState<string | null>(wanted ?? null);
   const [big, setBig] = React.useState<PartPreview | null>(null);
   const [bigError, setBigError] = React.useState<string | null>(null);
   const [newName, setNewName] = React.useState('');
   const [message, setMessage] = React.useState<{ ok: boolean; text: string } | null>(null);
+
+  // Opened on one part from the node: its picture is fetched once the dialog is on screen.
+  React.useEffect(() => {
+    if (!wanted || (p.files ?? {})[wanted] === undefined) return;
+    setBig(null); setBigError(null);
+    action<PartPreview>('composition/preview-part', [{ files: p.files ?? {}, media: p.media ?? {}, engine: out?.engine }, wanted])
+      .then(setBig, (e: unknown) => setBigError(e instanceof Error ? e.message : String(e)));
+    // Once, for the part the node opened on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wanted]);
 
   if (!overlay.current || node?.type !== 'composition') return null;
 
@@ -201,7 +112,14 @@ export const PartsDialog: React.FC = () => {
           </div>
           {paths.length ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-              {paths.map((path) => <Tile key={path} path={path} project={project} engine={out?.engine} selected={path === openPath} onOpen={() => openPart(path)} />)}
+              {paths.map((path) => (
+                <Thumbnail key={path} path={path} project={project} engine={out?.engine} selected={path === openPath} onOpen={() => openPart(path)} height="260px">
+                  <div style={{ color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(path)}</div>
+                  <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>
+                    {t(`node.compositionRole.${roleOf(project.files, path)}`)} · {readPart(project.files[path] ?? '').variables.length} {t('node.compositionVariables')}
+                  </div>
+                </Thumbnail>
+              ))}
             </div>
           ) : <div style={{ color: 'var(--tx-3)' }}>{t('node.compositionNone')}</div>}
         </div>

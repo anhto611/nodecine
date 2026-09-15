@@ -1,4 +1,4 @@
-import type { BlockInfo } from '@/contracts/storyboard/blocks';
+import type { BlockInfo, ComponentInfo } from '@/contracts/storyboard/blocks';
 import type { LinkedPage } from './material';
 import type { WrittenFrame, WrittenStoryboard } from './output';
 
@@ -22,6 +22,9 @@ export interface Picture { path: string; name: string; note: string; width?: num
 export interface WriterMaterial {
   request: Request;
   catalog: BlockInfo[];
+  /** Components a scene may mount over its block, and the named slots they go in. */
+  components: ComponentInfo[];
+  slots: Record<string, [number, number, number, number]>;
   guide: string;
   pictures: Picture[];
   /** Whether the pictures are attached for the model to see, in the order listed. */
@@ -49,6 +52,23 @@ function describeBlocks(catalog: BlockInfo[]): string {
     }).join('\n');
     return `- ${block.name} [role: ${block.role}]\n  ${block.description || '(no description)'}\n  values:\n${vars || '    (none)'}`;
   }).join('\n');
+}
+
+function describeComponents(m: WriterMaterial): string {
+  if (!m.components.length) return '';
+  const vars = (c: ComponentInfo) => c.variables.filter((v) => v.id !== 'seconds').map((v) => {
+    const extra = [
+      v.type === 'string' && v.maxLength ? `at most ${v.maxLength} characters` : '',
+      v.type === 'enum' ? `one of ${v.options.map((o) => `"${o.value}"`).join(', ')}` : '',
+    ].filter(Boolean).join('; ');
+    return `    - ${v.id} (${v.type}${v.required ? ', required' : ''}): ${v.label}${extra ? ` — ${extra}` : ''}`;
+  }).join('\n');
+  return `\nThe components a scene may mount over its block (in "mounts"):
+${m.components.map((c) => `- ${c.name} [role: ${c.role}]\n  ${c.description || '(no description)'}\n  values:\n${vars(c) || '    (none)'}`).join('\n')}
+
+The slots a component goes in (name: left, top, width, height in pixels of the frame):
+${Object.entries(m.slots).map(([name, r]) => `- ${name}: ${r.join(', ')}`).join('\n') || '(none)'}
+`;
 }
 
 function describePictures(pictures: Picture[], seen: boolean): string {
@@ -82,7 +102,8 @@ const OUTPUT_SHAPE = `{
       "duration_seconds": null, or seconds for a silent scene,
       "transition_in": "cut" | "crossfade" | "blur-crossfade",
       "block": "<a block name from the list>",
-      "values": { "<variable id>": <value>, ... }
+      "values": { "<variable id>": <value>, ... },
+      "mounts": [ { "component": "<a component from the list>", "slot": "<a slot name>", "at": "@word" or null, "until": "@word" or null, "values": { ... } } ]
     }
   ],
   "layers": [
@@ -106,6 +127,7 @@ function rules(m: WriterMaterial): string {
 - The whole narration runs about ${words} words (${m.request.durationSeconds} s at ${m.wordsPerSecond} words a second), counting silent scenes' seconds as time too.
 - One idea per scene.${m.first ? ` The first scene plays a ${m.first} block.` : ''}${m.last ? ` The last scene plays a ${m.last} block.` : ''}${m.repeat ? ` Never more than ${m.repeat} scenes in a row on the same block.` : ''}
 - Every scene plays exactly one block from the list, gives every value marked required, and gives only the values that block declares. Never give "seconds".
+- "mounts" puts components over a scene's block, each in a slot, appearing on "at" and leaving on "until" (words said in that scene; null for the scene's start or end). Use them as the guide says, where they add to the scene and do not cover what it shows; [] when none.
 - A block whose role is overlay never plays a scene: it goes in "layers", over a run of scenes, on top of their blocks, as the workflow's guide says. With no overlay blocks, or when the guide asks for none, "layers" is []. Two layers over the same scenes need the guide's leave.
 - Keep every text value within its character limit, and every enum value to its listed options.
 - A value that is a moment is "@word": a word (or the first words) said in that same scene's voiceover, where the thing should happen. A list of moments is "@a,@b,@c". Never write seconds for a moment.
@@ -124,7 +146,7 @@ ${describePictures(m.pictures, m.seen)}
 
 The blocks:
 ${describeBlocks(m.catalog)}
-${m.guide.trim() ? `\nHow this workflow's films are built:\n${m.guide.trim()}\n` : ''}
+${describeComponents(m)}${m.guide.trim() ? `\nHow this workflow's films are built:\n${m.guide.trim()}\n` : ''}
 ${UNDERSTAND}
 
 ${rules(m)}
@@ -143,7 +165,7 @@ ${describePictures(m.pictures, m.seen)}
 
 The blocks:
 ${describeBlocks(m.catalog)}
-${m.guide.trim() ? `\nHow this workflow's films are built:\n${m.guide.trim()}\n` : ''}
+${describeComponents(m)}${m.guide.trim() ? `\nHow this workflow's films are built:\n${m.guide.trim()}\n` : ''}
 ${rules(m)}
 
 Your storyboard:
@@ -165,7 +187,7 @@ ${describePictures(m.pictures, m.seen)}
 
 The blocks:
 ${describeBlocks(m.catalog)}
-${m.guide.trim() ? `\nHow this workflow's films are built:\n${m.guide.trim()}\n` : ''}
+${describeComponents(m)}${m.guide.trim() ? `\nHow this workflow's films are built:\n${m.guide.trim()}\n` : ''}
 ${rules(m)}
 
 The storyboard:

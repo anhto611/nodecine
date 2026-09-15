@@ -13,6 +13,8 @@ const composition: Composition = {
     'storyboard-guide.md': '---\nhint.vi: Dán link app\nfirst: hook\nlast: outro\n---\nOpen on the brand, show features on the phone, close on the button.',
     'compositions/brand-open.html': block('brand-open', 'hook', '{ "id": "name", "type": "string", "label": "Name", "default": "", "maxLength": 24, "required": true }'),
     'compositions/phone-feature.html': block('phone-feature', 'feature', '{ "id": "headline", "type": "string", "label": "Headline", "default": "", "maxLength": 20 }, { "id": "screen", "type": "image", "label": "Screen", "default": "" }, { "id": "callout_at", "type": "number", "label": "When (s)", "default": 1 }'),
+    'compositions/components/sticker.html': block('sticker', 'effect', '{ "id": "text", "type": "string", "label": "Text", "default": "", "maxLength": 14, "required": true }'),
+    'assemble.json': JSON.stringify({ slots: { 'top-right': [620, 120, 400, 220] } }),
     'compositions/brand-corner.html': block('brand-corner', 'overlay', '{ "id": "name", "type": "string", "label": "Name", "default": "", "maxLength": 20, "required": true }, { "id": "wink_at", "type": "number", "label": "When (s)", "default": 1 }'),
     'compositions/app-close.html': block('app-close', 'outro', '{ "id": "button", "type": "string", "label": "Button", "default": "", "maxLength": 28, "required": true }'),
   },
@@ -149,6 +151,23 @@ describe('the Storyboard Writer', () => {
     const misplaced = setup([asFrame, asFrame, asFrame]);
     const error2 = await misplaced.run().then(() => null, (e: { details: { problems: string[] } }) => e);
     expect(error2?.details.problems).toContain('frame 2: brand-corner is an overlay block: it plays over several frames in a layer, not as a frame\'s block');
+  });
+
+  it('mounts components over a scene\'s block in named slots, on its words', async () => {
+    const mounted = structuredClone(good) as unknown as WrittenStoryboard;
+    mounted.frames[1]!.mounts = [{ component: 'sticker', slot: 'top-right', at: '@AI', until: null, values: { text: 'Miễn phí' } }];
+    const { run } = setup([mounted]);
+    const out = await run() as unknown as { storyboard: { markdown: string; frames: { mounts: unknown[] }[] } };
+    expect(out.storyboard.frames[1]!.mounts).toEqual([{ component: 'sticker', box: 'top-right', at: '@AI', values: { text: 'Miễn phí' } }]);
+    expect(out.storyboard.markdown).toContain('"component": "sticker"');
+
+    const wrong = structuredClone(good) as unknown as WrittenStoryboard;
+    wrong.frames[1]!.mounts = [{ component: 'sticker', slot: 'middle', at: '@Nokia', until: null, values: { text: 'Một nhãn dán quá dài' } }];
+    const bad = setup([wrong, wrong, wrong]);
+    const error = await bad.run().then(() => null, (e: { details: { problems: string[] } }) => e);
+    expect(error?.details.problems).toContain('frame 2, sticker (mount 1): there is no slot middle (there are top-right)');
+    expect(error?.details.problems).toContain('frame 2, sticker (mount 1), at: "Nokia" is not said in this frame');
+    expect(error?.details.problems).toContain('frame 2, sticker (mount 1): text is 20 characters, the block allows 14');
   });
 
   it('corrects the subject in every scene, and moves the moments on its words', async () => {

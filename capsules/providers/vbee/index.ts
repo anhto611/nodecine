@@ -114,7 +114,8 @@ export function createVbeeProvider(settings: Record<string, unknown>, deps: ApiD
         });
         const raw = await res.text().catch(() => '');
         if (res.status === 401 || res.status === 403) throw codedError(ErrorCode.KEY_INVALID, 'Vbee rejected the token');
-        if (!res.ok) throw codedError(ErrorCode.TTS_UPSTREAM, `Vbee HTTP ${res.status}: ${raw.slice(0, 300)}`);
+        // A gateway's error page is HTML: its status is the news, not its markup.
+        if (!res.ok) throw codedError(ErrorCode.TTS_UPSTREAM, `Vbee HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}${/^\s*</.test(raw) ? '' : `: ${raw.slice(0, 300)}`}`);
         let body: { result?: { audio_link?: string; audio_url?: string }; error_code?: number };
         try {
           body = JSON.parse(raw) as typeof body;

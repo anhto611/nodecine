@@ -9,6 +9,16 @@ import { cueSaid, cueWord } from '@/contracts/storyboard/validate';
 
 export const TRANSITIONS = ['cut', 'crossfade', 'blur-crossfade'] as const;
 
+/** A component mounted over a scene's block: in a named slot, from one word to another. */
+export const WrittenMountSchema = z.object({
+  component: z.string().min(1).max(41),
+  slot: z.string().min(1).max(40),
+  at: z.string().max(80).nullable().default(null),
+  until: z.string().max(80).nullable().default(null),
+  values: z.record(z.string(), z.unknown()).default({}),
+});
+export type WrittenMount = z.infer<typeof WrittenMountSchema>;
+
 export const WrittenFrameSchema = z.object({
   title: z.string().min(1).max(80),
   voiceover: z.string().max(600).nullable().default(null),
@@ -16,6 +26,7 @@ export const WrittenFrameSchema = z.object({
   transition_in: z.enum(TRANSITIONS).default('cut'),
   block: z.string().min(1).max(41),
   values: z.record(z.string(), z.unknown()).default({}),
+  mounts: z.array(WrittenMountSchema).max(4).default([]),
 });
 export type WrittenFrame = z.infer<typeof WrittenFrameSchema>;
 
@@ -51,7 +62,7 @@ export function unwrapJson(written: WrittenStoryboard): WrittenStoryboard {
     try { return JSON.parse(value); } catch { return value; }
   };
   const each = (values: Record<string, unknown>) => Object.fromEntries(Object.entries(values).map(([k, v]) => [k, unwrap(v)]));
-  return { ...written, frames: written.frames.map((f) => ({ ...f, values: each(f.values) })), layers: (written.layers ?? []).map((l) => ({ ...l, values: each(l.values) })) };
+  return { ...written, frames: written.frames.map((f) => ({ ...f, values: each(f.values), mounts: (f.mounts ?? []).map((m) => ({ ...m, values: each(m.values) })) })), layers: (written.layers ?? []).map((l) => ({ ...l, values: each(l.values) })) };
 }
 
 /**
@@ -83,7 +94,7 @@ export function renameEverywhere(written: WrittenStoryboard, from: string, to: s
     message: written.message.replace(pattern, to),
     frames: written.frames.map((f) => {
       const voiceover = f.voiceover === null ? null : f.voiceover.replace(pattern, to);
-      return { ...f, title: f.title.replace(pattern, to), voiceover, values: swap(f.values, voiceover ?? '') as Record<string, unknown> };
+      return { ...f, title: f.title.replace(pattern, to), voiceover, values: swap(f.values, voiceover ?? '') as Record<string, unknown>, mounts: (f.mounts ?? []).map((m) => ({ ...m, values: swap(m.values, voiceover ?? '') as Record<string, unknown> })) };
     }),
     layers: (written.layers ?? []).map((l) => {
       const narration = written.frames.slice(l.from_frame - 1, l.to_frame).map((f) => (f.voiceover ?? '').replace(pattern, to)).join(' ');
@@ -142,6 +153,8 @@ export function toMarkdown(written: WrittenStoryboard, globals: { format: string
     JSON.stringify(frame.values, null, 2),
     '```',
     '',
+    // The components over the block: a second json block, in the storyboard's own mount shape.
+    ...((frame.mounts ?? []).length ? ['```json', JSON.stringify((frame.mounts ?? []).map((m) => ({ component: m.component, box: m.slot, ...(m.at?.trim() ? { at: m.at.trim() } : {}), ...(m.until?.trim() ? { until: m.until.trim() } : {}), values: m.values })), null, 2), '```', ''] : []),
   ].join('\n'));
   const layers = (written.layers ?? []).length ? ['## Layers', '', ...(written.layers ?? []).map((layer, i) => [
     `### Layer ${i + 1} — ${line(layer.title)}`,

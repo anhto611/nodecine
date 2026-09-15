@@ -1,5 +1,6 @@
+import os from 'node:os';
 import path from 'node:path';
-import { access } from 'node:fs/promises';
+import { access, mkdtemp, rm } from 'node:fs/promises';
 import { ErrorCode } from '@/contracts/errors';
 import { TranscribeErrorCode } from './errors';
 import type { Word } from '@/contracts/types/payloads';
@@ -33,11 +34,37 @@ export function parseAlignerOutput(stdout: string): Word[] {
     .map((w) => ({ text: w.text, start: Math.max(0, w.start), end: Math.max(w.start, w.end) }));
 }
 
-export async function alignWordsOnServer(audioUrl: string, text: string, language: string, options: { model: string }, signal: AbortSignal): Promise<Word[]> {
+/**
+ * `window`: align only that stretch of the recording (seconds from its start), cut out with ffmpeg
+ * first, the timings given back on the recording's clock. A narration of several segments is aligned
+ * one segment at a time, so the aligner losing its place in one cannot pull the others off.
+ */
+export async function alignWordsOnServer(audioUrl: string, text: string, language: string, options: { model: string; window?: { start: number; duration: number } }, signal: AbortSignal): Promise<Word[]> {
   const python = await alignerPython();
   if (!python) throw new NodeError(ErrorCode.PROVIDER_NOT_INSTALLED, 'No Python interpreter with stable-ts').withFix(ALIGN_INSTALL_HINT);
-  const audio = mediaPath(fileNameFromMediaUrl(audioUrl));
+  const whole = mediaPath(fileNameFromMediaUrl(audioUrl));
   const model = /^[a-z0-9._-]{1,40}$/i.test(options.model) ? options.model : 'small';
+  const window = options.window;
+  let audio = whole;
+  let dir: string | null = null;
+  if (window) {
+    const ffmpeg = await findBinary('ffmpeg', 'NODECINE_FFMPEG_BIN');
+    if (!ffmpeg) throw new NodeError(ErrorCode.PROVIDER_NOT_INSTALLED, 'ffmpeg is needed to cut the recording').withFix('brew install ffmpeg');
+    dir = await mkdtemp(path.join(os.tmpdir(), 'nodecine-align-'));
+    audio = path.join(dir, 'segment.wav');
+    const cut = await exec(ffmpeg, { args: ['-v', 'error', '-y', '-ss', String(Math.max(0, window.start)), '-t', String(Math.max(0.1, window.duration)), '-i', whole, '-ac', '1', '-ar', '16000', audio], timeoutMs: 60_000, signal });
+    if (cut.code !== 0) { await rm(dir, { recursive: true, force: true }); throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, `could not cut the recording: ${cut.stderr.trim().slice(0, 200)}`); }
+  }
+  try {
+    const words = await alignFile(python, audio, text, language, model, signal);
+    const offset = window?.start ?? 0;
+    return offset ? words.map((w) => ({ ...w, start: w.start + offset, end: w.end + offset })) : words;
+  } finally {
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function alignFile(python: string, audio: string, text: string, language: string, model: string, signal: AbortSignal): Promise<Word[]> {
   const r = await exec(python, {
     args: [ALIGN_SCRIPT, '--audio', audio, '--language', language, '--model', model],
     // The narration goes in on stdin, never through argv.

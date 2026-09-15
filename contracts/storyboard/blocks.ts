@@ -56,6 +56,42 @@ export function readBlock(name: string, html: string): BlockInfo {
   };
 }
 
+/** What a component is for: a piece of a scene, an effect over something, a piece of an interface, or a film-long overlay. */
+export const COMPONENT_ROLES = ['piece', 'effect', 'ui', 'overlay'] as const;
+export type ComponentRole = (typeof COMPONENT_ROLES)[number];
+const COMPONENT_FILE = /^compositions\/components\/([a-z][a-z0-9-]{1,40})\.html$/;
+
+export interface ComponentInfo {
+  name: string;
+  role: ComponentRole;
+  description: string;
+  variables: BlockVariable[];
+}
+
+/**
+ * Every component a composition holds that a frame may mount: not those `assemble.json` already runs
+ * across the whole film.
+ */
+export function readComponentCatalog(files: Record<string, string>): ComponentInfo[] {
+  let overlays = new Set<string>();
+  try { overlays = new Set(((JSON.parse(files['assemble.json'] ?? '{}') as { overlays?: { component?: string }[] }).overlays ?? []).map((o) => o.component ?? '')); } catch { /* none */ }
+  return Object.entries(files)
+    .map(([path, html]) => [COMPONENT_FILE.exec(path)?.[1], html] as const)
+    .filter((entry): entry is readonly [string, string] => !!entry[0] && !overlays.has(entry[0]))
+    .map(([name, html]) => {
+      const info = readBlock(name, html);
+      const role = attr(/<html\b[^>]*>/i.exec(html)?.[0] ?? '', 'data-role');
+      return { name, role: (COMPONENT_ROLES as readonly string[]).includes(role ?? '') ? role as ComponentRole : 'piece', description: info.description, variables: info.variables };
+    })
+    .filter((c) => c.role !== 'overlay')
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** The named boxes `assemble.json` gives, where a frame's components are mounted: name → [left, top, width, height]. */
+export function readSlots(files: Record<string, string>): Record<string, [number, number, number, number]> {
+  try { return (JSON.parse(files['assemble.json'] ?? '{}') as { slots?: Record<string, [number, number, number, number]> }).slots ?? {}; } catch { return {}; }
+}
+
 /** Every block a composition holds, by name. */
 export function readBlockCatalog(files: Record<string, string>): BlockInfo[] {
   return Object.entries(files)

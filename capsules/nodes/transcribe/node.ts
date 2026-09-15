@@ -50,17 +50,54 @@ export const transcribe: NodeDefinition<typeof Params> = {
       log('info', `${voiceover.words.length} words already timed by the provider`);
       return cut(voiceover, params.maxChars, log);
     }
-    const heard = await services.invoke<import('@/contracts/types/payloads').Word[]>('transcribe/align', [voiceover.audioUrl, script?.text ?? '', voiceover.language, { model: params.model }, signal]);
-    // With a script, the narration's own words on the model's clock, so the text cannot come back
-    // misspelled. Without one, what the model heard is all anybody has.
-    const words = script ? retime(script.text, heard) : heard;
+    type Word = import('@/contracts/types/payloads').Word;
+    const align = (text: string, window?: { start: number; duration: number }) =>
+      services.invoke<Word[]>('transcribe/align', [voiceover.audioUrl, text, voiceover.language, { model: params.model, ...(window ? { window } : {}) }, signal]);
+    let words: Word[];
+    let note = '';
+    const segments = voiceover.segments ?? [];
+    if (script && script.segments?.length && script.segments.length === segments.length && segments.length > 1) {
+      // A voice of several segments, each with its own text: aligned one at a time, so the aligner
+      // losing its place in a short choppy line cannot pile the words of the next scenes on top of it.
+      // A segment whose timings still collapse is spread over its own stretch instead.
+      words = [];
+      let spread = 0;
+      for (const [i, segment] of segments.entries()) {
+        const text = script.segments[i]!;
+        const heard = await align(text, { start: segment.start, duration: segment.durationSeconds }).catch(() => [] as Word[]);
+        let timed = retime(text, heard);
+        const span = timed.length ? timed[timed.length - 1]!.end - timed[0]!.start : 0;
+        if (!timed.length || span < 0.4 * segment.durationSeconds) { timed = evenly(text, segment.start + 0.15, segment.start + segment.durationSeconds - 0.15); spread++; }
+        words.push(...timed);
+      }
+      note = `${words.length} words aligned with ${params.model}, segment by segment${spread ? ` (${spread} spread evenly)` : ''}`;
+    } else {
+      const heard = await align(script?.text ?? '');
+      // With a script, the narration's own words on the model's clock, so the text cannot come back
+      // misspelled. Without one, what the model heard is all anybody has.
+      words = script ? retime(script.text, heard) : heard;
+      note = script
+        ? `${words.length} words aligned with ${params.model}${heard.length !== words.length ? ` (aligner heard ${heard.length}, retimed by position)` : ''}`
+        : `${words.length} words transcribed with ${params.model} · no script wired in`;
+    }
     if (!words.length) throw new NodeError(TranscribeErrorCode.TRANSCRIBE_NO_WORDS, script ? 'the aligner returned no words' : 'the model heard no words in this recording').withFix('check the recording has speech, and that its language matches the one set on the node that made it');
-    log('info', script
-      ? `${words.length} words aligned with ${params.model}${heard.length !== words.length ? ` (aligner heard ${heard.length}, retimed by position)` : ''}`
-      : `${words.length} words transcribed with ${params.model} · no script wired in`);
+    log('info', note);
     return cut({ ...voiceover, words }, params.maxChars, log);
   },
 };
+
+/** The words of a text spread over a stretch of time, longer words taking longer: what to say when the aligner cannot. */
+function evenly(text: string, from: number, to: number): import('@/contracts/types/payloads').Word[] {
+  const said = text.trim().split(/\s+/).filter(Boolean);
+  const weights = said.map((w) => Math.max(1, w.length));
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  let cursor = from;
+  return said.map((word, i) => {
+    const start = cursor;
+    cursor += (weights[i]! / total) * Math.max(0.2, to - from);
+    return { text: word, start: Math.round(start * 1000) / 1000, end: Math.round(cursor * 1000) / 1000 };
+  });
+}
 
 /** The voice as it goes on, and the lines drawn from it. Pure; the words are already decided. */
 function cut(voiceover: Voiceover, maxChars: number, log: (level: 'info', message: string) => void) {

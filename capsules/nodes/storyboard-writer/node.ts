@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { completeStructured } from '@/contracts/ai/structured-completion';
 import { NodeError } from '@/contracts/errors';
 import { LLM_NEEDS, resolveLLM } from '@/contracts/resources';
-import { readBlockCatalog } from '@/contracts/storyboard/blocks';
+import { readBlockCatalog, readComponentCatalog, readSlots } from '@/contracts/storyboard/blocks';
 import { GUIDE_FILE, readGuide } from '@/contracts/storyboard/guide';
 import { readStoryboard, spokenLines } from '@/contracts/storyboard/read';
 import { storyboardProblems } from '@/contracts/storyboard/validate';
@@ -78,20 +78,22 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
     const assets = inputs.assets?.payload as Assets | undefined;
     const ref = await resolveLLM(services, params, [...LLM_NEEDS, 'structuredOutput']);
     const catalog = readBlockCatalog(composition.files);
+    const components = readComponentCatalog(composition.files);
+    const slots = readSlots(composition.files);
     if (!catalog.length) throw new NodeError(StoryboardWriterErrorCode.NO_BLOCKS, 'the composition has no blocks to build scenes from').withFix('add blocks to the composition under compositions/');
 
     const seen = ref.capabilities.vision?.status === 'ready';
     const items = assets?.items ?? [];
     const guide = readGuide(composition.files[GUIDE_FILE]);
     const material: WriterMaterial = {
-      request, catalog, seen, first: guide.first, last: guide.last, repeat: guide.repeat,
+      request, catalog, components, slots, seen, first: guide.first, last: guide.last, repeat: guide.repeat,
       guide: guide.body,
       pictures: items.map((a) => ({ path: assetProjectPath(a), name: a.name, note: a.note, width: a.width, height: a.height })),
       wordsPerSecond: WORDS_PER_SECOND[params.language] ?? 2.6,
     };
     const images = seen ? items.map((a) => a.url) : [];
     if (items.length && !seen) log('warn', `${ref.displayName} cannot see pictures: it chooses them by their notes`);
-    const rules = { catalog, assets: material.pictures.map((p) => p.path), targetSeconds: params.durationSeconds, wordsPerSecond: material.wordsPerSecond, first: guide.first, last: guide.last, repeat: guide.repeat };
+    const rules = { catalog, assets: material.pictures.map((p) => p.path), targetSeconds: params.durationSeconds, wordsPerSecond: material.wordsPerSecond, first: guide.first, last: guide.last, repeat: guide.repeat, components, slots: Object.keys(slots) };
     const format = `${composition.width}x${composition.height}`;
     // Asked without `fresh`: a single run of this node (to rewrite one scene) must not rewrite the others.
     const asking: Pick<RunContext, 'signal' | 'progress' | 'fresh' | 'services' | 'log'> = { ...ctx, fresh: false };

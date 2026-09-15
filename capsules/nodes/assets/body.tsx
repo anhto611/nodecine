@@ -60,12 +60,13 @@ export const AssetsBody: React.FC<BodyProps> = ({ nodeId }) => {
       </div>
       {error && <div style={{ fontSize: 'var(--fs-hint)', color: 'var(--err)', overflowWrap: 'anywhere' }}>{error}</div>}
       {items.length ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, maxHeight: 520, overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 520, overflowY: 'auto' }}>
           {items.map((asset, i) => {
             return (
               <div key={`${asset.url}-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 6, border: '1px solid var(--line)', borderRadius: 6, minWidth: 0 }}>
-                <div style={{ position: 'relative', height: 150, background: 'var(--bg-2, #0002)', borderRadius: 4, overflow: 'hidden' }}>
-                  <img src={asset.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                {/* The picture across the card's full width, as tall as its own shape makes it. */}
+                <div style={{ position: 'relative', background: 'var(--bg-2, #0002)', borderRadius: 4, overflow: 'hidden' }}>
+                  <img src={asset.url} alt="" style={{ display: 'block', width: '100%', height: 'auto' }} />
                   <button className="nc-chip" style={{ position: 'absolute', top: 4, right: 4 }} onClick={() => remove(i)}>×</button>
                 </div>
                 <textarea className="nc-textarea" style={{ minHeight: 44 }} placeholder={t('node.assetsNote')} value={asset.note ?? ''} onChange={(e) => update(i, { note: e.target.value })} />
