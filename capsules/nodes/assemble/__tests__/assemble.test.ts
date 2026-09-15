@@ -17,6 +17,7 @@ const kit: Composition = {
 
 const storyboard: Storyboard = {
   markdown: '',
+  layers: [],
   frames: [
     { number: 1, title: 'Tin mới', voiceover: 'Kimi vừa ra mắt HighSpeed.', mounts: [{ component: 'card', box: 'top', values: { line1: 'Kimi' } }], values: {}, extra: {} },
     { number: 2, title: 'Ai dùng được', voiceover: 'Mở cho Beta, API và Business.', transitionIn: 'crossfade', mounts: [
@@ -121,5 +122,24 @@ describe('assembling scenes', () => {
     expect(ok.composition.media['assets/calendar.png']).toBe(pictures.items[0]!.url);
     const typo = assemble(withBlock, played('assets/calender.png'), { ...voice, segments: [voice.segments![0]!] }, pictures);
     expect(typo.problems).toEqual(['frame 3, card: no asset assets/calender.png (there are assets/calendar.png)']);
+  });
+  it('plays a layer from a word of its first frame to the end of its last, on its own track', () => {
+    const corner = `<html data-role="overlay" data-composition-variables='[
+  { "id": "name", "type": "string", "label": "Name", "default": "" },
+  { "id": "wink_at", "type": "number", "label": "When it winks (s)", "default": 1 },
+  { "id": "seconds", "type": "number", "label": "Length (s)", "default": 4 }
+]'>
+<body><template><div id="root" data-composition-id="brand-corner" data-width="1080" data-height="1920"></div></template></body></html>`;
+    const withCorner: Composition = { ...kit, files: { ...kit.files, 'compositions/brand-corner.html': corner } };
+    const layered: Storyboard = { ...storyboard, layers: [{ number: 1, title: 'Góc', block: 'brand-corner', from: 1, to: 2, start: '@vừa', values: { name: 'Kimi', wink_at: '@API' } }] };
+    const { composition, problems } = assemble(withCorner, layered, voice);
+    expect(problems).toEqual([]);
+    const index = composition.files['index.html']!;
+    // "vừa" is said at 0.4s; frame 2 ends at 5s; "API" is said at 3.2s, 2.8s into the layer.
+    expect(index).toContain(`data-composition-id="brand-corner" data-composition-src="compositions/brand-corner.html"
+    data-variable-values='{"name":"Kimi","wink_at":2.8,"seconds":4.6}'
+    data-start="0.4" data-duration="4.6" data-track-index="3"`);
+    const outside = assemble(withCorner, { ...layered, layers: [{ ...layered.layers[0]!, to: 3, end: '@Nokia' }] }, voice);
+    expect(outside.problems).toContain('layer 1, brand-corner: "Nokia" is not said in frame 3');
   });
 });

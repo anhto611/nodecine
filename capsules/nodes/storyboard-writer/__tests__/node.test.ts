@@ -13,6 +13,7 @@ const composition: Composition = {
     'storyboard-guide.md': '---\nhint.vi: Dán link app\nfirst: hook\nlast: outro\n---\nOpen on the brand, show features on the phone, close on the button.',
     'compositions/brand-open.html': block('brand-open', 'hook', '{ "id": "name", "type": "string", "label": "Name", "default": "", "maxLength": 24, "required": true }'),
     'compositions/phone-feature.html': block('phone-feature', 'feature', '{ "id": "headline", "type": "string", "label": "Headline", "default": "", "maxLength": 20 }, { "id": "screen", "type": "image", "label": "Screen", "default": "" }, { "id": "callout_at", "type": "number", "label": "When (s)", "default": 1 }'),
+    'compositions/brand-corner.html': block('brand-corner', 'overlay', '{ "id": "name", "type": "string", "label": "Name", "default": "", "maxLength": 20, "required": true }, { "id": "wink_at", "type": "number", "label": "When (s)", "default": 1 }'),
     'compositions/app-close.html': block('app-close', 'outro', '{ "id": "button", "type": "string", "label": "Button", "default": "", "maxLength": 28, "required": true }'),
   },
 };
@@ -129,6 +130,25 @@ describe('the Storyboard Writer', () => {
       expect(error?.details.problems).toContain('frame 4: phone-feature plays 3 scenes in a row, at most 2 may: tell this scene with another block');
       expect(prompts[0]!.prompt).toContain('Never more than 2 scenes in a row on the same block.');
     } finally { composition.files['storyboard-guide.md'] = original; }
+  });
+
+  it('lays an overlay block over a run of scenes, and holds it to the same rules', async () => {
+    const layered = { ...structuredClone(good), layers: [{ title: 'Góc', block: 'brand-corner', from_frame: 1, to_frame: 2, start: '@sổ', end: null, values: { name: 'Pig Money', wink_at: '@bốn' } }] };
+    const { run } = setup([layered]);
+    const out = await run() as unknown as { storyboard: { markdown: string; layers: unknown[] } };
+    expect(out.storyboard.markdown).toContain('## Layers\n\n### Layer 1 — Góc\n- block: brand-corner\n- frames: 1-2\n- start: @sổ');
+    expect(out.storyboard.layers).toEqual([{ number: 1, title: 'Góc', block: 'brand-corner', from: 1, to: 2, start: '@sổ', values: { name: 'Pig Money', wink_at: '@bốn' } }]);
+
+    const wrong = { ...structuredClone(good), layers: [{ title: 'Sai', block: 'phone-feature', from_frame: 2, to_frame: 5, start: '@Nokia', end: null, values: {} }] };
+    const asFrame = structuredClone(good);
+    asFrame.frames[1]!.block = 'brand-corner';
+    const bad = setup([wrong, wrong, wrong]);
+    const error = await bad.run().then(() => null, (e: { details: { problems: string[] } }) => e);
+    expect(error?.details.problems).toContain('layer 1, phone-feature: only an overlay block plays in a layer (this one is a feature block)');
+    expect(error?.details.problems).toContain('layer 1: it runs over frames 2 to 5, but the film has frames 1 to 3');
+    const misplaced = setup([asFrame, asFrame, asFrame]);
+    const error2 = await misplaced.run().then(() => null, (e: { details: { problems: string[] } }) => e);
+    expect(error2?.details.problems).toContain('frame 2: brand-corner is an overlay block: it plays over several frames in a layer, not as a frame\'s block');
   });
 
   it('corrects the subject in every scene, and moves the moments on its words', async () => {

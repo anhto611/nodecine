@@ -84,6 +84,17 @@ const OUTPUT_SHAPE = `{
       "block": "<a block name from the list>",
       "values": { "<variable id>": <value>, ... }
     }
+  ],
+  "layers": [
+    {
+      "title": "<a short name>",
+      "block": "<an overlay block from the list>",
+      "from_frame": <the first scene it runs over, counting from 1>,
+      "to_frame": <the last scene it runs over>,
+      "start": "@word" said in the first scene, or null for that scene's start,
+      "end": "@word" said in the last scene, or null for that scene's end,
+      "values": { "<variable id>": <value>, ... }
+    }
   ]
 }`;
 
@@ -95,6 +106,7 @@ function rules(m: WriterMaterial): string {
 - The whole narration runs about ${words} words (${m.request.durationSeconds} s at ${m.wordsPerSecond} words a second), counting silent scenes' seconds as time too.
 - One idea per scene.${m.first ? ` The first scene plays a ${m.first} block.` : ''}${m.last ? ` The last scene plays a ${m.last} block.` : ''}${m.repeat ? ` Never more than ${m.repeat} scenes in a row on the same block.` : ''}
 - Every scene plays exactly one block from the list, gives every value marked required, and gives only the values that block declares. Never give "seconds".
+- A block whose role is overlay never plays a scene: it goes in "layers", over a run of scenes, on top of their blocks, as the workflow's guide says. With no overlay blocks, or when the guide asks for none, "layers" is []. Two layers over the same scenes need the guide's leave.
 - Keep every text value within its character limit, and every enum value to its listed options.
 - A value that is a moment is "@word": a word (or the first words) said in that same scene's voiceover, where the thing should happen. A list of moments is "@a,@b,@c". Never write seconds for a moment.
 - A picture value is one of the listed picture paths, exactly as written. Pick the picture that shows what the scene says; use each picture at most once unless there are too few.

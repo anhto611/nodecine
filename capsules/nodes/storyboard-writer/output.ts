@@ -19,12 +19,25 @@ export const WrittenFrameSchema = z.object({
 });
 export type WrittenFrame = z.infer<typeof WrittenFrameSchema>;
 
+/** A layer as the model writes it: an overlay block over scenes `from_frame` to `to_frame`, numbered from 1. */
+export const WrittenLayerSchema = z.object({
+  title: z.string().min(1).max(80),
+  block: z.string().min(1).max(41),
+  from_frame: z.number().int().positive(),
+  to_frame: z.number().int().positive(),
+  start: z.string().max(80).nullable().default(null),
+  end: z.string().max(80).nullable().default(null),
+  values: z.record(z.string(), z.unknown()).default({}),
+});
+export type WrittenLayer = z.infer<typeof WrittenLayerSchema>;
+
 export const WrittenStoryboardSchema = z.object({
   language: z.string().min(2).max(35),
   /** The product or subject, as the model understood it from the description, the page and the pictures. */
   subject: z.string().max(120).default(''),
   message: z.string().max(300).default(''),
   frames: z.array(WrittenFrameSchema).min(2).max(16),
+  layers: z.array(WrittenLayerSchema).max(6).default([]),
 });
 export type WrittenStoryboard = z.infer<typeof WrittenStoryboardSchema>;
 
@@ -37,7 +50,8 @@ export function unwrapJson(written: WrittenStoryboard): WrittenStoryboard {
     if (typeof value !== 'string' || !/^\s*[[{]/.test(value)) return value;
     try { return JSON.parse(value); } catch { return value; }
   };
-  return { ...written, frames: written.frames.map((f) => ({ ...f, values: Object.fromEntries(Object.entries(f.values).map(([k, v]) => [k, unwrap(v)])) })) };
+  const each = (values: Record<string, unknown>) => Object.fromEntries(Object.entries(values).map(([k, v]) => [k, unwrap(v)]));
+  return { ...written, frames: written.frames.map((f) => ({ ...f, values: each(f.values) })), layers: (written.layers ?? []).map((l) => ({ ...l, values: each(l.values) })) };
 }
 
 /**
@@ -71,6 +85,10 @@ export function renameEverywhere(written: WrittenStoryboard, from: string, to: s
       const voiceover = f.voiceover === null ? null : f.voiceover.replace(pattern, to);
       return { ...f, title: f.title.replace(pattern, to), voiceover, values: swap(f.values, voiceover ?? '') as Record<string, unknown> };
     }),
+    layers: (written.layers ?? []).map((l) => {
+      const narration = written.frames.slice(l.from_frame - 1, l.to_frame).map((f) => (f.voiceover ?? '').replace(pattern, to)).join(' ');
+      return { ...l, title: l.title.replace(pattern, to), values: swap(l.values, narration) as Record<string, unknown> };
+    }),
   };
 }
 
@@ -82,10 +100,17 @@ export const FrameEditSchema = z.object({
 });
 export type FrameEdit = z.infer<typeof FrameEditSchema>;
 
-/** The written storyboard with a person's edits laid over it, scene by scene. */
+/** The key a person's edit of a layer is kept under, beside the scenes' `0`, `1`…. */
+export const layerEditKey = (index: number) => `layer-${index}`;
+
+/** The written storyboard with a person's edits laid over it, scene by scene and layer by layer. */
 export function applyEdits(written: WrittenStoryboard, edits: Record<string, FrameEdit>): WrittenStoryboard {
   return {
     ...written,
+    layers: (written.layers ?? []).map((layer, i) => {
+      const edit = edits[layerEditKey(i)];
+      return edit ? { ...layer, ...(edit.title !== undefined ? { title: edit.title } : {}), values: { ...layer.values, ...(edit.values ?? {}) } } : layer;
+    }),
     frames: written.frames.map((frame, i) => {
       const edit = edits[String(i)];
       if (!edit) return frame;
@@ -118,5 +143,17 @@ export function toMarkdown(written: WrittenStoryboard, globals: { format: string
     '```',
     '',
   ].join('\n'));
-  return [...head, ...frames].join('\n');
+  const layers = (written.layers ?? []).length ? ['## Layers', '', ...(written.layers ?? []).map((layer, i) => [
+    `### Layer ${i + 1} — ${line(layer.title)}`,
+    `- block: ${layer.block}`,
+    `- frames: ${layer.from_frame}-${layer.to_frame}`,
+    ...(layer.start?.trim() ? [`- start: ${line(layer.start)}`] : []),
+    ...(layer.end?.trim() ? [`- end: ${line(layer.end)}`] : []),
+    '',
+    '```json',
+    JSON.stringify(layer.values, null, 2),
+    '```',
+    '',
+  ].join('\n'))] : [];
+  return [...head, ...frames, ...layers].join('\n');
 }

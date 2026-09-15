@@ -10,7 +10,7 @@ export const storyboardWriterTranslations = {
     'node.writerTone.energetic': 'Energetic', 'node.writerTone.trustworthy': 'Trustworthy', 'node.writerTone.playful': 'Playful', 'node.writerTone.expert': 'Expert',
     'node.writerSubject': 'About', 'node.writerRenameEverywhere': 'Use in every scene', 'node.writerUnderstoodHint': 'Misunderstood? Correct the name above, or add what it missed to the description and write it again.',
     'error.NOTHING_TO_WRITE_ABOUT': 'Say what the video is about: a link or a few sentences',
-    'node.writerRole.scene': 'scene', 'node.writerRole.hook': 'hook', 'node.writerRole.feature': 'feature', 'node.writerRole.proof': 'proof', 'node.writerRole.outro': 'outro',
+    'node.writerRole.scene': 'scene', 'node.writerRole.hook': 'hook', 'node.writerRole.feature': 'feature', 'node.writerRole.proof': 'proof', 'node.writerRole.outro': 'outro', 'node.writerRole.overlay': 'overlay', 'node.writerLayer': 'Layer', 'node.writerLayerScenes': 'over scenes {from}–{to}',
   },
   vi: {
     'node.storyboard-writer': 'Viết Storyboard', 'node.desc.storyboard-writer': 'Viết storyboard từ link hoặc vài câu mô tả app: lời đọc, block cho từng cảnh, chữ và ảnh của cảnh, lúc mọi thứ xuất hiện. Tự kiểm tra và sửa chỗ sai luật; từng cảnh sửa được hoặc viết lại được.',
@@ -23,6 +23,6 @@ export const storyboardWriterTranslations = {
     'node.writerTone.energetic': 'Năng động', 'node.writerTone.trustworthy': 'Tin cậy', 'node.writerTone.playful': 'Vui nhộn', 'node.writerTone.expert': 'Chuyên gia',
     'node.writerSubject': 'Chủ đề', 'node.writerRenameEverywhere': 'Đổi ở mọi cảnh', 'node.writerUnderstoodHint': 'AI hiểu sai? Sửa tên ở trên, hoặc ghi thêm vào ô mô tả rồi viết lại.',
     'error.NOTHING_TO_WRITE_ABOUT': 'Chưa nói video về gì: dán link hoặc viết vài câu',
-    'node.writerRole.scene': 'cảnh', 'node.writerRole.hook': 'hook', 'node.writerRole.feature': 'tính năng', 'node.writerRole.proof': 'bằng chứng', 'node.writerRole.outro': 'kết',
+    'node.writerRole.scene': 'cảnh', 'node.writerRole.hook': 'hook', 'node.writerRole.feature': 'tính năng', 'node.writerRole.proof': 'bằng chứng', 'node.writerRole.outro': 'kết', 'node.writerRole.overlay': 'lớp phủ', 'node.writerLayer': 'Lớp phủ', 'node.writerLayerScenes': 'phủ cảnh {from}–{to}',
   },
 };

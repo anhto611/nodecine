@@ -1,4 +1,4 @@
-import type { Storyboard } from '@/contracts/types/storyboard';
+import { layerTrack, type Storyboard } from '@/contracts/types/storyboard';
 import { ASSETS_DIR } from '@/contracts/types/assets';
 import { checkBlockValues, type BlockInfo, type BlockRole } from './blocks';
 
@@ -76,8 +76,37 @@ export function storyboardProblems(storyboard: Storyboard, rules: StoryboardRule
     problems.push(...unsaid.map((u) => `${label}, ${u}`));
     const declared = block.variables.filter((v) => v.id !== 'seconds');
     problems.push(...checkBlockValues(label, values, declared).problems);
+    if (block.role === 'overlay') problems.push(`${where}: ${block.name} is an overlay block: it plays over several frames in a layer, not as a frame's block`);
     if (i === 0 && rules.first && block.role !== rules.first) problems.push(`${where}: the first frame must play a ${rules.first} block (it plays ${block.name}, a ${block.role} block)`);
     if (i === frames.length - 1 && rules.last && block.role !== rules.last) problems.push(`${where}: the last frame must play a ${rules.last} block (it plays ${block.name}, a ${block.role} block)`);
+  });
+
+  // Layers: an overlay block over a run of frames, on a track of its own.
+  const byTrack = new Map<number, { from: number; to: number; number: number }[]>();
+  (storyboard.layers ?? []).forEach((layer, i) => {
+    const where = `layer ${layer.number}`;
+    const block = byName.get(layer.block);
+    if (!block) { problems.push(`${where}: there is no block ${layer.block} (there are ${rules.catalog.map((b) => b.name).join(', ')})`); return; }
+    const label = `${where}, ${layer.block}`;
+    if (block.role !== 'overlay') problems.push(`${label}: only an overlay block plays in a layer (this one is a ${block.role} block)`);
+    const count = frames.length;
+    if (layer.from < 1 || layer.to > count || layer.from > layer.to) { problems.push(`${where}: it runs over frames ${layer.from} to ${layer.to}, but the film has frames 1 to ${count}`); return; }
+    const first = frames[layer.from - 1]!, last = frames[layer.to - 1]!;
+    for (const [edge, cue, frame] of [['start', layer.start, first], ['end', layer.end, last]] as const) {
+      if (typeof cue === 'string' && !cueSaid(cue, frame.voiceover ?? '')) problems.push(`${label}, ${edge}: "${cue.replace(/^@/, '')}" is not said in frame ${frame.number}`);
+    }
+    for (const path of assetPaths(layer.values)) {
+      if (!rules.assets.includes(path)) problems.push(`${label}: no asset ${path} (${rules.assets.length ? `there are ${rules.assets.join(', ')}` : 'there are no pictures'})`);
+    }
+    const narration = frames.slice(layer.from - 1, layer.to).map((f) => f.voiceover ?? '').join(' ');
+    const unsaid: string[] = [];
+    const values = cuesToNumbers(layer.values, narration, '', unsaid) as Record<string, unknown>;
+    problems.push(...unsaid.map((u) => `${label}, ${u.replace('in this frame', `in frames ${layer.from}–${layer.to}`)}`));
+    problems.push(...checkBlockValues(label, values, block.variables.filter((v) => v.id !== 'seconds')).problems);
+    const track = layerTrack(layer, i);
+    const clash = (byTrack.get(track) ?? []).find((o) => o.from <= layer.to && layer.from <= o.to);
+    if (clash) problems.push(`${where}: it shares track ${track} with layer ${clash.number} over the same frames: give one another track`);
+    byTrack.set(track, [...(byTrack.get(track) ?? []), { from: layer.from, to: layer.to, number: layer.number }]);
   });
 
   if (rules.repeat) {

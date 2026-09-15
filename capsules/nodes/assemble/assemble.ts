@@ -2,7 +2,7 @@ import { COMPOSITION_ENTRY, type Composition } from '@/contracts/types/compositi
 import { blockPath, checkBlockValues, declaredVariables } from '@/contracts/storyboard/blocks';
 import { ASSETS_DIR, assetProjectPath, type Assets } from '@/contracts/types/assets';
 import type { Voiceover, Word } from '@/contracts/types/payloads';
-import type { Cue, Mount, Storyboard, StoryboardFrame } from '@/contracts/types/storyboard';
+import { layerTrack, type Cue, type Mount, type Storyboard, type StoryboardFrame } from '@/contracts/types/storyboard';
 
 /**
  * Scenes put on the clock. A storyboard says what each frame shows and on which spoken word; a voice
@@ -176,6 +176,8 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
   let spokenIndex = 0;
   let spokenEnd = 0;
   const voiceRuns: { filmStart: number; mediaStart: number; duration: number }[] = [];
+  // Where each frame sits on the film and when its words are said there, for the layers over them.
+  const onFilm: { start: number; duration: number; words: FrameWords['words'] }[] = [];
 
   storyboard.frames.forEach((frame, i) => {
     const where = `frame ${frame.number}`;
@@ -266,6 +268,7 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
       spokenEnd = cursor + duration;
     }
     placed.push({ number: frame.number, title: frame.title, start: round(start), duration: round(length), file, ...(frame.block ? { block: frame.block } : {}) });
+    onFilm.push({ start: cursor, duration, words: fw.words });
     cursor += duration;
   });
 
@@ -277,6 +280,43 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
   });
 
   const total = round(cursor);
+
+  // Layers: an overlay block from a moment of one frame to a moment of a later one, on its own track
+  // above the frames. Its values' `@word`s are looked for in all the frames it runs over.
+  (storyboard.layers ?? []).forEach((layer, i) => {
+    const label = `layer ${layer.number}, ${layer.block}`;
+    const html = kit.files[blockPath(layer.block)];
+    if (html === undefined) { problems.push(`${label}: the composition has no block ${layer.block}`); return; }
+    const first = onFilm[layer.from - 1], last = onFilm[layer.to - 1];
+    if (!first || !last || layer.from > layer.to) { problems.push(`${label}: frames ${layer.from} to ${layer.to} are not in the film`); return; }
+    const inFrame = (cue: Cue | undefined, frame: typeof first, edge: number) => {
+      if (cue === undefined) return edge;
+      const at = cueSeconds(cue, frame.words, 0);
+      if (typeof at === 'string') { problems.push(`${label}: ${at.replace('this frame', `frame ${frame === first ? layer.from : layer.to}`)}`); return edge; }
+      return frame.start + at;
+    };
+    const from = inFrame(layer.start, first, first.start);
+    const to = Math.max(from + 0.5, inFrame(layer.end, last, last.start + last.duration));
+    const words = onFilm.slice(layer.from - 1, layer.to).flatMap((f) => f.words.map((w) => ({ text: w.text, at: f.start + w.at })));
+    checkAssets(layer.values, label);
+    const resolve = (value: unknown, where: string): unknown => {
+      if (Array.isArray(value)) return value.map((item, k) => resolve(item, `${where}[${k}]`));
+      if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolve(v, `${where}.${k}`)]));
+      if (typeof value !== 'string' || !/^@/.test(value.trim())) return value;
+      const parts = value.split(',').map((p) => p.trim());
+      const secs = parts.map((p) => cueSeconds(p, words, from));
+      const bad = secs.find((x) => typeof x === 'string');
+      if (bad) { problems.push(`${label}, ${where}: ${String(bad).replace('this frame', `frames ${layer.from}–${layer.to}`)}`); return value; }
+      const rel = (secs as number[]).map((x) => round(Math.max(0, x - from)));
+      return parts.length > 1 ? rel.join(',') : rel[0];
+    };
+    const values: Record<string, unknown> = Object.fromEntries(Object.entries(layer.values).map(([k, v]) => [k, resolve(v, k)]));
+    const declared = declaredVariables(html);
+    if (declared.some((v) => v.id === 'seconds')) values.seconds = round(to - from);
+    const checked = checkBlockValues(label, values, declared);
+    problems.push(...checked.problems);
+    clips.push(clipTag(`layer-${layer.number}`, { component: layer.block, src: blockPath(layer.block), rect: [0, 0, width, height], values: { ...values, ...checked.values }, start: from, duration: to - from, track: layerTrack(layer, i) }));
+  });
   (config.overlays ?? []).forEach((overlay, i) => {
     const label = `overlay ${overlay.component}`;
     if (!hasComponent(kit.files, overlay.component)) { problems.push(`${label}: the composition has no component ${overlay.component}`); return; }

@@ -64,4 +64,25 @@ describe('reading a storyboard', () => {
       'frame 2: values go with a block (add "- block: <name>"); a frame without one lists its mounts',
     ]);
   });
+  it('reads the layers written after the frames, and keeps them out of the frames', () => {
+    const layered = `${md}
+## Layers
+
+### Layer 1 — Góc thương hiệu
+- block: brand-corner
+- frames: 1-2
+- start: @vừa
+- track: 4
+
+\`\`\`json
+{ "name": "Kimi" }
+\`\`\`
+`;
+    const { storyboard, problems } = readStoryboard(layered);
+    expect(problems).toEqual([]);
+    expect(storyboard!.frames).toHaveLength(2);
+    expect(storyboard!.frames[1]!.mounts.map((m) => m.component)).toEqual(['cta-card']);
+    expect(storyboard!.layers).toEqual([{ number: 1, title: 'Góc thương hiệu', block: 'brand-corner', from: 1, to: 2, start: '@vừa', track: 4, values: { name: 'Kimi' } }]);
+    expect(readStoryboard(layered.replace('- frames: 1-2\n', '')).problems).toEqual(['layer 1: say the frames it runs over, like "- frames: 2-4"']);
+  });
 });

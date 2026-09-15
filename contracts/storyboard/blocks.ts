@@ -6,8 +6,8 @@ import { formatVariableValidationIssue, parseCompositionVariables, validateVaria
  * them to a model, the Assemble node plays them, and both hold a frame's values to the same rules.
  */
 
-/** What a block is for in a film. */
-export const BLOCK_ROLES = ['scene', 'hook', 'feature', 'proof', 'outro'] as const;
+/** What a block is for in a film. An `overlay` block plays over several frames as a layer, never as a frame's block. */
+export const BLOCK_ROLES = ['scene', 'hook', 'feature', 'proof', 'outro', 'overlay'] as const;
 export type BlockRole = (typeof BLOCK_ROLES)[number];
 
 /** A block lives at the top of `compositions/`; components and frames live below it. */

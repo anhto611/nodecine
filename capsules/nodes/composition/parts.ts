@@ -23,7 +23,7 @@ export const PART_NAME = /^[a-z][a-z0-9-]{1,40}$/;
  * over something to point at it, or a piece of an app's interface (`ui`).
  */
 export const ROLES = {
-  block: ['scene', 'hook', 'feature', 'proof', 'outro'],
+  block: ['scene', 'hook', 'feature', 'proof', 'outro', 'overlay'],
   component: ['piece', 'overlay', 'effect', 'ui'],
 } as const satisfies Record<Kind, readonly string[]>;
 export type Role = (typeof ROLES)[Kind][number];

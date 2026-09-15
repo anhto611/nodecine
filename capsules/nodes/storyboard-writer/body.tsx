@@ -10,7 +10,7 @@ import { assetProjectPath, type Assets } from '@/contracts/types/assets';
 import type { Composition } from '@/contracts/types/composition';
 import type { Storyboard } from '@/contracts/types/storyboard';
 import { DURATIONS, TONES } from './material';
-import type { FrameEdit, WrittenStoryboard } from './output';
+import { layerEditKey, type FrameEdit, type WrittenStoryboard } from './output';
 
 type Params = { subject: string; about: string; durationSeconds: number; tone: (typeof TONES)[number]; language: string; notes: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
 const LANGUAGES = ['vi', 'en'] as const;
@@ -121,10 +121,16 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
     ? draft.written.frames.map((f) => ({ title: f.title, voiceover: f.voiceover ?? '', block: f.block, values: f.values }))
     : (storyboard?.frames ?? []).map((f) => ({ title: f.title, voiceover: f.voiceover ?? '', block: f.block ?? '', values: f.values }));
   const problemsOf = (i: number) => (draft?.problems ?? []).filter((m) => m.startsWith(`frame ${i + 1}:`) || m.startsWith(`frame ${i + 1},`));
+  // Layers: an overlay block over a run of scenes, shown after them with the scenes they cover.
+  const layers = draft?.written
+    ? (draft.written.layers ?? []).map((l) => ({ title: l.title, block: l.block, from: l.from_frame, to: l.to_frame, values: l.values }))
+    : (storyboard?.layers ?? []).map((l) => ({ title: l.title, block: l.block, from: l.from, to: l.to, values: l.values }));
+  const layerProblemsOf = (i: number) => (draft?.problems ?? []).filter((m) => m.startsWith(`layer ${i + 1}:`) || m.startsWith(`layer ${i + 1},`));
 
-  const edit = (i: number, patch: FrameEdit) => {
-    const current = edits[String(i)] ?? {};
-    set({ edits: { ...edits, [String(i)]: { ...current, ...patch, ...(patch.values ? { values: { ...current.values, ...patch.values } } : {}) } } });
+  const edit = (i: number | string, patch: FrameEdit) => {
+    const key = String(i);
+    const current = edits[key] ?? {};
+    set({ edits: { ...edits, [key]: { ...current, ...patch, ...(patch.values ? { values: { ...current.values, ...patch.values } } : {}) } } });
   };
   const rewrite = (i: number) => {
     const { [String(i)]: _dropped, ...rest } = edits;
@@ -224,6 +230,30 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
                 <Btn small disabled={running} onClick={() => rewrite(i)}>{t('node.writerRewriteScene')}</Btn>
                 {edits[String(i)] && <Btn small onClick={() => { const { [String(i)]: _gone, ...rest } = edits; set({ edits: rest }); }}>{t('node.writerUndoEdits')}</Btn>}
               </div>
+            </div>
+          );
+        })}
+        {layers.map((layer, i) => {
+          const key = layerEditKey(i);
+          const e = edits[key] ?? {};
+          const values = { ...layer.values, ...(e.values ?? {}) };
+          const block: BlockInfo | undefined = catalog.get(layer.block);
+          const words = scenes.slice(layer.from - 1, layer.to).flatMap((s, k) => (edits[String(layer.from - 1 + k)]?.voiceover ?? s.voiceover).split(/\s+/).filter(Boolean));
+          const problems = layerProblemsOf(i);
+          const fid = (field: string) => `${nodeId}-layer-${i}-${field}`;
+          return (
+            <div key={key} style={{ display: 'grid', gap: 6, padding: 8, border: `1px dashed ${problems.length ? 'var(--err)' : 'var(--line)'}`, borderRadius: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                <b>{t('node.writerLayer')} · {e.title ?? layer.title}</b>
+                <span className="nc-chip">{layer.block}</span>
+                <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerLayerScenes', { from: layer.from, to: layer.to })}</span>
+                {e.values ? <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerEdited')}</span> : null}
+              </div>
+              {(block?.variables ?? []).filter((v) => v.id !== 'seconds' && values[v.id] !== undefined).map((v) => (
+                <ValueField key={v.id} id={fid(v.id)} variable={v} value={values[v.id]} words={words} pictures={pictures} onChange={(value) => edit(key, { values: { [v.id]: value } })} />
+              ))}
+              {problems.map((m) => <div key={m} style={{ fontSize: 'var(--fs-hint)', color: 'var(--err)', overflowWrap: 'anywhere' }}>{m}</div>)}
+              {edits[key] && <div><Btn small onClick={() => { const { [key]: _gone, ...rest } = edits; set({ edits: rest }); }}>{t('node.writerUndoEdits')}</Btn></div>}
             </div>
           );
         })}

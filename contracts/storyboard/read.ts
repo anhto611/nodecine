@@ -1,5 +1,5 @@
 import { parseStoryboard } from '@hyperframes/core/storyboard';
-import { MountSchema, StoryboardSchema, type Storyboard, type StoryboardFrame } from '@/contracts/types/storyboard';
+import { CueSchema, MountSchema, StoryboardLayerSchema, StoryboardSchema, type Storyboard, type StoryboardFrame, type StoryboardLayer } from '@/contracts/types/storyboard';
 
 export interface StoryboardReading {
   storyboard?: Storyboard;
@@ -7,6 +7,51 @@ export interface StoryboardReading {
   warnings: string[];
 }
 
+/** Where NodeCine's layers start, after the frames, and each layer's own heading. */
+const LAYERS_HEADING = /^## Layers[ \t]*$/m;
+const LAYER_HEADING = /^### Layer[ \t]+(\d+)[ \t]*(?:[—–-][ \t]*(.*))?$/gm;
+
+/** A cue as written: seconds, or `@word`. */
+const cueOf = (raw: string | undefined) => {
+  const text = raw?.trim();
+  if (!text) return undefined;
+  const n = Number(text.replace(/s$/, ''));
+  return CueSchema.parse(Number.isFinite(n) && /^[\d.]+s?$/.test(text) ? n : text);
+};
+
+/**
+ * The layers under `## Layers`, each `### Layer N — Title` with `- block:`, `- frames: 2-4`, and
+ * optionally `- start: @word`, `- end: @word`, `- track: 3`, then a ```json block of its values.
+ */
+function readLayers(text: string, problems: string[]): StoryboardLayer[] {
+  const heads = [...text.matchAll(LAYER_HEADING)];
+  return heads.map((head, i) => {
+    const body = text.slice(head.index! + head[0].length, heads[i + 1]?.index ?? text.length);
+    const number = Number(head[1]);
+    const where = `layer ${number}`;
+    const fields: Record<string, string> = {};
+    for (const m of body.matchAll(/^-[ \t]*([a-z_]+)[ \t]*:[ \t]*(.*)$/gm)) fields[m[1]!] = m[2]!.trim();
+    const range = /^(\d+)(?:\s*[-–]\s*(\d+))?$/.exec(fields.frames ?? '');
+    if (!range) problems.push(`${where}: say the frames it runs over, like "- frames: 2-4"`);
+    let values: unknown = {};
+    const raw = JSON_BLOCK.exec(body)?.[1];
+    if (raw) {
+      try { values = JSON.parse(raw); } catch (e) { problems.push(`${where}: its json block does not parse (${e instanceof Error ? e.message : String(e)})`); }
+    }
+    if (!values || typeof values !== 'object' || Array.isArray(values)) { problems.push(`${where}: its values are a json object`); values = {}; }
+    const candidate = {
+      number, title: head[2]?.trim() ?? '', block: fields.block, from: Number(range?.[1] ?? 0), to: Number(range?.[2] ?? range?.[1] ?? 0),
+      ...(fields.start ? { start: cueOf(fields.start) } : {}), ...(fields.end ? { end: cueOf(fields.end) } : {}),
+      ...(fields.track ? { track: Number(fields.track) } : {}), values,
+    };
+    const parsed = StoryboardLayerSchema.safeParse(candidate);
+    if (!parsed.success) {
+      if (range) problems.push(...parsed.error.issues.map((x) => `${where}: ${x.path.join('.') || 'layer'} ${x.message}`));
+      return null;
+    }
+    return parsed.data;
+  }).filter((l): l is StoryboardLayer => !!l);
+}
 /** The first ```json block of a frame's prose: its block's values (an object), or its mounts (a list). */
 const JSON_BLOCK = /```json\s*\n([\s\S]*?)\n```/;
 
@@ -16,7 +61,9 @@ const JSON_BLOCK = /```json\s*\n([\s\S]*?)\n```/;
  * a person can act on, each naming its frame.
  */
 export function readStoryboard(markdown: string): StoryboardReading {
-  const manifest = parseStoryboard(markdown);
+  // Layers are NodeCine's, after the frames: HyperFrames' parser reads only what comes before them.
+  const split = LAYERS_HEADING.exec(markdown);
+  const manifest = parseStoryboard(split ? markdown.slice(0, split.index) : markdown);
   const problems: string[] = [];
   const warnings = manifest.warnings.map((w) => (w.frameIndex ? `frame ${w.frameIndex}: ${w.message}` : w.message));
   if (!manifest.frames.length) return { problems: ['no frames: start each one with a "## Frame N — Title" heading'], warnings };
@@ -47,7 +94,8 @@ export function readStoryboard(markdown: string): StoryboardReading {
     return { number, title: f.title ?? '', scene: f.scene, voiceover, durationSeconds: f.durationSeconds, transitionIn: f.transitionIn, block: name, values, mounts: parsed, extra };
   });
 
-  const result = StoryboardSchema.safeParse({ format: manifest.globals.format, ...(manifest.globals.extra.subject ? { subject: manifest.globals.extra.subject } : {}), message: manifest.globals.message, arc: manifest.globals.arc, frames, markdown });
+  const layers = split ? readLayers(markdown.slice(split.index + split[0].length), problems) : [];
+  const result = StoryboardSchema.safeParse({ format: manifest.globals.format, ...(manifest.globals.extra.subject ? { subject: manifest.globals.extra.subject } : {}), message: manifest.globals.message, arc: manifest.globals.arc, frames, layers, markdown });
   if (!result.success) problems.push(...result.error.issues.map((x) => `${x.path.join('.')}: ${x.message}`));
   return { storyboard: problems.length ? undefined : result.data, problems, warnings };
 }
