@@ -46,6 +46,15 @@ const Player: React.FC<{ preview: PartPreview; still?: boolean }> = ({ preview, 
   return <div ref={ref} style={{ position: 'absolute', inset: 0, pointerEvents: still ? 'none' : 'auto' }} />;
 };
 
+/**
+ * A box of the picture's own shape, no taller than `maxHeight`: its width follows from that height, so
+ * a portrait film is not squeezed into a strip as wide as the panel.
+ */
+const frameBox = (size: { width: number; height: number }, maxHeight: string): React.CSSProperties => ({
+  position: 'relative', width: `min(100%, calc(${maxHeight} * ${size.width} / ${size.height}))`, aspectRatio: `${size.width} / ${size.height}`,
+  margin: '0 auto', background: '#000', borderRadius: 4, overflow: 'hidden',
+});
+
 /** Becomes true once the element has scrolled into view, and stays true. */
 function useSeen<T extends Element>(): [React.RefObject<T | null>, boolean] {
   const ref = React.useRef<T>(null);
@@ -86,7 +95,7 @@ const Tile: React.FC<{ path: string; project: Project; engine?: string; selected
       onClick={onOpen}
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: 6, textAlign: 'left', whiteSpace: 'normal', minWidth: 0 }}
     >
-      <div style={{ position: 'relative', width: '100%', aspectRatio: live ? `${live.width} / ${live.height}` : '9 / 16', maxHeight: 260, background: '#000', borderRadius: 4, overflow: 'hidden' }}>
+      <div style={frameBox(live ?? { width: 9, height: 16 }, '260px')}>
         {live ? <Player preview={live} still /> : (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, textAlign: 'center', color: failed ? 'var(--err)' : 'var(--tx-3)', fontSize: 'var(--fs-hint)', overflowWrap: 'anywhere' }}>
             {failed ?? '…'}
@@ -203,7 +212,7 @@ export const PartsDialog: React.FC = () => {
               <b style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{openPath}</b>
               <button className="nc-chip" onClick={close}>×</button>
             </div>
-            <div style={{ position: 'relative', width: '100%', aspectRatio: big ? `${big.width} / ${big.height}` : `${frame.width} / ${frame.height}`, maxHeight: '48vh', background: '#000', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ ...frameBox(big ?? frame, '70vh'), flex: 'none' }}>
               {big ? <Player key={big.url} preview={big} /> : (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, textAlign: 'center', color: bigError ? 'var(--err)' : 'var(--tx-3)', overflowWrap: 'anywhere' }}>{bigError ?? '…'}</div>
               )}

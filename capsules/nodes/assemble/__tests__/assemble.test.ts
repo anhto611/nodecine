@@ -86,20 +86,21 @@ describe('assembling scenes', () => {
   { "id": "pop_at", "type": "number", "label": "When it pops (s)", "default": 0 },
   { "id": "side", "type": "enum", "label": "Side", "default": "left", "options": [{ "value": "left", "label": "Left" }, { "value": "right", "label": "Right" }] },
   { "id": "effects", "type": "string", "label": "Effects, as JSON", "default": "[]" },
+  { "id": "cues", "type": "string", "label": "Cues, seconds separated by commas", "default": "" },
   { "id": "seconds", "type": "number", "label": "Length (s)", "default": 4 }
 ]'>
 <body><template><div id="root" data-composition-id="hook-question" data-width="1080" data-height="1920"></div></template></body></html>`;
   const withBlock: Composition = { ...kit, files: { ...kit.files, 'compositions/hook-question.html': block } };
 
   it('plays the block a frame names for the whole frame, with the frame\'s values and its words as seconds', () => {
-    const played: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right', effects: [{ type: 'pill', at: '@Business.' }] } }] };
+    const played: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right', effects: [{ type: 'pill', at: '@Business.' }], cues: '@Beta' } }] };
     const { composition, frames, problems } = assemble(withBlock, played, voice);
     expect(problems).toEqual([]);
     expect(frames[1]!.block).toBe('hook-question');
     const frame2 = composition.files['compositions/frames/02-ai-dung-duoc.html']!;
     expect(frame2).toContain('data-composition-id="hook-question" data-composition-src="compositions/hook-question.html"');
     // "API" is said 1.2s into the narration, which starts 0.4s into the frame's clip; the block runs the whole clip.
-    expect(frame2).toContain(`data-variable-values='{"question":"Ai dùng được?","pop_at":1.6,"side":"right","effects":"[{\\"type\\":\\"pill\\",\\"at\\":2.3}]","seconds":3.4}'`);
+    expect(frame2).toContain(`data-variable-values='{"question":"Ai dùng được?","pop_at":1.6,"side":"right","effects":"[{\\"type\\":\\"pill\\",\\"at\\":2.3}]","cues":"1","seconds":3.4}'`);
     expect(frame2).toContain('data-start="0" data-duration="3.4" data-track-index="1"');
   });
 

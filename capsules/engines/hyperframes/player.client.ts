@@ -20,6 +20,12 @@ export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOpti
   player.setAttribute('sandbox-origin', 'opaque');
   player.style.width = '100%';
   player.style.height = '100%';
+  // A portrait film in a node card or a side panel is a few hundred pixels wide: the player's own
+  // spacing needs about 270 for its controls, and past that it cuts the speed button and hides the
+  // scrubber. Tighter spacing keeps them all on the bar.
+  player.style.setProperty('--hfp-controls-gap', '6px');
+  player.style.setProperty('--hfp-controls-padding', '6px 8px');
+  player.style.setProperty('--hfp-font-size', '12px');
   // The page shows every clip as its markup left it until something seeks it: a film whose scenes stack
   // their parts would open on all of them at once. So it is seeked as soon as it is ready, to its first
   // frame, or to the moment a thumbnail shows.

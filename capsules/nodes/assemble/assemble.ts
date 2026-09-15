@@ -227,9 +227,12 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
         // The block starts with the frame's clip, which a soft transition starts early: its cues count from there.
         checkAssets(frame.values, label);
         const values = resolveValues(frame.values, -offset, label);
-        // HyperFrames' variables hold no lists or objects: a string variable given one (a list of effects) carries it as JSON.
+        // HyperFrames' variables hold no lists or objects: a string variable given one (a list of effects) carries it
+        // as JSON. A string variable given one @word (a list of cues with a single cue) carries its seconds as text.
         for (const v of declared) {
-          if (v.type === 'string' && values[v.id] !== null && typeof values[v.id] === 'object') values[v.id] = JSON.stringify(values[v.id]);
+          if (v.type !== 'string') continue;
+          if (values[v.id] !== null && typeof values[v.id] === 'object') values[v.id] = JSON.stringify(values[v.id]);
+          else if (typeof values[v.id] === 'number') values[v.id] = String(values[v.id]);
         }
         if (declared.some((v) => v.id === 'seconds')) values.seconds = round(length);
         for (const issue of validateVariables(values, declared)) problems.push(`${label}: ${formatVariableValidationIssue(issue)}`);
