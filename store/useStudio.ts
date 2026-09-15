@@ -158,7 +158,8 @@ export const useStudio = create<StudioState>((set, get) => {
       if (get().activeTab !== tab.key) return;
       const runtimes: Record<string, NodeRuntime> = {};
       for (const [id, rt] of ex.runtimes_()) runtimes[id] = rt;
-      set({ runtimes, logTick: get().logTick + 1 });
+      // A workflow left mid-run is still running on the server: its Run button stays off.
+      set({ runtimes, running: ex.isRunning(), logTick: get().logTick + 1 });
     });
   };
   const addTab = (tab: Omit<WorkflowTab, 'key'>) => {

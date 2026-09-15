@@ -1,5 +1,5 @@
-import { formatVariableValidationIssue, parseCompositionVariables, validateVariables, type CompositionVariable } from '@hyperframes/core/variables';
 import { COMPOSITION_ENTRY, type Composition } from '@/contracts/types/composition';
+import { blockPath, checkBlockValues, declaredVariables } from '@/contracts/storyboard/blocks';
 import { ASSETS_DIR, assetProjectPath, type Assets } from '@/contracts/types/assets';
 import type { Voiceover, Word } from '@/contracts/types/payloads';
 import type { Cue, Mount, Storyboard, StoryboardFrame } from '@/contracts/types/storyboard';
@@ -80,16 +80,6 @@ function cueSeconds(cue: Cue, words: FrameWords['words'], after: number): number
 
 /** The component's own variable declarations, to know which values are image paths and more. */
 const hasComponent = (files: Record<string, string>, name: string) => files[`${COMPONENTS_DIR}${name}.html`] !== undefined;
-
-/** A block: a whole scene of the workflow's own, at the top of `compositions/`. */
-const blockPath = (name: string) => `compositions/${name}.html`;
-
-/** What a block's `<html>` declares, read the way HyperFrames reads it. */
-function declaredVariables(html: string): CompositionVariable[] {
-  const raw = /<html\b[^>]*\bdata-composition-variables\s*=\s*(['"])([\s\S]*?)\1/i.exec(html)?.[2] ?? null;
-  const decoded = raw?.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&') ?? null;
-  return parseCompositionVariables({ getAttribute: (name: string) => (name === 'data-composition-variables' ? decoded : null) } as unknown as Element) as CompositionVariable[];
-}
 
 function clipTag(id: string, mount: { component: string; src?: string; rect: Rect; values: Record<string, unknown>; start: number; duration: number; track: number }): string {
   const [left, top, width, height] = mount.rect;
@@ -227,19 +217,10 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
         // The block starts with the frame's clip, which a soft transition starts early: its cues count from there.
         checkAssets(frame.values, label);
         const values = resolveValues(frame.values, -offset, label);
-        // HyperFrames' variables hold no lists or objects: a string variable given one (a list of effects) carries it
-        // as JSON. A string variable given one @word (a list of cues with a single cue) carries its seconds as text.
-        for (const v of declared) {
-          if (v.type !== 'string') continue;
-          if (values[v.id] !== null && typeof values[v.id] === 'object') values[v.id] = JSON.stringify(values[v.id]);
-          else if (typeof values[v.id] === 'number') values[v.id] = String(values[v.id]);
-        }
         if (declared.some((v) => v.id === 'seconds')) values.seconds = round(length);
-        for (const issue of validateVariables(values, declared)) problems.push(`${label}: ${formatVariableValidationIssue(issue)}`);
-        for (const v of declared) {
-          const value = values[v.id];
-          if (v.type === 'string' && v.maxLength && typeof value === 'string' && value.length > v.maxLength) problems.push(`${label}: ${v.id} is ${value.length} characters, the block allows ${v.maxLength}`);
-        }
+        const checked = checkBlockValues(label, values, declared);
+        problems.push(...checked.problems);
+        Object.assign(values, checked.values);
         const root = /<template[^>]*>[\s\S]*?(<[a-z][^>]*\bdata-composition-id\s*=[^>]*>)/i.exec(html)?.[1] ?? '';
         const blockId = /\bdata-composition-id\s*=\s*["']([^"']+)/i.exec(root)?.[1];
         if (blockId !== frame.block) problems.push(`${label}: its root's data-composition-id must be "${frame.block}", its file name`);

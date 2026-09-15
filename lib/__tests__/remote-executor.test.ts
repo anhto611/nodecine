@@ -138,3 +138,23 @@ describe('RemoteExecutor when the server is not ready', () => {
     expect(calls.filter((c) => c.url === '/api/jobs')).toHaveLength(1);
   });
 });
+
+describe('RemoteExecutor running state', () => {
+  it('shows a workflow running when its tab comes back mid-run, until the job ends', async () => {
+    vi.mocked(fetch).mockImplementation(async (url) => {
+      calls.push({ url: String(url), body: {} });
+      return new Response(JSON.stringify({ runtimes: {}, logs: [], running: true, pending: [{ id: 'queued', key: 'k', kind: 'run', status: 'pending', createdAt: 0 }], history: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    const ex = new RemoteExecutor('other', pipeline(), 'Other');
+    await flush();
+    await ex.switchTo('k', pipeline(), 'Static');
+    expect(ex.isRunning()).toBe(true);
+    const es = FakeEventSource.instances.at(-1)!;
+    const send = (job: object) => { for (const fn of es.listeners.get('job') ?? []) fn({ data: JSON.stringify({ job }) } as MessageEvent); };
+    send({ id: 'first', key: 'k', kind: 'run', status: 'done', ok: true, createdAt: 0 });
+    expect(ex.isRunning()).toBe(true);
+    send({ id: 'queued', key: 'k', kind: 'run', status: 'running', createdAt: 0 });
+    send({ id: 'queued', key: 'k', kind: 'run', status: 'done', ok: true, createdAt: 0 });
+    expect(ex.isRunning()).toBe(false);
+  });
+});

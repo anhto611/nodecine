@@ -16,9 +16,11 @@ declare module '@/core/engine/services' {
     /**
      * Ask the model. The server keeps every answer on disk by provider and prompt, so the same
      * question asked again — after a restart, or because a downstream visual node re-ran — is
-     * free and identical; `fresh` skips that and asks again (a forced run, a retry).
+     * free and identical; `fresh` skips that and asks again (a forced run, a retry). `images` are
+     * uploaded pictures (`/api/assets/…`) the model looks at with the prompt; a model that cannot see
+     * is asked without them.
      */
-    complete<S extends ZodTypeAny>(ref: LLMRef, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean }): Promise<z.infer<S>>;
+    complete<S extends ZodTypeAny>(ref: LLMRef, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean; images?: string[] }): Promise<z.infer<S>>;
     /** A page the engine's player loads for this composition, filled with its values. */
     preview(ref: EngineRef, composition: Composition, signal: AbortSignal): Promise<{ url: string }>;
     /** The composition, filled with its values, rendered by the engine it names. */

@@ -29,7 +29,10 @@ export const composition: NodeDefinition<typeof Params> = {
     }
     const inspection = await services.invoke<Inspection>('composition/inspect', [params.files]);
     const errors = inspection.findings.filter((f) => f.severity === 'error');
-    for (const f of inspection.findings.filter((x) => x.severity === 'warning')) log('warn', `${f.file ? `${f.file} · ` : ''}${f.code}: ${f.message}`, f.code);
+    // The linter's codes are its own, not NodeCine's: the card shows one warning of ours, the log each finding.
+    const warnings = inspection.findings.filter((x) => x.severity === 'warning');
+    for (const f of warnings) log('info', `${f.file ? `${f.file} · ` : ''}${f.code}: ${f.message}`);
+    if (warnings.length) log('warn', `HyperFrames lint: ${warnings.length} warning${warnings.length > 1 ? 's' : ''}`, CompositionErrorCode.COMPOSITION_LINT_WARNINGS);
     if (errors.length) {
       const first = errors[0]!;
       throw new NodeError(CompositionErrorCode.COMPOSITION_INVALID, `${first.file ? `${first.file}: ` : ''}${first.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`, false, errors).withFix(first.fixHint ?? 'fix the composition and run again');

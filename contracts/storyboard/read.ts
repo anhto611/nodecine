@@ -47,7 +47,7 @@ export function readStoryboard(markdown: string): StoryboardReading {
     return { number, title: f.title ?? '', scene: f.scene, voiceover, durationSeconds: f.durationSeconds, transitionIn: f.transitionIn, block: name, values, mounts: parsed, extra };
   });
 
-  const result = StoryboardSchema.safeParse({ format: manifest.globals.format, message: manifest.globals.message, arc: manifest.globals.arc, frames, markdown });
+  const result = StoryboardSchema.safeParse({ format: manifest.globals.format, ...(manifest.globals.extra.subject ? { subject: manifest.globals.extra.subject } : {}), message: manifest.globals.message, arc: manifest.globals.arc, frames, markdown });
   if (!result.success) problems.push(...result.error.issues.map((x) => `${x.path.join('.')}: ${x.message}`));
   return { storyboard: problems.length ? undefined : result.data, problems, warnings };
 }

@@ -37,10 +37,27 @@ export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOpti
   // The page's sound as one file beside it, when it has any: a click on Play does not reach the
   // opaque-origin frame, whose audio is then refused, and the player plays this from the Studio's page
   // instead (see preview-audio.server.ts). A thumbnail makes no sound, so it needs none.
+  //
+  // Such a page keeps no audio of its own (see register.server.ts), so the frame never reports its audio
+  // refused, and the player would never switch to the file: the film ran silent until a reload. With the
+  // file in hand the Studio's page takes the sound at once, and again whenever the player hands it back
+  // to the frame (a reload of the frame does).
   if (preview.controls !== false) {
     const audio = preview.url.replace(/\.html(\?.*)?$/, '.m4a');
     if (audio !== preview.url) {
-      void fetch(audio, { method: 'HEAD' }).then((res) => { if (res.ok && player.isConnected) player.setAttribute('audio-src', audio); }, () => {});
+      // The player's own fallback, called early. Not public API; without it the player keeps its default.
+      const owned = player as PlayerElement & { _audioOwner?: string; _promoteToParentProxy?: () => void };
+      const takeSound = () => {
+        if (player.hasAttribute('audio-src') && owned._audioOwner !== 'parent') owned._promoteToParentProxy?.();
+      };
+      player.addEventListener('ready', takeSound);
+      player.addEventListener('play', takeSound);
+      player.addEventListener('audioownershipchange', takeSound);
+      void fetch(audio, { method: 'HEAD' }).then((res) => {
+        if (!res.ok || !player.isConnected) return;
+        player.setAttribute('audio-src', audio);
+        takeSound();
+      }, () => {});
     }
   }
   element.appendChild(player);

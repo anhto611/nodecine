@@ -20,6 +20,8 @@ export interface StructuredSpec<S extends ZodTypeAny> {
   outputSchema: S;
   /** `strict` is set for the retry after a language mismatch; say it more firmly. */
   buildPrompt(language: string, strict: boolean): string;
+  /** Pictures the model looks at with the prompt (`/api/assets/…`), when it can see. */
+  images?: string[];
   /** The language the model claims to have written in, read out of its own answer. */
   languageOf(output: z.infer<S>): string;
 }
@@ -46,7 +48,7 @@ export async function completeStructured<S extends ZodTypeAny>(
     ctx.progress(0.2 + attempt * 0.2, `attempt ${attempt}`);
     let raw: unknown;
     try {
-      raw = await ctx.services.complete(ref, spec.buildPrompt(language, strict), RAW, ctx.signal, { fresh: ctx.fresh });
+      raw = await ctx.services.complete(ref, spec.buildPrompt(language, strict), RAW, ctx.signal, { fresh: ctx.fresh, ...(spec.images?.length ? { images: spec.images } : {}) });
     } catch (e) {
       const err = toNodeError(e, ErrorCode.LLM_UPSTREAM);
       // The provider itself can fail to get JSON out of the model; that is the same kind of miss.

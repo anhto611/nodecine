@@ -8,7 +8,15 @@ export interface LLMProvider {
   readonly displayName: string;
   readonly transport: LLMRef['transport'];
   probe(): Promise<LLMRef['capabilities']>;
-  complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal): Promise<z.infer<S>>;
+  complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal, options?: LLMCompleteOptions): Promise<z.infer<S>>;
+}
+
+/** A picture on this machine for the model to look at with the prompt. */
+export interface LLMImage { path: string; mediaType: string }
+
+export interface LLMCompleteOptions {
+  /** Only a provider whose probe reports `vision` ready is given these. */
+  images?: LLMImage[];
 }
 
 export interface SynthesizeResult {

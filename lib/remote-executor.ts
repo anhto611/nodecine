@@ -58,6 +58,8 @@ async function request<T>(url: string, body?: unknown, requestId?: string): Prom
 const getJson = <T,>(url: string): Promise<T> => request<T>(url);
 const postJson = <T,>(url: string, body: unknown, requestId?: string): Promise<T> => request<T>(url, body, requestId);
 
+const RUNNING_BEFORE_ATTACH = 'running-before-attach';
+
 /** An id for one submission, so a retry of it is recognised as the same one. */
 let submissionSeq = 0;
 const newRequestId = (): string => `req-${Date.now().toString(36)}-${(submissionSeq++).toString(36)}`;
@@ -71,7 +73,12 @@ export class RemoteExecutor {
   private source: EventSource | null = null;
   private waiting = new Map<string, (job: Job) => void>();
   private pushGraph: ReturnType<typeof setTimeout> | null = null;
-  private runningJob: string | null = null;
+  /**
+   * This workflow's jobs the server has not finished: running or waiting their turn. Read from the
+   * server when a tab is shown, so coming back to a workflow mid-run shows it running, and a second
+   * Run is not queued behind the first by a button that looked idle.
+   */
+  private activeJobs = new Set<string>();
   /**
    * Every request to the server goes out in the order it was issued. Without this an invalidate sent
    * from a param edit could land after the single-node job that followed it, and mark the fresh
@@ -115,7 +122,7 @@ export class RemoteExecutor {
   }
 
   isRunning(): boolean {
-    return this.runningJob !== null;
+    return this.activeJobs.size > 0;
   }
 
   /** A graph edit: mirrored here at once, sent to the server a moment later. */
@@ -218,7 +225,10 @@ export class RemoteExecutor {
     if (snap) {
       for (const [id, rt] of Object.entries(snap.runtimes)) this.setRuntime(id, rt);
       for (const entry of snap.logs.slice(-500)) this.logs.push(entry);
-      this.runningJob = snap.running ? 'unknown' : null;
+      this.activeJobs.clear();
+      // The job running now is not in the snapshot by id; it stands in until a job of this workflow ends.
+      if (snap.running) this.activeJobs.add(RUNNING_BEFORE_ATTACH);
+      for (const job of snap.pending ?? []) this.activeJobs.add(job.id);
       this.hooks.onHistory?.(snap.history ?? []);
     }
     const es = new EventSource(`/api/jobs/events?key=${encodeURIComponent(key)}`);
@@ -237,9 +247,10 @@ export class RemoteExecutor {
     es.addEventListener('log', (m) => { const e = JSON.parse((m as MessageEvent).data) as { entry: LogEntry }; this.logs.push(e.entry); });
     es.addEventListener('job', (m) => {
       const { job } = JSON.parse((m as MessageEvent).data) as { job: Job };
-      if (job.status === 'running') this.runningJob = job.id;
+      if (job.status === 'pending' || job.status === 'running') this.activeJobs.add(job.id);
       if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') {
-        if (this.runningJob === job.id) this.runningJob = null;
+        this.activeJobs.delete(job.id);
+        this.activeJobs.delete(RUNNING_BEFORE_ATTACH);
         if (job.error && job.status === 'failed') this.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: job.error.code, message: job.error.message });
         const waiter = this.waiting.get(job.id);
         if (waiter) { waiter(job); this.waiting.delete(job.id); }

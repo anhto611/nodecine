@@ -11,7 +11,7 @@ import { createHyperframesAdapter, type ServerPreview, type ServerRender } from 
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { writeProject } from './project.server';
 import { hoistNestedCompositions } from './hoist.server';
-import { writePreviewAudio } from './preview-audio.server';
+import { withoutMixedAudio, writePreviewAudio } from './preview-audio.server';
 
 const QUALITY: Record<ExportSettings['quality'], 'high' | 'standard' | 'draft'> = { high: 'high', medium: 'standard', low: 'draft' };
 
@@ -28,9 +28,16 @@ export const previewWithBundler: ServerPreview = async (composition) => {
   const { bundleToSingleHtml, injectTagsAtHeadStart } = await import('@hyperframes/core/compiler');
   const { key, dir } = await writeProject(composition);
   const values = valuesOf(composition);
-  const name = `preview-${contentHash(values)}.html`;
+  // `s` for a page whose sound is the file beside it: pages from before, which still play their own, are not reused.
+  const name = `preview-s-${contentHash(values)}.html`;
   const target = projectFilePath(key, name);
-  if (!(await stat(target).then(() => true, () => false))) {
+  const exists = (file: string) => stat(file).then(() => true, () => false);
+  // Its sound on the film's clock, beside it, for the player to play from the Studio's page (see preview-audio.server.ts).
+  const audio = projectFilePath(key, name.replace(/\.html$/, '.m4a'));
+  if (!(await exists(audio))) {
+    await writePreviewAudio(composition.files[COMPOSITION_ENTRY] ?? '', values, dir, audio).catch(() => false);
+  }
+  if (!(await exists(target))) {
     // Nested sub-compositions lose their values in the bundle; flatten them first (see hoist.server.ts).
     const { html, hoisted } = hoistNestedCompositions(composition.files[COMPOSITION_ENTRY] ?? '', (src) => composition.files[src]);
     const entryFile = hoisted ? `preview-entry-${contentHash(html)}.html` : COMPOSITION_ENTRY;
@@ -38,12 +45,9 @@ export const previewWithBundler: ServerPreview = async (composition) => {
     const bundled = await bundleToSingleHtml(dir, { entryFile, runtime: 'inline' });
     // `<` escaped so a value holding `</script>` cannot close the tag it is written into.
     const assignment = `<script>window.__hfVariables = ${JSON.stringify(values).replace(/</g, '\\u003c')};</script>`;
-    await writeFile(target, injectTagsAtHeadStart(bundled, assignment), 'utf8');
-  }
-  // Its sound on the film's clock, beside it, for the player to fall back on (see preview-audio.server.ts).
-  const audio = projectFilePath(key, name.replace(/\.html$/, '.m4a'));
-  if (!(await stat(audio).then(() => true, () => false))) {
-    await writePreviewAudio(composition.files[COMPOSITION_ENTRY] ?? '', values, dir, audio).catch(() => false);
+    // With the sound in its own file, the page keeps no audio of its own: two copies played at once.
+    const page = (await exists(audio)) ? withoutMixedAudio(bundled) : bundled;
+    await writeFile(target, injectTagsAtHeadStart(page, assignment), 'utf8');
   }
   return { url: projectUrl(key, name) };
 };

@@ -3,7 +3,7 @@ import { NodeError } from '@/contracts/errors';
 import type { AudioScript } from '@/contracts/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { StoryboardErrorCode } from './errors';
-import { readStoryboard, spokenLines } from './read';
+import { readStoryboard, spokenLines } from '@/contracts/storyboard/read';
 
 const Params = z.object({
   /** HyperFrames' STORYBOARD.md; under each frame, the block it plays and a ```json block of its values, or its mounts. */

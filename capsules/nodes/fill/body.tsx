@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
 import { Kv, useT, stopFlow } from '@/capsules/sdk/ui';
-import { useHost, useInputPayload, useParams, type BodyProps } from '@/capsules/sdk/host';
+import { useHost, useInputPayload, useLocale, useParams, type BodyProps } from '@/capsules/sdk/host';
+import { labelOf, type BlockVariable } from '@/contracts/storyboard/blocks';
 import type { Composition, CompositionVariable } from '@/contracts/types/composition';
 import { FILLED } from './node';
 
@@ -60,6 +61,7 @@ const Control: React.FC<{ variable: CompositionVariable; value: unknown; onChang
 
 export const FillBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
+  const locale = useLocale();
   const [p, set] = useParams<{ values: Record<string, unknown> }>(nodeId);
   const composition = useInputPayload<Composition>(nodeId, 'composition');
   const values = p.values ?? {};
@@ -67,7 +69,7 @@ export const FillBody: React.FC<BodyProps> = ({ nodeId }) => {
   return (
     <>
       {composition.variables.filter((v) => !FROM_THE_RUN.has(v.id)).map((v) => (
-        <Kv key={v.id} k={v.label ?? v.id} v={<Control variable={v} value={values[v.id]} onChange={(next) => {
+        <Kv key={v.id} k={v.label ? labelOf(v as unknown as BlockVariable, locale) : v.id} v={<Control variable={v} value={values[v.id]} onChange={(next) => {
           const { [v.id]: _old, ...rest } = values;
           set({ values: next === undefined ? rest : { ...rest, [v.id]: next } });
         }} />} />

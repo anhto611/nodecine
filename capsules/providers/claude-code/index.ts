@@ -6,7 +6,7 @@ import { claudeCodeSettings } from './settings';
 import { registerLLMProvider } from '@/contracts/providers/registry';
 import { ErrorCode, NodeError } from '@/contracts/errors';
 import { extractJson } from '@/contracts/ai/structured-completion';
-import type { LLMProvider } from '@/contracts/providers/types';
+import type { LLMCompleteOptions, LLMImage, LLMProvider } from '@/contracts/providers/types';
 import type { Capability, LLMRef } from '@/contracts/types/payloads';
 import { exec, findBinary } from '@/server/exec';
 
@@ -63,25 +63,31 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
       const bin = await claudeBin();
       if (!bin) {
         const missing: Capability = { status: 'unavailable', code: 'PROVIDER_NOT_INSTALLED', reason: 'Claude Code CLI was not found', fix: 'npm install -g @anthropic-ai/claude-code' };
-        return { installed: missing, authenticated: missing, structuredOutput: missing };
+        return { installed: missing, authenticated: missing, structuredOutput: missing, vision: missing };
       }
       const v = await exec(bin, { args: ['--version'], timeoutMs: 5000 }).catch(() => null);
       const version = v && v.code === 0 ? v.stdout.trim().split(/\s+/)[0] : undefined;
       const authenticated: Capability = (await looksAuthenticated())
         ? ready
         : { status: 'unavailable', code: 'PROVIDER_NOT_AUTHENTICATED', reason: 'Claude Code is not logged in', fix: 'claude  →  /login' };
-      return { installed: ready, authenticated, structuredOutput: ready, version };
+      return { installed: ready, authenticated, structuredOutput: ready, vision: ready, version };
     },
 
-    async complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal): Promise<z.infer<S>> {
+    async complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal, options?: LLMCompleteOptions): Promise<z.infer<S>> {
       const bin = await claudeBin();
       if (!bin) throw Object.assign(new Error('Claude Code CLI not found'), { code: 'PROVIDER_NOT_INSTALLED' });
       const cwd = await mkdtemp(path.join(os.tmpdir(), 'nodecine-claude-'));
       try {
-        const args = ['-p', '--output-format', 'json', '--max-turns', '1', '--tools', ''];
+        const images = options?.images ?? [];
+        // With pictures the prompt goes as one streamed user message whose content holds them; the
+        // answer then comes back as a stream whose last line is the same result envelope.
+        const args = images.length
+          ? ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--max-turns', '1', '--tools', '']
+          : ['-p', '--output-format', 'json', '--max-turns', '1', '--tools', ''];
         const model = settings.model as string | undefined;
         if (model) args.push('--model', model);
-        const r = await exec(bin, { args, stdin: prompt, cwd, timeoutMs: CLAUDE_TIMEOUT_MS, signal, maxOutput: 256 * 1024 });
+        const stdin = images.length ? `${JSON.stringify({ type: 'user', message: { role: 'user', content: [...(await imageBlocks(images, cwd, signal)), { type: 'text', text: prompt }] } })}\n` : prompt;
+        const r = await exec(bin, { args, stdin, cwd, timeoutMs: CLAUDE_TIMEOUT_MS, signal, maxOutput: images.length ? 4 * 1024 * 1024 : 256 * 1024 });
         if (r.timedOut) {
           // A killed process exits with a null code and an empty stderr, so without this the failure
           // read as "claude exited null:" — true, useless, and impossible to act on.
@@ -100,7 +106,7 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
           }
           throw new NodeError('LLM_UPSTREAM', `claude exited ${r.code}: ${msg || 'no output'}`, true);
         }
-        const envelope = JSON.parse(r.stdout) as { result?: string; is_error?: boolean };
+        const envelope = (images.length ? resultLine(r.stdout) : JSON.parse(r.stdout)) as { result?: string; is_error?: boolean };
         if (envelope.is_error || typeof envelope.result !== 'string') throw Object.assign(new Error('claude returned an error envelope'), { code: 'LLM_UPSTREAM' });
         const text = extractJson(envelope.result);
         const parsed = outputSchema.safeParse(JSON.parse(text));
@@ -111,6 +117,35 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
       }
     },
   };
+}
+
+/** The last line of a streamed answer that carries the result envelope. */
+function resultLine(stdout: string): unknown {
+  const line = stdout.trim().split('\n').reverse().find((l) => l.includes('"type":"result"'));
+  if (!line) throw Object.assign(new Error('claude returned no result'), { code: 'LLM_UPSTREAM' });
+  return JSON.parse(line);
+}
+
+/** The longest side a picture is sent at: what the model reads at full detail, and well under its size limit. */
+const IMAGE_LONG_SIDE = 1568;
+
+/**
+ * Pictures as base64 message blocks, each scaled to fit IMAGE_LONG_SIDE and sent as JPEG when ffmpeg
+ * is there to do it; a phone screenshot as PNG can be several megabytes, past what one message takes.
+ */
+async function imageBlocks(images: LLMImage[], dir: string, signal: AbortSignal): Promise<unknown[]> {
+  const ffmpeg = await findBinary('ffmpeg', 'NODECINE_FFMPEG_BIN');
+  return Promise.all(images.map(async (image, i) => {
+    let file = image.path;
+    let mediaType = image.mediaType;
+    if (ffmpeg && mediaType !== 'image/svg+xml') {
+      const out = path.join(dir, `image-${i}.jpg`);
+      const fit = `scale='if(gt(iw,ih),min(${IMAGE_LONG_SIDE},iw),-2)':'if(gt(iw,ih),-2,min(${IMAGE_LONG_SIDE},ih))'`;
+      const r = await exec(ffmpeg, { args: ['-v', 'error', '-y', '-i', image.path, '-vf', fit, '-q:v', '3', out], timeoutMs: 30_000, signal }).catch(() => null);
+      if (r && r.code === 0) { file = out; mediaType = 'image/jpeg'; }
+    }
+    return { type: 'image', source: { type: 'base64', media_type: mediaType, data: (await readFile(file)).toString('base64') } };
+  }));
 }
 
 export function registerClaudeCode(): void {

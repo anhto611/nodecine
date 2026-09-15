@@ -1,0 +1,1 @@
+{"id": "storyboard-writer", "definition": "storyboardWriter", "body": "StoryboardWriterBody", "icon": "bot", "group": "script", "layout": "wide", "translations": "storyboardWriterTranslations", "services": "storyboardWriterServices", "errors": "StoryboardWriterErrorCode"}

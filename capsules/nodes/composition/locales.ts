@@ -2,6 +2,7 @@ export const compositionTranslations = {
   en: {
     'node.composition': 'Composition', 'node.desc.composition': 'A HyperFrames project kept in the workflow: its root composition, the blocks and components written for it, and its media.',
     'error.COMPOSITION_INVALID': 'The composition does not pass HyperFrames\' checks',
+    'error.COMPOSITION_LINT_WARNINGS': 'HyperFrames lint has warnings: it still plays; see the log',
     'node.compositionSize': 'size', 'node.compositionVariables': 'variables', 'node.compositionNone': 'none',
     'node.compositionAddFile': 'add file', 'node.compositionRemoveFile': 'remove', 'node.compositionBadPath': 'a new relative path inside the project, like compositions/intro.html',
     'node.compositionKind.block': 'blocks', 'node.compositionKind.component': 'components',
@@ -24,6 +25,7 @@ export const compositionTranslations = {
   vi: {
     'node.composition': 'Composition', 'node.desc.composition': 'Project HyperFrames lưu trong workflow: composition gốc, các block và component viết riêng cho nó, cùng media.',
     'error.COMPOSITION_INVALID': 'Composition chưa qua được kiểm tra của HyperFrames',
+    'error.COMPOSITION_LINT_WARNINGS': 'HyperFrames lint có cảnh báo: vẫn chạy được, xem chi tiết trong nhật ký',
     'node.compositionSize': 'kích thước', 'node.compositionVariables': 'variables', 'node.compositionNone': 'chưa có',
     'node.compositionAddFile': 'thêm tệp', 'node.compositionRemoveFile': 'xóa', 'node.compositionBadPath': 'đường dẫn tương đối mới trong project, như compositions/intro.html',
     'node.compositionKind.block': 'block', 'node.compositionKind.component': 'component',

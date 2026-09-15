@@ -75,6 +75,8 @@ export const LLMRefSchema = z.object({
     installed: CapabilitySchema,
     authenticated: CapabilitySchema,
     structuredOutput: CapabilitySchema,
+    /** Whether pictures can go with a prompt. Absent means no. */
+    vision: CapabilitySchema.optional(),
     version: z.string().optional(),
   }),
   settings: z.record(z.string(), z.unknown()),

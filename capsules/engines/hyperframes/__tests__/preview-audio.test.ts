@@ -27,3 +27,11 @@ describe('the preview sound', () => {
     expect(graph).toContain('amix=inputs=3:normalize=0:duration=longest[out]');
   });
 });
+
+describe('a preview page with its sound in a file', () => {
+  it('drops the audio clips the file carries and keeps one from elsewhere', async () => {
+    const { withoutMixedAudio } = await import('../preview-audio.server');
+    const html = '<div><audio id="voice-1" data-start="0" data-duration="29.49" data-var-src="voiceover" data-end="29.49">\n</audio><audio data-start="2" src="https://cdn.example/a.mp3"></audio><video data-start="0" src="clip.mp4"></video></div>';
+    expect(withoutMixedAudio(html)).toBe('<div><audio data-start="2" src="https://cdn.example/a.mp3"></audio><video data-start="0" src="clip.mp4"></video></div>');
+  });
+});

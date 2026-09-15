@@ -63,6 +63,17 @@ export function mixArguments(clips: AudioClip[], dir: string, output: string): s
   return args;
 }
 
+/**
+ * The page without the audio clips that file carries, so the film has one voice: played from the
+ * Studio's page, never also from the frame. A clip the file does not carry (a URL elsewhere) stays.
+ */
+export function withoutMixedAudio(html: string): string {
+  return html.replace(/<audio\b[^>]*\bdata-start\b[^>]*>[\s\S]*?<\/audio>/gi, (tag) => {
+    const src = /\bsrc\s*=\s*["']([^"']*)["']/i.exec(tag.replace(/\bdata-var-src\s*=\s*["'][^"']*["']/i, ''))?.[1] ?? '';
+    return /^[a-z]+:|^\/\//i.test(src) ? tag : '';
+  });
+}
+
 /** Writes the preview's sound into the project directory; false when there is none, or no ffmpeg to make it. */
 export async function writePreviewAudio(entry: string, values: Record<string, unknown>, dir: string, output: string): Promise<boolean> {
   const clips = audioClips(entry, values);

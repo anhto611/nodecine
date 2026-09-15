@@ -33,7 +33,7 @@ export function nameFor(fileName: string, taken: Iterable<string>): string {
 }
 
 /**
- * The pictures a video is made with, brought by a person and named by them: an app's screens, a
+ * The pictures a video is made with, brought by a person and named from their files: an app's screens, a
  * logo, a product photo. The Assemble node puts them into the project under `assets/`, where a
  * storyboard refers to them by name.
  */

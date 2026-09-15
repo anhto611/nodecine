@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readStoryboard, spokenLines } from '../read';
+import { readStoryboard, spokenLines } from '@/contracts/storyboard/read';
 
 const md = `---
 format: 1080x1920

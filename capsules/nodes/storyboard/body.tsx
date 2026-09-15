@@ -2,7 +2,7 @@
 import React from 'react';
 import { Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useParams, type BodyProps } from '@/capsules/sdk/host';
-import { readStoryboard } from './read';
+import { readStoryboard } from '@/contracts/storyboard/read';
 
 export const StoryboardBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();

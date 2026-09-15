@@ -49,6 +49,8 @@ export type StoryboardFrame = z.infer<typeof StoryboardFrameSchema>;
 
 export const StoryboardSchema = z.object({
   format: z.string().max(40).optional(),
+  /** The product or subject the film is about, as its writer understood it. */
+  subject: z.string().max(120).optional(),
   message: z.string().max(400).optional(),
   arc: z.string().max(200).optional(),
   frames: z.array(StoryboardFrameSchema).min(1).max(60),

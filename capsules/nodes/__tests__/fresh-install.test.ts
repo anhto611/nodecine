@@ -27,6 +27,7 @@ describe('a fresh install', () => {
       'mp4-export',
       'script',
       'storyboard',
+      'storyboard-writer',
       'transcribe',
       'tts',
       'video-output',
