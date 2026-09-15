@@ -114,6 +114,37 @@ describe('probe with a server running', () => {
   });
 });
 
+describe('pictures', () => {
+  const tags = { '/api/tags': { body: { models: [{ name: 'gemma3:latest' }] } } };
+
+  it('reads pictures only with a model that lists vision among its capabilities', async () => {
+    const seeing = createOllamaProvider({ model: 'gemma3' }, deps(fakeFetch({ ...tags, '/api/show': { body: { capabilities: ['completion', 'vision'] } } })));
+    expect((await seeing.probe()).vision?.status).toBe('ready');
+    const blind = createOllamaProvider({ model: 'gemma3' }, deps(fakeFetch({ ...tags, '/api/show': { body: { capabilities: ['completion'] } } })));
+    const caps = await blind.probe();
+    expect(caps.vision?.status).toBe('unavailable');
+    if (caps.vision?.status === 'unavailable') expect(caps.vision.fix).toContain('vision model');
+  });
+
+  it('sends the pictures inline with the prompt', async () => {
+    const { mkdtemp, writeFile } = await import('node:fs/promises');
+    const os = await import('node:os');
+    const dir = await mkdtemp(`${os.tmpdir()}/nodecine-ollama-test-`);
+    // A 1×1 PNG.
+    const png = `${dir}/dot.png`;
+    await writeFile(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+    let sent: { images?: string[] } = {};
+    const fetchImpl = (async (_input: string | URL | Request, init?: RequestInit) => {
+      sent = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({ response: '{"headline":"SEEN"}' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    const p = createOllamaProvider({ model: 'gemma3' }, deps(fetchImpl));
+    await expect(p.complete('what is this', z.object({ headline: z.string() }), new AbortController().signal, { images: [{ path: png, mediaType: 'image/png' }] })).resolves.toEqual({ headline: 'SEEN' });
+    expect(sent.images).toHaveLength(1);
+    expect(sent.images![0]).toMatch(/^[A-Za-z0-9+/]+=*$/);
+  });
+});
+
 describe('complete', () => {
   const Schema = z.object({ headline: z.string() });
 

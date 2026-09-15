@@ -9,6 +9,7 @@ import { extractJson } from '@/contracts/ai/structured-completion';
 import type { LLMCompleteOptions, LLMImage, LLMProvider } from '@/contracts/providers/types';
 import type { Capability, LLMRef } from '@/contracts/types/payloads';
 import { exec, findBinary } from '@/server/exec';
+import { base64Of, fittedImages } from '../llm-images';
 
 /**
  * Claude Code provider: calls the locally logged-in `claude` CLI. No API key.
@@ -126,26 +127,9 @@ function resultLine(stdout: string): unknown {
   return JSON.parse(line);
 }
 
-/** The longest side a picture is sent at: what the model reads at full detail, and well under its size limit. */
-const IMAGE_LONG_SIDE = 1568;
-
-/**
- * Pictures as base64 message blocks, each scaled to fit IMAGE_LONG_SIDE and sent as JPEG when ffmpeg
- * is there to do it; a phone screenshot as PNG can be several megabytes, past what one message takes.
- */
+/** Pictures as base64 message blocks, fitted for the model first. */
 async function imageBlocks(images: LLMImage[], dir: string, signal: AbortSignal): Promise<unknown[]> {
-  const ffmpeg = await findBinary('ffmpeg', 'NODECINE_FFMPEG_BIN');
-  return Promise.all(images.map(async (image, i) => {
-    let file = image.path;
-    let mediaType = image.mediaType;
-    if (ffmpeg && mediaType !== 'image/svg+xml') {
-      const out = path.join(dir, `image-${i}.jpg`);
-      const fit = `scale='if(gt(iw,ih),min(${IMAGE_LONG_SIDE},iw),-2)':'if(gt(iw,ih),-2,min(${IMAGE_LONG_SIDE},ih))'`;
-      const r = await exec(ffmpeg, { args: ['-v', 'error', '-y', '-i', image.path, '-vf', fit, '-q:v', '3', out], timeoutMs: 30_000, signal }).catch(() => null);
-      if (r && r.code === 0) { file = out; mediaType = 'image/jpeg'; }
-    }
-    return { type: 'image', source: { type: 'base64', media_type: mediaType, data: (await readFile(file)).toString('base64') } };
-  }));
+  return Promise.all((await fittedImages(images, dir, signal)).map(async (image) => ({ type: 'image', source: { type: 'base64', media_type: image.mediaType, data: await base64Of(image) } })));
 }
 
 export function registerClaudeCode(): void {

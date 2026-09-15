@@ -1,10 +1,14 @@
+import os from 'node:os';
+import path from 'node:path';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { z, type ZodTypeAny } from 'zod';
 import { ollamaSettings, OLLAMA_DEFAULT_MODEL } from './settings';
 import { registerLLMProvider } from '@/contracts/providers/registry';
-import type { LLMProvider } from '@/contracts/providers/types';
+import type { LLMCompleteOptions, LLMProvider } from '@/contracts/providers/types';
 import { ErrorCode } from '@/contracts/errors';
 import type { Capability, LLMRef } from '@/contracts/types/payloads';
 import { extractJson } from '@/contracts/ai/structured-completion';
+import { base64Of, fittedImages } from '../llm-images';
 
 /**
  * Ollama provider: a local model server, offline and without a key.
@@ -81,7 +85,7 @@ export function createOllamaProvider(settings: Record<string, unknown>, deps: Ol
           reason: `No Ollama server at ${base}`,
           fix: 'brew install ollama, then: ollama serve',
         };
-        return { installed: offline, authenticated: offline, structuredOutput: offline };
+        return { installed: offline, authenticated: offline, structuredOutput: offline, vision: offline };
       }
 
       const installed: Capability = modelIsPulled(model, tags)
@@ -105,12 +109,37 @@ export function createOllamaProvider(settings: Record<string, unknown>, deps: Ol
         /* the tag call already proved the server is up */
       }
 
+      // Whether the model reads pictures is the model's, not the server's: /api/show lists its capabilities.
+      let vision: Capability = {
+        status: 'unavailable',
+        code: ErrorCode.PROVIDER_NOT_INSTALLED,
+        reason: `Model "${model}" does not read pictures`,
+        fix: 'choose a vision model, like gemma3 or qwen2.5vl',
+      };
+      if (installed.status === 'ready') {
+        try {
+          const res = await deps.fetch(`${base}/api/show`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }), signal: withTimeout(undefined, deps.timeoutMs) });
+          if (res.ok) {
+            const body = (await res.json()) as { capabilities?: unknown };
+            if (Array.isArray(body.capabilities) && body.capabilities.includes('vision')) vision = ready;
+          }
+        } catch {
+          /* an older server without capabilities: pictures stay off */
+        }
+      } else {
+        vision = installed;
+      }
+
       // The server needs no credential, and every version can be asked for JSON.
-      return { installed, authenticated: ready, structuredOutput: ready, ...(version ? { version } : {}) };
+      return { installed, authenticated: ready, structuredOutput: ready, vision, ...(version ? { version } : {}) };
     },
 
-    async complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal): Promise<z.infer<S>> {
+    async complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal, options?: LLMCompleteOptions): Promise<z.infer<S>> {
       const base = ollamaUrl();
+      // Pictures go inline, as the API takes them, fitted first; a vision model reads them with the prompt.
+      const wanted = options?.images ?? [];
+      const dir = wanted.length ? await mkdtemp(path.join(os.tmpdir(), 'nodecine-ollama-')) : null;
+      const images = dir ? await Promise.all((await fittedImages(wanted, dir, signal)).map(base64Of)).finally(() => rm(dir, { recursive: true, force: true })) : [];
       let res: Response;
       try {
         res = await deps.fetch(`${base}/api/generate`, {
@@ -118,7 +147,7 @@ export function createOllamaProvider(settings: Record<string, unknown>, deps: Ol
           headers: { 'Content-Type': 'application/json' },
           // `format: json` constrains the decoder; the schema is still enforced below, because the
           // server only promises valid JSON, not the shape this caller asked for.
-          body: JSON.stringify({ model, prompt, stream: false, format: 'json', options: { temperature: 0 } }),
+          body: JSON.stringify({ model, prompt, stream: false, format: 'json', options: { temperature: 0 }, ...(images.length ? { images } : {}) }),
           signal: withTimeout(signal, 120_000),
         });
       } catch (e) {

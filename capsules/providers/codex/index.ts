@@ -6,9 +6,10 @@ import { codexSettings } from './settings';
 import { registerLLMProvider } from '@/contracts/providers/registry';
 import { ErrorCode, NodeError } from '@/contracts/errors';
 import { extractJson } from '@/contracts/ai/structured-completion';
-import type { LLMProvider } from '@/contracts/providers/types';
+import type { LLMCompleteOptions, LLMProvider } from '@/contracts/providers/types';
 import type { Capability, LLMRef } from '@/contracts/types/payloads';
 import { exec, findBinary } from '@/server/exec';
+import { fittedImages } from '../llm-images';
 
 /**
  * OpenAI Codex CLI provider: calls locally logged-in `codex` CLI.
@@ -54,7 +55,7 @@ export function createCodexProvider(settings: Record<string, unknown>): LLMProvi
           reason: 'Codex CLI was not found',
           fix: 'npm install -g @openai/codex',
         };
-        return { installed: missing, authenticated: missing, structuredOutput: missing };
+        return { installed: missing, authenticated: missing, structuredOutput: missing, vision: missing };
       }
       const v = await exec(bin, { args: ['--version'], timeoutMs: 5000 }).catch(() => null);
       const version = v && v.code === 0 ? v.stdout.trim().split(/\s+/)[1] || v.stdout.trim() : undefined;
@@ -66,10 +67,11 @@ export function createCodexProvider(settings: Record<string, unknown>): LLMProvi
             reason: 'Codex CLI is not logged in',
             fix: 'codex login',
           };
-      return { installed: ready, authenticated, structuredOutput: ready, version };
+      // `codex exec --image` attaches pictures to the prompt, and its models read them.
+      return { installed: ready, authenticated, structuredOutput: ready, vision: ready, version };
     },
 
-    async complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal): Promise<z.infer<S>> {
+    async complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal, options?: LLMCompleteOptions): Promise<z.infer<S>> {
       const bin = await codexBin();
       if (!bin) throw Object.assign(new Error('Codex CLI not found'), { code: 'PROVIDER_NOT_INSTALLED' });
       const cwd = await mkdtemp(path.join(os.tmpdir(), 'nodecine-codex-'));
@@ -78,7 +80,9 @@ export function createCodexProvider(settings: Record<string, unknown>): LLMProvi
         const args = ['exec', '--ephemeral', '--skip-git-repo-check', '-s', 'read-only', '-o', outFile];
         const model = settings.model as string | undefined;
         if (model) args.push('-m', model);
-        args.push(prompt);
+        // One `--image=` a picture: the flag takes several values, and a bare list would swallow the prompt.
+        for (const image of await fittedImages(options?.images ?? [], cwd, signal)) args.push(`--image=${image.path}`);
+        args.push('--', prompt);
 
         const r = await exec(bin, {
           args,
