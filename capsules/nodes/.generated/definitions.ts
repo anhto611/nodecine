@@ -4,20 +4,24 @@ import { registerContracts } from '@/contracts';
 import { registerDocMigrations } from '../../migrations';
 import { assemble } from '../assemble/node';
 import { assets } from '../assets/node';
+import { brief } from '../brief/node';
 import { captionExport } from '../caption-export/node';
 import { composition } from '../composition/node';
 import { fill } from '../fill/node';
 import { mp4Export } from '../mp4-export/node';
+import { research } from '../research/node';
 import { storyboardWriter } from '../storyboard-writer/node';
 import { transcribe } from '../transcribe/node';
 import { ttsEngine } from '../tts/node';
 import { videoOutput } from '../video-output/node';
 import { AssembleErrorCode } from '../assemble/errors';
 import { AssetsErrorCode } from '../assets/errors';
+import { BriefErrorCode } from '../brief/errors';
 import { CaptionExportErrorCode } from '../caption-export/errors';
 import { CompositionErrorCode } from '../composition/errors';
 import { FillErrorCode } from '../fill/errors';
 import { Mp4ExportErrorCode } from '../mp4-export/errors';
+import { ResearchErrorCode } from '../research/errors';
 import { StoryboardWriterErrorCode } from '../storyboard-writer/errors';
 import { TranscribeErrorCode } from '../transcribe/errors';
 import { TtsErrorCode } from '../tts/errors';
@@ -25,17 +29,19 @@ import { TtsErrorCode } from '../tts/errors';
 export const ALL_NODES: AnyNodeDefinition[] = [
   assemble,
   assets,
+  brief,
   captionExport,
   composition,
   fill,
   mp4Export,
+  research,
   storyboardWriter,
   transcribe,
   ttsEngine,
   videoOutput,
 ] as unknown as AnyNodeDefinition[];
 
-const expectedIds = ["assemble","assets","caption-export","composition","fill","mp4-export","storyboard-writer","transcribe","tts","video-output"];
+const expectedIds = ["assemble","assets","brief","caption-export","composition","fill","mp4-export","research","storyboard-writer","transcribe","tts","video-output"];
 ALL_NODES.forEach((definition, index) => {
   if (definition.type !== expectedIds[index]) throw new Error('node manifest id "' + expectedIds[index] + '" does not match definition type "' + definition.type + '"');
 });
@@ -44,12 +50,14 @@ ALL_NODES.forEach((definition, index) => {
 export const NODE_FEATURES: Record<string, string[]> = {
   "assemble": [],
   "assets": [],
+  "brief": [],
   "caption-export": [],
   "composition": [],
   "fill": [],
   "mp4-export": [
     "history-file-export"
   ],
+  "research": [],
   "storyboard-writer": [],
   "transcribe": [],
   "tts": [],
@@ -66,20 +74,24 @@ export const NODE_FEATURES: Record<string, string[]> = {
 export const NODE_ERROR_CODES: Record<string, string[]> = {
   "assemble": [],
   "assets": [],
+  "brief": [],
   "caption-export": [],
   "composition": [],
   "fill": [],
   "mp4-export": [],
+  "research": [],
   "storyboard-writer": [],
   "transcribe": [],
   "tts": []
 };
 NODE_ERROR_CODES['assemble'] = Object.values(AssembleErrorCode);
 NODE_ERROR_CODES['assets'] = Object.values(AssetsErrorCode);
+NODE_ERROR_CODES['brief'] = Object.values(BriefErrorCode);
 NODE_ERROR_CODES['caption-export'] = Object.values(CaptionExportErrorCode);
 NODE_ERROR_CODES['composition'] = Object.values(CompositionErrorCode);
 NODE_ERROR_CODES['fill'] = Object.values(FillErrorCode);
 NODE_ERROR_CODES['mp4-export'] = Object.values(Mp4ExportErrorCode);
+NODE_ERROR_CODES['research'] = Object.values(ResearchErrorCode);
 NODE_ERROR_CODES['storyboard-writer'] = Object.values(StoryboardWriterErrorCode);
 NODE_ERROR_CODES['transcribe'] = Object.values(TranscribeErrorCode);
 NODE_ERROR_CODES['tts'] = Object.values(TtsErrorCode);

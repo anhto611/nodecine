@@ -59,7 +59,7 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       const r = await f(ref.settings).synthesize(text, voice, speed, signal);
       return { audioUrl: mediaUrl(path.basename(r.filePath)), durationSeconds: r.durationSeconds, voiceName: r.voice.id, language: r.voice.language, speed };
     },
-    async complete<S extends ZodTypeAny>(ref: { providerId: string; settings: Record<string, unknown>; capabilities?: { vision?: { status: string } } }, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean; images?: string[] }): Promise<z.infer<S>> {
+    async complete<S extends ZodTypeAny>(ref: { providerId: string; settings: Record<string, unknown>; capabilities?: { vision?: { status: string }; webSearch?: { status: string } } }, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean; images?: string[]; web?: boolean }): Promise<z.infer<S>> {
       const f = getLLMProviderFactory(ref.providerId);
       if (!f) throw Object.assign(new Error(`unknown llm provider ${ref.providerId}`), { code: 'PROVIDER_NOT_CONNECTED' });
       // The same prompt to the same provider *set up the same way* is the same answer:
@@ -68,7 +68,9 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       // Pictures go only to a model that can see them. They are uploads named by their content, so
       // their addresses in the key are the pictures themselves.
       const images = ref.capabilities?.vision?.status === 'ready' ? (opts?.images ?? []).filter((u) => /^\/api\/assets\//.test(u)) : [];
-      const file = path.join(llmCacheDir(), `${contentHash({ providerId: ref.providerId, settings: ref.settings, prompt, ...(images.length ? { images } : {}) })}.json`);
+      // An answer the model looked things up for is a different answer from one it gave from memory.
+      const web = !!opts?.web && ref.capabilities?.webSearch?.status === 'ready';
+      const file = path.join(llmCacheDir(), `${contentHash({ providerId: ref.providerId, settings: ref.settings, prompt, ...(images.length ? { images } : {}), ...(web ? { web } : {}) })}.json`);
       if (!opts?.fresh) {
         const hit = await fs.readFile(file, 'utf8').then((t) => JSON.parse(t) as unknown, () => undefined);
         if (hit !== undefined) {
@@ -77,7 +79,7 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
         }
       }
       const attached = images.map((url) => ({ path: assetPath(fileNameFromAssetUrl(url)), mediaType: IMAGE_TYPES[url.split('.').pop()!.toLowerCase()] ?? 'image/png' }));
-      const raw = await f(ref.settings).complete(prompt, schema, signal, attached.length ? { images: attached } : undefined);
+      const raw = await f(ref.settings).complete(prompt, schema, signal, attached.length || web ? { ...(attached.length ? { images: attached } : {}), ...(web ? { web } : {}) } : undefined);
       const out = schema.parse(raw) as z.infer<S>;
       await fs.mkdir(llmCacheDir(), { recursive: true }).then(() => fs.writeFile(`${file}.part`, JSON.stringify(out))).then(() => fs.rename(`${file}.part`, file)).catch(() => undefined);
       return out;

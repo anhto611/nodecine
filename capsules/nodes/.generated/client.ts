@@ -4,10 +4,12 @@ import type React from 'react';
 import type { BodyProps, NodeMeta } from '@/capsules/sdk/meta';
 import { AssembleBody } from '../assemble/body';
 import { AssetsBody } from '../assets/body';
+import { BriefBody } from '../brief/body';
 import { CaptionExportBody } from '../caption-export/body';
 import { CompositionBody, PartsDialog } from '../composition/body';
 import { FillBody } from '../fill/body';
 import { ExportBody } from '../mp4-export/body';
+import { ResearchBody } from '../research/body';
 import { StoryboardWriterBody } from '../storyboard-writer/body';
 import { TranscribeBody } from '../transcribe/body';
 import { TtsBody } from '../tts/body';
@@ -16,10 +18,12 @@ import { VideoOutputBody } from '../video-output/body';
 export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'assemble': AssembleBody,
   'assets': AssetsBody,
+  'brief': BriefBody,
   'caption-export': CaptionExportBody,
   'composition': CompositionBody,
   'fill': FillBody,
   'mp4-export': ExportBody,
+  'research': ResearchBody,
   'storyboard-writer': StoryboardWriterBody,
   'transcribe': TranscribeBody,
   'tts': TtsBody,
@@ -33,10 +37,12 @@ export const NODE_OVERLAYS: React.FC[] = [
 export const NODE_META: Record<string, NodeMeta> = {
   'assemble': { icon: 'layers', group: 'visual' },
   'assets': { icon: 'image', group: 'source', layout: 'wide' },
+  'brief': { icon: 'doc', group: 'source', layout: 'wide' },
   'caption-export': { icon: 'down', group: 'output' },
   'composition': { icon: 'layers', group: 'visual', layout: 'wide' },
   'fill': { icon: 'layers', group: 'visual' },
   'mp4-export': { icon: 'down', group: 'output' },
+  'research': { icon: 'search', group: 'script', layout: 'wide' },
   'storyboard-writer': { icon: 'bot', group: 'script', layout: 'wide' },
   'transcribe': { icon: 'wave', group: 'audio' },
   'tts': { icon: 'wave', group: 'audio' },

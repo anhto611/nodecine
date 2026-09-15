@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { NodeError } from '@/contracts/errors';
 import type { Composition, CompositionVariable } from '@/contracts/types/composition';
-import type { CaptionTrack, Voiceover } from '@/contracts/types/payloads';
+import type { Voiceover } from '@/contracts/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { FillErrorCode } from './errors';
 
@@ -15,14 +15,12 @@ import { FillErrorCode } from './errors';
  * - `voiceoverSeconds` variable: the voice's length, when declared.
  * - `voiceover.json`: `{ durationSeconds, segments?, words? }` — the voice's length, where each
  *   narration segment starts and how long it lasts, and the words' timings, for a timeline that
- *   follows the voice.
- * - `captions.json`: the caption lines.
+ *   follows the voice; karaoke captions read their words from here.
  */
 export const FILLED = {
   voiceover: 'voiceover',
   voiceoverSeconds: 'voiceoverSeconds',
   timing: 'voiceover.json',
-  captions: 'captions.json',
   images: 'images',
 } as const;
 
@@ -47,9 +45,8 @@ function suits(value: unknown, variable: CompositionVariable): boolean {
 }
 
 /**
- * A composition with what this run made poured in: the voice-over as a file beside it, its timings
- * and the caption lines as JSON it can read, uploaded pictures copied into it, and values for its
- * variables. The composition
+ * A composition with what this run made poured in: the voice-over as a file beside it, its timings and
+ * words as JSON it can read, uploaded pictures copied into it, and values for its variables. The composition
  * decides what to do with each; this node only puts them where the composition looks.
  */
 export const fill: NodeDefinition<typeof Params> = {
@@ -57,14 +54,12 @@ export const fill: NodeDefinition<typeof Params> = {
   inputs: [
     { name: 'composition', type: 'Composition' },
     { name: 'voiceover', type: 'Voiceover', required: false },
-    { name: 'captions', type: 'CaptionTrack', required: false },
   ],
   outputs: [{ name: 'composition', type: 'Composition' }],
   paramsSchema: Params, defaultParams: { values: {} },
   run: async ({ params, inputs, log }) => {
     const base = inputs.composition!.payload as Composition;
     const voice = inputs.voiceover?.payload as Voiceover | undefined;
-    const captions = inputs.captions?.payload as CaptionTrack | undefined;
     const declared = new Map(base.variables.map((v) => [v.id, v] as const));
 
     const values: Record<string, unknown> = { ...base.values };
@@ -102,11 +97,10 @@ export const fill: NodeDefinition<typeof Params> = {
         ...(voice.words?.length ? { words: voice.words } : {}),
       });
     }
-    if (captions) files[FILLED.captions] = JSON.stringify(captions.cues);
 
     const unset = base.variables.filter((v) => values[v.id] === undefined && v.default === undefined).map((v) => v.id);
     if (unset.length) log('warn', `no value and no default for ${unset.join(', ')}`);
-    log('info', `${Object.keys(values).length} values${voice ? ' · voice-over' : ''}${captions ? ` · ${captions.cues.length} caption lines` : ''}`);
+    log('info', `${Object.keys(values).length} values${voice ? ' · voice-over' : ''}`);
     return { composition: { ...base, files, media, values } satisfies Composition };
   },
 };

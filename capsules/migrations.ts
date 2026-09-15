@@ -69,9 +69,158 @@ function mergeCaptionsIntoTranscribe(graph: Graph, notes: { nodeId?: string; cod
   return { nodes, edges };
 }
 
+/** What the Storyboard Writer asked for itself until 2026-09-15, and a Brief node holds now. */
+const BRIEF_FIELDS = ['about', 'durationSeconds', 'tone', 'language', 'notes'] as const;
+/** How far apart two columns of wide nodes sit on the canvas. */
+const COLUMN = 430;
+
+/**
+ * Until 2026-09-15 the Storyboard Writer held what a video is about and read the page it linked to. A
+ * Brief node holds that now, and Research reads the links, finds out more and brings the pictures.
+ *
+ * A saved graph whose writer still holds a brief gets a Brief node with those fields, and a Research node
+ * between it and the writer, set up with the writer's model; the Assets node wired into the writer finds
+ * pictures for the same brief and research. The describe box's placeholder, which the workflow's storyboard
+ * guide carried, moves onto the Brief. Research starts with its default settings.
+ */
+function briefAndResearchBeforeTheWriter(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
+  const writers = graph.nodes.filter((n) => n.type === 'storyboard-writer' && 'about' in n.params && !graph.edges.some((e) => e.target === n.id && e.targetPort === 'brief'));
+  if (!writers.length) return graph;
+  const ids = new Set(graph.nodes.map((n) => n.id));
+  const fresh = (base: string) => { let id = base; for (let i = 2; ids.has(id); i++) id = `${base}-${i}`; ids.add(id); return id; };
+  const edgeIds = new Set(graph.edges.map((e) => e.id));
+  const edgeId = () => { let i = graph.edges.length + 1; while (edgeIds.has(`e${i}`)) i++; edgeIds.add(`e${i}`); return `e${i}`; };
+  let nodes = [...graph.nodes];
+  const edges = [...graph.edges];
+  for (const writer of writers) {
+    const briefId = fresh('brief');
+    const researchId = fresh('research');
+    const params = writer.params as Record<string, unknown>;
+    const composition = graph.edges.find((e) => e.target === writer.id && e.targetPort === 'composition');
+    const assets = graph.edges.find((e) => e.target === writer.id && e.targetPort === 'assets');
+    const guide = composition ? String((graph.nodes.find((n) => n.id === composition.source)?.params as { files?: Record<string, string> } | undefined)?.files?.['storyboard-guide.md'] ?? '') : '';
+    const header = /^---\r?\n([\s\S]*?)\r?\n---/.exec(guide)?.[1] ?? '';
+    const hint = Object.fromEntries([...header.matchAll(/^\s*hint\.([a-z-]+)\s*:\s*(.+?)\s*$/gim)].map((m) => [m[1]!.toLowerCase(), m[2]!]));
+    // Two new columns at the start of the flow: everything already there moves right to make room.
+    const left = Math.min(...nodes.map((n) => n.position?.x ?? 0));
+    const top = Math.min(...nodes.map((n) => n.position?.y ?? 0));
+    nodes = nodes.map((n) => ({
+      ...n,
+      position: { x: (n.position?.x ?? 0) + COLUMN * 2, y: n.position?.y ?? 0 },
+      ...(n.id === writer.id ? { params: Object.fromEntries(Object.entries(params).filter(([k]) => !(BRIEF_FIELDS as readonly string[]).includes(k))) } : {}),
+    }));
+    nodes.push(
+      { id: briefId, type: 'brief', params: { ...Object.fromEntries(BRIEF_FIELDS.filter((k) => params[k] !== undefined).map((k) => [k, params[k]])), hint }, bypassed: false, position: { x: left, y: top } },
+      { id: researchId, type: 'research', params: { llmProvider: params.llmProvider ?? '', llmSettings: params.llmSettings ?? {} }, bypassed: false, position: { x: left + COLUMN, y: top } },
+    );
+    edges.push(
+      { id: edgeId(), source: briefId, sourcePort: 'brief', target: researchId, targetPort: 'brief' },
+      { id: edgeId(), source: briefId, sourcePort: 'brief', target: writer.id, targetPort: 'brief' },
+      { id: edgeId(), source: researchId, sourcePort: 'research', target: writer.id, targetPort: 'research' },
+      // The Assets node the writer reads finds pictures for the same brief and research.
+      ...(assets ? [
+        { id: edgeId(), source: briefId, sourcePort: 'brief', target: assets.source, targetPort: 'brief' },
+        { id: edgeId(), source: researchId, sourcePort: 'research', target: assets.source, targetPort: 'research' },
+      ] : []),
+    );
+    if (assets) nodes = nodes.map((n) => (n.id === assets.source && !(n.params as { llmProvider?: string }).llmProvider ? { ...n, params: { ...n.params, llmProvider: params.llmProvider ?? '', llmSettings: params.llmSettings ?? {} } } : n));
+    notes.push({ nodeId: writer.id, code: 'NODE_REPLACED', message: 'what the video is about moved from the Storyboard Writer onto a Brief node, and Research now reads its links (2026-09-15)' });
+  }
+  return { ...graph, nodes, edges };
+}
+
+/**
+ * For an evening on 2026-09-15 Research read what to look for from `research-guide.md` in the composition
+ * wired into it. What a workflow's research looks for is Research's own settings now: the guide's header
+ * becomes `search` and `pictures`, its body `guide`, and the wire and the file go.
+ */
+function researchGuideOntoTheNode(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
+  const wires = graph.edges.filter((e) => e.targetPort === 'composition' && graph.nodes.some((n) => n.id === e.target && n.type === 'research'));
+  if (!wires.length) return graph;
+  const files = (id: string) => (graph.nodes.find((n) => n.id === id)?.params as { files?: Record<string, string> } | undefined)?.files ?? {};
+  const settings = new Map<string, Record<string, unknown>>();
+  for (const wire of wires) {
+    const text = files(wire.source)['research-guide.md'];
+    if (text === undefined) continue;
+    const header = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
+    const field = (name: string) => new RegExp(`^\\s*${name}\\s*:\\s*(.*?)\\s*$`, 'im').exec(header?.[1] ?? '')?.[1];
+    const pictures = Number.parseInt(field('pictures') ?? '', 10);
+    settings.set(wire.target, {
+      search: field('search') === 'web' ? 'web' : 'sources',
+      ...(Number.isFinite(pictures) ? { pictures: Math.max(0, Math.min(20, pictures)) } : {}),
+      guide: (header ? text.slice(header[0].length) : text).trim(),
+    });
+  }
+  const sources = new Set(wires.map((w) => w.source));
+  const nodes = graph.nodes.map((n) => {
+    if (settings.has(n.id)) {
+      notes.push({ nodeId: n.id, code: 'NODE_VERSION', message: 'what to look for moved from research-guide.md in the composition onto this node (2026-09-15)' });
+      return { ...n, params: { ...n.params, ...settings.get(n.id) } };
+    }
+    if (sources.has(n.id) && files(n.id)['research-guide.md'] !== undefined) {
+      const { 'research-guide.md': _moved, ...rest } = files(n.id);
+      return { ...n, params: { ...n.params, files: rest } };
+    }
+    return n;
+  });
+  return { ...graph, nodes, edges: graph.edges.filter((e) => !wires.includes(e)) };
+}
+
+/**
+ * For an evening on 2026-09-15 Research also brought pictures, handed to the Assets node on an Assets wire.
+ * Finding pictures is the Assets node's own work now, from the brief and the research wired into it: the
+ * wire goes, those two wires come, and how many pictures to find moves across with the model that finds them.
+ */
+function picturesOntoAssets(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
+  const research = new Map(graph.nodes.filter((n) => n.type === 'research').map((n) => [n.id, n]));
+  const wires = graph.edges.filter((e) => research.has(e.source) && e.sourcePort === 'assets');
+  const counted = graph.nodes.filter((n) => research.has(n.id) && 'pictures' in n.params);
+  if (!wires.length && !counted.length) return graph;
+  const edgeIds = new Set(graph.edges.map((e) => e.id));
+  const edgeId = () => { let i = graph.edges.length + 1; while (edgeIds.has(`e${i}`)) i++; edgeIds.add(`e${i}`); return `e${i}`; };
+  const edges = graph.edges.filter((e) => !wires.includes(e));
+  const patches = new Map<string, Record<string, unknown>>();
+  for (const wire of wires) {
+    const from = research.get(wire.source)!.params as Record<string, unknown>;
+    const briefWire = graph.edges.find((e) => e.target === wire.source && e.targetPort === 'brief');
+    const has = (port: string) => edges.some((e) => e.target === wire.target && e.targetPort === port);
+    if (briefWire && !has('brief')) edges.push({ id: edgeId(), source: briefWire.source, sourcePort: briefWire.sourcePort, target: wire.target, targetPort: 'brief' });
+    if (!has('research')) edges.push({ id: edgeId(), source: wire.source, sourcePort: 'research', target: wire.target, targetPort: 'research' });
+    patches.set(wire.target, { ...(typeof from.pictures === 'number' ? { pictures: from.pictures } : {}), llmProvider: from.llmProvider ?? '', llmSettings: from.llmSettings ?? {} });
+    notes.push({ nodeId: wire.target, code: 'NODE_VERSION', message: 'this node finds its pictures itself now, from the brief and the research wired into it (2026-09-15)' });
+  }
+  const nodes = graph.nodes.map((n) => {
+    if (research.has(n.id) && 'pictures' in n.params) {
+      const { pictures: _moved, ...rest } = n.params;
+      return { ...n, params: rest };
+    }
+    const patch = patches.get(n.id);
+    if (!patch) return n;
+    const own = n.params as { llmProvider?: string };
+    return { ...n, params: { ...n.params, ...patch, ...(own.llmProvider ? { llmProvider: own.llmProvider, llmSettings: (n.params as { llmSettings?: unknown }).llmSettings } : {}) } };
+  });
+  return { ...graph, nodes, edges };
+}
+
+/**
+ * Data Merge wrote caption lines into `captions.json` until 2026-09-15; no composition read them, karaoke
+ * captions read the words in `voiceover.json`. A wire into the port that is gone goes with it.
+ */
+function captionsOffDataMerge(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
+  const merges = new Set(graph.nodes.filter((n) => n.type === 'fill').map((n) => n.id));
+  const gone = graph.edges.filter((e) => merges.has(e.target) && e.targetPort === 'captions');
+  if (!gone.length) return graph;
+  for (const e of gone) notes.push({ nodeId: e.target, code: 'NODE_VERSION', message: 'Data Merge no longer takes caption lines; that wire was removed (2026-09-15)' });
+  return { ...graph, edges: graph.edges.filter((e) => !gone.includes(e)) };
+}
+
 export function registerDocMigrations(): void {
   registerResourceFolds();
   registerGraphStep(mergeCaptionsIntoTranscribe);
+  registerGraphStep(briefAndResearchBeforeTheWriter);
+  registerGraphStep(researchGuideOntoTheNode);
+  registerGraphStep(picturesOntoAssets);
+  registerGraphStep(captionsOffDataMerge);
   registerDocMigration(1, (doc: SavedDoc): SavedDoc => ({
     ...doc,
     graph: {

@@ -77,6 +77,8 @@ export const LLMRefSchema = z.object({
     structuredOutput: CapabilitySchema,
     /** Whether pictures can go with a prompt. Absent means no. */
     vision: CapabilitySchema.optional(),
+    /** Whether the model can search and read the web while it answers. Absent means no. */
+    webSearch: CapabilitySchema.optional(),
     version: z.string().optional(),
   }),
   settings: z.record(z.string(), z.unknown()),

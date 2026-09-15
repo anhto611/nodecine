@@ -10,7 +10,7 @@ const composition: Composition = {
   engine: 'hyperframes', width: 1080, height: 1920, fps: 30, media: {}, variables: [], values: {},
   files: {
     'index.html': '<html></html>',
-    'storyboard-guide.md': '---\nhint.vi: Dán link app\nfirst: hook\nlast: outro\n---\nOpen on the brand, show features on the phone, close on the button.',
+    'storyboard-guide.md': '---\nfirst: hook\nlast: outro\n---\nOpen on the brand, show features on the phone, close on the button.',
     'compositions/brand-open.html': block('brand-open', 'hook', '{ "id": "name", "type": "string", "label": "Name", "default": "", "maxLength": 24, "required": true }'),
     'compositions/phone-feature.html': block('phone-feature', 'feature', '{ "id": "headline", "type": "string", "label": "Headline", "default": "", "maxLength": 20 }, { "id": "screen", "type": "image", "label": "Screen", "default": "" }, { "id": "callout_at", "type": "number", "label": "When (s)", "default": 1 }'),
     'compositions/components/sticker.html': block('sticker', 'effect', '{ "id": "text", "type": "string", "label": "Text", "default": "", "maxLength": 14, "required": true }'),
@@ -30,7 +30,11 @@ const good = {
   ],
 };
 
+const research = { language: 'vi', subject: 'Pig Money', summary: 'Sổ chi tiêu có AI.', points: [{ text: 'Split bills with friends.', source: 'https://apps.apple.com/app/pig-money' }], sources: [{ url: 'https://apps.apple.com/app/pig-money', title: 'Pig Money' }] };
+
 function setup(answers: unknown[], params: Record<string, unknown> = {}) {
+  const { durationSeconds = 10, ...rest } = params;
+  const brief = { about: 'Pig Money: sổ chi tiêu có AI https://apps.apple.com/app/pig-money', durationSeconds, tone: 'energetic', language: 'vi', notes: '' };
   const prompts: { prompt: string; images?: string[] }[] = [];
   const services = {
     probeLLM: async () => ({ providerId: 'fake', displayName: 'Fake', transport: 'cli', settings: {}, capabilities: { installed: { status: 'ready' }, authenticated: { status: 'ready' }, structuredOutput: { status: 'ready' }, vision: { status: 'ready' } } }),
@@ -42,9 +46,9 @@ function setup(answers: unknown[], params: Record<string, unknown> = {}) {
   };
   const logs: string[] = [];
   const run = () => storyboardWriter.run({
-    nodeId: 'writer', params: storyboardWriter.paramsSchema.parse({ about: 'Pig Money: sổ chi tiêu có AI https://apps.apple.com/app/pig-money', durationSeconds: 10, llmProvider: 'fake', ...params }), lists: {}, signal: new AbortController().signal,
-    inputs: { composition: { type: 'Composition', payload: composition }, assets: { type: 'Assets', payload: assets } },
-    services: { ...services, invoke: async () => ({ url: 'https://apps.apple.com/app/pig-money', title: 'Pig Money', text: 'Track spending with AI. Split bills with friends.' }) }, fresh: false, log: (_: string, m: string) => logs.push(m), progress: () => {}, patchParams: () => {},
+    nodeId: 'writer', params: storyboardWriter.paramsSchema.parse({ llmProvider: 'fake', ...rest }), lists: {}, signal: new AbortController().signal,
+    inputs: { brief: { type: 'Brief', payload: brief }, research: { type: 'Research', payload: research }, composition: { type: 'Composition', payload: composition }, assets: { type: 'Assets', payload: assets } },
+    services, fresh: false, log: (_: string, m: string) => logs.push(m), progress: () => {}, patchParams: () => {},
   } as never) as Promise<{ storyboard: { frames: { block?: string; values: Record<string, unknown>; voiceover?: string }[]; markdown: string; subject?: string }; script: { segments: string[] } }>;
   return { prompts, logs, run };
 }
@@ -61,10 +65,9 @@ describe('the Storyboard Writer', () => {
     expect(prompts[0]!.images).toEqual([assets.items[0]!.url]);
     expect(prompts[0]!.prompt).toContain('phone-feature [role: feature]');
     expect(prompts[0]!.prompt).toContain('Open on the brand, show features on the phone');
-    expect(prompts[0]!.prompt).not.toContain('hint.vi');
     expect(prompts[0]!.prompt).toContain('The first scene plays a hook block. The last scene plays a outro block.');
     expect(prompts[0]!.prompt).toContain('- name (string, required): Name');
-    expect(prompts[0]!.prompt).toContain('Split bills with friends.');
+    expect(prompts[0]!.prompt).toContain('- Split bills with friends. [https://apps.apple.com/app/pig-money]');
     expect(out.storyboard.subject).toBe('Pig Money');
   });
 
@@ -190,17 +193,5 @@ describe('the Storyboard Writer', () => {
     const read = unwrapJson(stringy);
     expect(read.frames[1]!.values.effects).toEqual([{ type: 'pill', text: '4 khoản', at: '@bốn' }]);
     expect(read.frames[1]!.values.headline).toBe('[not json');
-  });
-
-  it('asks for something to write about', () => {
-    expect(storyboardWriter.validate!(storyboardWriter.paramsSchema.parse({}))).toEqual([{ code: 'NOTHING_TO_WRITE_ABOUT', message: 'say what the video is about: a link or a few sentences' }]);
-  });
-});
-
-describe('a link in a description', () => {
-  it('is found wherever it sits, without the sentence around it', async () => {
-    const { linkIn } = await import('../material');
-    expect(linkIn('Xem app ở https://apps.apple.com/vn/app/pig-money/id123. Rất hay')).toBe('https://apps.apple.com/vn/app/pig-money/id123');
-    expect(linkIn('Sổ chi tiêu có AI')).toBeUndefined();
   });
 });

@@ -17,6 +17,8 @@ export interface LLMImage { path: string; mediaType: string }
 export interface LLMCompleteOptions {
   /** Only a provider whose probe reports `vision` ready is given these. */
   images?: LLMImage[];
+  /** Search and read the web while answering. Only asked of a provider whose probe reports `webSearch` ready. */
+  web?: boolean;
 }
 
 export interface SynthesizeResult {

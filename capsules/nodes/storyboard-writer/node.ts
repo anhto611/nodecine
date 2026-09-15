@@ -7,12 +7,13 @@ import { GUIDE_FILE, readGuide } from '@/contracts/storyboard/guide';
 import { readStoryboard, spokenLines } from '@/contracts/storyboard/read';
 import { storyboardProblems } from '@/contracts/storyboard/validate';
 import { assetProjectPath, type Assets } from '@/contracts/types/assets';
+import type { Brief } from '@/contracts/types/brief';
 import type { Composition } from '@/contracts/types/composition';
+import type { Research } from '@/contracts/types/research';
 import type { AudioScript } from '@/contracts/types/payloads';
 import type { Storyboard } from '@/contracts/types/storyboard';
 import type { NodeDefinition, RunContext } from '@/core/nodes/definition';
 import { StoryboardWriterErrorCode } from './errors';
-import { linkIn, TONES, type LinkedPage } from './material';
 import { applyEdits, FrameEditSchema, renameEverywhere, toMarkdown, unwrapJson, WrittenFrameSchema, WrittenStoryboardSchema, type WrittenStoryboard } from './output';
 import { repairPrompt, rewriteFramePrompt, writePrompt, type Request, type WriterMaterial } from './prompt';
 
@@ -21,13 +22,6 @@ export const REPAIR_ROUNDS = 2;
 const WORDS_PER_SECOND: Record<string, number> = { vi: 2.8, en: 2.5 };
 
 const Params = z.object({
-  /** A link to the app's store page or website, a few sentences about it, or both. */
-  about: z.string().max(3000).default(''),
-  durationSeconds: z.number().int().min(10).max(120).default(30),
-  tone: z.enum(TONES).default('energetic'),
-  language: z.string().min(2).max(35).default('vi'),
-  /** What must be said or must not be. */
-  notes: z.string().max(1000).default(''),
   /** The subject as the person corrected it: written in place of the model's wherever the storyboard names it. */
   subject: z.string().max(120).default(''),
   llmProvider: z.string().max(60).default(''),
@@ -44,9 +38,8 @@ type WriterParams = z.infer<typeof Params>;
 interface Written { written: WrittenStoryboard; storyboard?: Storyboard; markdown: string; problems: string[] }
 
 /**
- * A storyboard written from a description. A model reads what the person wrote (and the page it links
- * to), the pictures and the workflow's blocks, works out the product and its features,
- * and writes one scene per idea, each playing a block with its values and its moments tied to the
+ * A storyboard written from the brief. A model reads what the person asked for, what Research found out
+ * when it ran, the pictures and the workflow's blocks, and writes one scene per idea, each playing a block with its values and its moments tied to the
  * words said over it. The result is checked with the rules the Assemble node holds a storyboard to;
  * what breaks them goes back to the model, twice at most. A person's edits to a scene are laid over
  * what the model wrote and checked the same way.
@@ -54,26 +47,18 @@ interface Written { written: WrittenStoryboard; storyboard?: Storyboard; markdow
 export const storyboardWriter: NodeDefinition<typeof Params> = {
   type: 'storyboard-writer', version: 1, kind: 'process',
   inputs: [
+    { name: 'brief', type: 'Brief' },
+    { name: 'research', type: 'Research', required: false },
     { name: 'composition', type: 'Composition' },
     { name: 'assets', type: 'Assets', required: false },
   ],
   outputs: [{ name: 'storyboard', type: 'Storyboard' }, { name: 'script', type: 'AudioScript' }],
   paramsSchema: Params, defaultParams: Params.parse({}),
-  validate: (params) => (params.about.trim() ? [] : [{ code: StoryboardWriterErrorCode.NOTHING_TO_WRITE_ABOUT, message: 'say what the video is about: a link or a few sentences' }]),
   run: async (ctx) => {
     const { params, inputs, services, log } = ctx;
-    if (!params.about.trim()) throw new NodeError(StoryboardWriterErrorCode.NOTHING_TO_WRITE_ABOUT, 'nothing to write about').withFix('paste the app\'s App Store link or website, or write a few sentences about it');
-    const link = linkIn(params.about);
-    let page: LinkedPage | undefined;
-    if (link) {
-      try {
-        page = await services.invoke<LinkedPage>('storyboard-writer/read-page', [link]);
-        log('info', `read ${page.url}: ${page.text.length} characters`);
-      } catch (e) {
-        log('warn', `could not read ${link}: ${e instanceof Error ? e.message : String(e)}`);
-      }
-    }
-    const request: Request = { about: params.about, ...(page ? { page } : {}), durationSeconds: params.durationSeconds, tone: params.tone, language: params.language, notes: params.notes };
+    const brief = inputs.brief!.payload as Brief;
+    const research = inputs.research?.payload as Research | undefined;
+    const request: Request = { brief, ...(research ? { research } : {}) };
     const composition = inputs.composition!.payload as Composition;
     const assets = inputs.assets?.payload as Assets | undefined;
     const ref = await resolveLLM(services, params, [...LLM_NEEDS, 'structuredOutput']);
@@ -89,16 +74,16 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
       request, catalog, components, slots, seen, first: guide.first, last: guide.last, repeat: guide.repeat,
       guide: guide.body,
       pictures: items.map((a) => ({ path: assetProjectPath(a), name: a.name, note: a.note, width: a.width, height: a.height })),
-      wordsPerSecond: WORDS_PER_SECOND[params.language] ?? 2.6,
+      wordsPerSecond: WORDS_PER_SECOND[brief.language] ?? 2.6,
     };
     const images = seen ? items.map((a) => a.url) : [];
     if (items.length && !seen) log('warn', `${ref.displayName} cannot see pictures: it chooses them by their notes`);
-    const rules = { catalog, assets: material.pictures.map((p) => p.path), targetSeconds: params.durationSeconds, wordsPerSecond: material.wordsPerSecond, first: guide.first, last: guide.last, repeat: guide.repeat, components, slots: Object.keys(slots) };
+    const rules = { catalog, assets: material.pictures.map((p) => p.path), targetSeconds: brief.durationSeconds, wordsPerSecond: material.wordsPerSecond, first: guide.first, last: guide.last, repeat: guide.repeat, components, slots: Object.keys(slots) };
     const format = `${composition.width}x${composition.height}`;
     // Asked without `fresh`: a single run of this node (to rewrite one scene) must not rewrite the others.
     const asking: Pick<RunContext, 'signal' | 'progress' | 'fresh' | 'services' | 'log'> = { ...ctx, fresh: false };
     const ask = <S extends z.ZodTypeAny>(schema: S, prompt: string, language: (out: z.infer<S>) => string) =>
-      completeStructured(asking, ref, { outputSchema: schema, buildPrompt: () => prompt, languageOf: language, images }, params.language);
+      completeStructured(asking, ref, { outputSchema: schema, buildPrompt: () => prompt, languageOf: language, images }, brief.language);
 
     const check = (raw: WrittenStoryboard): Written => {
       const written = unwrapJson(raw);
@@ -122,7 +107,7 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
     for (const [index, take] of Object.entries(params.rewrites).sort(([a], [b]) => Number(a) - Number(b))) {
       const i = Number(index);
       if (!written.frames[i]) continue;
-      const frame = await ask(WrittenFrameSchema, rewriteFramePrompt(material, written, i, take), () => params.language);
+      const frame = await ask(WrittenFrameSchema, rewriteFramePrompt(material, written, i, take), () => brief.language);
       written = { ...written, frames: written.frames.map((f, j) => (j === i ? frame : f)) };
     }
 
@@ -136,7 +121,7 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
     log('info', `${final.storyboard.subject ?? '?'} · ${final.storyboard.frames.length} scenes · ${lines.join(' ').split(/\s+/).length} words · ${Object.keys(params.edits).length} edited`);
     return {
       storyboard: final.storyboard,
-      script: { text: lines.join(' '), language: params.language, segments: lines } satisfies AudioScript,
+      script: { text: lines.join(' '), language: brief.language, segments: lines } satisfies AudioScript,
     };
   },
 };

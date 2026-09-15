@@ -1,0 +1,1 @@
+{"id": "research", "definition": "research", "body": "ResearchBody", "icon": "search", "group": "script", "layout": "wide", "translations": "researchTranslations", "services": "researchServices", "errors": "ResearchErrorCode"}

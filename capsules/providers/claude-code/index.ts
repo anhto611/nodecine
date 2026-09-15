@@ -28,6 +28,8 @@ export const CLAUDE_TIMEOUT_ENV = 'NODECINE_CLAUDE_TIMEOUT_MS';
  */
 export const CLAUDE_TIMEOUT_MS = Number(process.env[CLAUDE_TIMEOUT_ENV]) || 600_000;
 const ready: Capability = { status: 'ready' };
+/** Searches and page reads a web-backed answer may take before it answers. */
+const WEB_TURNS = 30;
 
 async function claudeBin(): Promise<string | null> {
   return findBinary('claude', 'NODECINE_CLAUDE_BIN');
@@ -64,14 +66,14 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
       const bin = await claudeBin();
       if (!bin) {
         const missing: Capability = { status: 'unavailable', code: 'PROVIDER_NOT_INSTALLED', reason: 'Claude Code CLI was not found', fix: 'npm install -g @anthropic-ai/claude-code' };
-        return { installed: missing, authenticated: missing, structuredOutput: missing, vision: missing };
+        return { installed: missing, authenticated: missing, structuredOutput: missing, vision: missing, webSearch: missing };
       }
       const v = await exec(bin, { args: ['--version'], timeoutMs: 5000 }).catch(() => null);
       const version = v && v.code === 0 ? v.stdout.trim().split(/\s+/)[0] : undefined;
       const authenticated: Capability = (await looksAuthenticated())
         ? ready
         : { status: 'unavailable', code: 'PROVIDER_NOT_AUTHENTICATED', reason: 'Claude Code is not logged in', fix: 'claude  →  /login' };
-      return { installed: ready, authenticated, structuredOutput: ready, vision: ready, version };
+      return { installed: ready, authenticated, structuredOutput: ready, vision: ready, webSearch: ready, version };
     },
 
     async complete<S extends ZodTypeAny>(prompt: string, outputSchema: S, signal: AbortSignal, options?: LLMCompleteOptions): Promise<z.infer<S>> {
@@ -82,9 +84,12 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
         const images = options?.images ?? [];
         // With pictures the prompt goes as one streamed user message whose content holds them; the
         // answer then comes back as a stream whose last line is the same result envelope.
+        // With the web, the model may search and read pages before it answers, and only that: every
+        // other tool stays off, and those two are allowed without a prompt nobody is there to answer.
+        const tools = options?.web ? ['--max-turns', String(WEB_TURNS), '--tools', 'WebSearch', 'WebFetch', '--allowedTools', 'WebSearch', 'WebFetch'] : ['--max-turns', '1', '--tools', ''];
         const args = images.length
-          ? ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--max-turns', '1', '--tools', '']
-          : ['-p', '--output-format', 'json', '--max-turns', '1', '--tools', ''];
+          ? ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', ...tools]
+          : ['-p', '--output-format', 'json', ...tools];
         const model = settings.model as string | undefined;
         if (model) args.push('--model', model);
         const stdin = images.length ? `${JSON.stringify({ type: 'user', message: { role: 'user', content: [...(await imageBlocks(images, cwd, signal)), { type: 'text', text: prompt }] } })}\n` : prompt;

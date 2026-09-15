@@ -21,10 +21,12 @@ describe('a fresh install', () => {
     expect(listNodeTypes().map((d) => d.type).sort()).toEqual([
       'assemble',
       'assets',
+      'brief',
       'caption-export',
       'composition',
       'fill',
       'mp4-export',
+      'research',
       'storyboard-writer',
       'transcribe',
       'tts',

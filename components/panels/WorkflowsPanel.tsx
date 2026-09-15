@@ -107,10 +107,11 @@ export const WorkflowsPanel: React.FC = () => {
                     <button className="nc-chip" onClick={() => setConfirm(null)}>{t('tabs.keep')}</button>
                   </div>
                 ) : (
-                  <div className="nc-wf-actions" onClick={(e) => e.stopPropagation()}>
-                    <button className="nc-chip" onClick={() => setRenaming({ id: f.id, name: localized(f.name, locale, f.id) })}>{t('workflows.rename')}</button>
-                    <button className="nc-chip" onClick={() => void download(f.id)}>{t('workflows.download')}</button>
-                    <button className="nc-chip" onClick={() => setConfirm(f.id)}>{t('workflows.delete')}</button>
+                  // Only the buttons keep a click to themselves: the space around them opens the workflow like the rest of the row.
+                  <div className="nc-wf-actions">
+                    <button className="nc-chip" onClick={(e) => { e.stopPropagation(); setRenaming({ id: f.id, name: localized(f.name, locale, f.id) }); }}>{t('workflows.rename')}</button>
+                    <button className="nc-chip" onClick={(e) => { e.stopPropagation(); void download(f.id); }}>{t('workflows.download')}</button>
+                    <button className="nc-chip" onClick={(e) => { e.stopPropagation(); setConfirm(f.id); }}>{t('workflows.delete')}</button>
                   </div>
                 )}
               </div>

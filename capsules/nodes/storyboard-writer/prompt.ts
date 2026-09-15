@@ -1,5 +1,6 @@
 import type { BlockInfo, ComponentInfo } from '@/contracts/storyboard/blocks';
-import type { LinkedPage } from './material';
+import type { Brief } from '@/contracts/types/brief';
+import type { Research } from '@/contracts/types/research';
 import type { WrittenFrame, WrittenStoryboard } from './output';
 
 /**
@@ -7,14 +8,10 @@ import type { WrittenFrame, WrittenStoryboard } from './output';
  * most closely; the narration and on-screen words are written in the language the person chose.
  */
 
-/** What the person asked for: a description (a link, a few sentences, or both) and a few choices. */
+/** What the person asked for, and what was found out about it when Research ran. */
 export interface Request {
-  about: string;
-  page?: LinkedPage;
-  durationSeconds: number;
-  tone: string;
-  language: string;
-  notes: string;
+  brief: Brief;
+  research?: Research;
 }
 
 export interface Picture { path: string; name: string; note: string; width?: number; height?: number }
@@ -80,16 +77,21 @@ function describePictures(pictures: Picture[], seen: boolean): string {
 }
 
 function describeRequest(r: Request): string {
+  const { brief, research } = r;
   return [
-    `What the person wrote about it:\n${r.about.trim()}`,
-    r.page ? `The page they linked (${r.page.url}):\n${r.page.title}\n${r.page.text.slice(0, 6000)}` : '',
-    `Length: ${r.durationSeconds} seconds`,
-    `Tone: ${TONES[r.tone] ?? r.tone}`,
-    r.notes.trim() ? `Must say / must not say: ${r.notes.trim()}` : '',
+    `What the person wrote about it:\n${brief.about.trim()}`,
+    research ? [
+      `What was found out about it${research.subject ? ` (${research.subject})` : ''}:`,
+      research.summary,
+      ...research.points.map((p) => `- ${p.text}${p.source ? ` [${p.source}]` : ''}`),
+    ].filter(Boolean).join('\n') : '',
+    `Length: ${brief.durationSeconds} seconds`,
+    `Tone: ${TONES[brief.tone] ?? brief.tone}`,
+    brief.notes.trim() ? `Must say / must not say: ${brief.notes.trim()}` : '',
   ].filter(Boolean).join('\n\n');
 }
 
-const UNDERSTAND = `First work out, from what the person wrote, the page and the pictures, what the film is about and what it should say, the way this workflow's guide asks. What the person wrote is the brief: follow it over the page when they differ.`;
+const UNDERSTAND = `First work out, from what the person wrote, what was found out and the pictures, what the film is about and what it should say, the way this workflow's guide asks. What the person wrote is the brief: follow it over the findings when they differ. Say only facts the brief or the findings give; never invent a number or a claim.`;
 
 const OUTPUT_SHAPE = `{
   "language": "<the narration language code>",
@@ -120,11 +122,11 @@ const OUTPUT_SHAPE = `{
 }`;
 
 function rules(m: WriterMaterial): string {
-  const language = LANGUAGE_NAMES[m.request.language] ?? m.request.language;
-  const words = Math.round(m.request.durationSeconds * m.wordsPerSecond);
+  const language = LANGUAGE_NAMES[m.request.brief.language] ?? m.request.brief.language;
+  const words = Math.round(m.request.brief.durationSeconds * m.wordsPerSecond);
   return `Rules:
 - Write the narration and every on-screen word in ${language}, unless a value's label asks for something else.
-- The whole narration runs about ${words} words (${m.request.durationSeconds} s at ${m.wordsPerSecond} words a second), counting silent scenes' seconds as time too.
+- The whole narration runs about ${words} words (${m.request.brief.durationSeconds} s at ${m.wordsPerSecond} words a second), counting silent scenes' seconds as time too.
 - One idea per scene.${m.first ? ` The first scene plays a ${m.first} block.` : ''}${m.last ? ` The last scene plays a ${m.last} block.` : ''}${m.repeat ? ` Never more than ${m.repeat} scenes in a row on the same block.` : ''}
 - Every scene plays exactly one block from the list, gives every value marked required, and gives only the values that block declares. Never give "seconds".
 - "mounts" puts components over a scene's block, each in a slot, appearing on "at" and leaving on "until" (words said in that scene; null for the scene's start or end). Use them as the guide says, where they add to the scene and do not cover what it shows; [] when none.

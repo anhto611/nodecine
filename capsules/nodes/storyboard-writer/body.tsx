@@ -4,16 +4,13 @@ import { Btn, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useInputPayload, useLocale, useOutputPayload, useParams, useRun, useRuntime, type BodyProps } from '@/capsules/sdk/host';
 import { ProviderPick } from '@/capsules/sdk/pickers';
 import { labelOf, readBlockCatalog, type BlockInfo, type BlockVariable } from '@/contracts/storyboard/blocks';
-import { GUIDE_FILE, guideHint, readGuide } from '@/contracts/storyboard/guide';
 import { cueWord } from '@/contracts/storyboard/validate';
 import { assetProjectPath, type Assets } from '@/contracts/types/assets';
 import type { Composition } from '@/contracts/types/composition';
 import type { Storyboard } from '@/contracts/types/storyboard';
-import { DURATIONS, TONES } from './material';
 import { layerEditKey, type FrameEdit, type WrittenStoryboard } from './output';
 
-type Params = { subject: string; about: string; durationSeconds: number; tone: (typeof TONES)[number]; language: string; notes: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
-const LANGUAGES = ['vi', 'en'] as const;
+type Params = { subject: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
 interface Scene { title: string; voiceover: string; block: string; values: Record<string, unknown>; mounts: { component: string; slot: string; at?: string; until?: string }[] }
 
 /** A value that names a moment: `@word`, set by picking a word the scene says. */
@@ -108,8 +105,6 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
   const storyboard = useOutputPayload<Storyboard>(nodeId, 'storyboard');
   const composition = useInputPayload<Composition>(nodeId, 'composition');
   const assets = useInputPayload<Assets>(nodeId, 'assets');
-  const locale = useLocale();
-  const hint = React.useMemo(() => guideHint(readGuide(composition?.files[GUIDE_FILE]), locale), [composition, locale]);
   const catalog = React.useMemo(() => new Map((composition ? readBlockCatalog(composition.files) : []).map((b) => [b.name, b] as const)), [composition]);
   const pictures = React.useMemo(() => (assets?.items ?? []).map((a) => ({ path: assetProjectPath(a), url: a.url })), [assets]);
   const edits = p.edits ?? {};
@@ -142,7 +137,6 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
     setTimeout(() => runNode(nodeId), 0);
   };
   const pending = Object.keys(edits).length > 0;
-  const [more, setMore] = React.useState(false);
   const subject = draft?.written?.subject ?? storyboard?.subject;
   const [subjectDraft, setSubjectDraft] = React.useState<string | null>(null);
   const message = draft?.written?.message ?? storyboard?.message;
@@ -150,36 +144,7 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
 
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <label htmlFor={fid('about')} style={{ display: 'grid', gap: 3 }}>
-        <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerAbout')}</span>
-        <textarea id={fid('about')} className="nc-textarea" style={{ minHeight: 64 }} maxLength={3000} placeholder={hint ?? t('node.writerAboutHint')} value={p.about ?? ''} onChange={(e) => set({ about: e.target.value })} />
-      </label>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-        <label htmlFor={fid('duration')} style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerDuration')}</label>
-        <select id={fid('duration')} className="nc-select" value={p.durationSeconds ?? 30} onChange={(e) => set({ durationSeconds: Number(e.target.value) })}>
-          {DURATIONS.map((d) => <option key={d} value={d}>{d} s</option>)}
-        </select>
-        <button className="nc-chip" aria-expanded={more} onClick={() => setMore(!more)}>{more ? t('node.writerLess') : t('node.writerMore')}</button>
-      </div>
-      {more && (
-        <div style={{ display: 'grid', gap: 6, padding: 6, border: '1px solid var(--line)', borderRadius: 6 }}>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <label htmlFor={fid('tone')} style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerTone')}</label>
-            <select id={fid('tone')} className="nc-select" value={p.tone ?? 'energetic'} onChange={(e) => set({ tone: e.target.value as Params['tone'] })}>
-              {TONES.map((tone) => <option key={tone} value={tone}>{t(`node.writerTone.${tone}`)}</option>)}
-            </select>
-            <label htmlFor={fid('language')} style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerLanguage')}</label>
-            <select id={fid('language')} className="nc-select" value={p.language ?? 'vi'} onChange={(e) => set({ language: e.target.value })}>
-              {LANGUAGES.map((l) => <option key={l} value={l}>{t(`node.language.${l}`)}</option>)}
-            </select>
-          </div>
-          <label htmlFor={fid('notes')} style={{ display: 'grid', gap: 3 }}>
-            <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerNotes')}</span>
-            <textarea id={fid('notes')} className="nc-textarea" style={{ minHeight: 40 }} maxLength={1000} value={p.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
-          </label>
-          <ProviderPick nodeId={nodeId} kind="llm" />
-        </div>
-      )}
+      <ProviderPick nodeId={nodeId} kind="llm" />
       {/* The storyboard is written by the workflow's Run; here only what reworks one already written. */}
       {(pending || scenes.length > 0) && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

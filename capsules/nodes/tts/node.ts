@@ -69,7 +69,7 @@ export const ttsEngine: NodeDefinition<typeof Params> = {
       } catch (e) {
         // A provider that fails one segment upstream (a gateway timeout, a dropped connection) gets one more try.
         if ((e as { code?: string }).code !== ErrorCode.TTS_UPSTREAM || signal.aborted) throw e;
-        log('warn', `segment ${i + 1}: ${e instanceof Error ? e.message.slice(0, 120) : String(e)} · retrying once`);
+        log('warn', `segment ${i + 1}: ${(e instanceof Error ? e.message : String(e)).replace(/<[^>]*>?/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)} · retrying once`);
         await new Promise((r) => setTimeout(r, 2000));
         parts.push(await services.synthesize(ref, text, voice, params.speed, signal));
       }

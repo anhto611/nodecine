@@ -1,5 +1,7 @@
 import { registerPortType, type PortType, type PortTypeInfo } from '@/core/types/ports';
 import { AssetsSchema, type Assets } from './types/assets';
+import { BriefSchema, type Brief } from './types/brief';
+import { ResearchSchema, type Research } from './types/research';
 import { CompositionSchema, type Composition } from './types/composition';
 import { StoryboardSchema, type Storyboard } from './types/storyboard';
 import {
@@ -24,6 +26,8 @@ declare module '@/core/types/ports' {
     CaptionTrack: CaptionTrack;
     Storyboard: Storyboard;
     Assets: Assets;
+    Brief: Brief;
+    Research: Research;
   }
 }
 
@@ -35,6 +39,8 @@ const PORTS: Record<PortType, PortTypeInfo> = {
   CaptionTrack: { labelKey: 'port.captionTrack', schema: CaptionTrackSchema },
   Storyboard: { labelKey: 'port.storyboard', schema: StoryboardSchema },
   Assets: { labelKey: 'port.assets', schema: AssetsSchema },
+  Brief: { labelKey: 'port.brief', schema: BriefSchema },
+  Research: { labelKey: 'port.research', schema: ResearchSchema },
 };
 
 /** Called wherever node types are registered: a node's ports mean nothing until their types are. */

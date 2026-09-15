@@ -1,12 +1,12 @@
 export const fillTranslations = {
   en: {
-    'node.fill': 'Data Merge', 'node.desc.fill': 'Pours what the run made into a composition: the voice-over, the word timings and captions as files, and values for its variables.',
+    'node.fill': 'Data Merge', 'node.desc.fill': 'Pours what the run made into a composition: the voice-over and its word timings as files, and values for its variables.',
     'error.VARIABLE_UNDECLARED': 'The composition declares no such variable',
     'error.VARIABLE_WRONG_TYPE': 'The value does not suit the variable\'s type',
     'node.fillNoComposition': 'wire a composition in', 'node.fillChoose': 'choose image', 'node.fillReplace': 'replace',
   },
   vi: {
-    'node.fill': 'Data Merge', 'node.desc.fill': 'Đổ những gì lần chạy tạo ra vào composition: giọng đọc, mốc từ và phụ đề thành tệp, cùng giá trị cho các variables.',
+    'node.fill': 'Data Merge', 'node.desc.fill': 'Đổ những gì lần chạy tạo ra vào composition: giọng đọc và mốc thời gian từng chữ thành tệp, cùng giá trị cho các variables.',
     'error.VARIABLE_UNDECLARED': 'Composition không khai variable này',
     'error.VARIABLE_WRONG_TYPE': 'Giá trị không đúng kiểu của variable',
     'node.fillNoComposition': 'nối một composition vào', 'node.fillChoose': 'chọn ảnh', 'node.fillReplace': 'đổi ảnh',

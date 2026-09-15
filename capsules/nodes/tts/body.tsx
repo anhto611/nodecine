@@ -51,7 +51,10 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
       </select>} />
       <FormBody nodeId={nodeId} fields={['speed']} widgets={{ speed: { widget: 'range', step: 0.05, format: (v) => `${v.toFixed(2)}x` } }} />
       <div className="nc-hint">{t(source === 'script' ? 'node.matchesLanguage' : 'node.guessedLanguage', { lang })}{auto?.fallback ? ` · ${t('node.voiceMismatch')}` : ''}</div>
-      {vo && <div className="nc-hint" style={{ color: 'var(--tx-2)' }}>{vo.durationSeconds.toFixed(2)}s · {vo.voiceName}</div>}
+      {vo && (() => {
+        const name = all.find((v) => v.id === vo.voiceName)?.displayName ?? vo.voiceName;
+        return <div className="nc-hint one-line" style={{ color: 'var(--tx-2)' }} title={`${vo.durationSeconds.toFixed(2)}s · ${name}`}>{vo.durationSeconds.toFixed(2)}s · {name}</div>;
+      })()}
     </>
   );
 };

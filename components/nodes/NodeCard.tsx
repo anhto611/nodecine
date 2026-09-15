@@ -8,6 +8,17 @@ import { Icon } from '@/capsules/sdk/icons';
 import { useT, Btn } from '@/capsules/sdk/ui';
 import { useNode, useRuntime, useStudio } from '@/store/useStudio';
 import { NODE_BODIES } from '@/capsules/nodes/index.client';
+import { hasTranslation } from '@/lib/i18n';
+
+/** A message as text: markup an upstream sent back (an error page) is dropped, its spaces folded. */
+const plainText = (message: string) => message.replace(/<[!/a-z][^>]*?(>|(?= · )|$)/gi, ' ').replace(/[ \t]+/g, ' ').trim();
+
+/**
+ * What a graph issue says. The graph's own checks have `issue.<code>` strings; a node's `validate` reports
+ * with its capsule's error codes, whose strings are `error.<code>`; a code with neither shows its message.
+ */
+const issueText = (t: (key: string) => string, issue: { code: string; message: string }) =>
+  hasTranslation(`issue.${issue.code}`) ? t(`issue.${issue.code}`) : hasTranslation(`error.${issue.code}`) ? t(`error.${issue.code}`) : issue.message;
 
 export type NcNode = Node<{ nodeId: string }, 'nc'>;
 
@@ -89,10 +100,12 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
       )}
       <div className="nc-body">
         {Body ? <Body nodeId={node.id} /> : null}
-        {issues.length > 0 && <div className="nc-hint" style={{ color: 'var(--warn)' }}>{issues.map((i) => t(`issue.${i.code}`)).join(' · ')}</div>}
-        {rt.warnings?.map((w, i) => (
-          <div key={i} className="nc-hint" style={{ color: 'var(--warn)' }}>{w.code ? t(`error.${w.code}`) : w.message}</div>
-        ))}
+        {issues.length > 0 && <div className="nc-hint" style={{ color: 'var(--warn)' }}>{issues.map((i) => issueText(t, i)).join(' · ')}</div>}
+        {rt.warnings?.map((w, i) => {
+          // A message can carry what an upstream answered, an HTML error page included: its text only, a few lines of it.
+          const text = w.code ? t(`error.${w.code}`) : plainText(w.message);
+          return <div key={i} className="nc-hint clamp" style={{ color: 'var(--warn)' }} title={text}>{text}</div>;
+        })}
         {rt.blockedBy && (
           <div className="nc-hint" style={{ color: rt.blockedBy.kind === 'capability' ? 'var(--warn)' : 'var(--tx-3)' }}>
             {rt.blockedBy.kind === 'capability' ? t(`error.${rt.blockedBy.code}`) : t(`error.${rt.blockedBy.code}`)}
@@ -102,7 +115,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
         {rt.error && (
           <div className="nc-hint" style={{ color: 'var(--err)' }}>
             {t(`error.${rt.error.code}`)}
-            <div style={{ color: 'var(--tx-3)', whiteSpace: 'pre-wrap' }}>{rt.error.message.slice(0, 160)}</div>
+            <div className="clamp" style={{ color: 'var(--tx-3)', whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 4, overflow: 'hidden' }} title={plainText(rt.error.message)}>{plainText(rt.error.message).slice(0, 160)}</div>
             {/* Drawn like the one on a blocked node, because it is the same thing: what to do next. */}
             {rt.error.fix ? <div style={{ color: 'var(--tx-2)' }}>$ {rt.error.fix}</div> : null}
           </div>
