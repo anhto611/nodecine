@@ -15,7 +15,7 @@ export type NodeKind =
   | 'process'
   /** No inputs; run() = probe(); always re-run. */
   | 'resource'
-  /** Consumes without producing packets (Video Output). */
+  /** Consumes without producing packets (Preview). */
   | 'sink'
   /** Bypassed by default; runs when explicitly triggered (MP4 Export). */
   | 'ondemand';

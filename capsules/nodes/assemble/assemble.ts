@@ -102,7 +102,7 @@ function frameFile(id: string, frame: StoryboardFrame, width: number, height: nu
   <!--
     Frame ${frame.number} — ${frame.title.replace(/--/g, '—')}
     ${(frame.scene ?? '').replace(/--/g, '—')}
-    Written by the Ráp Cảnh node from the storyboard; edit the storyboard, not this file.
+    Written by the Scene Assembly node from the storyboard; edit the storyboard, not this file.
   -->
   <head>
     <meta charset="UTF-8" />

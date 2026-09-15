@@ -131,7 +131,7 @@ export const PartsDialog: React.FC = () => {
               <button className="nc-chip" onClick={close}>×</button>
             </div>
             <div style={{ ...frameBox(big ?? frame, '70vh'), flex: 'none' }}>
-              {big ? <Player key={big.url} preview={big} /> : (
+              {big ? <Player key={big.url} preview={big} loop /> : (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, textAlign: 'center', color: bigError ? 'var(--err)' : 'var(--tx-3)', overflowWrap: 'anywhere' }}>{bigError ?? '…'}</div>
               )}
             </div>

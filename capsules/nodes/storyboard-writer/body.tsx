@@ -180,10 +180,13 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
           <ProviderPick nodeId={nodeId} kind="llm" />
         </div>
       )}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        <Btn small primary disabled={running} onClick={() => runNode(nodeId)}>{pending ? t('node.writerApply') : t('node.writerWrite')}</Btn>
-        {scenes.length > 0 && <Btn small disabled={running} onClick={writeAgain}>{t('node.writerWriteAgain')}</Btn>}
-      </div>
+      {/* The storyboard is written by the workflow's Run; here only what reworks one already written. */}
+      {(pending || scenes.length > 0) && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {pending && <Btn small primary disabled={running} onClick={() => runNode(nodeId)}>{t('node.writerApply')}</Btn>}
+          {scenes.length > 0 && <Btn small disabled={running} onClick={writeAgain}>{t('node.writerWriteAgain')}</Btn>}
+        </div>
+      )}
       {subject && (
         <div style={{ display: 'grid', gap: 4, fontSize: 'var(--fs-hint)', color: 'var(--tx-2)', lineHeight: 1.5 }}>
           <label htmlFor={fid('subject')} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>

@@ -28,6 +28,8 @@ export interface PlayerOptions {
   height: number;
   controls?: boolean;
   still?: number;
+  /** Plays as soon as it is ready, and from the start again at the end. */
+  loop?: boolean;
 }
 
 /** What a player node gets back from mounting a preview. */

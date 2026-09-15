@@ -26,18 +26,18 @@ const fingerprint = (text: string): string => {
   return (h >>> 0).toString(36);
 };
 
-/** Mounts the engine's player; `still` makes it a paused picture instead. */
-export const Player: React.FC<{ preview: PartPreview; still?: boolean }> = ({ preview, still }) => {
+/** Mounts the engine's player; `still` makes it a paused picture instead, `loop` plays it over and over from the start. */
+export const Player: React.FC<{ preview: PartPreview; still?: boolean; loop?: boolean }> = ({ preview, still, loop }) => {
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     const factory = getEngineFactory(preview.engineId);
     if (!ref.current || !factory) return;
     let handle: PlayerHandle | null = null;
     try {
-      handle = factory({}).mountPlayer(ref.current, { ...preview, ...(still ? { controls: false, still: Math.max(0, Math.min(preview.duration * 0.6, preview.duration - 0.1)) } : {}) });
+      handle = factory({}).mountPlayer(ref.current, { ...preview, ...(still ? { controls: false, still: Math.max(0, Math.min(preview.duration * 0.6, preview.duration - 0.1)) } : { loop }) });
     } catch { handle = null; }
     return () => handle?.unmount();
-  }, [preview, still]);
+  }, [preview, still, loop]);
   return <div ref={ref} style={{ position: 'absolute', inset: 0, pointerEvents: still ? 'none' : 'auto' }} />;
 };
 

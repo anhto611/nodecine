@@ -3,7 +3,7 @@
  *
  * Deliberately tiny and dependency-free: it looks at which writing system dominates the text and,
  * for Latin text, whether Vietnamese-only letters are present. It returns a BCP 47 primary subtag
- * that the TTS Engine uses to pick a voice; the user can always override the voice by hand.
+ * that the Voiceover node uses to pick a voice; the user can always override the voice by hand.
  * Latin text without Vietnamese markers is reported as English.
  */
 

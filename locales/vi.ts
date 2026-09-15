@@ -120,7 +120,7 @@ export const vi: Record<DictKey, string> = {
   'issue.PROVIDER_NOT_CONNECTED': 'Chưa nối node Nhà Cung Cấp vào cổng này',
   'issue.GRAPH_CYCLE': 'Đồ thị có vòng lặp',
   'issue.GRAPH_PORT_TYPE_MISMATCH': 'Kiểu cổng không khớp',
-  'issue.GRAPH_NO_SINK': 'Không có Node Xuất Bản Video hay Xuất MP4 nào được nối',
+  'issue.GRAPH_NO_SINK': 'Không có node Preview hay MP4 Export nào được nối',
   'issue.NODE_PARAMS_INVALID': 'Tham số không hợp lệ',
   'error.PROVIDER_NOT_INSTALLED': 'Không tìm thấy công cụ',
   'error.PROVIDER_NOT_AUTHENTICATED': 'Chưa đăng nhập',

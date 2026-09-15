@@ -15,7 +15,7 @@ export const AudioScriptSchema = z.object({
   /** The whole narration; with `segments`, their join. */
   text: z.string().min(1),
   language: bcp47,
-  /** The narration scene by scene, in scene order: the TTS Engine voices each one and the cut follows. */
+  /** The narration scene by scene, in scene order: the Voiceover node voices each one and the cut follows. */
   segments: z.array(z.string().min(1)).min(1).optional(),
 });
 export type AudioScript = z.infer<typeof AudioScriptSchema>;

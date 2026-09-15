@@ -118,7 +118,7 @@ export const en = {
   'issue.PROVIDER_NOT_CONNECTED': 'No provider node is connected to this port',
   'issue.GRAPH_CYCLE': 'The graph contains a cycle',
   'issue.GRAPH_PORT_TYPE_MISMATCH': 'Port types do not match',
-  'issue.GRAPH_NO_SINK': 'No Video Output or MP4 Export is connected',
+  'issue.GRAPH_NO_SINK': 'No Preview or MP4 Export is connected',
   'issue.NODE_PARAMS_INVALID': 'Invalid parameters',
   'error.PROVIDER_NOT_INSTALLED': 'Tool not found',
   'error.PROVIDER_NOT_AUTHENTICATED': 'Not logged in',

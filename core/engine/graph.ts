@@ -227,7 +227,7 @@ export function validateGraph(graph: Graph): GraphIssue[] {
     return def && (def.kind === 'sink' || def.kind === 'ondemand') && incomingEdges(graph, n.id).length > 0;
   });
   if (graph.nodes.length > 0 && !hasSink) {
-    issues.push({ severity: 'warning', code: ErrorCode.GRAPH_NO_SINK, message: 'No Video Output or MP4 Export node is connected' });
+    issues.push({ severity: 'warning', code: ErrorCode.GRAPH_NO_SINK, message: 'No Preview or MP4 Export node is connected' });
   }
 
   return issues;

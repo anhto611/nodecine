@@ -274,7 +274,7 @@ function CanvasInner() {
           <button className="nc-tbtn" title={t('canvas.redo')} disabled={!canRedo} onClick={redo}><Icon.redo /></button>
           <button className="nc-tbtn" title={t('canvas.layout')} onClick={() => {
             // Sizes come from what is actually on screen. React Flow's own `measured` can lag a card
-            // that grew after it was first measured — the Video Output player is the usual one — and a
+            // that grew after it was first measured — the Preview player is the usual one — and a
             // resource node hangs *below* its consumer, so a height reported short puts it on top of it.
             const sizes = Object.fromEntries(rf.getNodes().map((n) => {
               const el = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(n.id)}"]`);
