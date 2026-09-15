@@ -162,6 +162,28 @@ export const useStudio = create<StudioState>((set, get) => {
       set({ runtimes, running: ex.isRunning(), logTick: get().logTick + 1 });
     });
   };
+  /**
+   * A tab keeps its own copy of the workflow, in the browser. When the file changed on disk since (an
+   * edit made outside this tab), a tab with nothing unsaved takes the file's version: otherwise it would
+   * run, and a Save would write back, the copy it opened with. A tab with unsaved work keeps it.
+   */
+  const refreshFromFile = async (tab: WorkflowTab): Promise<WorkflowTab> => {
+    if (!tab.fileId || tab.dirty) return tab;
+    try {
+      const def = await workflowsApi.read(tab.fileId);
+      if (def.migrations?.length) return tab;
+      const name = localized(def.name, get().locale, tab.fileId);
+      const hash = savedHashOf(name, def.graph);
+      const current = get().tabs.find((t) => t.key === tab.key);
+      if (!current || current.dirty || hash === current.savedHash) return current ?? tab;
+      const fresh: WorkflowTab = { ...current, name, graph: structuredClone(def.graph), savedHash: hash, dirty: false };
+      undoStacks.delete(tab.key);
+      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? fresh : t)) });
+      return fresh;
+    } catch {
+      return tab;
+    }
+  };
   const addTab = (tab: Omit<WorkflowTab, 'key'>) => {
     // A tab that opens clean remembers what clean looks like.
     const full: WorkflowTab = { key: tabKey(), ...tab, ...(!tab.dirty && !tab.savedHash ? { savedHash: savedHashOf(tab.name, tab.graph) } : {}) };
@@ -240,6 +262,8 @@ export const useStudio = create<StudioState>((set, get) => {
         onStep: ({ nodeId, step, stepTotal }) => set({ step: { nodeId, step, total: stepTotal } }),
         onRunEnd: () => set({ running: false, step: null }),
         onHistory: (history) => set({ history }),
+        // A page loaded mid-run: the run goes on on the server, and its Run button shows it.
+        onAttached: ({ running }) => set(running ? { running } : { running, step: null }),
         onParamsPatch: (nodeId, patch) => get().applyParamsPatch(nodeId, patch),
       });
       executor.logs.subscribe((e) => set((s) => ({ logTick: s.logTick + 1, unreadErrors: e.level === 'error' && !s.logsOpen ? s.unreadErrors + 1 : s.unreadErrors })));
@@ -259,6 +283,8 @@ export const useStudio = create<StudioState>((set, get) => {
       for (const [id, rt] of executor.runtimes_()) runtimes[id] = rt;
       set({ runtimes });
       persist();
+      // The tab a reload puts back may be older than its file: take the file's version when nothing is unsaved.
+      void refreshFromFile(active).then((fresh) => { if (fresh !== active && get().activeTab === active.key) showTab(fresh); });
       // Whatever an older build left in localStorage moves to the server once, then the key is cleared.
       void (async () => {
         const leftovers = loadUserTemplates();
@@ -276,7 +302,7 @@ export const useStudio = create<StudioState>((set, get) => {
 
     async openWorkflow(fileId) {
       const open = get().tabs.find((t) => t.fileId === fileId);
-      if (open) { showTab(open); return null; }
+      if (open) { showTab(await refreshFromFile(open)); return null; }
       // A file that will not open has a reason, and the person who clicked it is owed that reason.
       // So is a file that did open but is not quite what they saved.
       try {
@@ -292,7 +318,9 @@ export const useStudio = create<StudioState>((set, get) => {
 
     activateTab(key) {
       const tab = get().tabs.find((t) => t.key === key);
-      if (tab && tab.key !== get().activeTab) showTab(tab);
+      if (!tab || tab.key === get().activeTab) return;
+      showTab(tab);
+      void refreshFromFile(tab).then((fresh) => { if (fresh !== tab && get().activeTab === key) showTab(fresh); });
     },
 
     closeTab(key) {

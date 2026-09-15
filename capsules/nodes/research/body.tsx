@@ -1,12 +1,14 @@
 'use client';
 import React from 'react';
-import { Btn, useT, stopFlow } from '@/capsules/sdk/ui';
+import { Btn, Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useOutputPayload, useParams, useRun, type BodyProps } from '@/capsules/sdk/host';
+import { FormBody } from '@/capsules/sdk/form-body';
 import { ProviderPick } from '@/capsules/sdk/pickers';
 import type { Research, ResearchPoint } from '@/contracts/types/research';
 import type { ResearchEdits } from './material';
+import { SEARCH } from './node';
 
-type Params = { search: 'sources' | 'web'; guide: string; attempt: number; edits: ResearchEdits };
+type Params = { attempt: number; edits: ResearchEdits };
 
 const hostOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 
@@ -20,6 +22,7 @@ export const ResearchBody: React.FC<BodyProps> = ({ nodeId }) => {
   const [p, set] = useParams<Params>(nodeId);
   const { running, runNode } = useRun();
   const found = useOutputPayload<Research>(nodeId, 'research');
+  const [settings, setSettings] = React.useState(false);
   const edits = p.edits ?? {};
   const pending = Object.keys(edits).length > 0;
   const subject = edits.subject ?? found?.subject ?? '';
@@ -31,45 +34,31 @@ export const ResearchBody: React.FC<BodyProps> = ({ nodeId }) => {
     setTimeout(() => runNode(nodeId), 0);
   };
   const fid = (field: string) => `${nodeId}-research-${field}`;
-  const label = { fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' };
-  const [settings, setSettings] = React.useState(false);
 
   return (
-    <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <ProviderPick nodeId={nodeId} kind="llm" />
       <button className="nc-chip" style={{ alignSelf: 'flex-start' }} aria-expanded={settings} onClick={() => setSettings(!settings)}>{settings ? t('node.researchSettingsHide') : t('node.researchSettings')}</button>
       {settings && (
-        <div style={{ display: 'grid', gap: 6, padding: 6, border: '1px solid var(--line)', borderRadius: 6 }}>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <label htmlFor={fid('search')} style={label}>{t('node.researchSearch')}</label>
-            <select id={fid('search')} className="nc-select" value={p.search ?? 'sources'} onChange={(e) => set({ search: e.target.value as Params['search'] })}>
-              <option value="sources">{t('node.researchSearch.sources')}</option>
-              <option value="web">{t('node.researchSearch.web')}</option>
-            </select>
-          </div>
-          <label htmlFor={fid('guide')} style={{ display: 'grid', gap: 3 }}>
-            <span style={label}>{t('node.researchGuide')}</span>
-            <textarea id={fid('guide')} className="nc-textarea" style={{ minHeight: 120 }} maxLength={8000} placeholder={t('node.researchGuideHint')} value={p.guide ?? ''} onChange={(e) => set({ guide: e.target.value })} />
-          </label>
-        </div>
+        <FormBody nodeId={nodeId} fields={['search', 'guide']} widgets={{
+          search: { labelKey: 'node.researchSearch', options: SEARCH.map((s) => ({ value: s, label: t(`node.researchSearch.${s}`) })) },
+          guide: { widget: 'textarea', rows: 6, labelKey: 'node.researchGuide', placeholder: t('node.researchGuideHint') },
+        }} />
       )}
       {!found ? <div className="nc-hint">{t('node.researchEmpty')}</div> : (
         <>
-          <label htmlFor={fid('subject')} style={{ display: 'grid', gap: 3 }}>
-            <span style={label}>{t('node.researchSubject')}</span>
+          <Kv k={<label htmlFor={fid('subject')}>{t('node.researchSubject')}</label>} v={
             <input id={fid('subject')} className="nc-input" maxLength={120} value={subject} onChange={(e) => set({ edits: { ...edits, subject: e.target.value } })} />
-          </label>
-          <label htmlFor={fid('summary')} style={{ display: 'grid', gap: 3 }}>
-            <span style={label}>{t('node.researchSummary')}</span>
-            <textarea id={fid('summary')} className="nc-textarea" style={{ minHeight: 64 }} maxLength={2000} value={summary} onChange={(e) => set({ edits: { ...edits, summary: e.target.value } })} />
-          </label>
-          <div style={{ display: 'grid', gap: 4 }}>
-            <span style={label}>{t('node.researchPoints', { count: points.length })}</span>
+          } />
+          <Kv wide k={<label htmlFor={fid('summary')}>{t('node.researchSummary')}</label>} v={
+            <textarea id={fid('summary')} className="nc-textarea" rows={3} maxLength={2000} value={summary} onChange={(e) => set({ edits: { ...edits, summary: e.target.value } })} />
+          } />
+          <Kv wide k={t('node.researchPoints', { count: points.length })} v={
             <div style={{ display: 'grid', gap: 6, maxHeight: 420, overflowY: 'auto' }}>
               {points.map((point, i) => (
                 <div key={i} style={{ display: 'grid', gap: 2 }}>
                   <div style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-                    <textarea aria-label={t('node.researchPoint', { n: i + 1 })} className="nc-textarea" style={{ minHeight: 36, flex: 1 }} maxLength={600} value={point.text}
+                    <textarea aria-label={t('node.researchPoint', { n: i + 1 })} className="nc-textarea" rows={2} style={{ flex: 1 }} maxLength={600} value={point.text}
                       onChange={(e) => setPoints(points.map((q, j) => (j === i ? { ...q, text: e.target.value } : q)))} />
                     <button className="nc-chip" aria-label={t('node.researchRemove')} onClick={() => setPoints(points.filter((_, j) => j !== i))}>×</button>
                   </div>
@@ -79,10 +68,10 @@ export const ResearchBody: React.FC<BodyProps> = ({ nodeId }) => {
                 </div>
               ))}
             </div>
-          </div>
+          } />
           {found.sources.length > 0 && (
             <details>
-              <summary style={{ ...label, cursor: 'pointer' }}>{t('node.researchSources', { count: found.sources.length })}</summary>
+              <summary className="nc-k" style={{ cursor: 'pointer' }}>{t('node.researchSources', { count: found.sources.length })}</summary>
               <div style={{ display: 'grid', gap: 2, marginTop: 4 }}>
                 {found.sources.map((s) => (
                   <a key={s.url} className="nc-hint one-line" style={{ marginTop: 0, color: 'var(--tx-2)' }} href={s.url} target="_blank" rel="noreferrer" title={s.url}>{s.title || hostOf(s.url)}</a>

@@ -4,6 +4,7 @@ import { assetsServices } from '../assets/server';
 import { compositionServices, compositionActions } from '../composition/server';
 import { researchServices } from '../research/server';
 import { transcribeServices } from '../transcribe/server';
+import { ttsActions } from '../tts/server';
 
 export const NODE_SERVICE_EXTENSIONS: Record<string, NodeService>[] = [
   assetsServices,
@@ -19,6 +20,7 @@ export const NODE_SERVICE_EXTENSIONS: Record<string, NodeService>[] = [
  */
 export const NODE_ACTIONS: Record<string, NodeService>[] = [
   compositionActions,
+  ttsActions,
 ];
 
 /**

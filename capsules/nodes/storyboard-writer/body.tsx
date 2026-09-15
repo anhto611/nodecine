@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
-import { Btn, useT, stopFlow } from '@/capsules/sdk/ui';
-import { useInputPayload, useLocale, useOutputPayload, useParams, useRun, useRuntime, type BodyProps } from '@/capsules/sdk/host';
+import { Btn, Kv, useT, stopFlow } from '@/capsules/sdk/ui';
+import { useGraph, useInputPayload, useLocale, useOutputPayload, useParams, useRun, useRuntime, type BodyProps } from '@/capsules/sdk/host';
+import { FormBody } from '@/capsules/sdk/form-body';
 import { ProviderPick } from '@/capsules/sdk/pickers';
 import { labelOf, readBlockCatalog, type BlockInfo, type BlockVariable } from '@/contracts/storyboard/blocks';
 import { cueWord } from '@/contracts/storyboard/validate';
@@ -9,8 +10,11 @@ import { assetProjectPath, type Assets } from '@/contracts/types/assets';
 import type { Composition } from '@/contracts/types/composition';
 import type { Storyboard } from '@/contracts/types/storyboard';
 import { layerEditKey, type FrameEdit, type WrittenStoryboard } from './output';
+import { OUTPUT_LANGUAGES, resolveOutputLanguage } from '@/contracts/text/languages';
+import type { Brief } from '@/contracts/types/brief';
+import { DURATIONS, TONES } from './node';
 
-type Params = { subject: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
+type Params = { tone: (typeof TONES)[number]; subject: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
 interface Scene { title: string; voiceover: string; block: string; values: Record<string, unknown>; mounts: { component: string; slot: string; at?: string; until?: string }[] }
 
 /** A value that names a moment: `@word`, set by picking a word the scene says. */
@@ -36,13 +40,16 @@ const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown
   const t = useT();
   const locale = useLocale();
   const label = (
-    <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>
-      <span>{labelOf(variable, locale)}{variable.required ? ' *' : ''}</span>
-      {variable.type === 'string' && variable.maxLength && typeof value === 'string' && <span style={{ color: value.length > variable.maxLength ? 'var(--err)' : undefined }}>{value.length}/{variable.maxLength}</span>}
-    </span>
+    <label htmlFor={id}>
+      {labelOf(variable, locale)}{variable.required ? ' *' : ''}
+      {variable.type === 'string' && variable.maxLength && typeof value === 'string' && <span style={{ marginLeft: 6, color: value.length > variable.maxLength ? 'var(--err)' : undefined }}>{value.length}/{variable.maxLength}</span>}
+    </label>
   );
   let control: React.ReactNode;
+  // A row of words, pictures or list items does not fit beside its label: it goes under it.
+  let wide = false;
   if (isCue(variable, value)) {
+    wide = true;
     control = <WordPick id={id} words={words} value={value} onPick={(word) => onChange(`@${word}`)} />;
   } else if (variable.type === 'enum') {
     control = (
@@ -53,6 +60,7 @@ const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown
   } else if (variable.type === 'boolean') {
     control = <input id={id} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} />;
   } else if (variable.type === 'image') {
+    wide = true;
     // Pictures are chosen by sight: their names are the storyboard's, not the person's.
     const chosen = typeof value === 'string' ? value : '';
     const tile = (on: boolean): React.CSSProperties => ({ width: 44, height: 64, padding: 0, borderRadius: 4, overflow: 'hidden', cursor: 'pointer', background: 'var(--bg-2, #0002)', border: `2px solid ${on ? 'var(--accent)' : 'var(--line)'}`, flex: 'none' });
@@ -67,6 +75,7 @@ const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown
       </div>
     );
   } else if (Array.isArray(value)) {
+    wide = true;
     // A list the block reads as JSON (effects): its words are editable, its layout is the writer's.
     control = (
       <div id={id} style={{ display: 'grid', gap: 4 }}>
@@ -77,7 +86,7 @@ const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown
               <span className="nc-chip" style={{ flex: 'none' }}>{String(entry.type ?? '')}</span>
               {typeof entry.text === 'string'
                 ? <input aria-label={`${variable.label} ${i + 1}`} className="nc-input" style={{ flex: 1 }} value={entry.text} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...(x as object), text: e.target.value } : x)))} />
-                : <span style={{ flex: 1, fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{String(entry.target ?? '')}</span>}
+                : <span className="nc-hint" style={{ flex: 1 }}>{String(entry.target ?? '')}</span>}
               <button className="nc-chip" aria-label={t('node.writerRemove')} onClick={() => onChange(value.filter((_, j) => j !== i))}>×</button>
             </div>
           );
@@ -89,7 +98,7 @@ const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown
   } else {
     control = <input id={id} className="nc-input" value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value)} />;
   }
-  return <label htmlFor={id} style={{ display: 'grid', gap: 3 }}>{label}{control}</label>;
+  return <Kv wide={wide} k={label} v={control} />;
 };
 
 /**
@@ -109,6 +118,18 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
   const pictures = React.useMemo(() => (assets?.items ?? []).map((a) => ({ path: assetProjectPath(a), url: a.url })), [assets]);
   const edits = p.edits ?? {};
   const rewrites = p.rewrites ?? {};
+  const locale = useLocale();
+  const graph = useGraph();
+  const briefPayload = useInputPayload<Brief>(nodeId, 'brief');
+  const briefWire = graph.edges.find((e) => e.target === nodeId && e.targetPort === 'brief');
+  const briefAbout = (graph.nodes.find((n) => n.id === briefWire?.source)?.params as { about?: unknown } | undefined)?.about;
+  const briefLanguage = resolveOutputLanguage('auto', typeof briefAbout === 'string' ? briefAbout : briefPayload?.about ?? '');
+  // Language names are only shown in the interface's language; which language the narration is in is this node's.
+  const nameOf = React.useMemo(() => {
+    let names: Intl.DisplayNames | null = null;
+    try { names = new Intl.DisplayNames([locale], { type: 'language' }); } catch { names = null; }
+    return (code: string) => { try { return names?.of(code) ?? code; } catch { return code; } };
+  }, [locale]);
 
   const failure = runtime?.state === 'error' ? runtime.error : undefined;
   const draft = (failure?.details as { written?: WrittenStoryboard; problems?: string[] } | undefined);
@@ -145,6 +166,12 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <ProviderPick nodeId={nodeId} kind="llm" />
+      <FormBody nodeId={nodeId} fields={['durationSeconds', 'language', 'tone', 'notes']} widgets={{
+        durationSeconds: { labelKey: 'node.writerDuration', options: DURATIONS.map((d) => ({ value: d, label: `${d} s` })) },
+        language: { labelKey: 'node.writerLanguage', options: OUTPUT_LANGUAGES.map((l) => ({ value: l, label: l === 'auto' ? t('node.writerLanguageAuto', { lang: nameOf(briefLanguage) }) : nameOf(l) })) },
+        tone: { labelKey: 'node.writerTone', options: TONES.map((tone) => ({ value: tone, label: t(`node.writerTone.${tone}`) })) },
+        notes: { widget: 'textarea', rows: 2, labelKey: 'node.writerNotes' },
+      }} />
       {/* The storyboard is written by the workflow's Run; here only what reworks one already written. */}
       {(pending || scenes.length > 0) && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -154,13 +181,12 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
       )}
       {subject && (
         <div style={{ display: 'grid', gap: 4, fontSize: 'var(--fs-hint)', color: 'var(--tx-2)', lineHeight: 1.5 }}>
-          <label htmlFor={fid('subject')} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <b style={{ flex: 'none' }}>{t('node.writerSubject')}</b>
-            <input id={fid('subject')} className="nc-input" style={{ flex: 1 }} maxLength={120} value={subjectDraft ?? subject} onChange={(e) => setSubjectDraft(e.target.value)} />
-            {subjectDraft !== null && subjectDraft.trim() && subjectDraft.trim() !== subject && (
-              <Btn small disabled={running} onClick={() => { set({ subject: subjectDraft.trim() }); setSubjectDraft(null); setTimeout(() => runNode(nodeId), 0); }}>{t('node.writerRenameEverywhere')}</Btn>
-            )}
-          </label>
+          <Kv k={<label htmlFor={fid('subject')}>{t('node.writerSubject')}</label>} v={
+            <input id={fid('subject')} className="nc-input" maxLength={120} value={subjectDraft ?? subject} onChange={(e) => setSubjectDraft(e.target.value)} />
+          } />
+          {subjectDraft !== null && subjectDraft.trim() && subjectDraft.trim() !== subject && (
+            <Btn small style={{ justifySelf: 'start' }} disabled={running} onClick={() => { set({ subject: subjectDraft.trim() }); setSubjectDraft(null); setTimeout(() => runNode(nodeId), 0); }}>{t('node.writerRenameEverywhere')}</Btn>
+          )}
           {message && <div>{message}</div>}
           <div style={{ color: 'var(--tx-3)' }}>{t('node.writerUnderstoodHint')}</div>
         </div>
@@ -182,20 +208,19 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
                 <b>{i + 1}. {e.title ?? scene.title}</b>
                 <span className="nc-chip">{scene.block}{block ? ` · ${t(`node.writerRole.${block.role}`)}` : ''}</span>
-                {e.voiceover !== undefined || e.values ? <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerEdited')}</span> : null}
+                {e.voiceover !== undefined || e.values ? <span className="nc-hint">{t('node.writerEdited')}</span> : null}
               </div>
               {scene.voiceover || e.voiceover !== undefined ? (
-                <label htmlFor={fid('voiceover')} style={{ display: 'grid', gap: 3 }}>
-                  <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerVoiceover', { words: words.length })}</span>
-                  <textarea id={fid('voiceover')} className="nc-textarea" style={{ minHeight: 48 }} value={voiceover} onChange={(ev) => edit(i, { voiceover: ev.target.value })} />
-                </label>
-              ) : <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerSilent')}</span>}
+                <Kv wide k={<label htmlFor={fid('voiceover')}>{t('node.writerVoiceover', { words: words.length })}</label>} v={
+                  <textarea id={fid('voiceover')} className="nc-textarea" rows={2} value={voiceover} onChange={(ev) => edit(i, { voiceover: ev.target.value })} />
+                } />
+              ) : <span className="nc-hint">{t('node.writerSilent')}</span>}
               {(block?.variables ?? []).filter((v) => v.id !== 'seconds' && values[v.id] !== undefined).map((v) => (
                 <ValueField key={v.id} id={fid(v.id)} variable={v} value={values[v.id]} words={words} pictures={pictures} onChange={(value) => edit(i, { values: { [v.id]: value } })} />
               ))}
               {scene.mounts.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerMounts')}</span>
+                  <span className="nc-hint">{t('node.writerMounts')}</span>
                   {scene.mounts.map((m, k) => (
                     <span key={k} className="nc-chip" title={[m.at && `${m.at}`, m.until && `→ ${m.until}`].filter(Boolean).join(' ')}>{m.component} · {m.slot}{m.at ? ` · ${m.at}` : ''}</span>
                   ))}
@@ -222,8 +247,8 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
                 <b>{t('node.writerLayer')} · {e.title ?? layer.title}</b>
                 <span className="nc-chip">{layer.block}</span>
-                <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerLayerScenes', { from: layer.from, to: layer.to })}</span>
-                {e.values ? <span style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.writerEdited')}</span> : null}
+                <span className="nc-hint">{t('node.writerLayerScenes', { from: layer.from, to: layer.to })}</span>
+                {e.values ? <span className="nc-hint">{t('node.writerEdited')}</span> : null}
               </div>
               {(block?.variables ?? []).filter((v) => v.id !== 'seconds' && values[v.id] !== undefined).map((v) => (
                 <ValueField key={v.id} id={fid(v.id)} variable={v} value={values[v.id]} words={words} pictures={pictures} onChange={(value) => edit(key, { values: { [v.id]: value } })} />

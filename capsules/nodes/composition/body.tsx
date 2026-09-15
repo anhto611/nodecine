@@ -61,7 +61,7 @@ export const CompositionBody: React.FC<BodyProps> = ({ nodeId }) => {
           {all.length > shown.length && (
             <button className="nc-chip" style={{ flex: `0 0 ${cardWidth(kind)}`, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: 6 }} onClick={() => openWall(kind)}>
               <div style={{ aspectRatio: out ? `${out.width} / ${out.height}` : '9 / 16', borderRadius: 4, background: 'var(--bg-sunk, #0002)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-body)' }}>+{all.length - shown.length}</div>
-              <div style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>{t('node.compositionSeeAll')}</div>
+              <div className="nc-hint" style={{ marginTop: 0 }}>{t('node.compositionSeeAll')}</div>
             </button>
           )}
         </div>

@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { NodeError } from '@/contracts/errors';
 import { ASSET_NAME, AssetSchema, assetNameFor, type Asset, type Assets } from '@/contracts/types/assets';
 import type { Brief } from '@/contracts/types/brief';
-import type { Research } from '@/contracts/types/research';
 import { contentHash } from '@/core/hash';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { AssetsErrorCode } from './errors';
@@ -14,8 +13,8 @@ export const MAX_FOUND = 20;
 const Params = z.object({
   /** The pictures a person added, in the order they were added. */
   items: z.array(AssetSchema).max(200).default([]),
-  /** Found pictures a person left out, by address. */
-  dropped: z.array(z.string().max(200)).max(200).default([]),
+  /** Found pictures a person removed, by address: gone from the list, and not found again until "Find again" starts over. */
+  removed: z.array(z.string().max(200)).max(400).default([]),
   /** Notes a person rewrote on found pictures, by address. */
   notes: z.record(z.string(), z.string().max(500)).default({}),
   /** How many pictures to find at most; 0 finds none. */
@@ -24,11 +23,11 @@ const Params = z.object({
   wanted: z.string().max(4000).default(''),
   llmProvider: z.string().max(60).default(''),
   llmSettings: z.record(z.string(), z.unknown()).default({}),
-  /** Raised by "Find again". */
+  /** Raised by "Find again", which starts the search over. */
   attempt: z.number().int().min(0).default(0),
   /** The pictures the last search found, kept so leaving one out or rewriting a note does not search again. */
   found: z.array(AssetSchema).max(MAX_FOUND).default([]),
-  /** What that search was asked, as a fingerprint: a different brief, research or setting searches again. */
+  /** What that search was asked, as a fingerprint: a different brief or setting searches again. */
   foundFor: z.string().max(64).default(''),
 });
 
@@ -48,18 +47,15 @@ export function assetProblems(items: Pick<Asset, 'name'>[]): string[] {
 export const nameFor = assetNameFor;
 
 /**
- * The pictures a video is made with: those found for it on the pages its brief and its research read,
- * less the ones a person left out, then the ones a person brought, named from their files. What was found
- * is kept on the node, so leaving a picture out or rewriting a note costs no search; a found picture keeps
- * its choice and its note across a new search, held by its address, which is its content. The Assemble
+ * The pictures a video is made with: those found for it on the pages its brief links to and the pages a
+ * web search finds for it, less the ones a person removed, then the ones a person brought, named from their files. What was found
+ * is kept on the node, so removing a picture or rewriting a note costs no search; a found picture keeps
+ * its note across a new search, and a removed one stays removed, both held by its address, which is its content. The Assemble
  * node puts them into the project under `assets/`, where a storyboard refers to them by name.
  */
 export const assets: NodeDefinition<typeof Params> = {
   type: 'assets', version: 1, kind: 'process',
-  inputs: [
-    { name: 'brief', type: 'Brief', required: false },
-    { name: 'research', type: 'Research', required: false },
-  ],
+  inputs: [{ name: 'brief', type: 'Brief', required: false }],
   outputs: [{ name: 'assets', type: 'Assets' }],
   paramsSchema: Params, defaultParams: Params.parse({}),
   validate: (params) => assetProblems(params.items).map((message) => ({ code: AssetsErrorCode.ASSETS_INVALID, message })),
@@ -68,23 +64,23 @@ export const assets: NodeDefinition<typeof Params> = {
     const problems = assetProblems(params.items);
     if (problems.length) throw new NodeError(AssetsErrorCode.ASSETS_INVALID, problems[0]!, false, problems).withFix('give every asset its own name');
     const brief = inputs.brief?.payload as Brief | undefined;
-    const research = inputs.research?.payload as Research | undefined;
     let offered: Asset[] = [];
-    if (params.pictures > 0 && (brief || research)) {
-      const input = { brief, research, pictures: params.pictures, wanted: params.wanted, attempt: params.attempt };
-      const key = contentHash({ about: brief?.about, language: brief?.language, subject: research?.subject, summary: research?.summary, sources: research?.sources.map((s) => s.url), pictures: params.pictures, wanted: params.wanted, attempt: params.attempt, llm: [params.llmProvider, params.llmSettings] });
+    if (params.pictures > 0 && brief) {
+      const input = { brief, pictures: params.pictures, wanted: params.wanted, attempt: params.attempt, existing: params.items, removed: params.removed };
+      // The pictures a person brought are part of the question: adding one searches again, so nothing found repeats it.
+      const key = contentHash({ about: brief.about, language: brief.language, pictures: params.pictures, wanted: params.wanted, attempt: params.attempt, llm: [params.llmProvider, params.llmSettings], existing: params.items.map((a) => a.url) });
       if (key === params.foundFor) offered = params.found;
       else {
         offered = await findPictures(ctx, input);
         ctx.patchParams({ found: offered, foundFor: key });
       }
     }
-    const dropped = new Set(params.dropped);
+    const removed = new Set(params.removed);
     // A found picture gives way to a brought one of the same name: the brought one was named by a person.
     const taken = params.items.map((a) => a.name);
     const kept: Asset[] = [];
     for (const found of offered) {
-      if (dropped.has(found.url) || params.items.some((a) => a.url === found.url) || kept.some((a) => a.url === found.url)) continue;
+      if (removed.has(found.url) || params.items.some((a) => a.url === found.url) || kept.some((a) => a.url === found.url)) continue;
       const name = assetNameFor(found.name, [...taken, ...kept.map((a) => a.name)]);
       kept.push({ ...found, name, note: params.notes[found.url] ?? found.note });
     }

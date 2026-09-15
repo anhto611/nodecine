@@ -12,6 +12,10 @@ describe('resolveOutputLanguage', () => {
     expect(resolveOutputLanguage('VI', 'Tiny widgets for the web.')).toBe('vi');
   });
 
+  it('reads the words, not the web addresses among them', () => {
+    expect(resolveOutputLanguage('auto', 'https://www.example.com/some/english/words/here/and/more 가계부 앱 소개 영상')).toBe('ko');
+  });
+
   it('falls back rather than throwing when there is no source to read', () => {
     expect(resolveOutputLanguage('auto', '')).toBe('en');
   });

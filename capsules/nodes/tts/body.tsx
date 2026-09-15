@@ -3,34 +3,47 @@ import React from 'react';
 import { ProviderPick } from '@/capsules/sdk/pickers';
 import type { AudioScript, TTSRef, Voiceover } from '@/contracts/types/payloads';
 import { Kv, useT, stopFlow } from '@/capsules/sdk/ui';
-import { useGraph, useInputPayload, useLocale, useOutputPayload, useParams, useRuntime, type BodyProps } from '@/capsules/sdk/host';
+import { useGraph, useHost, useInputPayload, useOutputPayload, useParams, useRuntime, type BodyProps } from '@/capsules/sdk/host';
 import { FormBody } from '@/capsules/sdk/form-body';
+import { resolveOutputLanguage } from '@/contracts/text/languages';
 import { pickVoice, voiceSpeaks } from './node';
 
 /**
- * Which language the narration will be in. An explicit output language on the upstream node is
- * what the next run will produce, so it wins even over a script that already exists — the old
- * script may be from before the setting changed. Otherwise the script payload is the truth once
- * the upstream node has run and is not stale; until then the interface language is the guess.
- * Without this the list showed English voices to someone who had just switched to Vietnamese.
+ * Which language the narration will be in. Once the node that writes it has run and is not stale, its
+ * script says. Before that it is that node's own language setting, or, left on auto, the language of the
+ * brief it writes from. The Studio's own language plays no part: it only shows the app.
  */
 function useScriptLanguage(nodeId: string, script: AudioScript | undefined): { lang: string; source: 'script' | 'guess' } {
   const graph = useGraph();
-  const locale = useLocale();
   const edge = graph.edges.find((e) => e.target === nodeId && e.targetPort === 'script');
   const upstream = edge ? graph.nodes.find((n) => n.id === edge.source) : undefined;
   const upstreamState = useRuntime(upstream?.id ?? '')?.state;
-  const set = upstream?.params.outputLanguage;
-  if (typeof set === 'string' && set && set !== 'auto') return { lang: set, source: 'guess' };
   if (script?.language && upstreamState !== 'stale') return { lang: script.language, source: 'script' };
-  return { lang: locale, source: 'guess' };
+  const chosen = (upstream?.params as { language?: unknown } | undefined)?.language;
+  const briefWire = upstream ? graph.edges.find((e) => e.target === upstream.id && e.targetPort === 'brief') : undefined;
+  const about = (briefWire ? graph.nodes.find((n) => n.id === briefWire.source)?.params as { about?: unknown } | undefined : undefined)?.about;
+  return { lang: resolveOutputLanguage(typeof chosen === 'string' ? chosen : 'auto', typeof about === 'string' ? about : ''), source: 'guess' };
 }
 
 export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
   const t = useT();
-  const [p, set] = useParams<{ voice?: string }>(nodeId);
+  const { action } = useHost();
+  const [p, set] = useParams<{ voice?: string; ttsProvider?: string; ttsSettings?: Record<string, unknown> }>(nodeId);
   const script = useInputPayload<AudioScript>(nodeId, 'script');
-  const ref = useInputPayload<TTSRef>(nodeId, 'tts');
+  // The chosen service's voices, asked of the server whenever the service or its settings change.
+  const [ref, setRef] = React.useState<TTSRef | null>(null);
+  const [voicesError, setVoicesError] = React.useState<string | null>(null);
+  const settingsKey = JSON.stringify(p.ttsSettings ?? {});
+  React.useEffect(() => {
+    if (!p.ttsProvider) return;
+    let gone = false;
+    setVoicesError(null);
+    action<TTSRef>('tts/voices', [p.ttsProvider, p.ttsSettings ?? {}])
+      .then((r) => { if (!gone) setRef(r); }, (e: unknown) => { if (!gone) { setRef(null); setVoicesError(e instanceof Error ? e.message : String(e)); } });
+    return () => { gone = true; };
+    // The settings are compared by content, not by the object that carries them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.ttsProvider, settingsKey]);
   const vo = useOutputPayload<Voiceover>(nodeId, 'voiceover');
   const { lang, source } = useScriptLanguage(nodeId, script);
   const all = ref?.voices ?? [];
@@ -49,6 +62,8 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
           <optgroup key={language} label={language}>{voices.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}</optgroup>
         ))}
       </select>} />
+      {voicesError && <div className="nc-hint clamp" style={{ color: 'var(--warn)' }} title={voicesError}>{t('node.voicesUnavailable')}: {voicesError}</div>}
+      {!ref && !voicesError && p.ttsProvider && <div className="nc-hint">{t('node.voicesLoading')}</div>}
       <FormBody nodeId={nodeId} fields={['speed']} widgets={{ speed: { widget: 'range', step: 0.05, format: (v) => `${v.toFixed(2)}x` } }} />
       <div className="nc-hint">{t(source === 'script' ? 'node.matchesLanguage' : 'node.guessedLanguage', { lang })}{auto?.fallback ? ` · ${t('node.voiceMismatch')}` : ''}</div>
       {vo && (() => {

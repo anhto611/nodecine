@@ -72,6 +72,11 @@ html, body { height: 100%; background: var(--bg-app); color: var(--tx); font-fam
 .nc-kv > .nc-v:has(.nc-input:not([type=number])) .nc-input { width: 100%; }
 .nc-kv .nc-input[type=number] { width: 64px; }
 .nc-v { color: var(--tx-2); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .nc-dim { color: var(--tx-3); }
+/* A wide row: the label on its own line, the value under it across the whole width. */
+.nc-kv.wide { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: 3px; line-height: 1.5; }
+.nc-kv.wide > .nc-k { white-space: normal; }
+.nc-kv.wide > .nc-v { text-align: left; white-space: normal; overflow: visible; max-width: none; }
+.nc-kv.wide .nc-textarea, .nc-kv.wide .nc-input { width: 100%; }
 .nc-hint { font-size: var(--fs-hint); color: var(--tx-3); margin-top: 4px; min-width: 0; overflow-wrap: anywhere; }
 .nc-hint.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .nc-hint.one-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

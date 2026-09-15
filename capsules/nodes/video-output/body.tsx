@@ -4,7 +4,7 @@ import { getEngineFactory } from '@/contracts/adapters/registry';
 import type { PlayerHandle } from '@/contracts/adapters/types';
 import type { Composition } from '@/contracts/types/composition';
 import { readCapability } from '@/core/nodes/definition';
-import { useT, stopFlow } from '@/capsules/sdk/ui';
+import { Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { Icon } from '@/capsules/sdk/icons';
 import { useInputPayload, useRun, useRuntime, useGraph, useViewedRun, type BodyProps } from '@/capsules/sdk/host';
 import type { VideoOutputResult } from './node';
@@ -84,9 +84,8 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
         )}
       </div>
       {composition && (
-        <div className="nc-kv" style={{ borderTop: '1px solid var(--line)', paddingTop: 5 }}>
-          <span className="nc-k">{seconds.toFixed(2)}s · {composition.fps}fps</span>
-          <span className="nc-k">{composition.width}×{composition.height}</span>
+        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 5 }}>
+          <Kv k={`${seconds.toFixed(2)}s · ${composition.fps}fps`} v={`${composition.width}×${composition.height}`} dim />
         </div>
       )}
     </div>

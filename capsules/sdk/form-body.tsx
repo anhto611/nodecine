@@ -20,6 +20,12 @@ export type FieldWidget = {
   format?: (v: number) => string;
   /** Draw this field yourself, in its schema position; the form only supplies the label row. */
   render?: React.ReactNode;
+  /** The label's dictionary key, when the field's name alone would collide with another node's (`node.<name>` otherwise). */
+  labelKey?: string;
+  /** A fixed list to choose from, for a text or number field whose schema does not list them. */
+  options?: { value: string | number; label: string }[];
+  /** Lines a text box shows before it grows. */
+  rows?: number;
 };
 
 /**
@@ -41,50 +47,60 @@ export const FormBody: React.FC<{ nodeId: string; fields?: string[]; omit?: stri
     <>
       {shown.map((f) => {
         const w = widgets[f.name] ?? {};
-        const control = w.render ?? <SchemaControl field={f} widget={w} value={p[f.name]} onChange={(v) => set({ [f.name]: v })} />;
+        const id = `${nodeId}-${f.name}`;
+        const control = w.render ?? <SchemaControl id={id} field={f} widget={w} value={p[f.name]} onChange={(v) => set({ [f.name]: v })} />;
         if (w.label === false) return <React.Fragment key={f.name}>{control}</React.Fragment>;
-        return <Kv key={f.name} k={t(`node.${f.name}`)} v={control} />;
+        return <Kv key={f.name} wide={w.widget === 'textarea'} k={<label htmlFor={id}>{t(w.labelKey ?? `node.${f.name}`)}</label>} v={control} />;
       })}
     </>
   );
 };
 
 /** One field of a schema as a control: a select, a bounded number that settles on blur, a checkbox, a text. */
-const SchemaControl: React.FC<{ field: FormField; widget: FieldWidget; value: unknown; onChange: (v: unknown) => void }> = ({ field, widget, value, onChange }) => {
+const SchemaControl: React.FC<{ id: string; field: FormField; widget: FieldWidget; value: unknown; onChange: (v: unknown) => void }> = ({ id, field, widget, value, onChange }) => {
   const t = useT();
   const { hasTranslation } = useHost();
+  if (widget.options) {
+    const current = value ?? ('defaultValue' in field ? field.defaultValue : undefined) ?? '';
+    return (
+      <select id={id} className={`nc-select ${stopFlow}`} value={String(current)} onChange={(e) => onChange(field.kind === 'number' ? Number(e.target.value) : e.target.value)}>
+        {widget.options.map((o) => <option key={String(o.value)} value={String(o.value)}>{o.label}</option>)}
+      </select>
+    );
+  }
   switch (field.kind) {
     case 'select':
       return (
-        <select className={`nc-select ${stopFlow}`} value={String(value ?? field.defaultValue ?? '')} onChange={(e) => onChange(e.target.value)}>
+        <select id={id} className={`nc-select ${stopFlow}`} value={String(value ?? field.defaultValue ?? '')} onChange={(e) => onChange(e.target.value)}>
           {field.options.map((o) => <option key={o} value={o}>{hasTranslation(`node.${field.name}.${o}`) ? t(`node.${field.name}.${o}`) : o}</option>)}
         </select>
       );
     case 'boolean':
-      return <input className={stopFlow} type="checkbox" checked={!!(value ?? field.defaultValue)} onChange={(e) => onChange(e.target.checked)} />;
+      return <input id={id} className={stopFlow} type="checkbox" checked={!!(value ?? field.defaultValue)} onChange={(e) => onChange(e.target.checked)} />;
     case 'text':
-      if (widget.widget === 'textarea') return <textarea className={`nc-textarea ${stopFlow}`} value={String(value ?? '')} placeholder={widget.placeholder} maxLength={field.max} onChange={(e) => onChange(e.target.value)} />;
-      return <input className={`nc-input ${stopFlow}`} value={String(value ?? '')} placeholder={widget.placeholder} maxLength={field.max} onChange={(e) => onChange(field.optional && e.target.value === '' ? undefined : e.target.value)} />;
+      if (widget.widget === 'textarea') return <textarea id={id} className={`nc-textarea ${stopFlow}`} rows={widget.rows} value={String(value ?? '')} placeholder={widget.placeholder} maxLength={field.max} onChange={(e) => onChange(e.target.value)} />;
+      return <input id={id} className={`nc-input ${stopFlow}`} value={String(value ?? '')} placeholder={widget.placeholder} maxLength={field.max} onChange={(e) => onChange(field.optional && e.target.value === '' ? undefined : e.target.value)} />;
     case 'number':
-      return <NumberControl field={field} widget={widget} value={value as number | undefined} onChange={onChange} />;
+      return <NumberControl id={id} field={field} widget={widget} value={value as number | undefined} onChange={onChange} />;
   }
 };
 
 /** Free typing while focused; the schema's bounds apply when the field is left. */
-const NumberControl: React.FC<{ field: Extract<FormField, { kind: 'number' }>; widget: FieldWidget; value: number | undefined; onChange: (v: number | undefined) => void }> = ({ field, widget, value, onChange }) => {
+const NumberControl: React.FC<{ id: string; field: Extract<FormField, { kind: 'number' }>; widget: FieldWidget; value: number | undefined; onChange: (v: number | undefined) => void }> = ({ id, field, widget, value, onChange }) => {
   const [draft, setDraft] = React.useState<string | null>(null);
   const step = widget.step ?? (field.integer ? 1 : 0.01);
   if (widget.widget === 'range' && field.min !== undefined && field.max !== undefined) {
     const v = value ?? field.defaultValue ?? field.min;
     return (
       <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <input className={stopFlow} type="range" min={field.min} max={field.max} step={step} value={v} onChange={(e) => onChange(Number(e.target.value))} style={{ width: 70 }} />
+        <input id={id} className={stopFlow} type="range" min={field.min} max={field.max} step={step} value={v} onChange={(e) => onChange(Number(e.target.value))} style={{ width: 70 }} />
         {widget.format ? widget.format(v) : String(v)}
       </span>
     );
   }
   return (
     <input
+      id={id}
       className={`nc-input ${stopFlow}`}
       type="number"
       min={field.min}

@@ -1,12 +1,13 @@
+import { languageName } from '@/contracts/text/languages';
 import type { Brief } from '@/contracts/types/brief';
 import type { LinkedPage } from '@/contracts/types/web';
 
 /**
  * The prompt Research sends. Instructions in English, where models follow them most closely; the
- * findings are written in the brief's language, since a person reads and corrects them.
+ * findings are written in the brief's language, since a person reads and corrects them. Research gathers:
+ * what the video must or must not say, and how long it runs, are the writer's to apply, not a filter here.
  */
 
-const LANGUAGE_NAMES: Record<string, string> = { vi: 'Vietnamese', en: 'English' };
 
 export interface ResearchMaterial {
   brief: Brief;
@@ -19,13 +20,11 @@ export interface ResearchMaterial {
 }
 
 export function researchPrompt(m: ResearchMaterial, attempt: number): string {
-  const language = LANGUAGE_NAMES[m.brief.language] ?? m.brief.language;
+  const language = languageName(m.brief.language);
   return `You research the subject of a short video before anyone writes it. Find out what the video needs to say, and say where each thing comes from.
 
 What the person wrote about the video (the brief; follow it over any source when they differ):
 ${m.brief.about}
-${m.brief.notes ? `\nMust say / must not say: ${m.brief.notes}\n` : ''}
-Length of the video: ${m.brief.durationSeconds} seconds.
 ${m.pages.map((p) => `\nA page the brief links to (${p.url}):\n${p.title}\n${p.text.slice(0, 8000)}`).join('\n')}${m.unread.length ? `\n\nLinks that could not be read: ${m.unread.map((u) => `${u.url} (${u.why})`).join('; ')}` : ''}
 ${m.guide.trim() ? `\nWhat this workflow's films need found out:\n${m.guide.trim()}\n` : ''}
 ${m.web

@@ -158,3 +158,20 @@ describe('RemoteExecutor running state', () => {
     expect(ex.isRunning()).toBe(false);
   });
 });
+
+describe('RemoteExecutor attaching to a workflow mid-run', () => {
+  it('says it is running when the server does, and not once that run\'s job ends', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ runtimes: {}, logs: [], running: true, pending: [], history: [] }), { status: 200, headers: { 'content-type': 'application/json' } })));
+    FakeEventSource.instances = [];
+    const heard: boolean[] = [];
+    const ex = new RemoteExecutor('k', pipeline(), 'Static', { onAttached: ({ running }) => heard.push(running) });
+    await flush();
+    expect(ex.isRunning()).toBe(true);
+    expect(heard).toEqual([true]);
+
+    const stream = FakeEventSource.instances.at(-1)!;
+    for (const fn of stream.listeners.get('job') ?? []) fn({ data: JSON.stringify({ job: { id: 'j9', key: 'k', kind: 'run', status: 'done', ok: true, createdAt: 0 } }) } as MessageEvent);
+    expect(ex.isRunning()).toBe(false);
+    expect(heard).toEqual([true, false]);
+  });
+});

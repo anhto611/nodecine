@@ -33,8 +33,7 @@ const good = {
 const research = { language: 'vi', subject: 'Pig Money', summary: 'Sổ chi tiêu có AI.', points: [{ text: 'Split bills with friends.', source: 'https://apps.apple.com/app/pig-money' }], sources: [{ url: 'https://apps.apple.com/app/pig-money', title: 'Pig Money' }] };
 
 function setup(answers: unknown[], params: Record<string, unknown> = {}) {
-  const { durationSeconds = 10, ...rest } = params;
-  const brief = { about: 'Pig Money: sổ chi tiêu có AI https://apps.apple.com/app/pig-money', durationSeconds, tone: 'energetic', language: 'vi', notes: '' };
+  const brief = { about: 'Pig Money: sổ chi tiêu có AI https://apps.apple.com/app/pig-money', language: 'vi' };
   const prompts: { prompt: string; images?: string[] }[] = [];
   const services = {
     probeLLM: async () => ({ providerId: 'fake', displayName: 'Fake', transport: 'cli', settings: {}, capabilities: { installed: { status: 'ready' }, authenticated: { status: 'ready' }, structuredOutput: { status: 'ready' }, vision: { status: 'ready' } } }),
@@ -46,7 +45,7 @@ function setup(answers: unknown[], params: Record<string, unknown> = {}) {
   };
   const logs: string[] = [];
   const run = () => storyboardWriter.run({
-    nodeId: 'writer', params: storyboardWriter.paramsSchema.parse({ llmProvider: 'fake', ...rest }), lists: {}, signal: new AbortController().signal,
+    nodeId: 'writer', params: storyboardWriter.paramsSchema.parse({ llmProvider: 'fake', durationSeconds: 10, ...params }), lists: {}, signal: new AbortController().signal,
     inputs: { brief: { type: 'Brief', payload: brief }, research: { type: 'Research', payload: research }, composition: { type: 'Composition', payload: composition }, assets: { type: 'Assets', payload: assets } },
     services, fresh: false, log: (_: string, m: string) => logs.push(m), progress: () => {}, patchParams: () => {},
   } as never) as Promise<{ storyboard: { frames: { block?: string; values: Record<string, unknown>; voiceover?: string }[]; markdown: string; subject?: string }; script: { segments: string[] } }>;
@@ -67,6 +66,8 @@ describe('the Storyboard Writer', () => {
     expect(prompts[0]!.prompt).toContain('Open on the brand, show features on the phone');
     expect(prompts[0]!.prompt).toContain('The first scene plays a hook block. The last scene plays a outro block.');
     expect(prompts[0]!.prompt).toContain('- name (string, required): Name');
+    expect(prompts[0]!.prompt).toContain('Tone: energetic and upbeat');
+    expect(prompts[0]!.prompt).not.toContain('Must say');
     expect(prompts[0]!.prompt).toContain('- Split bills with friends. [https://apps.apple.com/app/pig-money]');
     expect(out.storyboard.subject).toBe('Pig Money');
   });
@@ -121,6 +122,16 @@ describe('the Storyboard Writer', () => {
       const error = await run().then(() => null, (e: { details: { problems: string[] } }) => e);
       expect(error?.details.problems).toEqual(['frame 1, app-close: button is required (Button)']);
     } finally { composition.files['storyboard-guide.md'] = original!; }
+  });
+
+  it('writes to its own length, language, tone and must-says, the brief\'s language when left on auto', async () => {
+    const { prompts, run } = setup([structuredClone(good), structuredClone(good), structuredClone(good)], { tone: 'expert', notes: 'không nói giá', durationSeconds: 45 });
+    // Three short scenes are too little for 45 seconds; only what was asked matters here.
+    await run().catch(() => null);
+    expect(prompts[0]!.prompt).toContain('Length: 45 seconds');
+    expect(prompts[0]!.prompt).toContain('in Vietnamese');
+    expect(prompts[0]!.prompt).toContain('Tone: precise, like an expert explaining');
+    expect(prompts[0]!.prompt).toContain('Must say / must not say: không nói giá');
   });
 
   it('holds a film to how many scenes in a row one block may play', async () => {

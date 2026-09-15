@@ -11,8 +11,12 @@ export const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { pri
   />
 );
 
-export const Kv: React.FC<{ k: React.ReactNode; v: React.ReactNode; dim?: boolean }> = ({ k, v, dim }) => (
-  <div className="nc-kv">
+/**
+ * One labelled row: the label, then what it names. `wide` puts the value under its label across the whole
+ * width, for what does not fit beside a label: a paragraph to write, a row of words or pictures to pick.
+ */
+export const Kv: React.FC<{ k: React.ReactNode; v: React.ReactNode; dim?: boolean; wide?: boolean }> = ({ k, v, dim, wide }) => (
+  <div className={`nc-kv ${wide ? 'wide' : ''}`}>
     <span className="nc-k">{k}</span>
     <span className={`nc-v ${dim ? 'nc-dim' : ''}`}>{v}</span>
   </div>

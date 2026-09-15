@@ -21,7 +21,20 @@ import { repairPrompt, rewriteFramePrompt, writePrompt, type Request, type Write
 export const REPAIR_ROUNDS = 2;
 const WORDS_PER_SECOND: Record<string, number> = { vi: 2.8, en: 2.5 };
 
+/** How the narration sounds. */
+export const TONES = ['energetic', 'trustworthy', 'playful', 'expert'] as const;
+/** Lengths offered for a video, in seconds. */
+export const DURATIONS = [15, 30, 45, 60, 90] as const;
+
 const Params = z.object({
+  /** How long the video runs, which sets how much the narration says. */
+  durationSeconds: z.number().int().min(10).max(120).default(30),
+  /** The narration's language. `auto`: the language the brief is written in. */
+  language: z.string().min(2).max(35).default('auto'),
+  /** How the narration sounds, set once with the workflow: an explainer speaks as an expert, an ad with energy. */
+  tone: z.enum(TONES).default('energetic'),
+  /** What the narration must say or must not say. */
+  notes: z.string().max(1000).default(''),
   /** The subject as the person corrected it: written in place of the model's wherever the storyboard names it. */
   subject: z.string().max(120).default(''),
   llmProvider: z.string().max(60).default(''),
@@ -58,7 +71,9 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
     const { params, inputs, services, log } = ctx;
     const brief = inputs.brief!.payload as Brief;
     const research = inputs.research?.payload as Research | undefined;
-    const request: Request = { brief, ...(research ? { research } : {}) };
+    // The narration is written again from the start, in the language asked for: the brief's own unless one is chosen.
+    const language = params.language === 'auto' ? brief.language : params.language.toLowerCase();
+    const request: Request = { brief, language, durationSeconds: params.durationSeconds, tone: params.tone, notes: params.notes, ...(research ? { research } : {}) };
     const composition = inputs.composition!.payload as Composition;
     const assets = inputs.assets?.payload as Assets | undefined;
     const ref = await resolveLLM(services, params, [...LLM_NEEDS, 'structuredOutput']);
@@ -74,16 +89,16 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
       request, catalog, components, slots, seen, first: guide.first, last: guide.last, repeat: guide.repeat,
       guide: guide.body,
       pictures: items.map((a) => ({ path: assetProjectPath(a), name: a.name, note: a.note, width: a.width, height: a.height })),
-      wordsPerSecond: WORDS_PER_SECOND[brief.language] ?? 2.6,
+      wordsPerSecond: WORDS_PER_SECOND[language] ?? 2.6,
     };
     const images = seen ? items.map((a) => a.url) : [];
     if (items.length && !seen) log('warn', `${ref.displayName} cannot see pictures: it chooses them by their notes`);
-    const rules = { catalog, assets: material.pictures.map((p) => p.path), targetSeconds: brief.durationSeconds, wordsPerSecond: material.wordsPerSecond, first: guide.first, last: guide.last, repeat: guide.repeat, components, slots: Object.keys(slots) };
+    const rules = { catalog, assets: material.pictures.map((p) => p.path), targetSeconds: params.durationSeconds, wordsPerSecond: material.wordsPerSecond, first: guide.first, last: guide.last, repeat: guide.repeat, components, slots: Object.keys(slots) };
     const format = `${composition.width}x${composition.height}`;
     // Asked without `fresh`: a single run of this node (to rewrite one scene) must not rewrite the others.
     const asking: Pick<RunContext, 'signal' | 'progress' | 'fresh' | 'services' | 'log'> = { ...ctx, fresh: false };
-    const ask = <S extends z.ZodTypeAny>(schema: S, prompt: string, language: (out: z.infer<S>) => string) =>
-      completeStructured(asking, ref, { outputSchema: schema, buildPrompt: () => prompt, languageOf: language, images }, brief.language);
+    const ask = <S extends z.ZodTypeAny>(schema: S, prompt: string, languageOf: (out: z.infer<S>) => string) =>
+      completeStructured(asking, ref, { outputSchema: schema, buildPrompt: () => prompt, languageOf, images }, language);
 
     const check = (raw: WrittenStoryboard): Written => {
       const written = unwrapJson(raw);
@@ -107,7 +122,7 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
     for (const [index, take] of Object.entries(params.rewrites).sort(([a], [b]) => Number(a) - Number(b))) {
       const i = Number(index);
       if (!written.frames[i]) continue;
-      const frame = await ask(WrittenFrameSchema, rewriteFramePrompt(material, written, i, take), () => brief.language);
+      const frame = await ask(WrittenFrameSchema, rewriteFramePrompt(material, written, i, take), () => language);
       written = { ...written, frames: written.frames.map((f, j) => (j === i ? frame : f)) };
     }
 
@@ -121,7 +136,7 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
     log('info', `${final.storyboard.subject ?? '?'} · ${final.storyboard.frames.length} scenes · ${lines.join(' ').split(/\s+/).length} words · ${Object.keys(params.edits).length} edited`);
     return {
       storyboard: final.storyboard,
-      script: { text: lines.join(' '), language: brief.language, segments: lines } satisfies AudioScript,
+      script: { text: lines.join(' '), language, segments: lines } satisfies AudioScript,
     };
   },
 };

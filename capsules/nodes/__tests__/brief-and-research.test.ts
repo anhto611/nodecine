@@ -34,14 +34,16 @@ describe('a workflow whose Storyboard Writer held its brief', () => {
   it('opens with a Brief and Research before the writer, wired, and the writer\'s settings where they belong', () => {
     const { graph, notes } = migrateGraph(structuredClone(saved));
     const byType = (type: string) => graph.nodes.find((n) => n.type === type)!;
-    expect(byType('brief').params).toEqual({ about: 'Kimi K2.7 https://kimi.com', durationSeconds: 90, tone: 'expert', language: 'vi', notes: 'không nói giá', hint: { vi: 'Dán link bài viết', en: 'Paste the article link' } });
+    expect(byType('brief').params).toEqual({ about: 'Kimi K2.7 https://kimi.com', hint: { vi: 'Dán link bài viết', en: 'Paste the article link' } });
     expect(byType('research').params).toMatchObject({ llmProvider: 'claude-code', llmSettings: { model: 'opus' } });
-    expect(Object.keys(byType('storyboard-writer').params).sort()).toEqual(['attempt', 'edits', 'llmProvider', 'llmSettings', 'rewrites', 'subject']);
+    expect(Object.keys(byType('storyboard-writer').params).sort()).toEqual(['attempt', 'durationSeconds', 'edits', 'language', 'llmProvider', 'llmSettings', 'notes', 'rewrites', 'subject', 'tone']);
+    expect(byType('storyboard-writer').params).toMatchObject({ durationSeconds: 90, language: 'vi', tone: 'expert', notes: 'không nói giá' });
     const wire = (e: { source: string; sourcePort: string; target: string; targetPort: string }) => `${e.source}.${e.sourcePort} → ${e.target}.${e.targetPort}`;
     expect(graph.edges.map(wire)).toEqual(expect.arrayContaining([
       'brief.brief → research.brief', 'brief.brief → writer.brief', 'research.research → writer.research',
-      'brief.brief → assets.brief', 'research.research → assets.research',
+      'brief.brief → assets.brief',
     ]));
+    expect(graph.edges.some((e) => e.target === 'assets' && e.targetPort === 'research')).toBe(false);
     expect(byType('assets').params).toMatchObject({ llmProvider: 'claude-code', llmSettings: { model: 'opus' } });
     expect(graph.edges.some((e) => e.target === byType('research').id && e.targetPort === 'composition')).toBe(false);
     expect(validateGraph(graph).filter((i) => i.severity === 'error')).toEqual([]);
@@ -74,7 +76,7 @@ describe('a workflow whose Research read its guide from the composition', () => 
 });
 
 describe('a workflow whose Research brought the pictures', () => {
-  it('opens with the Assets node finding them itself, from the brief and the research, with the same count and model', () => {
+  it('opens with the Assets node finding them itself, from the brief, with the same count and model', () => {
     const graph: Graph = {
       nodes: [
         { id: 'brief', type: 'brief', version: 1, params: { about: 'Kimi K2.7' }, bypassed: false, position: { x: 0, y: 0 } },
@@ -88,9 +90,25 @@ describe('a workflow whose Research brought the pictures', () => {
     };
     const { graph: after } = migrateGraph(graph);
     const wire = (e: { source: string; sourcePort: string; target: string; targetPort: string }) => `${e.source}.${e.sourcePort} → ${e.target}.${e.targetPort}`;
-    expect(after.edges.map(wire).sort()).toEqual(['brief.brief → assets.brief', 'brief.brief → research.brief', 'research.research → assets.research']);
+    expect(after.edges.map(wire).sort()).toEqual(['brief.brief → assets.brief', 'brief.brief → research.brief']);
     expect(after.nodes.find((n) => n.id === 'assets')!.params).toMatchObject({ pictures: 6, llmProvider: 'claude-code' });
     expect('pictures' in after.nodes.find((n) => n.id === 'research')!.params).toBe(false);
     expect(validateGraph(after).filter((i) => i.severity === 'error')).toEqual([]);
+  });
+});
+
+describe('a workflow whose Brief held the tone and the must-says', () => {
+  it('opens with both on the Storyboard Writer the brief feeds', () => {
+    const at = { x: 0, y: 0 };
+    const graph: Graph = {
+      nodes: [
+        { id: 'brief', type: 'brief', version: 1, params: { about: 'Kimi K2.7', durationSeconds: 60, tone: 'expert', notes: 'không nói giá', language: 'auto' }, bypassed: false, position: at },
+        { id: 'writer', type: 'storyboard-writer', version: 1, params: { llmProvider: 'claude-code', llmSettings: {} }, bypassed: false, position: at },
+      ],
+      edges: [{ id: 'e1', source: 'brief', sourcePort: 'brief', target: 'writer', targetPort: 'brief' }],
+    };
+    const { graph: after } = migrateGraph(graph);
+    expect(after.nodes.find((n) => n.id === 'writer')!.params).toMatchObject({ durationSeconds: 60, language: 'auto', tone: 'expert', notes: 'không nói giá' });
+    expect(Object.keys(after.nodes.find((n) => n.id === 'brief')!.params)).toEqual(['about']);
   });
 });

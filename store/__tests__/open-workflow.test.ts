@@ -46,11 +46,25 @@ describe('opening a saved workflow', () => {
     expect(useStudio.getState().tabs.map((t) => t.fileId)).toEqual(['mine']);
   });
 
-  it('reports nothing when the file is already open in a tab', async () => {
-    const read = vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } });
+  it('reports nothing when the file is already open in a tab, and opens no second tab', async () => {
+    vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } });
     await useStudio.getState().openWorkflow('mine');
-    read.mockClear();
     expect(await useStudio.getState().openWorkflow('mine')).toBeNull();
-    expect(read).not.toHaveBeenCalled();
+    expect(useStudio.getState().tabs).toHaveLength(1);
+  });
+
+  it('gives an open tab with nothing unsaved the file\'s version when the file changed on disk, and leaves unsaved work alone', async () => {
+    const node = (about: string) => ({ id: 'b', type: 'brief', params: { about }, bypassed: false, position: { x: 0, y: 0 } });
+    const read = vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [node('first')], edges: [] } });
+    await useStudio.getState().openWorkflow('mine');
+    read.mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [node('changed on disk')], edges: [] } });
+    await useStudio.getState().openWorkflow('mine');
+    expect(useStudio.getState().tabs[0]!.graph.nodes[0]!.params.about).toBe('changed on disk');
+    expect(useStudio.getState().tabs[0]!.dirty).toBe(false);
+
+    useStudio.setState({ tabs: useStudio.getState().tabs.map((t) => ({ ...t, dirty: true, graph: { nodes: [node('my unsaved edit')], edges: [] } })) });
+    read.mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [node('changed again')], edges: [] } });
+    await useStudio.getState().openWorkflow('mine');
+    expect(useStudio.getState().tabs[0]!.graph.nodes[0]!.params.about).toBe('my unsaved edit');
   });
 });

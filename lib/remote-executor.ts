@@ -14,7 +14,14 @@ import type { Job } from '@/server/jobs';
  */
 
 type Snapshot = { runtimes: Record<string, NodeRuntime>; logs: LogEntry[]; running: boolean; pending: Job[]; history?: RunRecord[] };
-export type RemoteHooks = ExecutorHooks & { onHistory?: (history: RunRecord[]) => void };
+export type RemoteHooks = ExecutorHooks & {
+  onHistory?: (history: RunRecord[]) => void;
+  /**
+   * The server's state has been read for the workflow shown: whether it is running now. A page loaded
+   * while a run goes on hears no `run:start`, so without this its Run button looked idle until the run ended.
+   */
+  onAttached?: (state: { running: boolean }) => void;
+};
 
 /**
  * A server that answers 5xx with **nothing in the body** did not reach the route: in development
@@ -230,6 +237,7 @@ export class RemoteExecutor {
       if (snap.running) this.activeJobs.add(RUNNING_BEFORE_ATTACH);
       for (const job of snap.pending ?? []) this.activeJobs.add(job.id);
       this.hooks.onHistory?.(snap.history ?? []);
+      this.hooks.onAttached?.({ running: this.isRunning() });
     }
     const es = new EventSource(`/api/jobs/events?key=${encodeURIComponent(key)}`);
     this.source = es;
@@ -251,6 +259,8 @@ export class RemoteExecutor {
       if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') {
         this.activeJobs.delete(job.id);
         this.activeJobs.delete(RUNNING_BEFORE_ATTACH);
+        // The last of this workflow's jobs ended: a page that attached mid-run heard no run:start to pair with run:end.
+        if (!this.isRunning()) this.hooks.onAttached?.({ running: false });
         if (job.error && job.status === 'failed') this.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: job.error.code, message: job.error.message });
         const waiter = this.waiting.get(job.id);
         if (waiter) { waiter(job); this.waiting.delete(job.id); }

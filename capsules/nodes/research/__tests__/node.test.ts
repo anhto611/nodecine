@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { research } from '../node';
 
-const brief = { about: 'Kimi K2.7 HighSpeed nhanh gấp 6 lần https://kimi.com/blog/k2-7 và https://broken.example', durationSeconds: 60, tone: 'expert', language: 'vi', notes: '' };
+const brief = { about: 'Kimi K2.7 HighSpeed nhanh gấp 6 lần https://kimi.com/blog/k2-7 và https://broken.example', language: 'vi' };
 const findings = {
   language: 'vi', subject: 'Kimi K2.7 Code HighSpeed', summary: 'Bản K2.7 chạy nhanh hơn cho lập trình.',
   points: [{ text: 'Khoảng 180 token/giây ở coding task trung bình.', source: 'https://kimi.com/blog/k2-7' }, { text: 'Đang mở cho Beta Program.', source: null }],

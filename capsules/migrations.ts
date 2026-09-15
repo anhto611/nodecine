@@ -69,8 +69,8 @@ function mergeCaptionsIntoTranscribe(graph: Graph, notes: { nodeId?: string; cod
   return { nodes, edges };
 }
 
-/** What the Storyboard Writer asked for itself until 2026-09-15, and a Brief node holds now. */
-const BRIEF_FIELDS = ['about', 'durationSeconds', 'tone', 'language', 'notes'] as const;
+/** What the Storyboard Writer asked for itself until 2026-09-15, and a Brief node holds now. Everything else it asked for stays: it is the writer's. */
+const BRIEF_FIELDS = ['about'] as const;
 /** How far apart two columns of wide nodes sit on the canvas. */
 const COLUMN = 430;
 
@@ -80,7 +80,7 @@ const COLUMN = 430;
  *
  * A saved graph whose writer still holds a brief gets a Brief node with those fields, and a Research node
  * between it and the writer, set up with the writer's model; the Assets node wired into the writer finds
- * pictures for the same brief and research. The describe box's placeholder, which the workflow's storyboard
+ * pictures for the same brief. The describe box's placeholder, which the workflow's storyboard
  * guide carried, moves onto the Brief. Research starts with its default settings.
  */
 function briefAndResearchBeforeTheWriter(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
@@ -117,11 +117,8 @@ function briefAndResearchBeforeTheWriter(graph: Graph, notes: { nodeId?: string;
       { id: edgeId(), source: briefId, sourcePort: 'brief', target: researchId, targetPort: 'brief' },
       { id: edgeId(), source: briefId, sourcePort: 'brief', target: writer.id, targetPort: 'brief' },
       { id: edgeId(), source: researchId, sourcePort: 'research', target: writer.id, targetPort: 'research' },
-      // The Assets node the writer reads finds pictures for the same brief and research.
-      ...(assets ? [
-        { id: edgeId(), source: briefId, sourcePort: 'brief', target: assets.source, targetPort: 'brief' },
-        { id: edgeId(), source: researchId, sourcePort: 'research', target: assets.source, targetPort: 'research' },
-      ] : []),
+      // The Assets node the writer reads finds pictures for the same brief.
+      ...(assets ? [{ id: edgeId(), source: briefId, sourcePort: 'brief', target: assets.source, targetPort: 'brief' }] : []),
     );
     if (assets) nodes = nodes.map((n) => (n.id === assets.source && !(n.params as { llmProvider?: string }).llmProvider ? { ...n, params: { ...n.params, llmProvider: params.llmProvider ?? '', llmSettings: params.llmSettings ?? {} } } : n));
     notes.push({ nodeId: writer.id, code: 'NODE_REPLACED', message: 'what the video is about moved from the Storyboard Writer onto a Brief node, and Research now reads its links (2026-09-15)' });
@@ -168,8 +165,8 @@ function researchGuideOntoTheNode(graph: Graph, notes: { nodeId?: string; code: 
 
 /**
  * For an evening on 2026-09-15 Research also brought pictures, handed to the Assets node on an Assets wire.
- * Finding pictures is the Assets node's own work now, from the brief and the research wired into it: the
- * wire goes, those two wires come, and how many pictures to find moves across with the model that finds them.
+ * Finding pictures is the Assets node's own work now, from the brief wired into it: the wire goes, the
+ * brief's comes, and how many pictures to find moves across with the model that finds them.
  */
 function picturesOntoAssets(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
   const research = new Map(graph.nodes.filter((n) => n.type === 'research').map((n) => [n.id, n]));
@@ -185,9 +182,8 @@ function picturesOntoAssets(graph: Graph, notes: { nodeId?: string; code: string
     const briefWire = graph.edges.find((e) => e.target === wire.source && e.targetPort === 'brief');
     const has = (port: string) => edges.some((e) => e.target === wire.target && e.targetPort === port);
     if (briefWire && !has('brief')) edges.push({ id: edgeId(), source: briefWire.source, sourcePort: briefWire.sourcePort, target: wire.target, targetPort: 'brief' });
-    if (!has('research')) edges.push({ id: edgeId(), source: wire.source, sourcePort: 'research', target: wire.target, targetPort: 'research' });
     patches.set(wire.target, { ...(typeof from.pictures === 'number' ? { pictures: from.pictures } : {}), llmProvider: from.llmProvider ?? '', llmSettings: from.llmSettings ?? {} });
-    notes.push({ nodeId: wire.target, code: 'NODE_VERSION', message: 'this node finds its pictures itself now, from the brief and the research wired into it (2026-09-15)' });
+    notes.push({ nodeId: wire.target, code: 'NODE_VERSION', message: 'this node finds its pictures itself now, from the brief wired into it (2026-09-15)' });
   }
   const nodes = graph.nodes.map((n) => {
     if (research.has(n.id) && 'pictures' in n.params) {
@@ -214,13 +210,57 @@ function captionsOffDataMerge(graph: Graph, notes: { nodeId?: string; code: stri
   return { ...graph, edges: graph.edges.filter((e) => !gone.includes(e)) };
 }
 
+/** What a Brief held for an evening on 2026-09-15 and only the Storyboard Writer uses. */
+const WRITER_FIELDS = ['durationSeconds', 'language', 'tone', 'notes'] as const;
+
+/**
+ * For an evening on 2026-09-15 the Brief held the video's length, the narration's language and tone, and
+ * what it must or must not say. Only the Storyboard Writer uses them, so they are its settings: they move
+ * onto the writers the brief feeds.
+ */
+function writerChoicesOntoTheWriter(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
+  const briefs = graph.nodes.filter((n) => n.type === 'brief' && WRITER_FIELDS.some((f) => f in n.params));
+  if (!briefs.length) return graph;
+  const moves = new Map<string, Record<string, unknown>>();
+  for (const brief of briefs) {
+    for (const e of graph.edges.filter((x) => x.source === brief.id && x.targetPort === 'brief')) {
+      const target = graph.nodes.find((n) => n.id === e.target);
+      if (target?.type !== 'storyboard-writer') continue;
+      const fields = Object.fromEntries(WRITER_FIELDS.filter((f) => f in brief.params && !(f in target.params)).map((f) => [f, brief.params[f]]));
+      if (Object.keys(fields).length) moves.set(target.id, { ...(moves.get(target.id) ?? {}), ...fields });
+    }
+  }
+  const nodes = graph.nodes.map((n) => {
+    if (briefs.includes(n)) return { ...n, params: Object.fromEntries(Object.entries(n.params).filter(([k]) => !(WRITER_FIELDS as readonly string[]).includes(k))) };
+    const fields = moves.get(n.id);
+    if (!fields) return n;
+    notes.push({ nodeId: n.id, code: 'NODE_VERSION', message: `${Object.keys(fields).join(' and ')} moved from the Brief onto this node (2026-09-15)` });
+    return { ...n, params: { ...n.params, ...fields } };
+  });
+  return { ...graph, nodes };
+}
+
+/**
+ * For a night on 2026-09-15 Assets also read the research, for the pages it had read. It finds its own
+ * pages now, with a model that searches the web, so the wire from Research goes.
+ */
+function researchOffAssets(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
+  const assets = new Set(graph.nodes.filter((n) => n.type === 'assets').map((n) => n.id));
+  const gone = graph.edges.filter((e) => assets.has(e.target) && e.targetPort === 'research');
+  if (!gone.length) return graph;
+  for (const e of gone) notes.push({ nodeId: e.target, code: 'NODE_VERSION', message: 'Assets no longer reads the research; that wire was removed (2026-09-16)' });
+  return { ...graph, edges: graph.edges.filter((e) => !gone.includes(e)) };
+}
+
 export function registerDocMigrations(): void {
   registerResourceFolds();
   registerGraphStep(mergeCaptionsIntoTranscribe);
   registerGraphStep(briefAndResearchBeforeTheWriter);
   registerGraphStep(researchGuideOntoTheNode);
   registerGraphStep(picturesOntoAssets);
+  registerGraphStep(researchOffAssets);
   registerGraphStep(captionsOffDataMerge);
+  registerGraphStep(writerChoicesOntoTheWriter);
   registerDocMigration(1, (doc: SavedDoc): SavedDoc => ({
     ...doc,
     graph: {

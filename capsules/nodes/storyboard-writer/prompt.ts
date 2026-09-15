@@ -1,4 +1,5 @@
 import type { BlockInfo, ComponentInfo } from '@/contracts/storyboard/blocks';
+import { languageName } from '@/contracts/text/languages';
 import type { Brief } from '@/contracts/types/brief';
 import type { Research } from '@/contracts/types/research';
 import type { WrittenFrame, WrittenStoryboard } from './output';
@@ -11,6 +12,14 @@ import type { WrittenFrame, WrittenStoryboard } from './output';
 /** What the person asked for, and what was found out about it when Research ran. */
 export interface Request {
   brief: Brief;
+  /** The narration's language, resolved. */
+  language: string;
+  /** How long the video runs. */
+  durationSeconds: number;
+  /** How the narration sounds: the writer's setting. */
+  tone: string;
+  /** What the narration must say or must not say: the writer's setting. */
+  notes: string;
   research?: Research;
 }
 
@@ -34,7 +43,6 @@ export interface WriterMaterial {
   wordsPerSecond: number;
 }
 
-const LANGUAGE_NAMES: Record<string, string> = { vi: 'Vietnamese', en: 'English' };
 const TONES: Record<string, string> = { energetic: 'energetic and upbeat', trustworthy: 'calm and trustworthy', playful: 'playful and witty', expert: 'precise, like an expert explaining' };
 
 function describeBlocks(catalog: BlockInfo[]): string {
@@ -77,7 +85,7 @@ function describePictures(pictures: Picture[], seen: boolean): string {
 }
 
 function describeRequest(r: Request): string {
-  const { brief, research } = r;
+  const { brief, research, tone, notes, durationSeconds } = r;
   return [
     `What the person wrote about it:\n${brief.about.trim()}`,
     research ? [
@@ -85,9 +93,9 @@ function describeRequest(r: Request): string {
       research.summary,
       ...research.points.map((p) => `- ${p.text}${p.source ? ` [${p.source}]` : ''}`),
     ].filter(Boolean).join('\n') : '',
-    `Length: ${brief.durationSeconds} seconds`,
-    `Tone: ${TONES[brief.tone] ?? brief.tone}`,
-    brief.notes.trim() ? `Must say / must not say: ${brief.notes.trim()}` : '',
+    `Length: ${durationSeconds} seconds`,
+    `Tone: ${TONES[tone] ?? tone}`,
+    notes.trim() ? `Must say / must not say: ${notes.trim()}` : '',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -122,11 +130,11 @@ const OUTPUT_SHAPE = `{
 }`;
 
 function rules(m: WriterMaterial): string {
-  const language = LANGUAGE_NAMES[m.request.brief.language] ?? m.request.brief.language;
-  const words = Math.round(m.request.brief.durationSeconds * m.wordsPerSecond);
+  const language = languageName(m.request.language);
+  const words = Math.round(m.request.durationSeconds * m.wordsPerSecond);
   return `Rules:
 - Write the narration and every on-screen word in ${language}, unless a value's label asks for something else.
-- The whole narration runs about ${words} words (${m.request.brief.durationSeconds} s at ${m.wordsPerSecond} words a second), counting silent scenes' seconds as time too.
+- The whole narration runs about ${words} words (${m.request.durationSeconds} s at ${m.wordsPerSecond} words a second), counting silent scenes' seconds as time too.
 - One idea per scene.${m.first ? ` The first scene plays a ${m.first} block.` : ''}${m.last ? ` The last scene plays a ${m.last} block.` : ''}${m.repeat ? ` Never more than ${m.repeat} scenes in a row on the same block.` : ''}
 - Every scene plays exactly one block from the list, gives every value marked required, and gives only the values that block declares. Never give "seconds".
 - "mounts" puts components over a scene's block, each in a slot, appearing on "at" and leaving on "until" (words said in that scene; null for the scene's start or end). Use them as the guide says, where they add to the scene and do not cover what it shows; [] when none.

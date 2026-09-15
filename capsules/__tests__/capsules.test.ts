@@ -28,8 +28,10 @@ describe('node capsules', () => {
     const definitions = readFileSync(path.join(root, 'capsules/nodes/.generated/definitions.ts'), 'utf8');
     expect(definitions).not.toMatch(/\/server'/);
     const server = readFileSync(path.join(root, 'capsules/nodes/.generated/server.ts'), 'utf8');
-    // One import per capsule's server module, carrying its services and, when it has them, its actions.
-    expect(server.match(/^import \{ \w+(?:, \w+)* \} from '\.\.\/[\w-]+\/server';$/gm)).toHaveLength(NODE_SERVICE_EXTENSIONS.length);
+    // One import per capsule's server module, carrying its services, its actions, or both: counted by the
+    // capsule each service or action id is named under.
+    const capsulesWithServer = new Set([...NODE_SERVICE_EXTENSIONS, ...NODE_ACTIONS].flatMap((ext) => Object.keys(ext).map((id) => id.split('/')[0])));
+    expect(server.match(/^import \{ \w+(?:, \w+)* \} from '\.\.\/[\w-]+\/server';$/gm)).toHaveLength(capsulesWithServer.size);
     expect(server).not.toMatch(/\/node'/);
   });
 

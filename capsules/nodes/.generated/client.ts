@@ -3,7 +3,7 @@
 import type React from 'react';
 import type { BodyProps, NodeMeta } from '@/capsules/sdk/meta';
 import { AssembleBody } from '../assemble/body';
-import { AssetsBody } from '../assets/body';
+import { AssetsBody, AssetsDialog } from '../assets/body';
 import { BriefBody } from '../brief/body';
 import { CaptionExportBody } from '../caption-export/body';
 import { CompositionBody, PartsDialog } from '../composition/body';
@@ -31,6 +31,7 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
 };
 
 export const NODE_OVERLAYS: React.FC[] = [
+  AssetsDialog,
   PartsDialog,
 ];
 
