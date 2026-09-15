@@ -30,7 +30,6 @@ export const NODE_SOURCES: Record<string, string> = {
   "composition": "capsules/nodes/composition",
   "fill": "capsules/nodes/fill",
   "mp4-export": "capsules/nodes/mp4-export",
-  "script": "capsules/nodes/script",
   "storyboard-writer": "capsules/nodes/storyboard-writer",
   "transcribe": "capsules/nodes/transcribe",
   "tts": "capsules/nodes/tts",

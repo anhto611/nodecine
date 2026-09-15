@@ -8,7 +8,6 @@ import { CaptionExportBody } from '../caption-export/body';
 import { CompositionBody, PartsDialog } from '../composition/body';
 import { FillBody } from '../fill/body';
 import { ExportBody } from '../mp4-export/body';
-import { ScriptBody } from '../script/body';
 import { StoryboardWriterBody } from '../storyboard-writer/body';
 import { TranscribeBody } from '../transcribe/body';
 import { TtsBody } from '../tts/body';
@@ -21,7 +20,6 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'composition': CompositionBody,
   'fill': FillBody,
   'mp4-export': ExportBody,
-  'script': ScriptBody,
   'storyboard-writer': StoryboardWriterBody,
   'transcribe': TranscribeBody,
   'tts': TtsBody,
@@ -39,7 +37,6 @@ export const NODE_META: Record<string, NodeMeta> = {
   'composition': { icon: 'layers', group: 'visual', layout: 'wide' },
   'fill': { icon: 'layers', group: 'visual' },
   'mp4-export': { icon: 'down', group: 'output' },
-  'script': { icon: 'doc', group: 'script', layout: 'wide' },
   'storyboard-writer': { icon: 'bot', group: 'script', layout: 'wide' },
   'transcribe': { icon: 'wave', group: 'audio' },
   'tts': { icon: 'wave', group: 'audio' },

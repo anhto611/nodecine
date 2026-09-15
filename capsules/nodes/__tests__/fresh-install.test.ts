@@ -25,7 +25,6 @@ describe('a fresh install', () => {
       'composition',
       'fill',
       'mp4-export',
-      'script',
       'storyboard-writer',
       'transcribe',
       'tts',
