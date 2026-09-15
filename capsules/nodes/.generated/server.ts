@@ -23,6 +23,7 @@ export const NODE_ACTIONS: Record<string, NodeService>[] = [
  */
 export const NODE_SOURCES: Record<string, string> = {
   "assemble": "capsules/nodes/assemble",
+  "assets": "capsules/nodes/assets",
   "caption-export": "capsules/nodes/caption-export",
   "composition": "capsules/nodes/composition",
   "fill": "capsules/nodes/fill",

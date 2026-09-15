@@ -20,6 +20,7 @@ describe('a fresh install', () => {
   it('offers these node types in the Library, and no fewer', () => {
     expect(listNodeTypes().map((d) => d.type).sort()).toEqual([
       'assemble',
+      'assets',
       'caption-export',
       'composition',
       'fill',

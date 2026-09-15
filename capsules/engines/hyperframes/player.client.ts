@@ -20,9 +20,22 @@ export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOpti
   player.setAttribute('sandbox-origin', 'opaque');
   player.style.width = '100%';
   player.style.height = '100%';
-  if (preview.still !== undefined) {
-    const still = preview.still;
-    player.addEventListener('ready', () => { player.seek?.(still); player.pause?.(); }, { once: true });
+  // The page shows every clip as its markup left it until something seeks it: a film whose scenes stack
+  // their parts would open on all of them at once. So it is seeked as soon as it is ready, to its first
+  // frame, or to the moment a thumbnail shows.
+  const still = preview.still;
+  player.addEventListener('ready', () => {
+    player.seek?.(still ?? 0);
+    if (still !== undefined) player.pause?.();
+  }, { once: true });
+  // The page's sound as one file beside it, when it has any: a click on Play does not reach the
+  // opaque-origin frame, whose audio is then refused, and the player plays this from the Studio's page
+  // instead (see preview-audio.server.ts). A thumbnail makes no sound, so it needs none.
+  if (preview.controls !== false) {
+    const audio = preview.url.replace(/\.html(\?.*)?$/, '.m4a');
+    if (audio !== preview.url) {
+      void fetch(audio, { method: 'HEAD' }).then((res) => { if (res.ok && player.isConnected) player.setAttribute('audio-src', audio); }, () => {});
+    }
   }
   element.appendChild(player);
   return {

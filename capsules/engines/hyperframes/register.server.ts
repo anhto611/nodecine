@@ -11,6 +11,7 @@ import { createHyperframesAdapter, type ServerPreview, type ServerRender } from 
 import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { writeProject } from './project.server';
 import { hoistNestedCompositions } from './hoist.server';
+import { writePreviewAudio } from './preview-audio.server';
 
 const QUALITY: Record<ExportSettings['quality'], 'high' | 'standard' | 'draft'> = { high: 'high', medium: 'standard', low: 'draft' };
 
@@ -38,6 +39,11 @@ export const previewWithBundler: ServerPreview = async (composition) => {
     // `<` escaped so a value holding `</script>` cannot close the tag it is written into.
     const assignment = `<script>window.__hfVariables = ${JSON.stringify(values).replace(/</g, '\\u003c')};</script>`;
     await writeFile(target, injectTagsAtHeadStart(bundled, assignment), 'utf8');
+  }
+  // Its sound on the film's clock, beside it, for the player to fall back on (see preview-audio.server.ts).
+  const audio = projectFilePath(key, name.replace(/\.html$/, '.m4a'));
+  if (!(await stat(audio).then(() => true, () => false))) {
+    await writePreviewAudio(composition.files[COMPOSITION_ENTRY] ?? '', values, dir, audio).catch(() => false);
   }
   return { url: projectUrl(key, name) };
 };

@@ -32,7 +32,7 @@ export const StoryboardBody: React.FC<BodyProps> = ({ nodeId }) => {
           <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 180, overflowY: 'auto' }}>
             {frames.map((f) => (
               <div key={f.number} style={{ fontSize: 'var(--fs-hint)', color: 'var(--tx-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {f.number}. {f.title} · {f.mounts.map((m) => m.component).join(', ') || '—'}
+                {f.number}. {f.title} · {f.block ?? (f.mounts.map((m) => m.component).join(', ') || '—')}
               </div>
             ))}
           </div>

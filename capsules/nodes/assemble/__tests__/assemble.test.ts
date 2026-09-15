@@ -85,20 +85,21 @@ describe('assembling scenes', () => {
   { "id": "question", "type": "string", "label": "Question", "default": "?", "maxLength": 20 },
   { "id": "pop_at", "type": "number", "label": "When it pops (s)", "default": 0 },
   { "id": "side", "type": "enum", "label": "Side", "default": "left", "options": [{ "value": "left", "label": "Left" }, { "value": "right", "label": "Right" }] },
+  { "id": "effects", "type": "string", "label": "Effects, as JSON", "default": "[]" },
   { "id": "seconds", "type": "number", "label": "Length (s)", "default": 4 }
 ]'>
 <body><template><div id="root" data-composition-id="hook-question" data-width="1080" data-height="1920"></div></template></body></html>`;
   const withBlock: Composition = { ...kit, files: { ...kit.files, 'compositions/hook-question.html': block } };
 
   it('plays the block a frame names for the whole frame, with the frame\'s values and its words as seconds', () => {
-    const played: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right' } }] };
+    const played: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right', effects: [{ type: 'pill', at: '@Business.' }] } }] };
     const { composition, frames, problems } = assemble(withBlock, played, voice);
     expect(problems).toEqual([]);
     expect(frames[1]!.block).toBe('hook-question');
     const frame2 = composition.files['compositions/frames/02-ai-dung-duoc.html']!;
     expect(frame2).toContain('data-composition-id="hook-question" data-composition-src="compositions/hook-question.html"');
     // "API" is said 1.2s into the narration, which starts 0.4s into the frame's clip; the block runs the whole clip.
-    expect(frame2).toContain(`data-variable-values='{"question":"Ai dùng được?","pop_at":1.6,"side":"right","seconds":3.4}'`);
+    expect(frame2).toContain(`data-variable-values='{"question":"Ai dùng được?","pop_at":1.6,"side":"right","effects":"[{\\"type\\":\\"pill\\",\\"at\\":2.3}]","seconds":3.4}'`);
     expect(frame2).toContain('data-start="0" data-duration="3.4" data-track-index="1"');
   });
 
@@ -109,5 +110,15 @@ describe('assembling scenes', () => {
     expect(problems.some((p) => p.startsWith('frame 1, hook-question:') && p.includes('colour'))).toBe(true);
     expect(problems).toContain('frame 1, hook-question: question is 25 characters, the block allows 20');
     expect(problems).toContain('frame 3, outro: the composition has no block outro');
+  });
+
+  it('puts the Assets node\'s pictures under assets/, and refuses a value naming one that is not there', () => {
+    const pictures = { items: [{ name: 'calendar', url: '/api/assets/' + 'a'.repeat(40) + '.png', note: '' }] };
+    const played = (screen: string): Storyboard => ({ ...storyboard, frames: [{ ...storyboard.frames[0]!, mounts: [], block: 'hook-question', values: { question: 'Lịch?', effects: [{ type: 'pill' }], side: 'left' } }, { ...storyboard.frames[2]!, mounts: [{ component: 'card', box: 'full', values: { image: screen } }] }] });
+    const ok = assemble(withBlock, played('assets/calendar.png'), { ...voice, segments: [voice.segments![0]!] }, pictures);
+    expect(ok.problems).toEqual([]);
+    expect(ok.composition.media['assets/calendar.png']).toBe(pictures.items[0]!.url);
+    const typo = assemble(withBlock, played('assets/calender.png'), { ...voice, segments: [voice.segments![0]!] }, pictures);
+    expect(typo.problems).toEqual(['frame 3, card: no asset assets/calender.png (there are assets/calendar.png)']);
   });
 });

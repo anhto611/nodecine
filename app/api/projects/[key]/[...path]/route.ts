@@ -41,3 +41,20 @@ export async function GET(req: Request, ctx: { params: Promise<{ key: string; pa
     },
   });
 }
+
+/** Whether a project file is there, without its bytes: the player asks before it adopts a preview's sound. */
+export async function HEAD(_req: Request, ctx: { params: Promise<{ key: string; path: string[] }> }) {
+  const { key, path: segments } = await ctx.params;
+  let filePath: string;
+  try {
+    filePath = projectFilePath(key, segments.join('/'));
+  } catch {
+    return new Response(null, { status: 404 });
+  }
+  const s = await stat(filePath).catch(() => null);
+  if (!s?.isFile()) return new Response(null, { status: 404 });
+  return new Response(null, {
+    status: 200,
+    headers: { 'Content-Type': MIME[filePath.split('.').pop()?.toLowerCase() ?? ''] ?? 'application/octet-stream', 'Content-Length': String(s.size), 'Access-Control-Allow-Origin': '*' },
+  });
+}

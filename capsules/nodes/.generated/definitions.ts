@@ -3,6 +3,7 @@ import { registerNodeType, registerRetiredNodeType, type AnyNodeDefinition, type
 import { registerContracts } from '@/contracts';
 import { registerDocMigrations } from '../../migrations';
 import { assemble } from '../assemble/node';
+import { assets } from '../assets/node';
 import { captionExport } from '../caption-export/node';
 import { composition } from '../composition/node';
 import { fill } from '../fill/node';
@@ -13,6 +14,7 @@ import { transcribe } from '../transcribe/node';
 import { ttsEngine } from '../tts/node';
 import { videoOutput } from '../video-output/node';
 import { AssembleErrorCode } from '../assemble/errors';
+import { AssetsErrorCode } from '../assets/errors';
 import { CaptionExportErrorCode } from '../caption-export/errors';
 import { CompositionErrorCode } from '../composition/errors';
 import { FillErrorCode } from '../fill/errors';
@@ -24,6 +26,7 @@ import { TtsErrorCode } from '../tts/errors';
 
 export const ALL_NODES: AnyNodeDefinition[] = [
   assemble,
+  assets,
   captionExport,
   composition,
   fill,
@@ -35,7 +38,7 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   videoOutput,
 ] as unknown as AnyNodeDefinition[];
 
-const expectedIds = ["assemble","caption-export","composition","fill","mp4-export","script","storyboard","transcribe","tts","video-output"];
+const expectedIds = ["assemble","assets","caption-export","composition","fill","mp4-export","script","storyboard","transcribe","tts","video-output"];
 ALL_NODES.forEach((definition, index) => {
   if (definition.type !== expectedIds[index]) throw new Error('node manifest id "' + expectedIds[index] + '" does not match definition type "' + definition.type + '"');
 });
@@ -43,6 +46,7 @@ ALL_NODES.forEach((definition, index) => {
 /** What a node declares about itself beyond its ports, for the hub: which node carries the IR, the preview, the file export. */
 export const NODE_FEATURES: Record<string, string[]> = {
   "assemble": [],
+  "assets": [],
   "caption-export": [],
   "composition": [],
   "fill": [],
@@ -65,6 +69,7 @@ export const NODE_FEATURES: Record<string, string[]> = {
  */
 export const NODE_ERROR_CODES: Record<string, string[]> = {
   "assemble": [],
+  "assets": [],
   "caption-export": [],
   "composition": [],
   "fill": [],
@@ -75,6 +80,7 @@ export const NODE_ERROR_CODES: Record<string, string[]> = {
   "tts": []
 };
 NODE_ERROR_CODES['assemble'] = Object.values(AssembleErrorCode);
+NODE_ERROR_CODES['assets'] = Object.values(AssetsErrorCode);
 NODE_ERROR_CODES['caption-export'] = Object.values(CaptionExportErrorCode);
 NODE_ERROR_CODES['composition'] = Object.values(CompositionErrorCode);
 NODE_ERROR_CODES['fill'] = Object.values(FillErrorCode);

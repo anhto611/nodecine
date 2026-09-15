@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { NodeError } from '@/contracts/errors';
+import type { Assets } from '@/contracts/types/assets';
 import type { Composition } from '@/contracts/types/composition';
 import type { Voiceover } from '@/contracts/types/payloads';
 import type { Storyboard } from '@/contracts/types/storyboard';
@@ -12,7 +13,8 @@ const Params = z.object({});
 /**
  * The storyboard put on the clock and turned into the project: a sub-composition per frame under
  * `compositions/frames/`, each as long as its own narration, played in order by `index.html` over the
- * composition's shell. Without a voice, spoken frames get an estimate from their word count.
+ * composition's shell, with the Assets node's pictures under `assets/`. Without a voice, spoken frames
+ * get an estimate from their word count.
  */
 export const assemble: NodeDefinition<typeof Params> = {
   type: 'assemble', version: 1, kind: 'process',
@@ -20,6 +22,7 @@ export const assemble: NodeDefinition<typeof Params> = {
     { name: 'composition', type: 'Composition' },
     { name: 'storyboard', type: 'Storyboard' },
     { name: 'voiceover', type: 'Voiceover', required: false },
+    { name: 'assets', type: 'Assets', required: false },
   ],
   outputs: [{ name: 'composition', type: 'Composition' }],
   paramsSchema: Params, defaultParams: {},
@@ -27,7 +30,8 @@ export const assemble: NodeDefinition<typeof Params> = {
     const kit = inputs.composition!.payload as Composition;
     const storyboard = inputs.storyboard!.payload as Storyboard;
     const voice = inputs.voiceover?.payload as Voiceover | undefined;
-    const result = build(kit, storyboard, voice);
+    const pictures = inputs.assets?.payload as Assets | undefined;
+    const result = build(kit, storyboard, voice, pictures);
     if (result.problems.length) {
       throw new NodeError(AssembleErrorCode.ASSEMBLY_INVALID, result.problems[0]!, false, result.problems)
         .withFix(result.problems.length > 1 ? `and ${result.problems.length - 1} more; fix the storyboard or the composition` : 'fix the storyboard or the composition');

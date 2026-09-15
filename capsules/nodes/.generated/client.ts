@@ -3,6 +3,7 @@
 import type React from 'react';
 import type { BodyProps, NodeMeta } from '@/capsules/sdk/meta';
 import { AssembleBody } from '../assemble/body';
+import { AssetsBody } from '../assets/body';
 import { CaptionExportBody } from '../caption-export/body';
 import { CompositionBody, PartsDialog } from '../composition/body';
 import { FillBody } from '../fill/body';
@@ -15,6 +16,7 @@ import { VideoOutputBody } from '../video-output/body';
 
 export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'assemble': AssembleBody,
+  'assets': AssetsBody,
   'caption-export': CaptionExportBody,
   'composition': CompositionBody,
   'fill': FillBody,
@@ -32,6 +34,7 @@ export const NODE_OVERLAYS: React.FC[] = [
 
 export const NODE_META: Record<string, NodeMeta> = {
   'assemble': { icon: 'layers', group: 'visual' },
+  'assets': { icon: 'image', group: 'source', layout: 'wide' },
   'caption-export': { icon: 'down', group: 'output' },
   'composition': { icon: 'layers', group: 'visual', layout: 'wide' },
   'fill': { icon: 'layers', group: 'visual' },

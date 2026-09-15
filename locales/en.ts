@@ -73,6 +73,7 @@ export const en = {
   'port.voiceover': 'Audio & duration',
   'port.composition': 'Composition',
   'port.storyboard': 'Storyboard',
+  'port.assets': 'Assets',
   'port.captionTrack': 'Captions',
   'port.optional': 'optional',
   'node.retry': 'Retry this node',

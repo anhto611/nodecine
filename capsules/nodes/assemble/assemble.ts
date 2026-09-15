@@ -1,5 +1,6 @@
 import { formatVariableValidationIssue, parseCompositionVariables, validateVariables, type CompositionVariable } from '@hyperframes/core/variables';
 import { COMPOSITION_ENTRY, type Composition } from '@/contracts/types/composition';
+import { ASSETS_DIR, assetProjectPath, type Assets } from '@/contracts/types/assets';
 import type { Voiceover, Word } from '@/contracts/types/payloads';
 import type { Cue, Mount, Storyboard, StoryboardFrame } from '@/contracts/types/storyboard';
 
@@ -10,6 +11,9 @@ import type { Cue, Mount, Storyboard, StoryboardFrame } from '@/contracts/types/
  * mounting the workflow's components where and when the frame asks, and an `index.html` that plays the frames one after another — each for exactly as long as
  * its own narration — over the composition's shell (its style, its background, whatever runs
  * the whole film). Deterministic: the same storyboard and voice give the same files.
+ *
+ * The pictures the video is made with come from an Assets node: each is put into the project as
+ * `assets/<name>.<ext>`, and a value that names a picture there that does not exist is refused.
  *
  * What the composition provides, besides its blocks and components:
  * - `index.html` with `<!-- nodecine:frames -->` inside its root, where the frames go;
@@ -141,8 +145,19 @@ ${clips.join('\n')}
 }
 
 /** The storyboard, the composition that styles it and, when there is one, the voice that times it: a playable project. */
-export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceover | undefined): Assembly {
+export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceover | undefined, assets?: Assets): Assembly {
   const problems: string[] = [];
+  const media: Composition['media'] = { ...kit.media };
+  for (const asset of assets?.items ?? []) media[assetProjectPath(asset)] = asset.url;
+  // Every `assets/…` a value names, at any depth, must be a picture the project holds.
+  const checkAssets = (value: unknown, label: string) => {
+    if (Array.isArray(value)) value.forEach((v) => checkAssets(v, label));
+    else if (value && typeof value === 'object') Object.values(value).forEach((v) => checkAssets(v, label));
+    else if (typeof value === 'string' && value.startsWith(ASSETS_DIR) && media[value] === undefined && kit.files[value] === undefined) {
+      const names = (assets?.items ?? []).map(assetProjectPath);
+      problems.push(`${label}: no asset ${value} (${names.length ? `there are ${names.join(', ')}` : 'no Assets node gives any'})`);
+    }
+  };
   const shell = kit.files[COMPOSITION_ENTRY] ?? '';
   if (!shell.includes(FRAMES_MARKER)) problems.push(`the composition's index.html has no ${FRAMES_MARKER} where the frames go`);
   let config: AssemblyConfig = {};
@@ -184,20 +199,21 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
     const file = `compositions/frames/${String(frame.number).padStart(2, '0')}-${slug(frame.title)}.html`;
 
     const offset = cursor - start;
-    // `@word` values (or comma lists of them) as seconds from `from`, a moment of the frame's narration.
+    // `@word` values (or comma lists of them), at any depth of a list or an object, as seconds from
+    // `from`, a moment of the frame's narration.
     const resolveValues = (values: Record<string, unknown>, from: number, label: string): Record<string, unknown> => {
-      const out: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(values)) {
-        if (typeof value === 'string' && /^@/.test(value.trim())) {
-          const parts = value.split(',').map((p) => p.trim());
-          const secs = parts.map((p) => (p ? cueSeconds(p, fw.words, Math.max(0, from)) : 0));
-          const bad = secs.find((x) => typeof x === 'string');
-          if (bad) { problems.push(`${label}, ${key}: ${bad}`); continue; }
-          const rel = (secs as number[]).map((x) => round(Math.max(0, x - from)));
-          out[key] = parts.length > 1 ? rel.join(',') : rel[0];
-        } else out[key] = value;
-      }
-      return out;
+      const resolve = (value: unknown, where: string): unknown => {
+        if (Array.isArray(value)) return value.map((item, i) => resolve(item, `${where}[${i}]`));
+        if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolve(v, `${where}.${k}`)]));
+        if (typeof value !== 'string' || !/^@/.test(value.trim())) return value;
+        const parts = value.split(',').map((p) => p.trim());
+        const secs = parts.map((p) => (p ? cueSeconds(p, fw.words, Math.max(0, from)) : 0));
+        const bad = secs.find((x) => typeof x === 'string');
+        if (bad) { problems.push(`${label}, ${where}: ${bad}`); return value; }
+        const rel = (secs as number[]).map((x) => round(Math.max(0, x - from)));
+        return parts.length > 1 ? rel.join(',') : rel[0];
+      };
+      return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, resolve(value, key)]));
     };
 
     // The frame's parts: the block it plays, for all of it, or its mounts, each on its cue, in the order written.
@@ -209,7 +225,12 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
       else {
         const declared = declaredVariables(html);
         // The block starts with the frame's clip, which a soft transition starts early: its cues count from there.
+        checkAssets(frame.values, label);
         const values = resolveValues(frame.values, -offset, label);
+        // HyperFrames' variables hold no lists or objects: a string variable given one (a list of effects) carries it as JSON.
+        for (const v of declared) {
+          if (v.type === 'string' && values[v.id] !== null && typeof values[v.id] === 'object') values[v.id] = JSON.stringify(values[v.id]);
+        }
         if (declared.some((v) => v.id === 'seconds')) values.seconds = round(length);
         for (const issue of validateVariables(values, declared)) problems.push(`${label}: ${formatVariableValidationIssue(issue)}`);
         for (const v of declared) {
@@ -224,6 +245,7 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
     }
     frame.mounts.forEach((mount, j) => {
       const label = `${where}, ${mount.component}`;
+      checkAssets(mount.values, label);
       if (!hasComponent(kit.files, mount.component)) { problems.push(`${label}: the composition has no component ${mount.component}`); return; }
       const rect = rectOf(mount.box, label);
       const at = cueSeconds(mount.at ?? 0, fw.words, 0);
@@ -284,7 +306,7 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
   files[TIMELINE_FILE] = JSON.stringify({ durationSeconds: total, frames: placed, words: timeline });
 
   return {
-    composition: { ...kit, files, values: { ...kit.values, videoSeconds: total } },
+    composition: { ...kit, files, media, values: { ...kit.values, videoSeconds: total } },
     frames: placed,
     problems,
   };

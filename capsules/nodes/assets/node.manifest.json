@@ -1,0 +1,1 @@
+{"id": "assets", "definition": "assets", "body": "AssetsBody", "icon": "image", "group": "source", "layout": "wide", "translations": "assetsTranslations", "errors": "AssetsErrorCode"}

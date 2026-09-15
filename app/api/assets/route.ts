@@ -5,7 +5,8 @@ import { writeFile, rename } from 'node:fs/promises';
 import { z } from 'zod';
 import { ASSET_TYPES, assetUrl, ensureAssetsDir } from '@/server/paths';
 
-const MAX_BYTES = 2 * 1024 * 1024;
+// A phone screenshot saved as PNG often runs past 2 MB.
+const MAX_BYTES = 8 * 1024 * 1024;
 const Body = z.object({
   /** `data:image/png;base64,...` from a file picker. */
   dataUrl: z.string().max(MAX_BYTES * 2),
