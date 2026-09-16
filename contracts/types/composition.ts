@@ -49,3 +49,10 @@ export type Composition = z.infer<typeof CompositionSchema>;
 
 /** The file every project starts from. */
 export const COMPOSITION_ENTRY = 'index.html';
+
+/**
+ * The variable a composition declares for its own length. The Scene Assembly node fills it in when it
+ * lays the scenes on the clock, so nobody types it: a node that offers a person the film's values leaves
+ * this one out.
+ */
+export const FILM_SECONDS = 'videoSeconds';

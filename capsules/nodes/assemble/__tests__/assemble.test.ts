@@ -67,6 +67,8 @@ describe('assembling scenes', () => {
     expect(timeline.words.find((w: { text: string }) => w.text === 'API').start).toBe(3.2);
   });
 
+
+
   it('cuts the voice only where a silent frame sits between spoken ones', () => {
     const withPause: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { number: 9, title: 'Nghỉ', durationSeconds: 1.5, mounts: [], values: {}, extra: {} }, storyboard.frames[1]!] };
     const index = assemble(kit, withPause, voice).composition.files['index.html']!;
@@ -103,6 +105,25 @@ describe('assembling scenes', () => {
     // "API" is said 1.2s into the narration, which starts 0.4s into the frame's clip; the block runs the whole clip.
     expect(frame2).toContain(`data-variable-values='{"question":"Ai dùng được?","pop_at":1.6,"side":"right","effects":"[{\\"type\\":\\"pill\\",\\"at\\":2.3}]","cues":"1","seconds":3.4}'`);
     expect(frame2).toContain('data-start="0" data-duration="3.4" data-track-index="1"');
+  });
+
+  it('writes the film its own account: each scene when it plays and with the values its block got', () => {
+    const played: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right', cues: '@Beta' } }] };
+    const { composition, frames } = assemble(withBlock, played, voice);
+    const timeline = JSON.parse(composition.files[TIMELINE_FILE]!) as {
+      durationSeconds: number;
+      frames: { number: number; block?: string; start: number; duration: number; values: Record<string, unknown> }[];
+    };
+    expect(timeline.durationSeconds).toBe(composition.values.videoSeconds);
+    expect(timeline.frames.map((f) => [f.number, f.block, f.start, f.duration]))
+      .toEqual(frames.map((f) => [f.number, f.block, f.start, f.duration]));
+    // A part that runs across the film reads what the scene plays, its @words already in seconds.
+    const second = timeline.frames.find((f) => f.number === 2)!;
+    expect(second.values).toEqual({ question: 'Ai dùng được?', pop_at: 1.6, side: 'right', cues: '1', seconds: 3.4 });
+    // A frame that plays no block still says when it is on screen.
+    expect(timeline.frames.find((f) => f.number === 1)!.values).toEqual({});
+    // A frame opened by a soft transition is on screen before its narration starts, and says by how much.
+    expect(timeline.frames.map((f) => [f.number, (f as { spokenFrom?: number }).spokenFrom])).toEqual([[1, 0], [2, 0.4]]);
   });
 
   it('holds a block\'s values to what the block declares, the way HyperFrames does', () => {

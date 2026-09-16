@@ -1,4 +1,4 @@
-import { COMPOSITION_ENTRY, type Composition } from '@/contracts/types/composition';
+import { COMPOSITION_ENTRY, FILM_SECONDS, type Composition } from '@/contracts/types/composition';
 import { blockPath, checkBlockValues, declaredVariables } from '@/contracts/storyboard/blocks';
 import { ASSETS_DIR, assetProjectPath, type Assets } from '@/contracts/types/assets';
 import type { Voiceover, Word } from '@/contracts/types/payloads';
@@ -19,6 +19,11 @@ import { layerTrack, type Cue, type Mount, type Storyboard, type StoryboardFrame
  * - `index.html` with `<!-- nodecine:frames -->` inside its root, where the frames go;
  * - `assemble.json`: `{ slots, overlays, transition }` — named boxes a mount can use, the parts that
  *   run across the film (captions, a channel mark), and the length of a soft transition.
+ *
+ * What it writes back for those parts: `timeline.json`, the film's own account of itself — how long it
+ * runs, which scene plays when, how far into it the narration starts, and with which values (every
+ * `@word` already in seconds), and every word as it is said. A part that runs across the film reads it to follow along: the captions light the word
+ * being spoken, a presenter turns to the scene being explained.
  */
 
 export const FRAMES_MARKER = '<!-- nodecine:frames -->';
@@ -172,6 +177,8 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
   const clips: string[] = [];
   const timeline: { text: string; start: number; end: number }[] = [];
   const placed: Assembly['frames'] = [];
+  // The same frames with the values their block plays, for the parts that run across the whole film.
+  const scenes: { number: number; title: string; start: number; duration: number; spokenFrom: number; block?: string; values: Record<string, unknown> }[] = [];
   let cursor = 0;
   let spokenIndex = 0;
   let spokenEnd = 0;
@@ -210,6 +217,7 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
 
     // The frame's parts: the block it plays, for all of it, or its mounts, each on its cue, in the order written.
     const inner: string[] = [];
+    let blockValues: Record<string, unknown> = {};
     if (frame.block) {
       const label = `${where}, ${frame.block}`;
       const html = kit.files[blockPath(frame.block)];
@@ -223,6 +231,7 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
         const checked = checkBlockValues(label, values, declared);
         problems.push(...checked.problems);
         Object.assign(values, checked.values);
+        blockValues = values;
         const root = /<template[^>]*>[\s\S]*?(<[a-z][^>]*\bdata-composition-id\s*=[^>]*>)/i.exec(html)?.[1] ?? '';
         const blockId = /\bdata-composition-id\s*=\s*["']([^"']+)/i.exec(root)?.[1];
         if (blockId !== frame.block) problems.push(`${label}: its root's data-composition-id must be "${frame.block}", its file name`);
@@ -268,6 +277,8 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
       spokenEnd = cursor + duration;
     }
     placed.push({ number: frame.number, title: frame.title, start: round(start), duration: round(length), file, ...(frame.block ? { block: frame.block } : {}) });
+    // `spokenFrom`: how far into the scene its narration starts — a soft transition opens it early.
+    scenes.push({ number: frame.number, title: frame.title, start: round(start), duration: round(length), spokenFrom: round(offset), ...(frame.block ? { block: frame.block } : {}), values: blockValues });
     onFilm.push({ start: cursor, duration, words: fw.words });
     cursor += duration;
   });
@@ -327,10 +338,10 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
   });
 
   files[COMPOSITION_ENTRY] = shell.replace(FRAMES_MARKER, `${FRAMES_MARKER}\n${clips.join('\n')}`);
-  files[TIMELINE_FILE] = JSON.stringify({ durationSeconds: total, frames: placed, words: timeline });
+  files[TIMELINE_FILE] = JSON.stringify({ durationSeconds: total, frames: scenes, words: timeline });
 
   return {
-    composition: { ...kit, files, media, values: { ...kit.values, videoSeconds: total } },
+    composition: { ...kit, files, media, values: { ...kit.values, [FILM_SECONDS]: total } },
     frames: placed,
     problems,
   };
