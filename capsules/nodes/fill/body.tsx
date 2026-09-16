@@ -3,11 +3,11 @@ import React from 'react';
 import { Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useHost, useInputPayload, useLocale, useParams, type BodyProps } from '@/capsules/sdk/host';
 import { labelOf, type BlockVariable } from '@/contracts/storyboard/blocks';
-import type { Composition, CompositionVariable } from '@/contracts/types/composition';
+import { FILM_SECONDS, type Composition, type CompositionVariable } from '@/contracts/types/composition';
 import { FILLED } from './node';
 
-/** Variables the run fills from the voice-over; a person never types these. */
-const FROM_THE_RUN = new Set<string>([FILLED.voiceover, FILLED.voiceoverSeconds]);
+/** Variables the run fills itself — from the voice-over, or from the scenes laid on the clock; a person never types these. */
+const FROM_THE_RUN = new Set<string>([FILLED.voiceover, FILLED.voiceoverSeconds, FILM_SECONDS]);
 
 /** A picture: choose a file, see its name, clear it. */
 const ImageControl: React.FC<{ value: unknown; onChange: (v: unknown) => void }> = ({ value, onChange }) => {
@@ -35,6 +35,23 @@ const ImageControl: React.FC<{ value: unknown; onChange: (v: unknown) => void }>
   );
 };
 
+/**
+ * A colour. A picker always shows some colour, so it cannot say by itself whether this film has chosen
+ * one: unset, it shows the kit's own colour and says so, and once chosen it can be given back to the kit.
+ */
+const ColourControl: React.FC<{ variable: CompositionVariable; value: unknown; onChange: (v: unknown) => void }> = ({ variable, value, onChange }) => {
+  const t = useT();
+  const set = typeof value === 'string';
+  return (
+    <span className={stopFlow} style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
+      <input type="color" value={set ? value : String(variable.default ?? '#000000')} onChange={(e) => onChange(e.target.value)} />
+      {set
+        ? <button className="nc-chip" title={t('node.fillFollowKit')} onClick={() => onChange(undefined)}>×</button>
+        : <span style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>{t('node.fillFromKit')}</span>}
+    </span>
+  );
+};
+
 /** One control per declared variable, of the kind its type calls for; blank keeps the default. */
 const Control: React.FC<{ variable: CompositionVariable; value: unknown; onChange: (v: unknown) => void }> = ({ variable, value, onChange }) => {
   const options = (variable as { options?: { value: string; label?: string }[] }).options;
@@ -44,7 +61,7 @@ const Control: React.FC<{ variable: CompositionVariable; value: unknown; onChang
     case 'boolean':
       return <input className={stopFlow} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} />;
     case 'color':
-      return <input className={stopFlow} type="color" value={typeof value === 'string' ? value : String(variable.default ?? '#000000')} onChange={(e) => onChange(e.target.value)} />;
+      return <ColourControl variable={variable} value={value} onChange={onChange} />;
     case 'image':
       return <ImageControl value={value} onChange={onChange} />;
     case 'enum':
@@ -66,9 +83,12 @@ export const FillBody: React.FC<BodyProps> = ({ nodeId }) => {
   const composition = useInputPayload<Composition>(nodeId, 'composition');
   const values = p.values ?? {};
   if (!composition) return <div className="nc-hint">{t('node.fillNoComposition')}</div>;
+  const asked = composition.variables.filter((v) => !FROM_THE_RUN.has(v.id));
+  // A kit whose look is all its own asks a person for nothing: say so rather than showing an empty card.
+  if (!asked.length) return <div className="nc-hint">{t('node.fillNothingToSet')}</div>;
   return (
     <>
-      {composition.variables.filter((v) => !FROM_THE_RUN.has(v.id)).map((v) => (
+      {asked.map((v) => (
         <Kv key={v.id} k={v.label ? labelOf(v as unknown as BlockVariable, locale) : v.id} v={<Control variable={v} value={values[v.id]} onChange={(next) => {
           const { [v.id]: _old, ...rest } = values;
           set({ values: next === undefined ? rest : { ...rest, [v.id]: next } });

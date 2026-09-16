@@ -3,7 +3,7 @@ import React from 'react';
 import { Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useOutputPayload, useOverlay, useParams, type BodyProps } from '@/capsules/sdk/host';
 import type { Composition } from '@/contracts/types/composition';
-import { kindOf, nameOf, readPart, roleOf, ROLES, type Kind, type Project } from './parts';
+import { isPicture, kindOf, nameOf, readPart, roleOf, ROLES, type Kind, type Project } from './parts';
 import { Thumbnail } from './thumbnail';
 import type { PartsDialogData } from './parts-dialog';
 
@@ -41,6 +41,36 @@ export const CompositionBody: React.FC<BodyProps> = ({ nodeId }) => {
     return names.filter((n) => kindOf(n) === kind).sort((a, b) => order.indexOf(roleOf(files, a)) - order.indexOf(roleOf(files, b)) || a.localeCompare(b));
   };
   const openWall = (kind: Kind, path?: string) => overlay.open(nodeId, { kind, ...(path ? { path } : {}) } satisfies PartsDialogData);
+  const openKit = () => overlay.open(nodeId, { kind: 'block', view: 'kit' } satisfies PartsDialogData);
+
+  /**
+   * What the kit is made of besides its parts: the pictures its parts draw. They belong to the style,
+   * not to one video, so they are shown here and swapped here — the video's own pictures are the
+   * Assets node's.
+   */
+  const kitStrip = () => {
+    const pictures = Object.keys(media).filter(isPicture);
+    const shown = pictures.slice(0, 5);
+    return (
+      <div style={{ display: 'grid', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>
+          <span>{t('node.compositionKit')} · {Object.keys(media).length}</span>
+          <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={openKit}>{t('node.compositionSeeAll')}</button>
+        </div>
+        {shown.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: GAP, overflowX: 'auto', paddingBottom: 2 }}>
+            {shown.map((path) => (
+              <button key={path} className="nc-chip" title={path} onClick={openKit}
+                style={{ flex: `0 0 ${cardWidth('component')}`, minWidth: 0, padding: 4, display: 'grid', gap: 4, justifyItems: 'stretch' }}>
+                <img src={media[path]} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'contain', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }} />
+                <span style={{ color: 'var(--tx-2)', fontSize: 'var(--fs-hint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(path)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const strip = (kind: Kind) => {
     const all = ofKind(kind);
@@ -72,9 +102,9 @@ export const CompositionBody: React.FC<BodyProps> = ({ nodeId }) => {
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {out && <Kv k={t('node.compositionSize')} v={`${out.width}×${out.height} · ${out.fps}fps`} dim />}
-      <Kv k={t('node.compositionMedia')} v={String(Object.keys(media).length)} dim />
       {strip('block')}
       {strip('component')}
+      {kitStrip()}
     </div>
   );
 };

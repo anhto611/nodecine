@@ -144,3 +144,85 @@ export function storyboardSnippet(name: string, html: string): string {
   const values = Object.fromEntries(readPart(html).variables.filter((v) => v.id !== 'seconds').map((v) => [v.id, v.default]));
   return `- block: ${name}\n\n\`\`\`json\n${JSON.stringify(values, null, 2)}\n\`\`\``;
 }
+
+/** The file the Storyboard Writer reads: the kit's own rules for the films made with it. */
+export const GUIDE_FILE = 'storyboard-guide.md';
+
+const PICTURE = /\.(png|jpe?g|webp|gif|svg)$/i;
+/** A picture of the kit — the drawings and marks its parts paint with, as opposed to its fonts. */
+export const isPicture = (path: string): boolean => PICTURE.test(path);
+
+/** Whether any of the kit's files still names this media file. An unused one can be taken out. */
+export const usesMedia = (project: Project, path: string): boolean => Object.values(project.files).some((text) => text.includes(path));
+
+/**
+ * One of the kit's pictures swapped for another. The new file takes the old one's place, so every part
+ * that draws it draws the new one; when it is of another type the path changes with it — a PNG served
+ * under a name ending `.svg` is not read as a picture — and every mention follows.
+ */
+export function replaceMedia(project: Project, path: string, url: string): Project {
+  const ext = (/\.([a-z0-9]+)(?:\?|$)/i.exec(url)?.[1] ?? '').toLowerCase();
+  const target = ext ? path.replace(/\.[a-z0-9]+$/i, `.${ext}`) : path;
+  const media: Record<string, string> = {};
+  // The order of the pictures is the order they were put in: a swap keeps its place in the row.
+  for (const [at, was] of Object.entries(project.media)) media[at === path ? target : at] = at === path ? url : was;
+  if (!(target in media)) media[target] = url;
+  if (target === path) return { ...project, media };
+  const files = Object.fromEntries(Object.entries(project.files).map(([name, text]) => [name, text.split(path).join(target)]));
+  return { files, media };
+}
+
+/** A picture added to the kit under `art/`, named after the file the person chose. */
+export function addMedia(project: Project, fileName: string, url: string): { project: Project; path: string } {
+  const ext = (/\.([a-z0-9]+)(?:\?|$)/i.exec(url)?.[1] ?? 'png').toLowerCase();
+  const stem = fileName.replace(/\.[^.]*$/, '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'picture';
+  let path = `art/${stem}.${ext}`;
+  for (let n = 2; project.media[path] !== undefined; n++) path = `art/${stem}-${n}.${ext}`;
+  return { project: { ...project, media: { ...project.media, [path]: url } }, path };
+}
+
+/** A picture taken out of the kit. Only one nothing draws: the caller checks with `usesMedia` first. */
+export function removeMedia(project: Project, path: string): Project {
+  const { [path]: _gone, ...media } = project.media;
+  return { ...project, media };
+}
+
+/**
+ * The kit's palette: the colour tokens its shell defines, in the order they are written. These are what
+ * every part paints with (`var(--mark)`), so they are the kit's colours — as opposed to a colour one
+ * video sets, which is a declared variable filled on the Data Merge node.
+ */
+export function kitColours(html: string): { name: string; value: string }[] {
+  const found = new Map<string, string>();
+  for (const [, name, value] of html.matchAll(/--([a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{3,8})\b/g)) {
+    if (!found.has(name!)) found.set(name!, value!);
+  }
+  return [...found].map(([name, value]) => ({ name, value }));
+}
+
+/**
+ * One of those colours changed, everywhere the shell sets it. A kit that also declares a variable of the
+ * same name — a colour one video may override — has its default moved with it, so the two never disagree
+ * about what the kit's colour is.
+ */
+export function setKitColour(html: string, name: string, value: string): string {
+  const token = new RegExp(`(--${name}\\s*:\\s*)#[0-9a-fA-F]{3,8}\\b`, 'g');
+  return setVariableDefault(html.replace(token, `$1${value}`), name, value);
+}
+
+/**
+ * A value of the film given another default, in the shell that declares it. Does nothing when the shell
+ * declares no such variable, which is the usual case for a colour that only the kit's parts read.
+ */
+export function setVariableDefault(html: string, id: string, value: string): string {
+  const attribute = /(\bdata-composition-variables\s*=\s*')([\s\S]*?)(')/i.exec(html);
+  if (!attribute) return html;
+  let declared: { id?: string; default?: unknown }[];
+  try { declared = JSON.parse(attribute[2]!) as typeof declared; } catch { return html; }
+  if (!Array.isArray(declared) || !declared.some((v) => v?.id === id)) return html;
+  const next = JSON.stringify(declared.map((v) => (v?.id === id ? { ...v, default: value } : v)));
+  // The attribute is quoted with ' and holds JSON quoted with ": a value with a ' in it would end it.
+  if (next.includes("'")) return html;
+  return html.slice(0, attribute.index) + attribute[1] + next + attribute[3] + html.slice(attribute.index + attribute[0]!.length);
+}

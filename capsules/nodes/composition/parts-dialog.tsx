@@ -6,9 +6,10 @@ import type { Composition } from '@/contracts/types/composition';
 import type { PartPreview } from './preview.server';
 import { kindOf, mountSnippet, nameOf, PART_NAME, pathFor, readPart, roleOf, ROLES, scaffoldPart, storyboardSnippet, type Kind, type Project, type Role } from './parts';
 import { frameBox, Player, Thumbnail } from './thumbnail';
+import { KitView } from './kit-view';
 
-/** What the dialog opens on: the kind of part it lists. */
-export type PartsDialogData = { kind: Kind; path?: string };
+/** What the dialog opens on: the kind of part it lists, or the kit's own side of the composition. */
+export type PartsDialogData = { kind: Kind; path?: string; view?: 'parts' | 'kit' };
 
 /** The project's blocks and components as a wall of pictures: open one to watch it large and edit it. */
 export const PartsDialog: React.FC = () => {
@@ -20,6 +21,7 @@ export const PartsDialog: React.FC = () => {
   const [p, set] = useParams<Project>(nodeId);
   const out = useOutputPayload<Composition>(nodeId, 'composition');
   const [kind, setKind] = React.useState<Kind>((overlay.current?.data as PartsDialogData | undefined)?.kind ?? 'block');
+  const [view, setView] = React.useState<'parts' | 'kit'>((overlay.current?.data as PartsDialogData | undefined)?.view ?? 'parts');
   const [role, setRole] = React.useState<Role | null>(null);
   const [query, setQuery] = React.useState('');
   const wanted = (overlay.current?.data as PartsDialogData | undefined)?.path;
@@ -84,17 +86,19 @@ export const PartsDialog: React.FC = () => {
     <Dialog
       width="min(1240px, 95vw)"
       height="90vh"
-      title={t('node.compositionPartsTitle')}
+      title={view === 'kit' ? t('node.compositionKitTitle') : t('node.compositionPartsTitle')}
       onClose={overlay.close}
       titleExtra={
         <span style={{ display: 'flex', gap: 4, marginLeft: 12, alignItems: 'center' }}>
           {(['block', 'component'] as const).map((k) => (
-            <button key={k} className={`nc-chip ${k === kind ? 'on' : ''}`} onClick={() => { setKind(k); setRole(null); close(); }}>{t(`node.compositionKind.${k}`)}</button>
+            <button key={k} className={`nc-chip ${view === 'parts' && k === kind ? 'on' : ''}`} onClick={() => { setView('parts'); setKind(k); setRole(null); close(); }}>{t(`node.compositionKind.${k}`)}</button>
           ))}
-          <input className="nc-input" style={{ width: 200, marginLeft: 8 }} placeholder={t('node.compositionSearch')} value={query} onChange={(e) => setQuery(e.target.value)} />
+          <button className={`nc-chip ${view === 'kit' ? 'on' : ''}`} onClick={() => { setView('kit'); close(); }}>{t('node.compositionKit')}</button>
+          {view === 'parts' && <input className="nc-input" style={{ width: 200, marginLeft: 8 }} placeholder={t('node.compositionSearch')} value={query} onChange={(e) => setQuery(e.target.value)} />}
         </span>
       }
     >
+      {view === 'kit' ? <KitView project={project} set={(patch) => set(patch)} /> : (
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ color: 'var(--tx-3)', lineHeight: 1.5 }}>{t(`node.compositionKindHint.${kind}`)}</div>
@@ -157,6 +161,7 @@ export const PartsDialog: React.FC = () => {
         )}
         {!openPath && message && <div style={{ position: 'absolute', bottom: 12, left: 14, fontSize: 'var(--fs-hint)', color: message.ok ? 'var(--ok)' : 'var(--err)' }}>{message.text}</div>}
       </div>
+      )}
     </Dialog>
   );
 };
