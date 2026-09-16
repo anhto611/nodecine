@@ -12,6 +12,17 @@ describe('detectLanguage', () => {
     expect(detectLanguage('Hà Nội mùa thu')).toBe('vi');
   });
 
+  it('recognises a short Vietnamese line whose letters are all in Spanish too', () => {
+    expect(detectLanguage('so sánh frontend và backend')).toBe('vi');
+    expect(detectLanguage('nói về AI cho người mới')).toBe('vi');
+    expect(detectLanguage('video giải thích cho người mới')).toBe('vi');
+  });
+
+  it('keeps accented text of other languages English', () => {
+    expect(detectLanguage('Aquí está la aplicación que todos usan.')).toBe('en');
+    expect(detectLanguage('Une vidéo courte pour présenter la société.')).toBe('en');
+  });
+
   it('recognises the major non-Latin scripts', () => {
     expect(detectLanguage('ノードグラフから短い動画を作る。')).toBe('ja');
     expect(detectLanguage('从节点图构建短视频。')).toBe('zh');

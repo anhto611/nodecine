@@ -33,6 +33,9 @@ export function pickVoice(ref: TTSRef, language: string, preferred?: string): { 
 /** Silence after each scene's narration: the breath between two thoughts, and the frame the cut lands on. */
 export const SCENE_GAP_SECONDS = 0.35;
 
+/** How long to wait before each further try at a voice service that failed upstream. */
+export const UPSTREAM_RETRY_WAITS = [2000, 6000];
+
 /**
  * AudioScript + TTSRef → Voiceover. A script that comes scene by scene is
  * voiced scene by scene and joined, so the assembler can cut where the speech does; a script that
@@ -56,23 +59,35 @@ export const ttsEngine: NodeDefinition<typeof Params> = {
       log('warn', `no voice for "${script.language}", using fallback "${voice.displayName}"`, TtsErrorCode.TTS_VOICE_LANGUAGE_MISMATCH);
     }
     log('info', `voice=${voice.id} speed=${params.speed}`);
+
+    /**
+     * One piece of narration, spoken. A voice service that fails upstream (a gateway timeout, a dropped
+     * connection) is having a moment, not refusing the work, so it is asked again after a wait before the
+     * node gives up; anything else — a bad key, a voice it does not have — is final and is thrown as it is.
+     */
+    const speak = async (text: string, where: string) => {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await services.synthesize(ref, text, voice, params.speed, signal);
+        } catch (e) {
+          const wait = UPSTREAM_RETRY_WAITS[attempt];
+          if ((e as { code?: string }).code !== ErrorCode.TTS_UPSTREAM || wait === undefined || signal.aborted) throw e;
+          const why = (e instanceof Error ? e.message : String(e)).replace(/<[^>]*>?/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+          log('warn', `${where}: ${why} · trying again in ${wait / 1000}s`);
+          await new Promise((r) => setTimeout(r, wait));
+        }
+      }
+    };
+
     const segments = script.segments?.filter((s) => s.trim()) ?? [];
     if (segments.length < 2) {
-      const voiceover = await services.synthesize(ref, script.text, voice, params.speed, signal);
+      const voiceover = await speak(script.text, 'the narration');
       return { voiceover: segments.length === 1 ? { ...voiceover, segments: [{ start: 0, durationSeconds: voiceover.durationSeconds }] } : voiceover };
     }
     const parts = [];
     for (const [i, text] of segments.entries()) {
       progress(i / segments.length, `${i + 1}/${segments.length}`);
-      try {
-        parts.push(await services.synthesize(ref, text, voice, params.speed, signal));
-      } catch (e) {
-        // A provider that fails one segment upstream (a gateway timeout, a dropped connection) gets one more try.
-        if ((e as { code?: string }).code !== ErrorCode.TTS_UPSTREAM || signal.aborted) throw e;
-        log('warn', `segment ${i + 1}: ${(e instanceof Error ? e.message : String(e)).replace(/<[^>]*>?/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)} · retrying once`);
-        await new Promise((r) => setTimeout(r, 2000));
-        parts.push(await services.synthesize(ref, text, voice, params.speed, signal));
-      }
+      parts.push(await speak(text, `segment ${i + 1}`));
     }
     const joined = await services.concatAudio(parts.map((p) => ({ audioUrl: p.audioUrl, durationSeconds: p.durationSeconds })), SCENE_GAP_SECONDS, signal);
     log('info', `${segments.length} segments · ${joined.durationSeconds.toFixed(2)}s`);

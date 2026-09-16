@@ -2,9 +2,9 @@
  * Script-based language detection.
  *
  * Deliberately tiny and dependency-free: it looks at which writing system dominates the text and,
- * for Latin text, whether Vietnamese-only letters are present. It returns a BCP 47 primary subtag
- * that the Voiceover node uses to pick a voice; the user can always override the voice by hand.
- * Latin text without Vietnamese markers is reported as English.
+ * for Latin text, whether Vietnamese-only letters or everyday Vietnamese words are present. It returns
+ * a BCP 47 primary subtag that the Voiceover node uses to pick a voice; the user can always override
+ * the voice by hand. Latin text with no sign of Vietnamese is reported as English.
  */
 
 type Range = { lang: string; re: RegExp };
@@ -25,6 +25,17 @@ const SCRIPTS: Range[] = [
 const VIETNAMESE_MARKERS =
   /[đĐăĂơƠưƯạảẠẢấầẩẫậẤẦẨẪẬắằẳẵặẮẰẲẴẶẹẻẽẸẺẼếềểễệẾỀỂỄỆịỉĩỊỈĨọỏõỌỎÕốồổỗộỐỒỔỖỘớờởỡợỚỜỞỠỢụủũỤỦŨứừửữựỨỪỬỮỰỳỷỹỵỲỶỸỴ]/g;
 
+/**
+ * Short Vietnamese sentences can carry none of those letters — "so sánh frontend và backend" has only
+ * the tone marks Spanish and French use too. Everyday Vietnamese words settle those: a word from this
+ * list beside a Latin tone mark, or two of them, is Vietnamese.
+ */
+const VIETNAMESE_WORDS =
+  /(?<![\p{L}])(và|là|của|có|không|được|một|những|với|cho|khi|thì|ở|để|nào|sao|gì|nhưng|hoặc|rồi|chưa|nữa|rất|này|về|theo|trong|làm|nói|bạn|tôi|mình)(?![\p{L}])/giu;
+
+/** A Latin letter carrying any accent: Vietnamese tone marks, and every other language's too. */
+const LATIN_ACCENTS = /[À-ɏḀ-ỿ]/g;
+
 const count = (text: string, re: RegExp): number => (text.match(re) ?? []).length;
 
 export function detectLanguage(text: string): string {
@@ -39,5 +50,7 @@ export function detectLanguage(text: string): string {
   }
 
   if (count(sample, VIETNAMESE_MARKERS) > 0) return 'vi';
+  const words = count(sample, VIETNAMESE_WORDS);
+  if (words >= 2 || (words === 1 && count(sample, LATIN_ACCENTS) > 0)) return 'vi';
   return 'en';
 }
