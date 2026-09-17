@@ -24,6 +24,8 @@ export const Icon: Record<IconKey | 'lib' | 'hist' | 'logs' | 'gear' | 'play' | 
   play: ({ size = 12, className }) => <svg {...base(size)} className={className} fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20 6 4" /></svg>,
   // A flat brush: the handle, the ferrule, and the bristles that lay down the film's style.
   brush: ({ size = 12, className }) => <svg {...base(size)} className={className}><path d="M4 20c0-3 2-4 4-4s4 1 4 4H4z" /><path d="M9 16 19 6a2 2 0 0 0-3-3L6 13" /></svg>,
+  // A strip of film: the frame it shows, with sprocket holes down both sides.
+  film: ({ size = 14, className }) => <svg {...base(size)} className={className}><rect x="2" y="4" width="20" height="16" rx="2" /><line x1="7" y1="4" x2="7" y2="20" /><line x1="17" y1="4" x2="17" y2="20" /><line x1="2" y1="9" x2="7" y2="9" /><line x1="2" y1="15" x2="7" y2="15" /><line x1="17" y1="9" x2="22" y2="9" /><line x1="17" y1="15" x2="22" y2="15" /></svg>,
   // A picture: its frame, the sun, and the hills it shows.
   image: ({ size = 14, className }) => <svg {...base(size)} className={className}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>,
   // A drawing pin seen head-on: the disc, and the tack behind it.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addMedia, isPicture, kitColours, removeMedia, replaceMedia, setKitColour, usesMedia, type Project } from '../parts';
+import { addMedia, isClip, isPicture, isSeen, kitColours, removeMedia, replaceMedia, setKitColour, usesMedia, type Project } from '../parts';
 
 const project: Project = {
   files: {
@@ -15,10 +15,16 @@ const project: Project = {
 };
 
 describe('the pictures a kit draws with', () => {
-  it('tells a picture from a font', () => {
+  it('tells a picture and a clip from a font', () => {
     expect(isPicture('art/teacher-point.png')).toBe(true);
     expect(isPicture('preview/left.svg')).toBe(true);
     expect(isPicture('fonts/lexend-700.woff2')).toBe(false);
+    expect(isClip('clip.mp4')).toBe(true);
+    expect(isClip('preview/sample.webm')).toBe(true);
+    expect(isClip('art/teacher-point.png')).toBe(false);
+    // Both are what a person can look at and swap; a font is not.
+    expect(['clip.mp4', 'art/teacher-point.png'].every(isSeen)).toBe(true);
+    expect(isSeen('fonts/lexend-700.woff2')).toBe(false);
   });
 
   it('knows which ones the kit still draws', () => {

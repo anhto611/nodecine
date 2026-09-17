@@ -26,12 +26,21 @@ export async function alignerPython(): Promise<string | null> {
   return findBinary('python3');
 }
 
-export function parseAlignerOutput(stdout: string): Word[] {
+/** What the aligner said: the words, and the language it decided on when it was left to hear one. */
+export interface Heard { words: Word[]; language?: string }
+
+export function parseAlignerOutput(stdout: string): Heard {
   const parsed = JSON.parse(stdout) as unknown;
-  if (!Array.isArray(parsed)) throw new Error('aligner did not return a list');
-  return parsed
-    .filter((w): w is { text: string; start: number; end: number } => !!w && typeof w.text === 'string' && typeof w.start === 'number' && typeof w.end === 'number')
-    .map((w) => ({ text: w.text, start: Math.max(0, w.start), end: Math.max(w.start, w.end) }));
+  // The script used to print a bare list; it prints the language with them now.
+  const list = Array.isArray(parsed) ? parsed : (parsed as { words?: unknown })?.words;
+  if (!Array.isArray(list)) throw new Error('aligner did not return a list of words');
+  const language = Array.isArray(parsed) ? undefined : (parsed as { language?: unknown }).language;
+  return {
+    words: list
+      .filter((w): w is { text: string; start: number; end: number } => !!w && typeof w.text === 'string' && typeof w.start === 'number' && typeof w.end === 'number')
+      .map((w) => ({ text: w.text, start: Math.max(0, w.start), end: Math.max(w.start, w.end) })),
+    ...(typeof language === 'string' && language ? { language } : {}),
+  };
 }
 
 /**
@@ -39,7 +48,7 @@ export function parseAlignerOutput(stdout: string): Word[] {
  * first, the timings given back on the recording's clock. A narration of several segments is aligned
  * one segment at a time, so the aligner losing its place in one cannot pull the others off.
  */
-export async function alignWordsOnServer(audioUrl: string, text: string, language: string, options: { model: string; window?: { start: number; duration: number } }, signal: AbortSignal): Promise<Word[]> {
+export async function alignWordsOnServer(audioUrl: string, text: string, language: string, options: { model: string; window?: { start: number; duration: number } }, signal: AbortSignal): Promise<Heard> {
   const python = await alignerPython();
   if (!python) throw new NodeError(ErrorCode.PROVIDER_NOT_INSTALLED, 'No Python interpreter with stable-ts').withFix(ALIGN_INSTALL_HINT);
   const whole = mediaPath(fileNameFromMediaUrl(audioUrl));
@@ -56,15 +65,15 @@ export async function alignWordsOnServer(audioUrl: string, text: string, languag
     if (cut.code !== 0) { await rm(dir, { recursive: true, force: true }); throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, `could not cut the recording: ${cut.stderr.trim().slice(0, 200)}`); }
   }
   try {
-    const words = await alignFile(python, audio, text, language, model, signal);
+    const heard = await alignFile(python, audio, text, language, model, signal);
     const offset = window?.start ?? 0;
-    return offset ? words.map((w) => ({ ...w, start: w.start + offset, end: w.end + offset })) : words;
+    return offset ? { ...heard, words: heard.words.map((w) => ({ ...w, start: w.start + offset, end: w.end + offset })) } : heard;
   } finally {
     if (dir) await rm(dir, { recursive: true, force: true });
   }
 }
 
-async function alignFile(python: string, audio: string, text: string, language: string, model: string, signal: AbortSignal): Promise<Word[]> {
+async function alignFile(python: string, audio: string, text: string, language: string, model: string, signal: AbortSignal): Promise<Heard> {
   const r = await exec(python, {
     args: [ALIGN_SCRIPT, '--audio', audio, '--language', language, '--model', model],
     // The narration goes in on stdin, never through argv.
@@ -79,14 +88,14 @@ async function alignFile(python: string, audio: string, text: string, language: 
     if (/No module named 'stable_whisper'/.test(err)) throw new NodeError(ErrorCode.PROVIDER_NOT_INSTALLED, 'stable-ts is not installed for this interpreter').withFix(ALIGN_INSTALL_HINT);
     throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, `aligner failed: ${err.split('\n').slice(-3).join(' ').slice(0, 400) || r.code}`);
   }
-  let words: Word[];
+  let heard: Heard;
   try {
-    words = parseAlignerOutput(r.stdout);
+    heard = parseAlignerOutput(r.stdout);
   } catch (e) {
     throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, `aligner output unreadable (${r.stdout.length} bytes${r.truncated ? ', cut at the output cap' : ''}): ${e instanceof Error ? e.message : String(e)}`);
   }
-  if (!words.length) throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, 'aligner returned no words');
-  return words;
+  if (!heard.words.length) throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, 'aligner returned no words');
+  return heard;
 }
 
 export const transcribeServices = { 'transcribe/align': alignWordsOnServer };

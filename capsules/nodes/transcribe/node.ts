@@ -51,9 +51,12 @@ export const transcribe: NodeDefinition<typeof Params> = {
       return cut(voiceover, params.maxChars, log);
     }
     type Word = import('@/contracts/types/payloads').Word;
+    type Heard = { words: Word[]; language?: string };
     const align = (text: string, window?: { start: number; duration: number }) =>
-      services.invoke<Word[]>('transcribe/align', [voiceover.audioUrl, text, voiceover.language, { model: params.model, ...(window ? { window } : {}) }, signal]);
+      services.invoke<Heard>('transcribe/align', [voiceover.audioUrl, text, voiceover.language, { model: params.model, ...(window ? { window } : {}) }, signal]);
     let words: Word[];
+    // A recording brought in says `und`: nobody has listened to it yet. What the model heard becomes its language.
+    let language = voiceover.language;
     let note = '';
     const segments = voiceover.segments ?? [];
     if (script && script.segments?.length && script.segments.length === segments.length && segments.length > 1) {
@@ -64,8 +67,8 @@ export const transcribe: NodeDefinition<typeof Params> = {
       let spread = 0;
       for (const [i, segment] of segments.entries()) {
         const text = script.segments[i]!;
-        const heard = await align(text, { start: segment.start, duration: segment.durationSeconds }).catch(() => [] as Word[]);
-        let timed = retime(text, heard);
+        const heard = await align(text, { start: segment.start, duration: segment.durationSeconds }).catch(() => ({ words: [] as Word[] }));
+        let timed = retime(text, heard.words);
         const span = timed.length ? timed[timed.length - 1]!.end - timed[0]!.start : 0;
         if (!timed.length || span < 0.4 * segment.durationSeconds) { timed = evenly(text, segment.start + 0.15, segment.start + segment.durationSeconds - 0.15); spread++; }
         words.push(...timed);
@@ -75,14 +78,15 @@ export const transcribe: NodeDefinition<typeof Params> = {
       const heard = await align(script?.text ?? '');
       // With a script, the narration's own words on the model's clock, so the text cannot come back
       // misspelled. Without one, what the model heard is all anybody has.
-      words = script ? retime(script.text, heard) : heard;
+      words = script ? retime(script.text, heard.words) : heard.words;
+      if (heard.language) language = heard.language;
       note = script
-        ? `${words.length} words aligned with ${params.model}${heard.length !== words.length ? ` (aligner heard ${heard.length}, retimed by position)` : ''}`
-        : `${words.length} words transcribed with ${params.model} · no script wired in`;
+        ? `${words.length} words aligned with ${params.model}${heard.words.length !== words.length ? ` (aligner heard ${heard.words.length}, retimed by position)` : ''}`
+        : `${words.length} words transcribed with ${params.model} · ${language === voiceover.language ? 'no script wired in' : `heard in ${language}`}`;
     }
     if (!words.length) throw new NodeError(TranscribeErrorCode.TRANSCRIBE_NO_WORDS, script ? 'the aligner returned no words' : 'the model heard no words in this recording').withFix('check the recording has speech, and that its language matches the one set on the node that made it');
     log('info', note);
-    return cut({ ...voiceover, words }, params.maxChars, log);
+    return cut({ ...voiceover, words, language }, params.maxChars, log);
   },
 };
 

@@ -37,6 +37,14 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
   // not finished — an empty port, a setting still blank. Filtering warnings out left the card silent
   // until a run reached the node and blocked, which is exactly when it is too late to be told.
   const issues = React.useMemo(() => allIssues.filter((i) => i.nodeId === data.nodeId), [allIssues, data.nodeId]);
+  // A standing issue and a failed run can be the same thing said twice: a node that will not run without
+  // a brief says so before it is run, and says so again when it is. The error is the fuller of the two —
+  // it carries what to do next — so the issue steps aside when they share a code. Kept apart from
+  // `issues` because the card's warning ring should still come on for a node with something to say.
+  const shown = React.useMemo(
+    () => issues.filter((i) => i.code !== rt?.error?.code && i.code !== rt?.blockedBy?.code),
+    [issues, rt?.error?.code, rt?.blockedBy?.code],
+  );
   const runNode = useStudio((s) => s.runNode);
   const running = useStudio((s) => s.running);
   const toggleBypass = useStudio((s) => s.toggleBypass);
@@ -100,7 +108,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
       )}
       <div className="nc-body">
         {Body ? <Body nodeId={node.id} /> : null}
-        {issues.length > 0 && <div className="nc-hint" style={{ color: 'var(--warn)' }}>{issues.map((i) => issueText(t, i)).join(' · ')}</div>}
+        {shown.length > 0 && <div className="nc-hint" style={{ color: 'var(--warn)' }}>{shown.map((i) => issueText(t, i)).join(' · ')}</div>}
         {rt.warnings?.map((w, i) => {
           // A message can carry what an upstream answered, an HTML error page included: its text only, a few lines of it.
           const text = w.code ? t(`error.${w.code}`) : plainText(w.message);

@@ -149,8 +149,13 @@ export function storyboardSnippet(name: string, html: string): string {
 export const GUIDE_FILE = 'storyboard-guide.md';
 
 const PICTURE = /\.(png|jpe?g|webp|gif|svg)$/i;
+const CLIP = /\.(mp4|webm|mov|m4v)$/i;
 /** A picture of the kit — the drawings and marks its parts paint with, as opposed to its fonts. */
 export const isPicture = (path: string): boolean => PICTURE.test(path);
+/** A clip of the kit: a recording its parts play, or the sample a workflow built around one ships to show itself. */
+export const isClip = (path: string): boolean => CLIP.test(path);
+/** Everything of the kit a person can look at and swap, as opposed to the fonts it writes with. */
+export const isSeen = (path: string): boolean => isPicture(path) || isClip(path);
 
 /** Whether any of the kit's files still names this media file. An unused one can be taken out. */
 export const usesMedia = (project: Project, path: string): boolean => Object.values(project.files).some((text) => text.includes(path));

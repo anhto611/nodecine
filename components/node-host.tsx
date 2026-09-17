@@ -51,6 +51,15 @@ const studioHost: NodeHost = {
     if (!res.ok || !body.url) throw new Error(body.message ?? `upload failed (${res.status})`);
     return body.url;
   },
+  uploadFile: async (file) => {
+    // The file itself, not a data URL: a recording is tens of megabytes and base64 would carry a third more.
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch('/api/assets', { method: 'POST', body: form });
+    const body = (await res.json().catch(() => ({}))) as { url?: string; message?: string };
+    if (!res.ok || !body.url) throw new Error(body.message ?? `upload failed (${res.status})`);
+    return body.url;
+  },
 };
 
 export const StudioNodeHost: React.FC<{ children: React.ReactNode }> = ({ children }) => <NodeHostProvider host={studioHost}>{children}</NodeHostProvider>;

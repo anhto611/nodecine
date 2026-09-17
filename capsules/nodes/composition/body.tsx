@@ -3,7 +3,7 @@ import React from 'react';
 import { Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useOutputPayload, useOverlay, useParams, type BodyProps } from '@/capsules/sdk/host';
 import type { Composition } from '@/contracts/types/composition';
-import { isPicture, kindOf, nameOf, readPart, roleOf, ROLES, type Kind, type Project } from './parts';
+import { isClip, isSeen, kindOf, nameOf, readPart, roleOf, ROLES, type Kind, type Project } from './parts';
 import { Thumbnail } from './thumbnail';
 import type { PartsDialogData } from './parts-dialog';
 
@@ -44,12 +44,12 @@ export const CompositionBody: React.FC<BodyProps> = ({ nodeId }) => {
   const openKit = () => overlay.open(nodeId, { kind: 'block', view: 'kit' } satisfies PartsDialogData);
 
   /**
-   * What the kit is made of besides its parts: the pictures its parts draw. They belong to the style,
-   * not to one video, so they are shown here and swapped here — the video's own pictures are the
-   * Assets node's.
+   * What the kit is made of besides its parts: the pictures and clips its parts draw. They belong to
+   * the style, not to one video, so they are shown here and swapped here — the video's own pictures are
+   * the Assets node's, and the recording a film is cut from comes in through the Footage node.
    */
   const kitStrip = () => {
-    const pictures = Object.keys(media).filter(isPicture);
+    const pictures = Object.keys(media).filter(isSeen);
     const shown = pictures.slice(0, 5);
     return (
       <div style={{ display: 'grid', gap: 4 }}>
@@ -62,7 +62,9 @@ export const CompositionBody: React.FC<BodyProps> = ({ nodeId }) => {
             {shown.map((path) => (
               <button key={path} className="nc-chip" title={path} onClick={openKit}
                 style={{ flex: `0 0 ${cardWidth('component')}`, minWidth: 0, padding: 4, display: 'grid', gap: 4, justifyItems: 'stretch' }}>
-                <img src={media[path]} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'contain', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }} />
+                {isClip(path)
+                  ? <video src={media[path]} muted playsInline preload="metadata" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }} />
+                  : <img src={media[path]} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'contain', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }} />}
                 <span style={{ color: 'var(--tx-2)', fontSize: 'var(--fs-hint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(path)}</span>
               </button>
             ))}

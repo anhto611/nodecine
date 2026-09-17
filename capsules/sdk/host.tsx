@@ -39,6 +39,8 @@ export interface NodeHost {
   action<T = unknown>(id: string, args: unknown[]): Promise<T>;
   /** Keep a picture the person chose as a file this machine holds, and return its URL. */
   uploadImage(file: File): Promise<string>;
+  /** The same for a file too big to carry as text — a recorded clip — sent as itself. */
+  uploadFile(file: File): Promise<string>;
   /** The providers of one kind this build ships, for a picker. */
   providers(kind: 'llm' | 'tts'): { id: string; nameKey: string; defaultSettings: Record<string, unknown> }[];
 }

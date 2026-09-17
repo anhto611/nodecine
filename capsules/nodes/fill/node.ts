@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { NodeError } from '@/contracts/errors';
 import type { Composition, CompositionVariable } from '@/contracts/types/composition';
 import type { Voiceover } from '@/contracts/types/payloads';
+import type { Footage } from '@/contracts/types/footage';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { FillErrorCode } from './errors';
 
@@ -16,12 +17,20 @@ import { FillErrorCode } from './errors';
  * - `voiceover.json`: `{ durationSeconds, segments?, words? }` — the voice's length, where each
  *   narration segment starts and how long it lasts, and the words' timings, for a timeline that
  *   follows the voice; karaoke captions read their words from here.
+ * - `clip.<ext>`: the recording the film is cut from, when one is wired in. A composition built around
+ *   a recording plays it by that name, the way it plays the voice by `voiceover`; the scenes say which
+ *   stretch of it each of them shows.
+ * - `cutout.webm`: the same recording with the speaker cut out of it, when a Matte node is wired in.
+ *   A block plays it on top of its own graphics, on the same clock as `clip`, and the speaker comes
+ *   forward: type sits behind their head, and their head breaks out over the edge of a card.
  */
 export const FILLED = {
   voiceover: 'voiceover',
   voiceoverSeconds: 'voiceoverSeconds',
   timing: 'voiceover.json',
   images: 'images',
+  clip: 'clip',
+  cutout: 'cutout',
 } as const;
 
 /** A file this machine holds, named by the app: an upload or something a node made. */
@@ -54,12 +63,17 @@ export const fill: NodeDefinition<typeof Params> = {
   inputs: [
     { name: 'composition', type: 'Composition' },
     { name: 'voiceover', type: 'Voiceover', required: false },
+    { name: 'footage', type: 'Footage', required: false },
+    // The same recording with the speaker cut out of it: a second layer, not a second recording.
+    { name: 'cutout', type: 'Footage', required: false },
   ],
   outputs: [{ name: 'composition', type: 'Composition' }],
   paramsSchema: Params, defaultParams: { values: {} },
   run: async ({ params, inputs, log }) => {
     const base = inputs.composition!.payload as Composition;
     const voice = inputs.voiceover?.payload as Voiceover | undefined;
+    const clip = inputs.footage?.payload as Footage | undefined;
+    const cutout = inputs.cutout?.payload as Footage | undefined;
     const declared = new Map(base.variables.map((v) => [v.id, v] as const));
 
     const values: Record<string, unknown> = { ...base.values };
@@ -98,9 +112,23 @@ export const fill: NodeDefinition<typeof Params> = {
       });
     }
 
+    if (clip) {
+      const ext = clip.url.split('.').pop() ?? 'mp4';
+      media[`${FILLED.clip}.${ext}`] = clip.url as Composition['media'][string];
+      if (declared.has(FILLED.clip)) values[FILLED.clip] = `${FILLED.clip}.${ext}`;
+    }
+
+    if (cutout) {
+      // Laid over the graphics, so a clip that is not clear anywhere would simply cover them.
+      if (!cutout.hasAlpha) log('warn', `${cutout.name} was not cut out: laid over the graphics it will hide them`);
+      const ext = cutout.url.split('.').pop() ?? 'webm';
+      media[`${FILLED.cutout}.${ext}`] = cutout.url as Composition['media'][string];
+      if (declared.has(FILLED.cutout)) values[FILLED.cutout] = `${FILLED.cutout}.${ext}`;
+    }
+
     const unset = base.variables.filter((v) => values[v.id] === undefined && v.default === undefined).map((v) => v.id);
     if (unset.length) log('warn', `no value and no default for ${unset.join(', ')}`);
-    log('info', `${Object.keys(values).length} values${voice ? ' · voice-over' : ''}`);
+    log('info', `${Object.keys(values).length} values${voice ? ' · voice-over' : ''}${clip ? ` · ${clip.name}` : ''}${cutout ? ' · cut-out' : ''}`);
     return { composition: { ...base, files, media, values } satisfies Composition };
   },
 };

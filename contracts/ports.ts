@@ -3,6 +3,7 @@ import { AssetsSchema, type Assets } from './types/assets';
 import { BriefSchema, type Brief } from './types/brief';
 import { ResearchSchema, type Research } from './types/research';
 import { CompositionSchema, type Composition } from './types/composition';
+import { FootageSchema, type Footage } from './types/footage';
 import { StoryboardSchema, type Storyboard } from './types/storyboard';
 import {
   AudioScriptSchema,
@@ -28,6 +29,7 @@ declare module '@/core/types/ports' {
     Assets: Assets;
     Brief: Brief;
     Research: Research;
+    Footage: Footage;
   }
 }
 
@@ -41,6 +43,7 @@ const PORTS: Record<PortType, PortTypeInfo> = {
   Assets: { labelKey: 'port.assets', schema: AssetsSchema },
   Brief: { labelKey: 'port.brief', schema: BriefSchema },
   Research: { labelKey: 'port.research', schema: ResearchSchema },
+  Footage: { labelKey: 'port.footage', schema: FootageSchema },
 };
 
 /** Called wherever node types are registered: a node's ports mean nothing until their types are. */

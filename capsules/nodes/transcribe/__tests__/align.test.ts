@@ -3,8 +3,11 @@ import { parseAlignerOutput } from '../server';
 
 describe('parseAlignerOutput', () => {
   it('keeps well-formed words, clamps negatives and inverted spans, drops junk', () => {
-    const out = parseAlignerOutput(JSON.stringify([{ text: 'Xin', start: -0.1, end: 0.2 }, { text: 'chào', start: 0.6, end: 0.5 }, { nope: true }, 'x']));
-    expect(out).toEqual([{ text: 'Xin', start: 0, end: 0.2 }, { text: 'chào', start: 0.6, end: 0.6 }]);
+    const out = parseAlignerOutput(JSON.stringify({ language: 'vi', words: [{ text: 'Xin', start: -0.1, end: 0.2 }, { text: 'chào', start: 0.6, end: 0.5 }, { nope: true }, 'x'] }));
+    expect(out).toEqual({ language: 'vi', words: [{ text: 'Xin', start: 0, end: 0.2 }, { text: 'chào', start: 0.6, end: 0.6 }] });
+  });
+  it('still reads the bare list older scripts printed', () => {
+    expect(parseAlignerOutput(JSON.stringify([{ text: 'Xin', start: 0, end: 0.2 }]))).toEqual({ words: [{ text: 'Xin', start: 0, end: 0.2 }] });
   });
   it('refuses anything that is not a list', () => {
     expect(() => parseAlignerOutput('{"a":1}')).toThrow(/list/);
@@ -20,8 +23,8 @@ describe('aligning a voice of several segments', () => {
         calls.push({ text, window: opts.window });
         const w = opts.window!;
         // The second segment comes back piled on one instant, the way a lost aligner answers.
-        if (calls.length === 2) return text.split(' ').map((t) => ({ text: t, start: w.start + 3, end: w.start + 3.01 }));
-        return text.split(' ').map((t, i) => ({ text: t, start: w.start + i * 0.5, end: w.start + i * 0.5 + 0.3 }));
+        if (calls.length === 2) return { words: text.split(' ').map((t) => ({ text: t, start: w.start + 3, end: w.start + 3.01 })) };
+        return { words: text.split(' ').map((t, i) => ({ text: t, start: w.start + i * 0.5, end: w.start + i * 0.5 + 0.3 })) };
       },
     };
     const voiceover = { audioUrl: '/api/media/' + 'a'.repeat(16) + '.mp3', durationSeconds: 8, voiceName: 'v', language: 'vi', speed: 1, segments: [{ start: 0, durationSeconds: 3 }, { start: 3, durationSeconds: 5 }] };

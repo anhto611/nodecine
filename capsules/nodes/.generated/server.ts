@@ -2,6 +2,8 @@
 import type { NodeService } from '@/core/engine/services';
 import { assetsServices } from '../assets/server';
 import { compositionServices, compositionActions } from '../composition/server';
+import { footageServices } from '../footage/server';
+import { matteServices } from '../matte/server';
 import { researchServices } from '../research/server';
 import { transcribeServices } from '../transcribe/server';
 import { ttsActions } from '../tts/server';
@@ -9,6 +11,8 @@ import { ttsActions } from '../tts/server';
 export const NODE_SERVICE_EXTENSIONS: Record<string, NodeService>[] = [
   assetsServices,
   compositionServices,
+  footageServices,
+  matteServices,
   researchServices,
   transcribeServices,
 ];
@@ -33,9 +37,13 @@ export const NODE_SOURCES: Record<string, string> = {
   "brief": "capsules/nodes/brief",
   "caption-export": "capsules/nodes/caption-export",
   "composition": "capsules/nodes/composition",
+  "coverage": "capsules/nodes/coverage",
   "fill": "capsules/nodes/fill",
+  "footage": "capsules/nodes/footage",
+  "matte": "capsules/nodes/matte",
   "mp4-export": "capsules/nodes/mp4-export",
   "research": "capsules/nodes/research",
+  "rough-cut": "capsules/nodes/rough-cut",
   "storyboard-writer": "capsules/nodes/storyboard-writer",
   "transcribe": "capsules/nodes/transcribe",
   "tts": "capsules/nodes/tts",

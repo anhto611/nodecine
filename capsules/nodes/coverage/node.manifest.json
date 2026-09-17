@@ -1,0 +1,1 @@
+{"id": "coverage", "definition": "coverage", "body": "CoverageBody", "icon": "layers", "group": "script", "translations": "coverageTranslations", "errors": "CoverageErrorCode"}

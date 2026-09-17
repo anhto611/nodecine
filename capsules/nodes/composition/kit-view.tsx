@@ -3,7 +3,7 @@ import React from 'react';
 import { Btn, useT } from '@/capsules/sdk/ui';
 import { useHost } from '@/capsules/sdk/host';
 import { COMPOSITION_ENTRY } from '@/contracts/types/composition';
-import { addMedia, GUIDE_FILE, isPicture, kitColours, nameOf, readPart, removeMedia, replaceMedia, setKitColour, usesMedia, type Project } from './parts';
+import { addMedia, GUIDE_FILE, isClip, isSeen, kitColours, nameOf, readPart, removeMedia, replaceMedia, setKitColour, usesMedia, type Project } from './parts';
 
 /**
  * What a kit is made of besides its blocks and components: the pictures its parts draw, the fonts it
@@ -15,14 +15,14 @@ import { addMedia, GUIDE_FILE, isPicture, kitColours, nameOf, readPart, removeMe
  */
 export const KitView: React.FC<{ project: Project; set: (patch: Partial<Project>) => void }> = ({ project, set }) => {
   const t = useT();
-  const { uploadImage } = useHost();
+  const { uploadImage, uploadFile } = useHost();
   const [busy, setBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState<string | null>(null);
 
   const paths = Object.keys(project.media);
-  const pictures = paths.filter(isPicture);
-  const rest = paths.filter((p) => !isPicture(p));
+  const shown = paths.filter(isSeen);
+  const rest = paths.filter((p) => !isSeen(p));
   const guide = project.files[GUIDE_FILE];
   const shell = project.files[COMPOSITION_ENTRY] ?? '';
   const variables = readPart(shell).variables;
@@ -30,7 +30,8 @@ export const KitView: React.FC<{ project: Project; set: (patch: Partial<Project>
 
   const upload = async (key: string, file: File, then: (url: string) => void) => {
     setBusy(key); setError(null);
-    try { then(await uploadImage(file)); }
+    // A picture travels as text, a clip as itself: too many megabytes to carry any other way.
+    try { then(await (/\.(mp4|webm|mov|m4v)$/i.test(file.name) ? uploadFile(file) : uploadImage(file))); }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(null); }
   };
@@ -38,7 +39,7 @@ export const KitView: React.FC<{ project: Project; set: (patch: Partial<Project>
   const picker = (key: string, label: string, onFile: (file: File) => void) => (
     <label className="nc-chip" style={{ cursor: 'pointer' }}>
       {busy === key ? '…' : label}
-      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden onChange={(e) => {
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" hidden onChange={(e) => {
         const file = e.target.files?.[0];
         e.target.value = '';
         if (file) onFile(file);
@@ -52,18 +53,22 @@ export const KitView: React.FC<{ project: Project; set: (patch: Partial<Project>
 
       <section style={{ display: 'grid', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <b>{t('node.compositionKitPictures')} · {pictures.length}</b>
+          <b>{t('node.compositionKitPictures')} · {shown.length}</b>
           <span style={{ marginLeft: 'auto' }}>
             {picker('new', t('node.compositionKitAdd'), (file) => void upload('new', file, (url) => set(addMedia(project, file.name, url).project)))}
           </span>
         </div>
-        {pictures.length === 0 && <div style={{ color: 'var(--tx-3)' }}>{t('node.compositionNone')}</div>}
+        {shown.length === 0 && <div style={{ color: 'var(--tx-3)' }}>{t('node.compositionNone')}</div>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
-          {pictures.map((path) => {
+          {shown.map((path) => {
             const used = usesMedia(project, path);
+            const box = { width: '100%', aspectRatio: '1 / 1', objectFit: 'contain' as const, background: 'var(--bg-sunk, #0002)', borderRadius: 4 };
             return (
               <div key={path} style={{ display: 'grid', gap: 6, padding: 8, border: '1px solid var(--line)', borderRadius: 6 }}>
-                <img src={project.media[path]} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'contain', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }} />
+                {/* A clip shows itself, quietly and on demand: a wall of cards must not all start playing. */}
+                {isClip(path)
+                  ? <video src={project.media[path]} style={box} muted playsInline controls preload="metadata" />
+                  : <img src={project.media[path]} alt="" style={box} />}
                 <div title={path} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(path)}</div>
                 <div style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>{copied === path ? t('node.compositionKitCopied') : used ? t('node.compositionKitUsed') : t('node.compositionKitUnused')}</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

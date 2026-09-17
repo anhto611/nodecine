@@ -23,6 +23,8 @@ export const ErrorCode = {
   LLM_LANGUAGE_MISMATCH: 'LLM_LANGUAGE_MISMATCH',
   TTS_UPSTREAM: 'TTS_UPSTREAM',
   TTS_AUDIO_UNREADABLE: 'TTS_AUDIO_UNREADABLE',
+  /** A recorded clip this machine holds could not be read: no picture in it, no length, or ffmpeg refused it. */
+  CLIP_UNREADABLE: 'CLIP_UNREADABLE',
   ENGINE_NOT_READY: 'ENGINE_NOT_READY',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

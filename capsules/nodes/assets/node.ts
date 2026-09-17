@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { NodeError } from '@/contracts/errors';
 import { ASSET_NAME, AssetSchema, assetNameFor, type Asset, type Assets } from '@/contracts/types/assets';
 import type { Brief } from '@/contracts/types/brief';
+import type { Voiceover } from '@/contracts/types/payloads';
+import { spokenBrief } from './spoken';
 import { contentHash } from '@/core/hash';
 import type { NodeDefinition } from '@/core/nodes/definition';
 import { AssetsErrorCode } from './errors';
@@ -55,7 +57,16 @@ export const nameFor = assetNameFor;
  */
 export const assets: NodeDefinition<typeof Params> = {
   type: 'assets', version: 1, kind: 'process',
-  inputs: [{ name: 'brief', type: 'Brief', required: false }],
+  inputs: [
+    { name: 'brief', type: 'Brief', required: false },
+    /*
+      A film cut from a recording has no brief and needs none: what it is about is what was said on it.
+      A brief is an intention, written before there is a video; a voice-over is the record of one that
+      exists. Wired here, the words stand in for the brief — and bring the language they were heard in
+      with them, which a typed brief has to be got right about by hand.
+    */
+    { name: 'voiceover', type: 'Voiceover', required: false },
+  ],
   outputs: [{ name: 'assets', type: 'Assets' }],
   paramsSchema: Params, defaultParams: Params.parse({}),
   validate: (params) => assetProblems(params.items).map((message) => ({ code: AssetsErrorCode.ASSETS_INVALID, message })),
@@ -63,7 +74,10 @@ export const assets: NodeDefinition<typeof Params> = {
     const { params, inputs, log } = ctx;
     const problems = assetProblems(params.items);
     if (problems.length) throw new NodeError(AssetsErrorCode.ASSETS_INVALID, problems[0]!, false, problems).withFix('give every asset its own name');
-    const brief = inputs.brief?.payload as Brief | undefined;
+    const said = inputs.voiceover?.payload as Voiceover | undefined;
+    // A brief somebody wrote is what they want; it wins over what the recording happens to say.
+    const brief = (inputs.brief?.payload as Brief | undefined) ?? (said ? spokenBrief(said) : undefined);
+    if (!inputs.brief && brief) log('info', `read what this film is about off ${said!.words!.length} spoken words · ${brief.language}`);
     let offered: Asset[] = [];
     if (params.pictures > 0 && brief) {
       const input = { brief, pictures: params.pictures, wanted: params.wanted, attempt: params.attempt, existing: params.items, removed: params.removed };

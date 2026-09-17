@@ -7,9 +7,13 @@ import { AssetsBody, AssetsDialog } from '../assets/body';
 import { BriefBody } from '../brief/body';
 import { CaptionExportBody } from '../caption-export/body';
 import { CompositionBody, PartsDialog } from '../composition/body';
+import { CoverageBody } from '../coverage/body';
 import { FillBody } from '../fill/body';
+import { FootageBody } from '../footage/body';
+import { MatteBody } from '../matte/body';
 import { ExportBody } from '../mp4-export/body';
 import { ResearchBody } from '../research/body';
+import { RoughCutBody } from '../rough-cut/body';
 import { StoryboardWriterBody } from '../storyboard-writer/body';
 import { TranscribeBody } from '../transcribe/body';
 import { TtsBody } from '../tts/body';
@@ -21,9 +25,13 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'brief': BriefBody,
   'caption-export': CaptionExportBody,
   'composition': CompositionBody,
+  'coverage': CoverageBody,
   'fill': FillBody,
+  'footage': FootageBody,
+  'matte': MatteBody,
   'mp4-export': ExportBody,
   'research': ResearchBody,
+  'rough-cut': RoughCutBody,
   'storyboard-writer': StoryboardWriterBody,
   'transcribe': TranscribeBody,
   'tts': TtsBody,
@@ -41,9 +49,13 @@ export const NODE_META: Record<string, NodeMeta> = {
   'brief': { icon: 'doc', group: 'source', layout: 'wide' },
   'caption-export': { icon: 'down', group: 'output' },
   'composition': { icon: 'layers', group: 'visual', layout: 'wide' },
+  'coverage': { icon: 'layers', group: 'script' },
   'fill': { icon: 'layers', group: 'visual' },
+  'footage': { icon: 'film', group: 'source', layout: 'wide' },
+  'matte': { icon: 'film', group: 'visual', layout: 'wide' },
   'mp4-export': { icon: 'down', group: 'output' },
   'research': { icon: 'search', group: 'script', layout: 'wide' },
+  'rough-cut': { icon: 'branch', group: 'script' },
   'storyboard-writer': { icon: 'bot', group: 'script', layout: 'wide' },
   'transcribe': { icon: 'wave', group: 'audio' },
   'tts': { icon: 'wave', group: 'audio' },

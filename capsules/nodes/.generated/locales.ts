@@ -4,9 +4,13 @@ import { assetsTranslations } from '../assets/locales';
 import { briefTranslations } from '../brief/locales';
 import { captionExportTranslations } from '../caption-export/locales';
 import { compositionTranslations } from '../composition/locales';
+import { coverageTranslations } from '../coverage/locales';
 import { fillTranslations } from '../fill/locales';
+import { footageTranslations } from '../footage/locales';
+import { matteTranslations } from '../matte/locales';
 import { mp4ExportTranslations } from '../mp4-export/locales';
 import { researchTranslations } from '../research/locales';
+import { roughCutTranslations } from '../rough-cut/locales';
 import { storyboardWriterTranslations } from '../storyboard-writer/locales';
 import { transcribeTranslations } from '../transcribe/locales';
 import { ttsTranslations } from '../tts/locales';
@@ -14,7 +18,7 @@ import { videoOutputTranslations } from '../video-output/locales';
 
 /** Every string a node shows, by language: its name and description (node.<id>, node.desc.<id>) and its own labels. */
 export const NODE_TRANSLATIONS: Record<string, Record<string, string>> = { en: {}, vi: {} };
-for (const extension of [assembleTranslations, assetsTranslations, briefTranslations, captionExportTranslations, compositionTranslations, fillTranslations, mp4ExportTranslations, researchTranslations, storyboardWriterTranslations, transcribeTranslations, ttsTranslations, videoOutputTranslations]) {
+for (const extension of [assembleTranslations, assetsTranslations, briefTranslations, captionExportTranslations, compositionTranslations, coverageTranslations, fillTranslations, footageTranslations, matteTranslations, mp4ExportTranslations, researchTranslations, roughCutTranslations, storyboardWriterTranslations, transcribeTranslations, ttsTranslations, videoOutputTranslations]) {
   Object.assign(NODE_TRANSLATIONS.en!, extension.en);
   Object.assign(NODE_TRANSLATIONS.vi!, extension.vi);
 }
