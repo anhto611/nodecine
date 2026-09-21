@@ -92,12 +92,21 @@ function cutOut(frame) {
 
 const decode = spawn(ffmpeg, ['-v', 'error', '-i', clip,
   '-vf', `fps=${fps},scale=${W}:${H},format=rgba`, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-']);
+// Listen immediately: the decoder can exit while the model is still processing its last frame.
+const decoded = new Promise((done) => {
+  decode.once('close', done);
+  decode.once('error', () => done(-1));
+});
 const encode = spawn(ffmpeg, ['-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(fps), '-i', '-',
   '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-auto-alt-ref', '0', '-b:v', '0', '-crf', '34',
   // A keyframe a second. A film seeks into the cut-out at every scene exactly as it does the
   // recording, and a layer that stalls while the one under it does not is worse than both stalling.
   '-g', String(fps), '-keyint_min', String(fps),
   '-speed', '8', '-deadline', 'realtime', '-an', out, '-y']);
+const encoded = new Promise((done) => {
+  encode.once('close', done);
+  encode.once('error', () => done(-1));
+});
 
 let trouble = '';
 for (const [name, child] of [['decoder', decode], ['encoder', encode]]) {
@@ -126,9 +135,9 @@ try {
   process.exit(1);
 }
 encode.stdin.end();
-const code = await new Promise((done) => encode.on('close', done));
-if (code !== 0 || !frames) {
-  process.stderr.write(`${frames} frames, encoder exited ${code}\n${trouble}`);
+const [decodeCode, code] = await Promise.all([decoded, encoded]);
+if (decodeCode !== 0 || code !== 0 || !frames || held.length) {
+  process.stderr.write(`${frames} frames, decoder exited ${decodeCode}, encoder exited ${code}, ${held.length} incomplete bytes\n${trouble}`);
   process.exit(1);
 }
 // Let go of the model before the process ends. Left to the runtime's own teardown, onnxruntime

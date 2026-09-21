@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { assetUrl, ensureAssetsDir } from '@/server/paths';
+import { assetPath, assetUrl, ensureAssetsDir, fileNameFromAssetUrl } from '@/server/paths';
 import { clipAudio, readClip, webClip } from '@/server/contracts/video';
 import { footage } from '../node';
 
@@ -61,6 +61,41 @@ describe('a recorded clip brought in', () => {
     expect(copy.converted).toBe(true);
     expect(copy.url).toMatch(/^\/api\/assets\/[a-f0-9]{40}\.mp4$/);
     expect((await readClip(copy.url)).codec).toBe('h264');
+  }, 120_000);
+
+  it('measures CSV keyframes and reports rotated dimensions after conversion', async () => {
+    const dir = fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', 'nodecine-rotation-'));
+    try {
+      const original = path.join(dir, 'original.mp4');
+      const rotated = path.join(dir, 'rotated.mp4');
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i',
+        'testsrc=size=64x48:rate=30:duration=10', '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+        '-g', '250', '-sc_threshold', '0', original]);
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-display_rotation:v:0', '90', '-i', original,
+        '-c', 'copy', rotated]);
+      const bytes = fs.readFileSync(rotated);
+      const name = `${createHash('sha1').update(bytes).digest('hex')}.mp4`;
+      await ensureAssetsDir();
+      fs.writeFileSync(assetPath(name), bytes);
+      const clip = assetUrl(name);
+      const facts = await readClip(clip);
+      expect(facts.keyframeSeconds).toBeCloseTo(8.333, 2);
+      expect(facts).toMatchObject({ width: 64, height: 48 });
+      const out = await footage.run({
+        nodeId: 'f', params: footage.paramsSchema.parse({ clip }),
+        lists: {}, signal: new AbortController().signal, inputs: {}, fresh: false,
+        services: { invoke: (id: string, args: unknown[]) =>
+          id === 'footage/read' ? readClip(args[0] as string)
+            : webClip(args[0] as string, args[1] as never) },
+        log: () => {}, progress: () => {}, patchParams: () => {},
+      } as never) as { footage: { url: string; width: number; height: number } };
+      expect(out.footage).toMatchObject({ width: 48, height: 64 });
+      expect(out.footage.url).not.toBe(clip);
+      fs.unlinkSync(assetPath(fileNameFromAssetUrl(out.footage.url)));
+      fs.unlinkSync(assetPath(name));
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   }, 120_000);
 
   it('says so when the clip is not on this machine', async () => {

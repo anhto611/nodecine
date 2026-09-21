@@ -2,16 +2,20 @@
   "name": "nodecine",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "description": "The open-source node-based agentic video studio",
   "scripts": {
     "capsules:discover": "node scripts/discover-capsules.mjs",
     "capsules:check": "node scripts/check-boundaries.mjs",
     "capsules:prepare": "npm run capsules:discover && npm run providers:discover && npm run capsules:check",
     "predev": "npm run capsules:prepare",
-    "dev": "next dev",
+    "dev": "next dev --hostname 127.0.0.1",
     "prebuild": "npm run capsules:prepare",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --hostname 127.0.0.1",
     "pretypecheck": "npm run capsules:prepare",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

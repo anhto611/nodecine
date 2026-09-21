@@ -49,7 +49,7 @@ export interface CutOut { url: string; width: number; height: number; frames: nu
 
 export async function cutOutClip(clipUrl: string, facts: ClipFacts, detail: MatteDetail, signal?: AbortSignal): Promise<CutOut> {
   const { width, height } = matteSize(facts, detail);
-  const name = `${createHash('sha1').update(`${fileNameFromAssetUrl(clipUrl)}:matte:${detail}`).digest('hex')}.webm`;
+  const name = `${createHash('sha1').update(`${fileNameFromAssetUrl(clipUrl)}:matte-v2:${detail}`).digest('hex')}.webm`;
   const out = assetPath(name);
   if (await stat(out).then((s) => s.isFile(), () => false)) {
     return { url: assetUrl(name), width, height, frames: 0, seconds: 0 };

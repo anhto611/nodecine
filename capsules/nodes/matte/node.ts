@@ -32,7 +32,7 @@ const Params = z.object({
  * throws away the reading of the clip itself.
  */
 export const matte: NodeDefinition<typeof Params> = {
-  type: 'matte', version: 1, kind: 'process',
+  type: 'matte', version: 2, kind: 'process',
   inputs: [{ name: 'footage', type: 'Footage' }],
   outputs: [{ name: 'footage', type: 'Footage' }],
   paramsSchema: Params, defaultParams: Params.parse({}),

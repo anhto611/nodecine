@@ -28,7 +28,7 @@ const Params = z.object({
  * writes down whatever the model hears.
  */
 export const footage: NodeDefinition<typeof Params> = {
-  type: 'footage', version: 1, kind: 'source',
+  type: 'footage', version: 2, kind: 'source',
   inputs: [],
   outputs: [
     { name: 'footage', type: 'Footage' },
@@ -38,13 +38,15 @@ export const footage: NodeDefinition<typeof Params> = {
   validate: (params) => (params.clip ? [] : [{ code: FootageErrorCode.FOOTAGE_EMPTY, message: 'choose a clip to work from' }]),
   run: async ({ params, services, signal, log }) => {
     if (!params.clip) throw new NodeError(FootageErrorCode.FOOTAGE_EMPTY, 'no clip chosen').withFix('choose a recording on this node');
-    const facts = await services.invoke<ClipFacts>('footage/read', [params.clip, signal]);
+    let facts = await services.invoke<ClipFacts>('footage/read', [params.clip, signal]);
     // A phone films in a codec no browser here can play; the film shows a copy it can.
     const playable = await services.invoke<{ url: string; converted: boolean; why?: 'codec' | 'seeking' }>('footage/playable', [params.clip, facts, signal]);
     if (playable.converted) {
       log('info', playable.why === 'codec'
         ? `${facts.codec} is not a codec this engine plays: made an H.264 copy`
         : `its keyframes are ${facts.keyframeSeconds}s apart, which stalls every cut: made a copy with one a second`);
+      // Transcoding applies the recording's rotation, so dimensions must describe the playable pixels.
+      facts = await services.invoke<ClipFacts>('footage/read', [playable.url, signal]);
     }
     const footage: Footage = {
       url: playable.url,

@@ -109,7 +109,10 @@ async function keyframeGap(ffprobe: string, file: string, durationSeconds: numbe
       '-show_entries', 'frame=pts_time', '-of', 'csv=p=0', '-read_intervals', `%+${WINDOW}`, file],
     timeoutMs: 120_000, maxOutput: 1024 * 1024, signal,
   });
-  const times = r.stdout.split(/\s+/).map(Number).filter((n) => Number.isFinite(n));
+  if (r.code !== 0) return Math.min(durationSeconds, WINDOW);
+  // Frame side data can add CSV columns (including a trailing comma). Blank lines are not time zero.
+  const times = r.stdout.split(/\r?\n/).map((line) => line.split(',')[0]!.trim())
+    .filter(Boolean).map(Number).filter((n) => Number.isFinite(n));
   // One keyframe in half a minute: the worst seek decodes everything up to it, capped by the window.
   if (times.length < 2) return Math.min(durationSeconds, WINDOW);
   let widest = 0;
