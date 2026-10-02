@@ -1,0 +1,9 @@
+{
+  "id": "screen-walkthrough",
+  "group": "recording",
+  "tagline": {
+    "en": "Bring a screen recording; it is cut where you pause, framed as a screen, and exported with captions.",
+    "vi": "Đưa một bản quay màn hình; phim cắt theo chỗ bạn ngừng nói, đóng khung như màn hình, và xuất kèm phụ đề."
+  },
+  "tags": ["the clip's own shape", "needs a clip", { "en": "No model needed", "vi": "Không cần model" }]
+}

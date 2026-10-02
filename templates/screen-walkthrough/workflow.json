@@ -1,0 +1,226 @@
+{
+  "id": "screen-walkthrough",
+  "name": {
+    "en": "Screen walkthrough",
+    "vi": "Hướng dẫn bằng quay màn hình"
+  },
+  "description": {
+    "en": "Choose a screen recording on the Footage node. Its own sound is transcribed and the film is cut where you pause, framed as a screen, and exported with a subtitle file. No model and no voice provider are needed.",
+    "vi": "Chọn bản quay màn hình ở node Footage. Tiếng trong clip được bóc băng, phim cắt theo chỗ bạn ngừng nói, đóng khung như màn hình, và xuất kèm tệp phụ đề. Không cần model, không cần dịch vụ giọng đọc."
+  },
+  "category": "template",
+  "graph": {
+    "nodes": [
+      {
+        "id": "footage",
+        "type": "footage",
+        "params": {
+          "clip": "",
+          "name": ""
+        },
+        "bypassed": false,
+        "position": {
+          "x": 0,
+          "y": 300
+        },
+        "version": 2
+      },
+      {
+        "id": "captions",
+        "type": "transcribe",
+        "params": {
+          "model": "small",
+          "maxChars": 26
+        },
+        "bypassed": false,
+        "position": {
+          "x": 330,
+          "y": 90
+        },
+        "version": 2
+      },
+      {
+        "id": "composition",
+        "type": "composition",
+        "params": {
+          "files": {
+            "index.html": "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=1920, height=1080\" />\n  <script src=\"gsap.min.js\"></script>\n  <style>\n    html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #05080a; }\n    #walkthrough-shell { position: relative; width: 1920px; height: 1080px; overflow: hidden; }\n  </style>\n</head>\n<body>\n  <div id=\"walkthrough-shell\" data-composition-id=\"walkthrough-shell\" data-start=\"0\" data-width=\"1920\" data-height=\"1080\">\n    <!-- nodecine:frames -->\n    <script>\n      const tl = gsap.timeline({ paused: true });\n      tl.set({}, {}, 1);\n      window.__timelines['walkthrough-shell'] = tl;\n    </script>\n  </div>\n</body>\n</html>",
+            "compositions/clip-full.html": "<!doctype html>\n<html lang=\"en\" data-composition-duration=\"6\" data-role=\"scene\" data-composition-variables='[{\"id\":\"from\",\"type\":\"number\",\"label\":\"Second in the recording this scene starts at (the Rough Cut node gives it)\",\"labels\":{\"vi\":\"Giây bắt đầu trong bản ghi (node Rough Cut cấp)\"},\"default\":0,\"required\":true},{\"id\":\"seconds\",\"type\":\"number\",\"label\":\"Length in seconds (the Assemble node gives it)\",\"labels\":{\"vi\":\"Độ dài, giây (node Assemble cấp)\"},\"default\":4}]'>\n<head><meta charset=\"UTF-8\" /><meta name=\"description\" content=\"The recording, framed as a screen, playing from the second this scene starts.\" /></head>\n<body><template>\n<style>html,body{margin:0;background:#05080a}*{box-sizing:border-box}#root{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;color:#eaf2f5;background:#05080a;font-family:var(--font-body,Inter,Arial,sans-serif)}.nc-backdrop{position:absolute;inset:0;background:radial-gradient(circle at 22% 6%,#123240 0,#0a1418 54%,#04070a 100%)}.chrome{position:absolute;left:110px;right:110px;top:96px;bottom:168px;background:#f2f5f7;border-radius:22px;box-shadow:0 46px 110px #00000088;overflow:hidden}.bar{height:64px;display:flex;align-items:center;gap:12px;padding:0 26px;background:#e4e9ee;color:#54606c;font-size:21px;font-weight:800;letter-spacing:.12em}.bar i{display:block;width:14px;height:14px;border-radius:50%;background:#c3ccd4}.bar .url{margin-left:16px;flex:1;height:34px;border-radius:17px;background:#f7f9fb;color:#8a949d;font-size:19px;letter-spacing:.06em;display:flex;align-items:center;padding:0 18px}.screen{position:absolute;left:0;right:0;top:64px;bottom:0;background:#0a0f14}.screen .take{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2}.screen .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#4d5a66;font-size:30px;letter-spacing:.1em}.mark{position:absolute;left:110px;bottom:92px;display:flex;align-items:center;gap:16px;color:#7fe0c0;font-size:23px;font-weight:850;letter-spacing:.16em}.mark .brand-mark{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:15px;background:#7fe0c0;color:#04211a;font-size:34px;font-weight:1000;letter-spacing:-.1em}.ticks{position:absolute;right:110px;bottom:96px;display:flex;align-items:end;gap:7px;height:30px}.ticks b{display:block;width:7px;background:#7fe0c0;border-radius:4px}.ticks b:nth-child(1){height:14px}.ticks b:nth-child(2){height:28px}.ticks b:nth-child(3){height:19px}.ticks b:nth-child(4){height:30px}.ticks b:nth-child(5){height:17px}</style>\n<div id=\"root\" data-composition-id=\"clip-full\" data-duration=\"6\" data-width=\"1920\" data-height=\"1080\"><div class=\"nc-backdrop\"></div><div class=\"chrome\"><div class=\"bar\"><i></i><i></i><i></i><span class=\"url\">RECORDING</span></div><div class=\"screen\"><span class=\"empty\">THE RECORDING PLAYS HERE</span><video class=\"take\" id=\"take\" data-var-src=\"clip\" data-start=\"0\" muted playsinline></video></div></div>\n      <div class=\"mark\"><span class=\"brand-mark\">N<span></span></span><span>WALKTHROUGH</span></div>\n      <div class=\"ticks\"><b></b><b></b><b></b><b></b><b></b></div></div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  ['title','detail','source'].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?{\"from\":0,\"seconds\":4}[key]:v[key])})});\n  var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});\n  var take=root.querySelector('.take');if(take){take.setAttribute('data-media-start',String(Number(v.from)||0));take.setAttribute('data-duration',String(Number(v.seconds)||Number(root.dataset.duration)||4));}\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||6);\n  var tl=gsap.timeline({paused:true});\n  tl.fromTo(q('.chrome'),{y:44,opacity:0},{y:0,opacity:1,duration:.6,ease:'power3.out'},0)\n      .fromTo(q('.mark'),{x:-24,opacity:0},{x:0,opacity:1,duration:.5,ease:'power2.out'},.42)\n      .fromTo(q('.ticks'),{opacity:0},{opacity:1,duration:.5,ease:'sine.out'},.5);\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['clip-full']=tl;\n})();</script>\n</template></body></html>",
+            "storyboard-guide.md": "---\nfirst: clip-full\nlast: clip-full\nrepeat: 0\n---\nA walkthrough cut from a screen recording: the Rough Cut node decides where each scene starts and stops, by where the person paused, so nothing writes scenes here.\nEvery scene shows the recording full-frame in screen chrome, playing from the second the scene starts.\nThe narration is the recorder's own voice; never invent a step, a click or a menu that the recording does not show."
+          },
+          "media": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 0,
+          "y": 620
+        },
+        "version": 1
+      },
+      {
+        "id": "rough-cut",
+        "type": "rough-cut",
+        "params": {
+          "targetSeconds": 6,
+          "minSeconds": 2.5,
+          "pauseSeconds": 0.35
+        },
+        "bypassed": false,
+        "position": {
+          "x": 660,
+          "y": 300
+        },
+        "version": 1
+      },
+      {
+        "id": "assemble",
+        "type": "assemble",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 990,
+          "y": 300
+        },
+        "version": 1
+      },
+      {
+        "id": "fill",
+        "type": "fill",
+        "params": {
+          "values": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1320,
+          "y": 300
+        },
+        "version": 1
+      },
+      {
+        "id": "subs",
+        "type": "caption-export",
+        "params": {
+          "format": "srt",
+          "fileName": "screen-walkthrough"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 660,
+          "y": 40
+        },
+        "version": 1
+      },
+      {
+        "id": "preview",
+        "type": "video-output",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 1660,
+          "y": 170
+        },
+        "version": 2
+      },
+      {
+        "id": "export",
+        "type": "mp4-export",
+        "params": {
+          "quality": "medium",
+          "fileName": "screen-walkthrough.mp4"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1660,
+          "y": 470
+        },
+        "version": 2
+      }
+    ],
+    "edges": [
+      {
+        "id": "clip-to-rough-cut",
+        "source": "footage",
+        "sourcePort": "footage",
+        "target": "rough-cut",
+        "targetPort": "footage"
+      },
+      {
+        "id": "voice-to-transcribe",
+        "source": "footage",
+        "sourcePort": "voice",
+        "target": "captions",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "words-to-rough-cut",
+        "source": "captions",
+        "sourcePort": "voiceover",
+        "target": "rough-cut",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "kit-to-assemble",
+        "source": "composition",
+        "sourcePort": "composition",
+        "target": "assemble",
+        "targetPort": "composition"
+      },
+      {
+        "id": "storyboard-to-assemble",
+        "source": "rough-cut",
+        "sourcePort": "storyboard",
+        "target": "assemble",
+        "targetPort": "storyboard"
+      },
+      {
+        "id": "words-to-assemble",
+        "source": "rough-cut",
+        "sourcePort": "voiceover",
+        "target": "assemble",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "film-to-fill",
+        "source": "assemble",
+        "sourcePort": "composition",
+        "target": "fill",
+        "targetPort": "composition"
+      },
+      {
+        "id": "clip-to-fill",
+        "source": "footage",
+        "sourcePort": "footage",
+        "target": "fill",
+        "targetPort": "footage"
+      },
+      {
+        "id": "words-to-fill",
+        "source": "rough-cut",
+        "sourcePort": "voiceover",
+        "target": "fill",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "captions-to-subs",
+        "source": "captions",
+        "sourcePort": "captions",
+        "target": "subs",
+        "targetPort": "captions"
+      },
+      {
+        "id": "film-to-preview",
+        "source": "fill",
+        "sourcePort": "composition",
+        "target": "preview",
+        "targetPort": "composition"
+      },
+      {
+        "id": "film-to-export",
+        "source": "fill",
+        "sourcePort": "composition",
+        "target": "export",
+        "targetPort": "composition"
+      }
+    ]
+  }
+}

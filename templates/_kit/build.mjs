@@ -68,6 +68,7 @@ export function sceneBlock({
   motion,
   variables,
   textKeys = ['title', 'detail', 'source'],
+  extraScript = '',
   width = 1080,
   height = 1920,
   seconds = 4,
@@ -76,6 +77,6 @@ export function sceneBlock({
 }) {
   const defaults = Object.fromEntries(variables.map((variable) => [variable.id, variable.default]));
   const fill = textKeys.map((key) => `'${key}'`).join(',');
-  const setup = `var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});`;
+  const setup = `var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});${extraScript ? `\n  ${extraScript}` : ''}`;
   return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables='${JSON.stringify(variables)}'>\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body>${template ? '<template>' : ''}${loadGsap ? '<script src="gsap.min.js"></script>' : ''}\n<style>${css}</style>\n<div id="root" data-composition-id="${id}" data-duration="${seconds}" data-width="${width}" data-height="${height}"><div class="nc-backdrop"></div>${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${setup}\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||${seconds});\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${id}']=tl;\n})();</script>\n${template ? '</template>' : ''}</body></html>`;
 }
