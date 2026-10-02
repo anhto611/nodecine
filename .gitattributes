@@ -1,0 +1,4 @@
+# Every checkout gets LF, whatever the machine's own core.autocrlf says: the format check, the diffs
+# and CI then read the same on Windows, macOS and Linux, and a CRLF file cannot slip into the index.
+# `text=auto` still detects the fonts as binary, and nothing here needs CRLF.
+* text=auto eol=lf

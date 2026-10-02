@@ -3,5 +3,6 @@
 node_modules
 capsules/*/.generated
 templates/.generated
+diagrams
 package-lock.json
 tsconfig.tsbuildinfo
