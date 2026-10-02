@@ -19,7 +19,7 @@ const templatesDir = path.join(root, 'templates');
 const generatedDir = path.join(templatesDir, '.generated');
 
 const WORKFLOW = 'workflow.json';
-const THUMBNAIL = 'thumbnail.svg';
+const THUMBNAIL = 'thumbnail.png';
 
 const folders = (await readdir(templatesDir, { withFileTypes: true }))
   .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('_'))

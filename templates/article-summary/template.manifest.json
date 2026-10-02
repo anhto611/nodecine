@@ -1,0 +1,9 @@
+{
+  "id": "article-summary",
+  "group": "video",
+  "tagline": {
+    "en": "Turn an article link into a narrated summary video grounded in the source.",
+    "vi": "Biến một đường link thành video tóm tắt có giọng đọc, bám sát nguồn."
+  },
+  "tags": ["9:16", "30–45s", { "en": "English narration", "vi": "Giọng đọc tiếng Anh" }]
+}

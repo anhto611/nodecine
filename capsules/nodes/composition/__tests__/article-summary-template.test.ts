@@ -10,7 +10,7 @@ import { inspectComposition } from '@/capsules/nodes/composition/server';
 describe('article summary template workflow', () => {
   it('has a valid graph and a renderable scene kit', async () => {
     registerNodes();
-    const file = path.join(process.cwd(), 'templates', 'article-summary-vi', 'workflow.json');
+    const file = path.join(process.cwd(), 'templates', 'article-summary', 'workflow.json');
     const workflow = WorkflowDocumentSchema.parse(JSON.parse(await readFile(file, 'utf8')));
     const issues = validateGraph(workflow.graph);
     expect(hasBlockingIssues(issues), JSON.stringify(issues)).toBe(false);

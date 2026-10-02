@@ -18,5 +18,5 @@ export type TemplateDescriptor = {
  * or removed by moving one folder — never by editing this list.
  */
 export const TEMPLATES: TemplateDescriptor[] = [
-  { id: 'article-summary-vi', group: 'video', tagline: {"vi":"Biến một đường link thành video tóm tắt có giọng đọc, bám sát nguồn.","en":"Turn an article link into a narrated summary video grounded in the source."}, tags: ["9:16","30–45s",{"vi":"Giọng đọc tiếng Việt","en":"Vietnamese voiceover"}], workflow: 'workflow.json', thumbnail: 'thumbnail.svg' },
+  { id: 'article-summary', group: 'video', tagline: {"en":"Turn an article link into a narrated summary video grounded in the source.","vi":"Biến một đường link thành video tóm tắt có giọng đọc, bám sát nguồn."}, tags: ["9:16","30–45s",{"en":"English narration","vi":"Giọng đọc tiếng Anh"}], workflow: 'workflow.json', thumbnail: 'thumbnail.png' },
 ];
