@@ -831,6 +831,11 @@ body {
   overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  /* A row is as tall as the tiles in it. `auto` does not manage that here: a tile carries
+     `overflow: hidden`, which keeps its block size out of the row's automatic size — the row came out
+     291px against a 483px card, so each row of tiles was drawn on top of the row above it. Measured in
+     the running app: rows 290.875px with `auto`, 482.547px/510.547px with `max-content`, gap 12px. */
+  grid-auto-rows: max-content;
   gap: 12px;
   align-content: start;
 }
@@ -868,14 +873,15 @@ body {
 .nc-template-card:disabled {
   cursor: wait;
 }
-/* One tile shape for every template, whatever shape its still is: a square, the still whole inside it. */
+/* One tile shape for every template, whatever shape its still is: a square, the still whole inside it.
+   The square is drawn with padding against the width, not `aspect-ratio`, so its height is definite
+   whatever the layout around it does; the still is centred inside it and never cropped. */
 .nc-template-art {
+  display: block;
   position: relative;
   flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 1 / 1;
+  height: 0;
+  padding-top: 100%;
   overflow: hidden;
   background: #0f1b2c;
 }
@@ -887,7 +893,9 @@ body {
   filter: blur(18px) brightness(0.5);
 }
 .nc-template-art img {
-  position: relative;
+  position: absolute;
+  inset: 0;
+  margin: auto;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
