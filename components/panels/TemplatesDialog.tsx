@@ -49,7 +49,7 @@ export const TemplatesDialog: React.FC = () => {
   });
 
   return (
-    <Dialog width="min(90vw, 1100px)" height="min(80vh, 520px)" icon={<Icon.layers />} title={t('templates.title')} onClose={() => setTemplatesOpen(false)}>
+    <Dialog width="min(90vw, 1100px)" height="min(80vh, 720px)" icon={<Icon.layers />} title={t('templates.title')} onClose={() => setTemplatesOpen(false)}>
       <div className="nc-template-browser">
         <nav className="nc-template-nav" aria-label={t('templates.categories')}>
           <button className={category === 'all' ? 'on' : ''} onClick={() => setCategory('all')}>{t('templates.all')}</button>
@@ -61,19 +61,24 @@ export const TemplatesDialog: React.FC = () => {
             <input className="nc-input" autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('templates.search')} aria-label={t('templates.search')} />
           </div>
           {error && <div className="nc-template-error" role="alert">{t('templates.error', { why: error })}</div>}
-          <div className={`nc-template-grid ${visible?.length === 1 ? 'featured' : ''}`} data-testid="template-gallery">
+          <div className="nc-template-grid" data-testid="template-gallery">
             {visible === null && <div className="nc-template-empty">{t('templates.loading')}</div>}
             {visible?.length === 0 && <div className="nc-template-empty">{t('templates.empty')}</div>}
             {visible?.map((item) => (
               <button className="nc-template-card" key={item.id} disabled={loadingId !== null} onClick={() => void open(item)}>
-                <div className="nc-template-art" style={{ backgroundImage: `url(${item.thumbnail})` }} aria-hidden="true" />
-                <div className="nc-template-copy">
+                {/* One tile shape for every template: a square, holding a still of any aspect ratio —
+                    9:16, 16:9 or square — fitted whole over a blurred fill of itself, never cropped. */}
+                <span className="nc-template-art">
+                  <span className="nc-template-art-fill" style={{ backgroundImage: `url(${item.thumbnail})` }} aria-hidden="true" />
+                  <img src={item.thumbnail} alt="" />
+                </span>
+                <span className="nc-template-copy">
                   <span className="nc-template-eyebrow"><Icon.film size={13} />{t('templates.ready')}</span>
                   <strong>{localized(item.name, locale, item.id)}</strong>
                   <span className="nc-template-tagline">{localized(item.tagline, locale)}</span>
                   <span className="nc-template-tags">{item.tags.map((tag, index) => <span key={index}>{localized(tag, locale)}</span>)}</span>
                   <span className="nc-template-action">{t('templates.open')} <span aria-hidden="true">→</span></span>
-                </div>
+                </span>
               </button>
             ))}
           </div>
