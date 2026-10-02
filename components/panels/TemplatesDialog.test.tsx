@@ -22,7 +22,7 @@ describe('workflow template gallery', () => {
         name: 'Sample',
         description: 'Example',
         category: 'template',
-        group: 'video',
+        group: 'link',
         updatedAt: '',
         nodes: 1,
         thumbnail: '/api/templates/article-summary/thumbnail',
@@ -57,7 +57,7 @@ describe('workflow template gallery', () => {
         name: 'Sample',
         description: 'Example',
         category: 'template',
-        group: 'video',
+        group: 'link',
         updatedAt: '',
         nodes: 1,
         // A portrait still: the case that used to be cropped into a wide, single featured row.
@@ -74,6 +74,10 @@ describe('workflow template gallery', () => {
     );
     const gallery = screen.getByTestId('template-gallery');
     expect(gallery.className).not.toContain('featured');
+    // Grouped by what a person brings, not by the medium: every template here is a video.
+    expect(screen.getByRole('button', { name: 'templates.group.link' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'templates.group.idea' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'templates.group.recording' })).not.toBeNull();
     const card = (await screen.findByRole('button', { name: /Sample/ })).closest('.nc-template-card');
     expect(card).not.toBeNull();
     expect(card!.querySelector('.nc-template-art')).not.toBeNull();

@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { LocalizedText } from '@/core/engine/document';
-import { TEMPLATES } from '@/templates/.generated/descriptors';
+import { TEMPLATES, type TemplateGroup } from '@/templates/.generated/descriptors';
 import { workflowStore, type WorkflowFile, type WorkflowSummary } from './workflows';
 
 export type TemplateSummary = WorkflowSummary & {
-  group: 'video';
+  group: TemplateGroup;
   thumbnail: string;
   tagline: LocalizedText;
   tags: LocalizedText[];

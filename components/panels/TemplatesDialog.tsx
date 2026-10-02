@@ -3,8 +3,16 @@ import React from 'react';
 import { useStudio } from '@/store/useStudio';
 import { localized } from '@/core/engine/document';
 import { templatesApi, type TemplateSummary } from '@/lib/workflows.client';
+import type { TemplateGroup } from '@/templates/.generated/descriptors';
 import { Icon } from '@/capsules/sdk/icons';
 import { Dialog, useT } from '@/capsules/sdk/ui';
+
+/** The three places a template can start from, in the order the gallery shows them. */
+const GROUPS: { id: TemplateGroup; label: string }[] = [
+  { id: 'link', label: 'templates.group.link' },
+  { id: 'idea', label: 'templates.group.idea' },
+  { id: 'recording', label: 'templates.group.recording' },
+];
 
 /** Browse shipped workflow templates in a modal; selecting a card opens an independent draft. */
 export const TemplatesDialog: React.FC = () => {
@@ -14,7 +22,7 @@ export const TemplatesDialog: React.FC = () => {
   const createFromTemplate = useStudio((state) => state.createFromTemplate);
   const [templates, setTemplates] = React.useState<TemplateSummary[] | null>(null);
   const [query, setQuery] = React.useState('');
-  const [category, setCategory] = React.useState<'all' | 'video'>('all');
+  const [category, setCategory] = React.useState<'all' | TemplateGroup>('all');
   const [loadingId, setLoadingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -54,7 +62,7 @@ export const TemplatesDialog: React.FC = () => {
   };
 
   const visible = templates?.filter((item) => {
-    if (category === 'video' && item.group !== 'video') return false;
+    if (category !== 'all' && item.group !== category) return false;
     const text = `${localized(item.name, locale, item.id)} ${localized(item.description, locale)}`.toLocaleLowerCase();
     return text.includes(query.trim().toLocaleLowerCase());
   });
@@ -66,13 +74,15 @@ export const TemplatesDialog: React.FC = () => {
           <button className={category === 'all' ? 'on' : ''} onClick={() => setCategory('all')}>
             {t('templates.all')}
           </button>
-          <button className={category === 'video' ? 'on' : ''} onClick={() => setCategory('video')}>
-            {t('templates.video')}
-          </button>
+          {GROUPS.map((group) => (
+            <button key={group.id} className={category === group.id ? 'on' : ''} onClick={() => setCategory(group.id)}>
+              {t(group.label)}
+            </button>
+          ))}
         </nav>
         <div className="nc-template-main">
           <div className="nc-template-toolbar">
-            <strong>{t(category === 'all' ? 'templates.all' : 'templates.video')}</strong>
+            <strong>{t(category === 'all' ? 'templates.all' : GROUPS.find((group) => group.id === category)!.label)}</strong>
             <input className="nc-input" autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('templates.search')} aria-label={t('templates.search')} />
           </div>
           {error && (

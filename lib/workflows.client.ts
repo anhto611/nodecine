@@ -1,5 +1,6 @@
 'use client';
 import type { LocalizedText, WorkflowDocument } from '@/core/engine/document';
+import type { TemplateGroup } from '@/templates/.generated/descriptors';
 
 /** The browser's side of the workflow files (server/workflows.ts). Thin: every function is one request. */
 
@@ -11,7 +12,7 @@ export interface WorkflowSummary {
   updatedAt: string;
   nodes: number;
 }
-export type TemplateSummary = WorkflowSummary & { group: 'video'; thumbnail: string; tagline: LocalizedText; tags: LocalizedText[] };
+export type TemplateSummary = WorkflowSummary & { group: TemplateGroup; thumbnail: string; tagline: LocalizedText; tags: LocalizedText[] };
 
 /** A file that had to be brought forward reports what changed, so the person is told, not surprised. */
 export type WorkflowRead = WorkflowDocument & { migrations?: { code: string; message: string; nodeId?: string }[] };

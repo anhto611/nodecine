@@ -20,7 +20,7 @@ describe('template storage', () => {
 
   it('lists the bundled summary template without putting it among personal workflows', async () => {
     const templates = await listTemplates(registerNodes);
-    expect(templates).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'article-summary', group: 'video', nodes: 8, thumbnail: '/api/templates/article-summary/thumbnail' })]));
+    expect(templates).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'article-summary', group: 'link', nodes: 8, thumbnail: '/api/templates/article-summary/thumbnail' })]));
     const cover = await readFile(path.join(process.cwd(), 'templates', 'article-summary', 'thumbnail.png'));
     expect(cover.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
     expect((await readTemplate('article-summary', registerNodes))?.graph.nodes).toHaveLength(8);
