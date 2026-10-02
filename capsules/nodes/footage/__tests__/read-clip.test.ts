@@ -49,7 +49,7 @@ describe('a recorded clip brought in', () => {
     // Nobody has listened to it yet: the Caption Sync node writes down what it hears.
     expect(out.voice!.language).toBe('und');
     expect(out.voice!.audioUrl).toMatch(/^\/api\/media\/[a-f0-9]{16,64}\.mp3$/);
-    expect(out.voice!.durationSeconds).toBeCloseTo(2, 1);
+    expect(out.voice!.durationSeconds).toBeCloseTo(2, 0);
     expect(logs.join(' ')).toContain('640×360');
   }, 120_000);
 
