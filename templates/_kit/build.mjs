@@ -19,6 +19,8 @@ import { readFile, writeFile } from 'node:fs/promises';
  *     frame — a dark scene came back white, with near-white type invisible on it. An element inside
  *     the root travels with the scene wherever the runtime puts it. A template paints that class in
  *     its own CSS, because the colours are the design's.
+ *   - `data-composition-id` lives on the root element alone. On `<html>` as well, the engine reads two
+ *     compositions in one file — and the first of them carries no `data-duration` to take a length from.
  */
 
 /**
@@ -38,10 +40,29 @@ export async function editComposition(workflowUrl, edit) {
  * One scene as a block: the document shell, the variables it declares, the backdrop element, and the
  * timeline the engine seeks. The text keys are filled from the values the engine handed the page, and
  * long type is shrunk until it fits the box it was given.
+ *
+ * `loadGsap` is for a kit whose own `index.html` is the film — a template with no Assemble node, where
+ * nothing writes an entry for it. A block leaves it off: the host page carries GSAP. And `template`
+ * says whether the scene is wrapped in `<template>`, which is what a *sub-composition* is: the film's
+ * own entry is a page, and a page inside `<template>` never runs.
  */
-export function sceneBlock({ id, role, description, css, markup, motion, variables, textKeys = ['title', 'detail', 'source'], width = 1080, height = 1920, seconds = 4 }) {
+export function sceneBlock({
+  id,
+  role,
+  description,
+  css,
+  markup,
+  motion,
+  variables,
+  textKeys = ['title', 'detail', 'source'],
+  width = 1080,
+  height = 1920,
+  seconds = 4,
+  loadGsap = false,
+  template = true,
+}) {
   const defaults = Object.fromEntries(variables.map((variable) => [variable.id, variable.default]));
   const fill = textKeys.map((key) => `'${key}'`).join(',');
   const setup = `var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});`;
-  return `<!doctype html>\n<html lang="en" data-composition-id="${id}" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables='${JSON.stringify(variables)}'>\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body><template>\n<style>${css}</style>\n<div id="root" data-composition-id="${id}" data-duration="${seconds}" data-width="${width}" data-height="${height}"><div class="nc-backdrop"></div>${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${setup}\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||${seconds});\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${id}']=tl;\n})();</script>\n</template></body></html>`;
+  return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables='${JSON.stringify(variables)}'>\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body>${template ? '<template>' : ''}${loadGsap ? '<script src="gsap.min.js"></script>' : ''}\n<style>${css}</style>\n<div id="root" data-composition-id="${id}" data-duration="${seconds}" data-width="${width}" data-height="${height}"><div class="nc-backdrop"></div>${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${setup}\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||${seconds});\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${id}']=tl;\n})();</script>\n${template ? '</template>' : ''}</body></html>`;
 }

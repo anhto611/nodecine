@@ -2,7 +2,7 @@ import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promise
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readBlockCatalog } from '@/contracts/storyboard/blocks';
+import { readBlock, readBlockCatalog } from '@/contracts/storyboard/blocks';
 import type { Composition } from '@/contracts/types/composition';
 import { writeProject } from '../project.server';
 
@@ -48,19 +48,24 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
         const files = workflow.graph.nodes.find((node) => node.params?.files)?.params?.files;
         if (!files) throw new Error(`templates/${folder}/workflow.json: no node carries a files map`);
 
+        // A template whose own `index.html` is the film is shown as it is; one that waits for Assemble
+        // (its entry is empty) is shown through its first block instead.
         const blocks = readBlockCatalog(files);
         const block = blocks.find((candidate) => candidate.role === 'hook') ?? blocks[0];
-        if (!block) throw new Error(`templates/${folder}: the composition has no blocks`);
-        const entry = files[`compositions/${block.name}.html`];
-        if (!entry) throw new Error(`templates/${folder}: no file for block "${block.name}"`);
+        const film = (files['index.html'] ?? '').trim();
+        if (!film && !block) throw new Error(`templates/${folder}: the composition has no blocks`);
+        const scene = film ? readBlock('film', film) : block!;
+        const entry = film || files[`compositions/${scene.name}.html`];
+        if (!entry) throw new Error(`templates/${folder}: no file for block "${scene.name}"`);
 
-        const seconds = Number(block.variables.find((variable) => variable.id === 'seconds')?.default ?? 4);
+        const seconds = Number(scene.variables.find((variable) => variable.id === 'seconds')?.default ?? 4);
         // What the card shows: the sample the author wrote, and the default wherever there is none.
-        const values = Object.fromEntries(block.variables.map((variable) => [variable.id, (variable as unknown as { sample?: unknown }).sample ?? variable.default]));
+        const values = Object.fromEntries(scene.variables.map((variable) => [variable.id, (variable as unknown as { sample?: unknown }).sample ?? variable.default]));
         // A block keeps its scene in `<template>`, which the runtime instantiates only for a
         // sub-composition of a host page. Standalone, the scene is the page — so the template comes
-        // off, GSAP is loaded the way Assemble loads it, and the values arrive before any script.
-        const page = entry.replace(/<template>([\s\S]*?)<\/template>/i, '$1').replace(/<head([^>]*)>/i, '<head$1><script src="gsap.min.js"></script>');
+        // off, and GSAP is loaded where the entry did not already load it itself.
+        const unwrapped = entry.replace(/<template>([\s\S]*?)<\/template>/i, '$1');
+        const page = unwrapped.includes('gsap.min.js') ? unwrapped : unwrapped.replace(/<head([^>]*)>/i, '<head$1><script src="gsap.min.js"></script>');
         const composition: Composition = {
           engine: 'hyperframes',
           width: WIDTH,
@@ -69,7 +74,7 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
           files: { 'index.html': page },
           media: {},
           // The declaration travels in the engine's own shape; NodeCine's two extra keys stay behind.
-          variables: block.variables.map((variable) => ({ id: variable.id, type: variable.type, label: variable.label, default: variable.default })),
+          variables: scene.variables.map((variable) => ({ id: variable.id, type: variable.type, label: variable.label, default: variable.default })),
           values,
         };
 
@@ -89,7 +94,7 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
           const output = path.join(templatesDir, folder, 'thumbnail.png');
           await writeFile(output, buffer);
           const bytes = (await stat(output)).size;
-          console.log(`THUMBNAIL templates/${folder}/thumbnail.png · block=${block.name} · at=${at.toFixed(2)}s · ${bytes} bytes · warnings=${session.warnings.length}`);
+          console.log(`THUMBNAIL templates/${folder}/thumbnail.png · scene=${scene.name} · at=${at.toFixed(2)}s · ${bytes} bytes · warnings=${session.warnings.length}`);
           expect(bytes).toBeGreaterThan(4_000);
         } finally {
           await closeCaptureSession(session);

@@ -1,0 +1,9 @@
+{
+  "id": "quote-cards",
+  "group": "idea",
+  "tagline": {
+    "en": "Type a quote and who said it; the card animates itself. No model, no voice.",
+    "vi": "Gõ câu trích dẫn và người nói; tấm thẻ tự dựng động. Không cần model, không cần giọng đọc."
+  },
+  "tags": ["9:16", "~12s", { "en": "No model needed", "vi": "Không cần model" }]
+}
