@@ -36,7 +36,7 @@ const scenes = {
       '.book-line{position:absolute;left:96px;right:96px;bottom:300px;display:flex;align-items:center;gap:18px;color:#d8b26a;font-size:23px;font-weight:800;letter-spacing:.08em}' +
       '.book-line .source{flex:1;text-align:right;color:#e6ddc9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     markup: `<div class="mast"><span class="brand-mark">N<span></span></span><span>BOOK SUMMARY</span><span class="edition">01 / OPENING</span></div>
-      <div class="paper"><div class="paper-top"><span>BOOK SUMMARY</span><span>01 / OPENING</span></div><h1 class="title"></h1><div class="rule"></div><p class="detail"></p></div>
+      <div class="paper"><div class="paper-top"><span>THE PROMISE</span><span>01 / OPENING</span></div><h1 class="title"></h1><div class="rule"></div><p class="detail"></p></div>
       <div class="book-line"><span>THE BOOK</span><span class="source"></span></div>
       <div class="foot"><span>NODECINE / BOOK SUMMARY</span><span class="foot-bars"><b></b><b></b><b></b><b></b><b></b></span></div>`,
     motion: `tl.fromTo(q('.paper'),{y:110,opacity:0},{y:0,opacity:1,duration:.9,ease:'power3.out'},0)
