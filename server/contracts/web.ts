@@ -94,15 +94,35 @@ export function pageText(html: string, url: string): { url: string; title: strin
   return { url, title, text };
 }
 
+/**
+ * Fetches a public web resource, following redirects manually to ensure every hop
+ * is strictly validated against private/local addresses (preventing SSRF).
+ */
+async function fetchPublic(initialLink: string, init: RequestInit, maxRedirects = 5): Promise<{ res: Response; finalUrl: string }> {
+  let currentUrl = publicUrl(initialLink);
+  for (let i = 0; i <= maxRedirects; i++) {
+    const res = await fetch(currentUrl, { ...init, redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location) return { res, finalUrl: currentUrl.toString() };
+      currentUrl = publicUrl(location, currentUrl.toString());
+      continue;
+    }
+    return { res, finalUrl: currentUrl.toString() };
+  }
+  throw new Error('too many redirects');
+}
+
 export async function readPage(link: string): Promise<LinkedPage> {
-  const url = publicUrl(link);
-  const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)', 'accept-language': 'vi,en;q=0.8' }, redirect: 'follow', signal: AbortSignal.timeout(15_000) });
+  const { res, finalUrl } = await fetchPublic(link, {
+    headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)', 'accept-language': 'vi,en;q=0.8' },
+    signal: AbortSignal.timeout(15_000),
+  });
   if (!res.ok) throw new Error(`the page answered ${res.status}`);
   const type = res.headers.get('content-type') ?? '';
   if (!/html|text/.test(type)) throw new Error(`the page is ${type || 'not text'}`);
   const html = new TextDecoder().decode((await res.arrayBuffer()).slice(0, MAX_PAGE_BYTES));
-  const at = res.url || url.toString();
-  return { ...pageText(html, at), pictures: pagePictures(html, at) };
+  return { ...pageText(html, finalUrl), pictures: pagePictures(html, finalUrl) };
 }
 
 /** A picture's pixel size, read by ffprobe; undefined when it cannot be read. */
@@ -119,8 +139,10 @@ async function sizeOf(file: string): Promise<{ width: number; height: number } |
  * the same picture found twice is one file and a film never depends on someone else's server.
  */
 export async function fetchPicture(link: string): Promise<FetchedPicture> {
-  const url = publicUrl(link);
-  const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)' }, redirect: 'follow', signal: AbortSignal.timeout(20_000) });
+  const { res } = await fetchPublic(link, {
+    headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)' },
+    signal: AbortSignal.timeout(20_000),
+  });
   if (!res.ok) throw new Error(`the picture answered ${res.status}`);
   const ext = PICTURE_TYPES[(res.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase()];
   if (!ext) throw new Error(`not a picture a film can use (${res.headers.get('content-type') || 'no type'})`);

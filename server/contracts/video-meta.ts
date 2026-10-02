@@ -1,4 +1,4 @@
-import { rename, stat } from 'node:fs/promises';
+import { rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { exec } from '@/server/exec';
 import { ffmpegBin, ffprobeBin } from './audio';
 
@@ -15,23 +15,37 @@ export async function embedWorkflow(mp4Path: string, workflow: unknown, signal?:
   const bin = await ffmpegBin();
   if (!bin) return false;
   const tmp = `${mp4Path}.meta.tmp.mp4`;
+  const metaTxt = `${mp4Path}.meta.tmp.txt`;
   const json = JSON.stringify(workflow);
-  const r = await exec(bin, {
-    args: ['-y', '-v', 'error', '-i', mp4Path, '-c', 'copy', '-map', '0', '-movflags', 'use_metadata_tags+faststart', '-metadata', `${WORKFLOW_TAG}=${json}`, '-f', 'mp4', tmp],
-    timeoutMs: 120_000,
-    signal,
-  });
-  if (r.code !== 0) throw new Error(`ffmpeg could not tag the video: ${r.stderr.trim()}`);
-  const s = await stat(tmp);
-  if (s.size === 0) throw new Error('ffmpeg wrote an empty file');
-  await rename(tmp, mp4Path);
-  return true;
+  // Escaping for FFmpeg ffmetadata format (RFC / FFmpeg spec: = ; # \ and \n must be escaped with \)
+  const escaped = json.replace(/([=;#\\\n])/g, '\\$1');
+  await writeFile(metaTxt, `;FFMETADATA1\n${WORKFLOW_TAG}=${escaped}\n`, 'utf8');
+
+  try {
+    const r = await exec(bin, {
+      args: ['-y', '-v', 'error', '-i', mp4Path, '-i', metaTxt, '-map_metadata', '1', '-c', 'copy', '-map', '0', '-movflags', 'use_metadata_tags+faststart', '-f', 'mp4', tmp],
+      timeoutMs: 120_000,
+      signal,
+    });
+    if (r.code !== 0) throw new Error(`ffmpeg could not tag the video: ${r.stderr.trim()}`);
+    const s = await stat(tmp);
+    if (s.size === 0) throw new Error('ffmpeg wrote an empty file');
+    await rename(tmp, mp4Path);
+    return true;
+  } finally {
+    await unlink(metaTxt).catch(() => {});
+  }
 }
 
 export async function readWorkflowTag(mp4Path: string, signal?: AbortSignal): Promise<unknown | null> {
   const bin = await ffprobeBin();
   if (!bin) throw Object.assign(new Error('ffprobe was not found'), { code: 'PROVIDER_NOT_INSTALLED' });
-  const r = await exec(bin, { args: ['-v', 'error', '-show_entries', `format_tags=${WORKFLOW_TAG}`, '-of', 'json', mp4Path], timeoutMs: 30_000, signal });
+  const r = await exec(bin, {
+    args: ['-v', 'error', '-show_entries', `format_tags=${WORKFLOW_TAG}`, '-of', 'json', mp4Path],
+    timeoutMs: 30_000,
+    signal,
+    maxOutput: 10 * 1024 * 1024,
+  });
   if (r.code !== 0) throw new Error(`ffprobe failed: ${r.stderr.trim()}`);
   const parsed = JSON.parse(r.stdout) as { format?: { tags?: Record<string, string> } };
   const raw = parsed.format?.tags?.[WORKFLOW_TAG];

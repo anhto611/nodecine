@@ -76,12 +76,12 @@ export function exec(bin: string, opts: ExecOptions = {}): Promise<ExecResult> {
   });
 }
 
-/** Locate a binary: explicit override env var, then PATH via `which`. */
+/** Locate a binary: explicit override env var, then the platform's PATH lookup. */
 export async function findBinary(name: string, overrideEnv?: string): Promise<string | null> {
   const override = overrideEnv ? process.env[overrideEnv] : undefined;
   if (override) return override;
-  const r = await exec('/usr/bin/which', { args: [name], timeoutMs: 3000 }).catch(() => null);
+  const r = await exec(process.platform === 'win32' ? 'where.exe' : '/usr/bin/which', { args: [name], timeoutMs: 3000 }).catch(() => null);
   if (!r || r.code !== 0) return null;
-  const p = r.stdout.trim().split('\n')[0];
+  const p = r.stdout.trim().split(/\r?\n/)[0];
   return p || null;
 }

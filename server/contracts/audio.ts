@@ -11,7 +11,7 @@ export async function ffmpegBin(): Promise<string | null> {
 
 export async function ffprobeBin(): Promise<string | null> {
   const override = process.env.NODECINE_FFMPEG_BIN;
-  if (override) return override.replace(/ffmpeg$/, 'ffprobe');
+  if (override) return override.replace(/ffmpeg(\.exe)?$/i, 'ffprobe$1');
   return findBinary('ffprobe');
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { assetPath, assetUrl, ensureAssetsDir, fileNameFromAssetUrl } from '@/server/paths';
 import { clipAudio, readClip, webClip } from '@/server/contracts/video';
@@ -9,7 +10,7 @@ import { footage } from '../node';
 
 /** A real two-second clip, made here, so the test needs nothing from outside. */
 function makeClip(): string {
-  const dir = fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', 'nodecine-clip-'));
+  const dir = fs.mkdtempSync(path.join(tmpdir(), 'nodecine-clip-'));
   const file = path.join(dir, 'spoken.mp4');
   execFileSync('ffmpeg', ['-v', 'error', '-y',
     '-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=25:duration=2',
@@ -64,7 +65,7 @@ describe('a recorded clip brought in', () => {
   }, 120_000);
 
   it('measures CSV keyframes and reports rotated dimensions after conversion', async () => {
-    const dir = fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', 'nodecine-rotation-'));
+    const dir = fs.mkdtempSync(path.join(tmpdir(), 'nodecine-rotation-'));
     try {
       const original = path.join(dir, 'original.mp4');
       const rotated = path.join(dir, 'rotated.mp4');

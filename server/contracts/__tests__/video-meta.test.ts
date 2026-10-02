@@ -25,5 +25,10 @@ describe('workflow tag in an MP4', () => {
     const workflow = { name: 'Tệp thử', graph: { nodes: [], edges: [] }, note: 'quotes " and unicode ✓' };
     expect(await embedWorkflow(file, workflow)).toBe(true);
     expect(await readWorkflowTag(file)).toEqual(workflow);
+
+    // Large workflow (> 40KB) that would exceed Windows CreateProcess 32KB argument limit
+    const largeWorkflow = { name: 'Large', payload: 'a'.repeat(45_000) };
+    expect(await embedWorkflow(file, largeWorkflow)).toBe(true);
+    expect(await readWorkflowTag(file)).toEqual(largeWorkflow);
   }, 60_000);
 });

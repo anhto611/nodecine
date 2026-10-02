@@ -24,6 +24,9 @@ for (let i = 2; i < process.argv.length; i += 2) args.set(process.argv[i].replac
 const clip = args.get('clip'), out = args.get('out'), model = args.get('model');
 const W = Number(args.get('width')), H = Number(args.get('height')), fps = Number(args.get('fps')) || 30;
 const ffmpeg = args.get('ffmpeg') || 'ffmpeg';
+const isNodeScript = ffmpeg.endsWith('.js') || ffmpeg.endsWith('.mjs') || ffmpeg.endsWith('.cjs');
+const ffmpegBin = isNodeScript ? process.execPath : ffmpeg;
+const ffmpegPrefix = isNodeScript ? [ffmpeg] : [];
 if (!clip || !out || !model || !W || !H) {
   process.stderr.write('usage: matte.mjs --clip F --out F --model F --width N --height N [--fps N] [--ffmpeg PATH]\n');
   process.exit(2);
@@ -90,14 +93,14 @@ function cutOut(frame) {
   });
 }
 
-const decode = spawn(ffmpeg, ['-v', 'error', '-i', clip,
+const decode = spawn(ffmpegBin, [...ffmpegPrefix, '-v', 'error', '-i', clip,
   '-vf', `fps=${fps},scale=${W}:${H},format=rgba`, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-']);
 // Listen immediately: the decoder can exit while the model is still processing its last frame.
 const decoded = new Promise((done) => {
   decode.once('close', done);
   decode.once('error', () => done(-1));
 });
-const encode = spawn(ffmpeg, ['-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(fps), '-i', '-',
+const encode = spawn(ffmpegBin, [...ffmpegPrefix, '-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(fps), '-i', '-',
   '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-auto-alt-ref', '0', '-b:v', '0', '-crf', '34',
   // A keyframe a second. A film seeks into the cut-out at every scene exactly as it does the
   // recording, and a layer that stalls while the one under it does not is worse than both stalling.

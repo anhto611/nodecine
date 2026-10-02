@@ -20,15 +20,15 @@ describe('matte decoder completion', () => {
           }) },
         };
       `));
-      const ffmpeg = path.join(dir, 'ffmpeg');
-      writeFileSync(ffmpeg, `#!${process.execPath}
+      const ffmpeg = path.join(dir, 'ffmpeg.mjs');
+      writeFileSync(ffmpeg, `
         if (process.argv.includes('-vf')) {
           process.stdout.write(Buffer.alloc(16), () => process.exit(${exitCode}));
         } else {
           process.stdin.resume();
           process.stdin.on('end', () => process.exit(0));
         }
-      `, { mode: 0o755 });
+      `);
       const result = spawnSync(process.execPath, [path.join(dir, 'matte.mjs'),
         '--clip', 'clip', '--out', 'out.webm', '--model', 'model',
         '--width', '2', '--height', '2', '--ffmpeg', ffmpeg], { encoding: 'utf8', timeout: 10_000 });

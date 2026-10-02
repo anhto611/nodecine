@@ -26,7 +26,11 @@ const INSTALL_HINT = 'pip install piper-tts, then download a voice from rhasspy/
 
 /** Where voice models live: the override first, then Piper's own default location. */
 export function voicesDir(): string {
-  return process.env.NODECINE_PIPER_VOICES?.trim() || path.join(os.homedir(), '.local', 'share', 'piper-voices');
+  if (process.env.NODECINE_PIPER_VOICES?.trim()) return process.env.NODECINE_PIPER_VOICES.trim();
+  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
+    return path.join(process.env.LOCALAPPDATA, 'piper-voices');
+  }
+  return path.join(os.homedir(), '.local', 'share', 'piper-voices');
 }
 
 /**
