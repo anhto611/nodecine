@@ -1,7 +1,7 @@
 # LLM Wiki maintenance
 
 This directory is a Markdown knowledge base. Apply these rules when working here.
-Write explanations and wiki content in Vietnamese unless the user requests otherwise.
+Write explanations and wiki content in English unless the user requests otherwise.
 
 ## Layout
 

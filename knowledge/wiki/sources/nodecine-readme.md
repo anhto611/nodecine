@@ -1,33 +1,33 @@
 ---
-title: "Nguồn: README NodeCine"
+title: "Source: NodeCine README"
 type: source
 created: 2026-10-02
 updated: 2026-10-02
 ---
 
-# Nguồn: README NodeCine
+# Source: NodeCine README
 
-## Xuất xứ
+## Provenance
 
-Bản chụp [README dự án](../../raw/2026-10-02-nodecine-readme.md) tại ngày 2026-10-02.
-Đây là tài liệu mô tả dự án, không phải kết quả kiểm thử độc lập.
+Snapshot of the [project README](../../raw/2026-10-02-nodecine-readme.md) as of 2026-10-02.
+This is descriptive project documentation, not independent test verification.
 
-## Nội dung
+## Content
 
-- NodeCine là studio video mã nguồn mở, dùng các node để xây dựng workflow. Dự án đang ở giai đoạn alpha. Nguồn: README, phần mở đầu.
-- Yêu cầu Node.js từ 22.12, npm, FFmpeg và ffprobe cho xử lý media. Nguồn: README, Requirements.
-- Có thể mở Studio và dùng composition mẫu mà không cần API key. Nguồn: README, Quick start.
-- Provider mô hình và giọng nói được chọn trong Settings; yêu cầu cài đặt hoặc thông tin đăng nhập tùy provider. Nguồn: README, Providers and optional tools.
-- Dữ liệu mặc định được lưu dưới `.nodecine/`; trạng thái trình duyệt còn dùng local storage. Nguồn: README, Local data.
+- NodeCine is an open-source video studio using nodes to build workflows. The project is in early alpha. Source: README, Overview.
+- Requires Node.js 22.12+, npm, FFmpeg, and ffprobe for media processing. Source: README, Requirements.
+- Studio and the sample composition can be opened without an API key. Source: README, Quick start.
+- Model and voice providers are configured in Settings; requirements or credentials vary by provider. Source: README, Providers and optional tools.
+- Local data is saved under `.nodecine/` by default; browser state also uses local storage. Source: README, Local data.
 
-## Giới hạn và câu hỏi mở
+## Limitations and open questions
 
-README nói Windows chưa được kiểm chứng đầy đủ. Không suy ra mọi provider hay toàn bộ quy trình render đều hoạt động chỉ từ hướng dẫn cài đặt.
+The README notes that Windows support has not been fully verified. Installation instructions alone do not imply all providers or complete render pipelines work out-of-the-box.
 
-## Nguồn
+## Sources
 
-- [README nguyên bản tại thời điểm nhập](../../raw/2026-10-02-nodecine-readme.md).
+- [Original README snapshot at time of ingestion](../../raw/2026-10-02-nodecine-readme.md).
 
-## Liên quan
+## Related
 
-- [Chạy NodeCine trên Windows](../concepts/chay-nodecine-windows.md).
+- [Running NodeCine on Windows](../concepts/running-nodecine-on-windows.md).

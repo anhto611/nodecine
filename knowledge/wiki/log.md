@@ -1,13 +1,19 @@
-# Lịch sử wiki
+# Wiki Log
 
-## [2026-10-02] setup | Khởi tạo LLM Wiki
+## [2026-10-02] setup | Initialize LLM Wiki
 
-- Tạo cấu trúc nguồn gốc, wiki, mẫu trang và quy tắc cho agent.
-- Tạo [mục lục](index.md) và [hướng dẫn](../README.md).
-- Chưa nhập tài liệu; chưa có kết luận chuyên môn trong kho kiến thức.
+- Created structure for raw sources, wiki, templates, and agent guidelines.
+- Created [index](index.md) and [guide](../README.md).
+- No documents ingested yet; no domain-specific findings in knowledge base.
 
-## [2026-10-02] ingest | README NodeCine
+## [2026-10-02] ingest | NodeCine README
 
-- Lưu bản chụp README trong `raw/`, giữ nguyên nội dung tại thời điểm nhập.
-- Tạo [trang nguồn](sources/nodecine-readme.md) và [hướng dẫn Windows](concepts/chay-nodecine-windows.md).
-- Cập nhật [mục lục](index.md); ghi rõ giới hạn giữa tài liệu và kết quả kiểm thử.
+- Archived README snapshot in `raw/`, preserving content at ingestion time.
+- Created [source page](sources/nodecine-readme.md) and [Windows guide](concepts/running-nodecine-on-windows.md).
+- Updated [index](index.md); distinguished documented claims from runtime test results.
+
+## [2026-10-02] maintenance | Switch knowledge base language to English
+
+- Updated [AGENTS.md](../AGENTS.md) and [README](../README.md) to English.
+- Renamed `concepts/chay-nodecine-windows.md` to [running-nodecine-on-windows.md](concepts/running-nodecine-on-windows.md) and translated content.
+- Translated [source summary](sources/nodecine-readme.md), [index](index.md), templates, and raw guide to English.

@@ -1,24 +1,24 @@
 ---
-title: "Tên trang"
+title: "Page Title"
 type: concept
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
 
-# Tên trang
+# Page Title
 
-## Nội dung
+## Content
 
-Các nhận định chính, có dẫn nguồn ngay tại nhận định.
+Key claims with citations attached directly to each claim.
 
-## Giới hạn và câu hỏi mở
+## Limitations and open questions
 
-Phân biệt nội dung đã được nguồn xác nhận với suy luận và điều chưa biết.
+Distinguish verified source evidence from inference and unknowns.
 
-## Nguồn
+## Sources
 
-Liên kết tương đối tới tài liệu gốc hoặc trang nguồn; URL và ngày truy cập nếu là nguồn web.
+Relative links to raw documents or source pages; URL and access date for web sources.
 
-## Liên quan
+## Related
 
-Liên kết tới các trang liên quan đã tồn tại.
+Links to existing related pages.

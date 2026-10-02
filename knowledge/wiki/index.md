@@ -1,22 +1,22 @@
-# Mục lục kiến thức
+# Knowledge Index
 
-## Nguồn
+## Sources
 
-- [README NodeCine](sources/nodecine-readme.md): tóm tắt tài liệu dự án, bản chụp 2026-10-02.
+- [NodeCine README](sources/nodecine-readme.md): project documentation summary, snapshot 2026-10-02.
 
-## Khái niệm
+## Concepts
 
-- [Chạy NodeCine trên Windows](concepts/chay-nodecine-windows.md): yêu cầu, lệnh chạy và cấu hình media.
+- [Running NodeCine on Windows](concepts/running-nodecine-on-windows.md): requirements, commands, and media configuration.
 
-## Thực thể
+## Entities
 
-Chưa có trang.
+No pages yet.
 
-## Tổng hợp
+## Syntheses
 
-Chưa có trang.
+No pages yet.
 
-## Quản lý
+## Maintenance
 
-- [Lịch sử](log.md): các lần nhập tài liệu và bảo trì.
-- [Hướng dẫn](../README.md): cách sử dụng kho kiến thức.
+- [Log](log.md): ingestion and maintenance history.
+- [Guide](../README.md): knowledge base usage guide.

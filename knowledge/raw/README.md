@@ -1,7 +1,7 @@
-# Tài liệu đầu vào
+# Raw Source Documents
 
-Đặt tài liệu gốc ở đây rồi yêu cầu agent ingest. Đặt tên có ngày nếu có nhiều phiên bản,
-ví dụ `2026-10-02-project-notes.md`. Có thể tạo thư mục `assets/` cho ảnh và tệp đính kèm.
+Place original documents here, then ask the agent to ingest them. Include dates in filenames if there are multiple revisions,
+e.g. `2026-10-02-project-notes.md`. You can create an `assets/` directory for images and attachments.
 
-Agent giữ nguyên tài liệu gốc và ghi kết quả tổng hợp vào `../wiki/`.
-Không đặt mật khẩu, API key hoặc file `.env` trong kho kiến thức.
+The agent preserves raw documents as-is and writes compiled knowledge to `../wiki/`.
+Do not store credentials, API keys, or `.env` files in this knowledge base.
