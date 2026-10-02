@@ -1,0 +1,9 @@
+{
+  "id": "data-story",
+  "group": "link",
+  "tagline": {
+    "en": "Paste a report or a table; get one claim per scene, each with its number and where it came from.",
+    "vi": "Dán báo cáo hoặc bảng số liệu; mỗi cảnh một nhận định, kèm con số và nguồn của nó."
+  },
+  "tags": ["9:16", "~75s", { "en": "Needs a model and a voice", "vi": "Cần model và giọng đọc" }]
+}
