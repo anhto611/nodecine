@@ -277,3 +277,30 @@ export function sourceLine({ accent = '#ff8f7a', color = '#8b93b8', track = '#2b
     motion: `tl.fromTo(q('.sl'),{opacity:0,y:10},{opacity:1,y:0,duration:.5,ease:'power2.out'},1.05);`,
   };
 }
+
+/** A bar of colour down the edge of the frame, with a soft glow beside it: a poster's spine. */
+export function edgeRule({ accent = '#e0a45c', glow = '#e0a45c33' } = {}) {
+  return {
+    name: 'edge-rule',
+    role: 'effect',
+    description: 'A bar of colour down the edge of the frame, with a soft glow beside it.',
+    css: `.er{position:absolute;inset:0}.er-bar{position:absolute;left:0;top:0;bottom:0;width:18px;background:${accent}}.er-glow{position:absolute;left:18px;top:0;bottom:0;width:96px;background:linear-gradient(90deg,${glow},transparent)}`,
+    markup: `<span class="er"><span class="er-bar"></span><span class="er-glow"></span></span>`,
+    motion: `tl.fromTo(q('.er-bar'),{scaleY:0,transformOrigin:'top center'},{scaleY:1,duration:.9,ease:'power2.out'},0)
+      .fromTo(q('.er-glow'),{opacity:0},{opacity:1,duration:.8,ease:'sine.out'},.3);`,
+  };
+}
+
+/** Who said it, set down the side of the frame like a signature. */
+export function signature({ label = 'SAID BY', accent = '#e0a45c', color = '#e8d6ba' } = {}) {
+  return {
+    name: 'signature',
+    role: 'piece',
+    description: "Who said it, set vertically down the side: reads the scene's own detail.",
+    css: `.sg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:16px}.sg-rule{width:2px;height:70px;background:${accent}}.sg-label{color:${accent};font-size:14px;font-weight:850;letter-spacing:.2em;writing-mode:vertical-rl}.sg-name{color:${color};font-size:30px;font-weight:750;letter-spacing:.02em;writing-mode:vertical-rl;transform:rotate(180deg);max-height:520px;overflow:hidden}`,
+    markup: `<span class="sg"><span class="sg-rule"></span><span class="sg-label">${label}</span><span class="sg-name"></span></span>`,
+    variables: [{ id: 'detail', type: 'string', label: 'Who said it', default: 'Robert Frost', sample: 'Robert Frost', maxLength: 60, required: true }],
+    extraScript: `var nameEl=root.querySelector('.sg-name');if(nameEl)nameEl.textContent=String(v.detail==null?'Robert Frost':v.detail);`,
+    motion: `tl.fromTo(q('.sg'),{opacity:0,y:-24},{opacity:1,y:0,duration:.7,ease:'power2.out'},.5);`,
+  };
+}
