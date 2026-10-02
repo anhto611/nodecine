@@ -52,7 +52,10 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
         // single-scene film that is its own entry — falls back to that entry; a shell page is not a
         // scene, and a still of it would show nothing.
         const blocks = readBlockCatalog(files);
-        const block = blocks.find((candidate) => candidate.role === 'hook') ?? blocks[0];
+        // Naming a block draws that one instead, to a file of its own, for looking at a scene that is
+        // not the card: NODECINE_THUMBNAIL_BLOCK=data-chart.
+        const wanted = process.env.NODECINE_THUMBNAIL_BLOCK;
+        const block = (wanted ? blocks.find((candidate) => candidate.name === wanted) : undefined) ?? blocks.find((candidate) => candidate.role === 'hook') ?? blocks[0];
         const entry = block ? files[`compositions/${block.name}.html`] : (files['index.html'] ?? '');
         if (!entry) throw new Error(`templates/${folder}: no scene to draw a card from`);
         const scene = block ?? readBlock('film', entry);
@@ -95,10 +98,13 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
           await initializeSession(session);
           const at = Math.max(0.2, seconds * AT);
           const { buffer } = await captureFrameToBuffer(session, Math.round(at * FPS.num), at);
-          const output = path.join(templatesDir, folder, 'thumbnail.png');
+          const looking = wanted && scene.name === wanted;
+          const output = path.join(templatesDir, folder, looking ? `thumbnail-${wanted}.png` : 'thumbnail.png');
           await writeFile(output, buffer);
           const bytes = (await stat(output)).size;
-          console.log(`THUMBNAIL templates/${folder}/thumbnail.png · scene=${scene.name} · ${width}x${height} · at=${at.toFixed(2)}s · ${bytes} bytes · warnings=${session.warnings.length}`);
+          console.log(
+            `THUMBNAIL ${path.relative(process.cwd(), output).replace(/\\/g, '/')} · scene=${scene.name} · ${width}x${height} · at=${at.toFixed(2)}s · ${bytes} bytes · warnings=${session.warnings.length}`,
+          );
           expect(bytes).toBeGreaterThan(4_000);
         } finally {
           await closeCaptureSession(session);
