@@ -2,5 +2,6 @@
 .nodecine
 node_modules
 capsules/*/.generated
+templates/.generated
 package-lock.json
 tsconfig.tsbuildinfo

@@ -8,6 +8,7 @@ import { Canvas } from './Canvas';
 import { WorkflowTabs } from './WorkflowTabs';
 import { StatusBar } from './StatusBar';
 import { WorkflowsPanel } from './panels/WorkflowsPanel';
+import { TemplatesDialog } from './panels/TemplatesDialog';
 import { LibraryPanel } from './panels/LibraryPanel';
 import { HistoryPanel } from './panels/HistoryPanel';
 import { LogsPanel } from './panels/LogsPanel';
@@ -22,6 +23,7 @@ export const Studio: React.FC = () => {
   const overlay = useStudio((s) => s.overlay);
   const logsOpen = useStudio((s) => s.logsOpen);
   const settingsOpen = useStudio((s) => s.settingsOpen);
+  const templatesOpen = useStudio((s) => s.templatesOpen);
 
   React.useEffect(() => {
     init();
@@ -43,9 +45,10 @@ export const Studio: React.FC = () => {
       if (mod && e.key.toLowerCase() === 'j') { e.preventDefault(); s.toggleLogs(); return; }
       if (mod && e.key === ',') { e.preventDefault(); s.setSettingsOpen(true); return; }
       if (mod && e.key.toLowerCase() === 'b' && s.selectedNodeId) { e.preventDefault(); s.toggleBypass(s.selectedNodeId); return; }
-      if (e.key === 'Escape') { s.setSettingsOpen(false); s.setOverlay(null); if (s.panel) s.setPanel(s.panel); return; }
+      if (e.key === 'Escape') { s.setSettingsOpen(false); s.setTemplatesOpen(false); s.setOverlay(null); if (s.panel) s.setPanel(s.panel); return; }
       if (inField || mod) return;
       if (e.key.toLowerCase() === 'w') s.setPanel('workflows');
+      if (e.key.toLowerCase() === 't') s.setTemplatesOpen(true);
       if (e.key.toLowerCase() === 'n') s.setPanel('library');
       if (e.key.toLowerCase() === 'h') s.setPanel('history');
     };
@@ -73,6 +76,7 @@ export const Studio: React.FC = () => {
       </div>
       {overlay && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
       {settingsOpen && <SettingsDialog />}
+      {templatesOpen && <TemplatesDialog />}
     </div>
     </StudioNodeHost>
   );

@@ -1,9 +1,10 @@
 'use client';
-import type { WorkflowDocument } from '@/core/engine/document';
+import type { LocalizedText, WorkflowDocument } from '@/core/engine/document';
 
 /** The browser's side of the workflow files (server/workflows.ts). Thin: every function is one request. */
 
 export interface WorkflowSummary { id: string; name: WorkflowDocument['name']; description?: WorkflowDocument['description']; category: string; updatedAt: string; nodes: number }
+export type TemplateSummary = WorkflowSummary & { group: 'video'; thumbnail: string; tagline: LocalizedText; tags: LocalizedText[] };
 
 /** A file that had to be brought forward reports what changed, so the person is told, not surprised. */
 export type WorkflowRead = WorkflowDocument & { migrations?: { code: string; message: string; nodeId?: string }[] };
@@ -27,4 +28,9 @@ export const workflowsApi = {
     form.append('file', file);
     return json<WorkflowDocument>('/api/workflows/from-video', { method: 'POST', body: form });
   },
+};
+
+export const templatesApi = {
+  list: () => json<{ templates: TemplateSummary[] }>('/api/templates').then((response) => response.templates),
+  read: (id: string) => json<WorkflowRead>(`/api/templates/${encodeURIComponent(id)}`),
 };

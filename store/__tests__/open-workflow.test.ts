@@ -96,3 +96,15 @@ describe('saving a workflow', () => {
     expect(useStudio.getState().tabs[0]!.fileId).toBe('mine');
   });
 });
+
+describe('using a template', () => {
+  it('opens an independent draft while keeping its source unchanged', () => {
+    const source = { id: 'sample', name: 'Sample', category: 'template', graph: { nodes: [], edges: [] } };
+    useStudio.getState().createFromTemplate(source);
+    const draft = useStudio.getState().tabs[0]!;
+    expect(draft).toMatchObject({ fileId: null, name: 'Sample', dirty: true });
+    expect(draft.graph).not.toBe(source.graph);
+    expect(draft.graph).toEqual(source.graph);
+  });
+
+});

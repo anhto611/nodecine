@@ -74,8 +74,8 @@ export const WorkflowsPanel: React.FC = () => {
       <div style={{ padding: '6px 12px', fontSize: 'var(--fs-hint)', color: 'var(--tx-3)', borderBottom: '1px solid var(--line)' }}>{t('workflows.where')}</div>
       <div style={{ overflowY: 'auto', flex: 1 }}>
         {files === null && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>…</div>}
-        {files?.length === 0 && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>{t('workflows.empty')}</div>}
-        {files?.map((f) => {
+        {files?.filter((file) => file.category !== 'template').length === 0 && <div style={{ padding: '6px 12px', color: 'var(--tx-3)', fontSize: 'var(--fs-body)' }}>{t('workflows.empty')}</div>}
+        {files?.filter((file) => file.category !== 'template').map((f) => {
           const isOpen = tabs.some((x) => x.fileId === f.id);
           return (
             <div key={f.id} className={`nc-wf ${isOpen ? 'open' : ''}`} onClick={async () => {

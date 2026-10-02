@@ -16,8 +16,6 @@ export interface ProjectDoc {
 }
 
 const UI_KEY = 'nodecine.ui';
-/** Templates the user saved from the canvas or pasted in. Data only, same shape as a shipped one. */
-const TEMPLATES_KEY = 'nodecine.templates';
 /** The workflows open in the tab bar, drafts included, so a reload puts the same tabs back (ComfyUI keeps its open workflows the same way). */
 const TABS_KEY = 'nodecine.tabs';
 export interface UiPrefs {
@@ -72,20 +70,6 @@ export function loadTabs(): TabsDoc | null {
 
 export function saveTabs(doc: TabsDoc): void {
   safeSet(TABS_KEY, JSON.stringify(doc));
-}
-
-export function loadUserTemplates(): unknown[] {
-  try {
-    const raw = safeGet(TEMPLATES_KEY);
-    const list: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveUserTemplates(list: unknown[]): void {
-  safeSet(TEMPLATES_KEY, JSON.stringify(list));
 }
 
 export function loadUiPrefs(): Partial<UiPrefs> {

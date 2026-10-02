@@ -9,7 +9,7 @@ import { contentHash } from '@/core/hash';
 import { getNodeType } from '@/core/nodes/definition';
 import { localized, type WorkflowDocument } from '@/core/engine/document';
 import { bootstrapClient } from '@/lib/bootstrap.client';
-import { loadUserTemplates, saveUserTemplates, loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
+import { loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 import { workflowsApi } from '@/lib/workflows.client';
 import type { Locale } from '@/lib/i18n';
 
@@ -56,6 +56,7 @@ export interface StudioState {
   activeTab: string;
   locale: Locale;
   panel: Panel;
+  templatesOpen: boolean;
   logsOpen: boolean;
   /** Bumps whenever a workflow file changes, so lists re-read the directory. */
   workflowsTick: number;
@@ -100,6 +101,8 @@ export interface StudioState {
   runNode(nodeId: string): Promise<void>;
   /** Tab bar, ComfyUI-style. */
   newWorkflow(): void;
+  createFromTemplate(template: WorkflowDocument): void;
+  setTemplatesOpen(open: boolean): void;
   /**
    * Opens a saved file in a tab. Returns why it could not be opened, or what had to be brought
    * forward for it to open, or null when it just opened.
@@ -238,6 +241,7 @@ export const useStudio = create<StudioState>((set, get) => {
     activeTab: '',
     locale: 'en',
     panel: null,
+    templatesOpen: false,
     logsOpen: false,
     workflowsTick: 0,
     settingsOpen: false,
@@ -281,7 +285,7 @@ export const useStudio = create<StudioState>((set, get) => {
         tabs,
         activeTab: active.key,
         locale: prefs.locale ?? 'en',
-        panel: prefs.panel ?? null,
+        panel: prefs.panel === 'workflows' || prefs.panel === 'library' || prefs.panel === 'history' ? prefs.panel : null,
         logsOpen: prefs.logsOpen ?? false,
         issues: validateGraph(graph),
       });
@@ -291,22 +295,24 @@ export const useStudio = create<StudioState>((set, get) => {
       persist();
       // The tab a reload puts back may be older than its file: take the file's version when nothing is unsaved.
       void refreshFromFile(active).then((fresh) => { if (fresh !== active && get().activeTab === active.key) showTab(fresh); });
-      // Whatever an older build left in localStorage moves to the server once, then the key is cleared.
-      void (async () => {
-        const leftovers = loadUserTemplates();
-        if (!leftovers.length) return;
-        const failed: typeof leftovers = [];
-        for (const t of leftovers) {
-          try { await workflowsApi.save(t as WorkflowDocument); } catch { failed.push(t); }
-        }
-        saveUserTemplates(failed);
-        set({ workflowsTick: get().workflowsTick + 1 });
-      })();
     },
 
     newWorkflow() {
       const n = get().tabs.filter((t) => t.fileId === null).length + 1;
       addTab({ fileId: null, name: `Untitled ${n}`, graph: { nodes: [], edges: [] }, dirty: false });
+    },
+
+    createFromTemplate(template) {
+      addTab({
+        fileId: null,
+        name: localized(template.name, get().locale, template.id),
+        graph: structuredClone(template.graph),
+        dirty: true,
+      });
+    },
+
+    setTemplatesOpen(open) {
+      set({ templatesOpen: open });
     },
 
     async openWorkflow(fileId) {
