@@ -21,7 +21,7 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
   const viewed = useViewedRun();
   const { step, running } = useRun();
   const graphNodes = useGraph().nodes;
-  const stepNodeType = step ? graphNodes.find((n) => n.id === step.nodeId)?.type ?? '' : '';
+  const stepNodeType = step ? (graphNodes.find((n) => n.id === step.nodeId)?.type ?? '') : '';
 
   const live = rt?.state === 'success' ? (rt.result as VideoOutputResult | undefined) : undefined;
   // A run picked from the history plays what that run prepared, not what is wired now.
@@ -62,21 +62,42 @@ export const VideoOutputBody: React.FC<BodyProps> = ({ nodeId }) => {
           // Keyed so a new preview gets a fresh container rather than a player reused mid-teardown.
           <div key={key} ref={ref} style={{ position: 'absolute', inset: 0 }} />
         ) : (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 22px', textAlign: 'center', color: 'var(--tx-3)', fontSize: 'var(--fs-body)', lineHeight: 1.7 }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              padding: '0 22px',
+              textAlign: 'center',
+              color: 'var(--tx-3)',
+              fontSize: 'var(--fs-body)',
+              lineHeight: 1.7,
+            }}
+          >
             {running && step ? (
               <>
-                <span style={{ color: 'var(--run)' }}><Icon.spin size={22} /></span>
+                <span style={{ color: 'var(--run)' }}>
+                  <Icon.spin size={22} />
+                </span>
                 <div>{stepNodeType ? t(`node.${stepNodeType}`) : ''}</div>
                 <div>{t('node.step', { step: step.step, total: step.total })}</div>
               </>
             ) : live && !previewReady ? (
               <>
-                <span style={{ color: 'var(--warn)' }}><Icon.warn size={22} /></span>
+                <span style={{ color: 'var(--warn)' }}>
+                  <Icon.warn size={22} />
+                </span>
                 <div>{readCapability(live, 'preview')?.reason ?? t('node.previewUnavailable')}</div>
               </>
             ) : (
               <>
-                <span style={{ opacity: 0.5 }}><Icon.screen size={26} /></span>
+                <span style={{ opacity: 0.5 }}>
+                  <Icon.screen size={26} />
+                </span>
                 <div>{t('node.noPreview')}</div>
               </>
             )}

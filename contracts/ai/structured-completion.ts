@@ -35,12 +35,7 @@ export type StructuredContext = Pick<RunContext, 'signal' | 'progress' | 'fresh'
 };
 
 /** One retry for the wrong shape and one for the wrong language, then give up with the raw text. */
-export async function completeStructured<S extends ZodTypeAny>(
-  ctx: StructuredContext,
-  ref: LLMRef,
-  spec: StructuredSpec<S>,
-  language: string,
-): Promise<z.infer<S>> {
+export async function completeStructured<S extends ZodTypeAny>(ctx: StructuredContext, ref: LLMRef, spec: StructuredSpec<S>, language: string): Promise<z.infer<S>> {
   let strict = false;
   let schemaRetries = 0;
   let languageRetries = 0;
@@ -50,7 +45,11 @@ export async function completeStructured<S extends ZodTypeAny>(
     ctx.progress(0.2 + attempt * 0.2, `attempt ${attempt}`);
     let raw: unknown;
     try {
-      raw = await ctx.services.complete(ref, spec.buildPrompt(language, strict), RAW, ctx.signal, { fresh: ctx.fresh, ...(spec.images?.length ? { images: spec.images } : {}), ...(spec.web ? { web: true } : {}) });
+      raw = await ctx.services.complete(ref, spec.buildPrompt(language, strict), RAW, ctx.signal, {
+        fresh: ctx.fresh,
+        ...(spec.images?.length ? { images: spec.images } : {}),
+        ...(spec.web ? { web: true } : {}),
+      });
     } catch (e) {
       const err = toNodeError(e, ErrorCode.LLM_UPSTREAM);
       // The provider itself can fail to get JSON out of the model; that is the same kind of miss.
@@ -65,7 +64,10 @@ export async function completeStructured<S extends ZodTypeAny>(
     lastRaw = raw;
     const parsed = spec.outputSchema.safeParse(raw);
     if (!parsed.success) {
-      const why = parsed.error.issues.slice(0, 3).map((i) => `${i.path.join('.') || '$'}: ${i.message}`).join('; ');
+      const why = parsed.error.issues
+        .slice(0, 3)
+        .map((i) => `${i.path.join('.') || '$'}: ${i.message}`)
+        .join('; ');
       if (schemaRetries < 1) {
         schemaRetries++;
         ctx.log('warn', `answer has the wrong structure (${why}); retrying once`, ErrorCode.LLM_SCHEMA_INVALID);

@@ -24,15 +24,11 @@ describe('timecode', () => {
 
 describe('toSubtitles', () => {
   it('numbers SubRip cues and ends on a newline', () => {
-    expect(toSubtitles(track, 'srt')).toBe(
-      '1\n00:00:00,000 --> 00:00:01,500\nXin chào\n\n2\n00:00:01,620 --> 00:00:03,004\nthế giới\n',
-    );
+    expect(toSubtitles(track, 'srt')).toBe('1\n00:00:00,000 --> 00:00:01,500\nXin chào\n\n2\n00:00:01,620 --> 00:00:03,004\nthế giới\n');
   });
 
   it('gives WebVTT its header and drops the numbering', () => {
-    expect(toSubtitles(track, 'vtt')).toBe(
-      'WEBVTT\n\n00:00:00.000 --> 00:00:01.500\nXin chào\n\n00:00:01.620 --> 00:00:03.004\nthế giới\n',
-    );
+    expect(toSubtitles(track, 'vtt')).toBe('WEBVTT\n\n00:00:00.000 --> 00:00:01.500\nXin chào\n\n00:00:01.620 --> 00:00:03.004\nthế giới\n');
   });
 
   it('gives a cue with no length a visible instant, so a player cannot drop it', () => {

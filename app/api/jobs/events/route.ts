@@ -24,8 +24,26 @@ export async function GET(req: Request) {
       };
       controller.enqueue(encoder.encode(`: connected ${key}\n\n`));
       off = jobHub().subscribe(send);
-      beat = setInterval(() => { try { controller.enqueue(encoder.encode(': keepalive\n\n')); } catch { /* closed */ } }, 15_000);
-      req.signal.addEventListener('abort', () => { off?.(); if (beat) clearInterval(beat); try { controller.close(); } catch { /* already */ } }, { once: true });
+      beat = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(': keepalive\n\n'));
+        } catch {
+          /* closed */
+        }
+      }, 15_000);
+      req.signal.addEventListener(
+        'abort',
+        () => {
+          off?.();
+          if (beat) clearInterval(beat);
+          try {
+            controller.close();
+          } catch {
+            /* already */
+          }
+        },
+        { once: true },
+      );
     },
     cancel() {
       off?.();

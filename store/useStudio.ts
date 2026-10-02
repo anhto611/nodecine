@@ -35,7 +35,11 @@ export const savedHashOf = (name: string, graph: Graph): string => contentHash({
 const dirtyOf = (tab: WorkflowTab, name: string, graph: Graph): boolean => (tab.savedHash ? savedHashOf(name, graph) !== tab.savedHash : true);
 let importSequence = 0;
 function importedId(id: string | undefined): string {
-  const base = (id ?? 'workflow').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'workflow';
+  const base =
+    (id ?? 'workflow')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'workflow';
   const suffix = `-${Date.now().toString(36)}-${(importSequence++).toString(36)}`;
   return `${base.slice(0, 64 - suffix.length)}${suffix}`;
 }
@@ -161,7 +165,20 @@ export const useStudio = create<StudioState>((set, get) => {
   /** Swap the canvas to a tab's graph: executor, validation, runtimes, name. */
   const showTab = (tab: WorkflowTab) => {
     const ex = get().executor;
-    set({ activeTab: tab.key, graph: tab.graph, projectName: tab.name, issues: validateGraph(tab.graph), runtimes: {}, running: false, step: null, viewingRun: null, selectedNodeId: null, history: [], canUndo: stackFor(tab.key).canUndo, canRedo: stackFor(tab.key).canRedo });
+    set({
+      activeTab: tab.key,
+      graph: tab.graph,
+      projectName: tab.name,
+      issues: validateGraph(tab.graph),
+      runtimes: {},
+      running: false,
+      step: null,
+      viewingRun: null,
+      selectedNodeId: null,
+      history: [],
+      canUndo: stackFor(tab.key).canUndo,
+      canRedo: stackFor(tab.key).canRedo,
+    });
     persist();
     void ex?.switchTo(tab.key, tab.graph, tab.name).then(() => {
       if (get().activeTab !== tab.key) return;
@@ -206,8 +223,18 @@ export const useStudio = create<StudioState>((set, get) => {
   };
   // One undo history per open tab, in memory only: a reload starts with a clean slate, like ComfyUI.
   const undoStacks = new Map<string, UndoStack<Graph>>();
-  const stackFor = (key: string) => { let s = undoStacks.get(key); if (!s) { s = new UndoStack<Graph>(); undoStacks.set(key, s); } return s; };
-  const syncUndoFlags = () => { const s = stackFor(get().activeTab); set({ canUndo: s.canUndo, canRedo: s.canRedo }); };
+  const stackFor = (key: string) => {
+    let s = undoStacks.get(key);
+    if (!s) {
+      s = new UndoStack<Graph>();
+      undoStacks.set(key, s);
+    }
+    return s;
+  };
+  const syncUndoFlags = () => {
+    const s = stackFor(get().activeTab);
+    set({ canUndo: s.canUndo, canRedo: s.canRedo });
+  };
   /** Puts a graph on the active tab and the executor without touching the undo history. */
   const apply = (graph: Graph) => {
     const ex = get().executor;
@@ -261,9 +288,9 @@ export const useStudio = create<StudioState>((set, get) => {
       // A tab stored clean is, by definition, at its saved state: give it the hash it predates.
       const tabs: WorkflowTab[] = stored?.tabs.length
         ? stored.tabs.map((t) => (t.savedHash || t.dirty ? t : { ...t, savedHash: savedHashOf(t.name, t.graph) }))
-        // Nothing stored: an empty canvas. The first-run film went with the nodes it was built from
-        // on 2026-09-14; the next one comes with the first genre's nodes.
-        : [{ key: tabKey(), fileId: null, name: 'Untitled', graph: { nodes: [], edges: [] }, dirty: false }];
+        : // Nothing stored: an empty canvas. The first-run film went with the nodes it was built from
+          // on 2026-09-14; the next one comes with the first genre's nodes.
+          [{ key: tabKey(), fileId: null, name: 'Untitled', graph: { nodes: [], edges: [] }, dirty: false }];
       const active = tabs.find((t) => t.key === stored?.active) ?? tabs[0]!;
       const graph = active.graph;
       const executor = new RemoteExecutor(active.key, graph, active.name, {
@@ -294,7 +321,9 @@ export const useStudio = create<StudioState>((set, get) => {
       set({ runtimes });
       persist();
       // The tab a reload puts back may be older than its file: take the file's version when nothing is unsaved.
-      void refreshFromFile(active).then((fresh) => { if (fresh !== active && get().activeTab === active.key) showTab(fresh); });
+      void refreshFromFile(active).then((fresh) => {
+        if (fresh !== active && get().activeTab === active.key) showTab(fresh);
+      });
     },
 
     newWorkflow() {
@@ -317,7 +346,10 @@ export const useStudio = create<StudioState>((set, get) => {
 
     async openWorkflow(fileId) {
       const open = get().tabs.find((t) => t.fileId === fileId);
-      if (open) { showTab(await refreshFromFile(open)); return null; }
+      if (open) {
+        showTab(await refreshFromFile(open));
+        return null;
+      }
       // A file that will not open has a reason, and the person who clicked it is owed that reason.
       // So is a file that did open but is not quite what they saved.
       try {
@@ -335,7 +367,9 @@ export const useStudio = create<StudioState>((set, get) => {
       const tab = get().tabs.find((t) => t.key === key);
       if (!tab || tab.key === get().activeTab) return;
       showTab(tab);
-      void refreshFromFile(tab).then((fresh) => { if (fresh !== tab && get().activeTab === key) showTab(fresh); });
+      void refreshFromFile(tab).then((fresh) => {
+        if (fresh !== tab && get().activeTab === key) showTab(fresh);
+      });
     },
 
     closeTab(key) {
@@ -345,7 +379,10 @@ export const useStudio = create<StudioState>((set, get) => {
       const rest = tabs.filter((t) => t.key !== key);
       undoStacks.delete(key);
       set({ tabs: rest });
-      if (rest.length === 0) { get().newWorkflow(); return; }
+      if (rest.length === 0) {
+        get().newWorkflow();
+        return;
+      }
       if (activeTab === key) showTab(rest[Math.min(i, rest.length - 1)]!);
       else persist();
     },
@@ -359,7 +396,10 @@ export const useStudio = create<StudioState>((set, get) => {
       const savedHash = savedHashOf(name, graph);
       const existing = await workflowsApi.read(tab.fileId).catch(() => null);
       await workflowsApi.replace(tab.fileId, { name, ...(existing?.description ? { description: existing.description } : {}), graph });
-      set({ tabs: get().tabs.map((t) => (t.key === tab.key && t.fileId === tab.fileId ? { ...t, dirty: savedHashOf(t.name, t.graph) !== savedHash, savedHash } : t)), workflowsTick: get().workflowsTick + 1 });
+      set({
+        tabs: get().tabs.map((t) => (t.key === tab.key && t.fileId === tab.fileId ? { ...t, dirty: savedHashOf(t.name, t.graph) !== savedHash, savedHash } : t)),
+        workflowsTick: get().workflowsTick + 1,
+      });
       persist();
       return 'saved';
     },
@@ -367,15 +407,26 @@ export const useStudio = create<StudioState>((set, get) => {
     async saveWorkflowAs(name) {
       const tab = get().tabs.find((t) => t.key === get().activeTab);
       if (!tab || !name.trim()) return;
-      const base = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workflow';
+      const base =
+        name
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 40) || 'workflow';
       const id = `${base}-${Date.now().toString(36)}`;
       const savedName = name.trim();
       const graph = structuredClone(tab.graph);
       const savedHash = savedHashOf(savedName, graph);
       await workflowsApi.save({ id, name: savedName, graph });
       const current = get().tabs.find((t) => t.key === tab.key);
-      const currentName = current?.name === tab.name ? savedName : current?.name ?? savedName;
-      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, fileId: id, name: currentName, dirty: savedHashOf(currentName, t.graph) !== savedHash, savedHash } : t)), ...(get().activeTab === tab.key ? { projectName: currentName } : {}), workflowsTick: get().workflowsTick + 1 });
+      const currentName = current?.name === tab.name ? savedName : (current?.name ?? savedName);
+      set({
+        tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, fileId: id, name: currentName, dirty: savedHashOf(currentName, t.graph) !== savedHash, savedHash } : t)),
+        ...(get().activeTab === tab.key ? { projectName: currentName } : {}),
+        workflowsTick: get().workflowsTick + 1,
+      });
       persist();
     },
 
@@ -398,7 +449,10 @@ export const useStudio = create<StudioState>((set, get) => {
       const graph = get().graph;
       // React Flow reports a position change on mount and on select even when nothing moved; a
       // no-op must not mark the tab unsaved.
-      const moved = Object.entries(positions).filter(([id, pos]) => { const n = graph.nodes.find((x) => x.id === id); return n && (n.position.x !== pos.x || n.position.y !== pos.y); });
+      const moved = Object.entries(positions).filter(([id, pos]) => {
+        const n = graph.nodes.find((x) => x.id === id);
+        return n && (n.position.x !== pos.x || n.position.y !== pos.y);
+      });
       if (!moved.length) return;
       const next: Graph = { ...graph, nodes: graph.nodes.map((n) => (positions[n.id] ? { ...n, position: positions[n.id]! } : n)) };
       refresh(next);
@@ -406,13 +460,19 @@ export const useStudio = create<StudioState>((set, get) => {
 
     undo() {
       const prev = stackFor(get().activeTab).undo(get().graph);
-      if (prev) { apply(prev); set({ selectedNodeId: null }); }
+      if (prev) {
+        apply(prev);
+        set({ selectedNodeId: null });
+      }
       syncUndoFlags();
     },
 
     redo() {
       const next = stackFor(get().activeTab).redo(get().graph);
-      if (next) { apply(next); set({ selectedNodeId: null }); }
+      if (next) {
+        apply(next);
+        set({ selectedNodeId: null });
+      }
       syncUndoFlags();
     },
 
@@ -475,7 +535,11 @@ export const useStudio = create<StudioState>((set, get) => {
       const graph = get().graph;
       const node = graph.nodes.find((n) => n.id === nodeId);
       if (!node) return;
-      if (node.pinned) { refresh(unpinNode(graph, nodeId)); get().executor?.invalidate(nodeId); return; }
+      if (node.pinned) {
+        refresh(unpinNode(graph, nodeId));
+        get().executor?.invalidate(nodeId);
+        return;
+      }
       // Only what the last run actually produced can be frozen; there is nothing to approve otherwise.
       const outputs = get().runtimes[nodeId]?.outputs ?? {};
       const next = pinNode(graph, nodeId, outputs, new Date().toISOString());

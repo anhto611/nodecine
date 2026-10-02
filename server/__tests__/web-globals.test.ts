@@ -43,7 +43,12 @@ describe('keepWebGlobals', () => {
     const Response0 = globalThis.Response;
     const define = Object.defineProperty;
     let release!: () => void;
-    const inner = keepWebGlobals(() => new Promise<void>((r) => { release = r; }));
+    const inner = keepWebGlobals(
+      () =>
+        new Promise<void>((r) => {
+          release = r;
+        }),
+    );
     await keepWebGlobals(async () => undefined);
     // One run has finished, the other has not: still guarded.
     Object.defineProperty(global, 'Response', { value: class {} });
@@ -55,7 +60,11 @@ describe('keepWebGlobals', () => {
 
   it('restores when the run throws', async () => {
     const define = Object.defineProperty;
-    await expect(keepWebGlobals(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
+    await expect(
+      keepWebGlobals(async () => {
+        throw new Error('boom');
+      }),
+    ).rejects.toThrow('boom');
     expect(Object.defineProperty).toBe(define);
   });
 });

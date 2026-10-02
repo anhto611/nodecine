@@ -31,7 +31,11 @@ const files = new Map<string, Seen>();
 const versions = new Map<string, string>();
 
 function isFile(p: string): boolean {
-  try { return statSync(p).isFile(); } catch { return false; }
+  try {
+    return statSync(p).isFile();
+  } catch {
+    return false;
+  }
 }
 
 function resolve(from: string, specifier: string): string | { pkg: string } | null {
@@ -46,7 +50,11 @@ function resolve(from: string, specifier: string): string | { pkg: string } | nu
 
 function read(file: string): Seen | null {
   let st;
-  try { st = statSync(file); } catch { return null; }
+  try {
+    st = statSync(file);
+  } catch {
+    return null;
+  }
   const known = files.get(file);
   if (known && known.mtimeMs === st.mtimeMs && known.size === st.size) return known;
   const text = readFileSync(file, 'utf8');
@@ -60,7 +68,11 @@ function packageVersion(pkg: string): string {
   const known = versions.get(pkg);
   if (known) return known;
   let version = 'unknown';
-  try { version = String((JSON.parse(readFileSync(path.join(root, 'node_modules', pkg, 'package.json'), 'utf8')) as { version?: unknown }).version ?? 'unknown'); } catch { /* not installed where we look */ }
+  try {
+    version = String((JSON.parse(readFileSync(path.join(root, 'node_modules', pkg, 'package.json'), 'utf8')) as { version?: unknown }).version ?? 'unknown');
+  } catch {
+    /* not installed where we look */
+  }
   versions.set(pkg, version);
   return version;
 }

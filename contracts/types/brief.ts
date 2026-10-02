@@ -16,5 +16,4 @@ export const BriefSchema = z.object({
 export type Brief = z.infer<typeof BriefSchema>;
 
 /** Every web address in a brief, in order, once each. */
-export const linksIn = (about: string): string[] =>
-  [...new Set([...about.matchAll(/https?:\/\/[^\s<>"')]+/gi)].map((m) => m[0].replace(/[.,;!?]+$/, '')))];
+export const linksIn = (about: string): string[] => [...new Set([...about.matchAll(/https?:\/\/[^\s<>"')]+/gi)].map((m) => m[0].replace(/[.,;!?]+$/, '')))];

@@ -48,7 +48,12 @@ const Params = z.object({
 });
 type WriterParams = z.infer<typeof Params>;
 
-interface Written { written: WrittenStoryboard; storyboard?: Storyboard; markdown: string; problems: string[] }
+interface Written {
+  written: WrittenStoryboard;
+  storyboard?: Storyboard;
+  markdown: string;
+  problems: string[];
+}
 
 /**
  * A storyboard written from the brief. A model reads what the person asked for, what Research found out
@@ -58,15 +63,21 @@ interface Written { written: WrittenStoryboard; storyboard?: Storyboard; markdow
  * what the model wrote and checked the same way.
  */
 export const storyboardWriter: NodeDefinition<typeof Params> = {
-  type: 'storyboard-writer', version: 1, kind: 'process',
+  type: 'storyboard-writer',
+  version: 1,
+  kind: 'process',
   inputs: [
     { name: 'brief', type: 'Brief' },
     { name: 'research', type: 'Research', required: false },
     { name: 'composition', type: 'Composition' },
     { name: 'assets', type: 'Assets', required: false },
   ],
-  outputs: [{ name: 'storyboard', type: 'Storyboard' }, { name: 'script', type: 'AudioScript' }],
-  paramsSchema: Params, defaultParams: Params.parse({}),
+  outputs: [
+    { name: 'storyboard', type: 'Storyboard' },
+    { name: 'script', type: 'AudioScript' },
+  ],
+  paramsSchema: Params,
+  defaultParams: Params.parse({}),
   run: async (ctx) => {
     const { params, inputs, services, log } = ctx;
     const brief = inputs.brief!.payload as Brief;
@@ -86,14 +97,31 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
     const items = assets?.items ?? [];
     const guide = readGuide(composition.files[GUIDE_FILE]);
     const material: WriterMaterial = {
-      request, catalog, components, slots, seen, first: guide.first, last: guide.last, repeat: guide.repeat,
+      request,
+      catalog,
+      components,
+      slots,
+      seen,
+      first: guide.first,
+      last: guide.last,
+      repeat: guide.repeat,
       guide: guide.body,
       pictures: items.map((a) => ({ path: assetProjectPath(a), name: a.name, note: a.note, width: a.width, height: a.height })),
       wordsPerSecond: WORDS_PER_SECOND[language] ?? 2.6,
     };
     const images = seen ? items.map((a) => a.url) : [];
     if (items.length && !seen) log('warn', `${ref.displayName} cannot see pictures: it chooses them by their notes`);
-    const rules = { catalog, assets: material.pictures.map((p) => p.path), targetSeconds: params.durationSeconds, wordsPerSecond: material.wordsPerSecond, first: guide.first, last: guide.last, repeat: guide.repeat, components, slots: Object.keys(slots) };
+    const rules = {
+      catalog,
+      assets: material.pictures.map((p) => p.path),
+      targetSeconds: params.durationSeconds,
+      wordsPerSecond: material.wordsPerSecond,
+      first: guide.first,
+      last: guide.last,
+      repeat: guide.repeat,
+      components,
+      slots: Object.keys(slots),
+    };
     const format = `${composition.width}x${composition.height}`;
     // Asked without `fresh`: a single run of this node (to rewrite one scene) must not rewrite the others.
     const asking: Pick<RunContext, 'signal' | 'progress' | 'fresh' | 'services' | 'log'> = { ...ctx, fresh: false };
@@ -129,8 +157,11 @@ export const storyboardWriter: NodeDefinition<typeof Params> = {
     if (params.subject.trim() && written.subject && params.subject.trim() !== written.subject) written = renameEverywhere(written, written.subject, params.subject.trim());
     const final = check(applyEdits(written, params.edits));
     if (final.problems.length || !final.storyboard) {
-      throw new NodeError(StoryboardWriterErrorCode.STORYBOARD_UNWRITABLE, final.problems[0] ?? 'the storyboard does not read', false, { problems: final.problems, markdown: final.markdown, written: final.written })
-        .withFix(final.problems.length > 1 ? `and ${final.problems.length - 1} more: edit the scenes, or write it again` : 'edit the scene, or write it again');
+      throw new NodeError(StoryboardWriterErrorCode.STORYBOARD_UNWRITABLE, final.problems[0] ?? 'the storyboard does not read', false, {
+        problems: final.problems,
+        markdown: final.markdown,
+        written: final.written,
+      }).withFix(final.problems.length > 1 ? `and ${final.problems.length - 1} more: edit the scenes, or write it again` : 'edit the scene, or write it again');
     }
     const lines = spokenLines(final.storyboard);
     log('info', `${final.storyboard.subject ?? '?'} · ${final.storyboard.frames.length} scenes · ${lines.join(' ').split(/\s+/).length} words · ${Object.keys(params.edits).length} edited`);

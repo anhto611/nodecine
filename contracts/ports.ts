@@ -5,14 +5,7 @@ import { ResearchSchema, type Research } from './types/research';
 import { CompositionSchema, type Composition } from './types/composition';
 import { FootageSchema, type Footage } from './types/footage';
 import { StoryboardSchema, type Storyboard } from './types/storyboard';
-import {
-  AudioScriptSchema,
-  CaptionTrackSchema,
-  VoiceoverSchema,
-  type AudioScript,
-  type CaptionTrack,
-  type Voiceover,
-} from './types/payloads';
+import { AudioScriptSchema, CaptionTrackSchema, VoiceoverSchema, type AudioScript, type CaptionTrack, type Voiceover } from './types/payloads';
 
 /**
  * The port types a video workflow speaks: the core runs wires, this names what

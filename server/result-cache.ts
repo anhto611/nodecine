@@ -43,7 +43,11 @@ export class DiskResultCache implements ResultCache {
     const file = this.file(signature);
     if (!file) return undefined;
     let text: string;
-    try { text = await readFile(file, 'utf8'); } catch { return undefined; }
+    try {
+      text = await readFile(file, 'utf8');
+    } catch {
+      return undefined;
+    }
     if (filesNamedIn(text).some((p) => !existsSync(p))) {
       await unlink(file).catch(() => undefined);
       return undefined;
@@ -72,7 +76,11 @@ export class DiskResultCache implements ResultCache {
   /** Keep the newest `MAX_ENTRIES` by last use. */
   async prune(max = MAX_ENTRIES): Promise<void> {
     let names: string[];
-    try { names = (await readdir(this.dir())).filter((n) => n.endsWith('.json')); } catch { return; }
+    try {
+      names = (await readdir(this.dir())).filter((n) => n.endsWith('.json'));
+    } catch {
+      return;
+    }
     if (names.length <= max) return;
     const dated = await Promise.all(names.map(async (n) => ({ n, t: (await stat(path.join(this.dir(), n)).catch(() => ({ mtimeMs: 0 }))).mtimeMs })));
     dated.sort((a, b) => b.t - a.t);

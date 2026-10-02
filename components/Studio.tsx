@@ -41,11 +41,33 @@ export const Studio: React.FC = () => {
       const target = e.target instanceof Element ? e.target : null;
       const inField = !!target && (!!target.closest('input, textarea, select') || (target as HTMLElement).isContentEditable);
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key === 'Enter') { e.preventDefault(); if (!s.running) void s.run({ force: e.shiftKey }); return; }
-      if (mod && e.key.toLowerCase() === 'j') { e.preventDefault(); s.toggleLogs(); return; }
-      if (mod && e.key === ',') { e.preventDefault(); s.setSettingsOpen(true); return; }
-      if (mod && e.key.toLowerCase() === 'b' && s.selectedNodeId) { e.preventDefault(); s.toggleBypass(s.selectedNodeId); return; }
-      if (e.key === 'Escape') { s.setSettingsOpen(false); s.setTemplatesOpen(false); s.setOverlay(null); if (s.panel) s.setPanel(s.panel); return; }
+      if (mod && e.key === 'Enter') {
+        e.preventDefault();
+        if (!s.running) void s.run({ force: e.shiftKey });
+        return;
+      }
+      if (mod && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        s.toggleLogs();
+        return;
+      }
+      if (mod && e.key === ',') {
+        e.preventDefault();
+        s.setSettingsOpen(true);
+        return;
+      }
+      if (mod && e.key.toLowerCase() === 'b' && s.selectedNodeId) {
+        e.preventDefault();
+        s.toggleBypass(s.selectedNodeId);
+        return;
+      }
+      if (e.key === 'Escape') {
+        s.setSettingsOpen(false);
+        s.setTemplatesOpen(false);
+        s.setOverlay(null);
+        if (s.panel) s.setPanel(s.panel);
+        return;
+      }
       if (inField || mod) return;
       if (e.key.toLowerCase() === 'w') s.setPanel('workflows');
       if (e.key.toLowerCase() === 't') s.setTemplatesOpen(true);
@@ -60,24 +82,24 @@ export const Studio: React.FC = () => {
   // The whole shell, not only the canvas: the Studio draws with the same kit the node bodies do.
   return (
     <StudioNodeHost>
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Header />
-      <WorkflowTabs />
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        <Rail />
-        {panel === 'workflows' && <WorkflowsPanel />}
-        {panel === 'library' && <LibraryPanel />}
-        {panel === 'history' && <HistoryPanel />}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
-          <Canvas />
-          <StatusBar />
-          {logsOpen && <LogsPanel />}
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Header />
+        <WorkflowTabs />
+        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          <Rail />
+          {panel === 'workflows' && <WorkflowsPanel />}
+          {panel === 'library' && <LibraryPanel />}
+          {panel === 'history' && <HistoryPanel />}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
+            <Canvas />
+            <StatusBar />
+            {logsOpen && <LogsPanel />}
+          </div>
         </div>
+        {overlay && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
+        {settingsOpen && <SettingsDialog />}
+        {templatesOpen && <TemplatesDialog />}
       </div>
-      {overlay && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
-      {settingsOpen && <SettingsDialog />}
-      {templatesOpen && <TemplatesDialog />}
-    </div>
     </StudioNodeHost>
   );
 };

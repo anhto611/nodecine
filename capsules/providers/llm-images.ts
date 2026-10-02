@@ -14,13 +14,15 @@ export const IMAGE_LONG_SIDE = 1568;
 /** The pictures as files to send: fitted copies in `dir`, or the originals when they cannot be made. */
 export async function fittedImages(images: LLMImage[], dir: string, signal: AbortSignal): Promise<LLMImage[]> {
   const ffmpeg = await findBinary('ffmpeg', 'NODECINE_FFMPEG_BIN');
-  return Promise.all(images.map(async (image, i) => {
-    if (!ffmpeg || image.mediaType === 'image/svg+xml') return image;
-    const out = path.join(dir, `image-${i}.jpg`);
-    const fit = `scale='if(gt(iw,ih),min(${IMAGE_LONG_SIDE},iw),-2)':'if(gt(iw,ih),-2,min(${IMAGE_LONG_SIDE},ih))'`;
-    const r = await exec(ffmpeg, { args: ['-v', 'error', '-y', '-i', image.path, '-vf', fit, '-q:v', '3', out], timeoutMs: 30_000, signal }).catch(() => null);
-    return r && r.code === 0 ? { path: out, mediaType: 'image/jpeg' } : image;
-  }));
+  return Promise.all(
+    images.map(async (image, i) => {
+      if (!ffmpeg || image.mediaType === 'image/svg+xml') return image;
+      const out = path.join(dir, `image-${i}.jpg`);
+      const fit = `scale='if(gt(iw,ih),min(${IMAGE_LONG_SIDE},iw),-2)':'if(gt(iw,ih),-2,min(${IMAGE_LONG_SIDE},ih))'`;
+      const r = await exec(ffmpeg, { args: ['-v', 'error', '-y', '-i', image.path, '-vf', fit, '-q:v', '3', out], timeoutMs: 30_000, signal }).catch(() => null);
+      return r && r.code === 0 ? { path: out, mediaType: 'image/jpeg' } : image;
+    }),
+  );
 }
 
 /** A picture's bytes as base64, for an API that takes them inline. */

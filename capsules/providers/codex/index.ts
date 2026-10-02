@@ -94,8 +94,7 @@ export function createCodexProvider(settings: Record<string, unknown>): LLMProvi
         });
 
         if (r.timedOut) {
-          throw new NodeError('LLM_UPSTREAM', `codex did not answer within ${Math.round(CODEX_TIMEOUT_MS / 1000)}s`, true)
-            .withFix(`give it longer with ${CODEX_TIMEOUT_ENV}`);
+          throw new NodeError('LLM_UPSTREAM', `codex did not answer within ${Math.round(CODEX_TIMEOUT_MS / 1000)}s`, true).withFix(`give it longer with ${CODEX_TIMEOUT_ENV}`);
         }
         if (r.code !== 0) {
           throw new NodeError('LLM_UPSTREAM', `codex exited ${r.code}: ${r.stderr.trim() || r.stdout.trim() || 'no output'}`, true);

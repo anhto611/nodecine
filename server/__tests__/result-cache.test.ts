@@ -17,7 +17,8 @@ beforeEach(async () => {
   process.env.NODECINE_TMP_DIR = media;
 });
 afterEach(async () => {
-  if (previousTmp === undefined) delete process.env.NODECINE_TMP_DIR; else process.env.NODECINE_TMP_DIR = previousTmp;
+  if (previousTmp === undefined) delete process.env.NODECINE_TMP_DIR;
+  else process.env.NODECINE_TMP_DIR = previousTmp;
   await rm(dir, { recursive: true, force: true });
   await rm(media, { recursive: true, force: true });
 });

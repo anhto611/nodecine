@@ -7,7 +7,10 @@ export const FindingsSchema = z.object({
   subject: z.string().max(120),
   summary: z.string().max(2000),
   points: z.array(z.object({ text: z.string().min(1).max(600), source: z.string().max(2000).nullable().default(null) })).max(40),
-  sources: z.array(z.object({ url: z.string().max(2000), title: z.string().max(300).nullable().default(null) })).max(40).default([]),
+  sources: z
+    .array(z.object({ url: z.string().max(2000), title: z.string().max(300).nullable().default(null) }))
+    .max(40)
+    .default([]),
 });
 export type Findings = z.infer<typeof FindingsSchema>;
 

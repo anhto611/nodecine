@@ -35,6 +35,10 @@ declare module '@/core/engine/services' {
      * One file from several, in order, with a pause after each part. Returns the file, its measured
      * length and where each part starts and how long it lasts, pause included.
      */
-    concatAudio(parts: { audioUrl: string; durationSeconds: number }[], gapSeconds: number, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number; segments: { start: number; durationSeconds: number }[] }>;
+    concatAudio(
+      parts: { audioUrl: string; durationSeconds: number }[],
+      gapSeconds: number,
+      signal: AbortSignal,
+    ): Promise<{ audioUrl: string; durationSeconds: number; segments: { start: number; durationSeconds: number }[] }>;
   }
 }

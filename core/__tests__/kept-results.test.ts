@@ -74,7 +74,11 @@ describe('a result already paid for', () => {
 
   it('keeps the warnings it was produced with', async () => {
     const cache = new MemoryResultCache();
-    const graph = () => { const g = pipeline(); g.nodes.find((n) => n.id === 'join')!.params.wantsExtra = true; return g; };
+    const graph = () => {
+      const g = pipeline();
+      g.nodes.find((n) => n.id === 'join')!.params.wantsExtra = true;
+      return g;
+    };
     await new Executor(graph(), testServices(), {}, undefined, { cache }).run();
     const ex = new Executor(graph(), testServices(), {}, undefined, { cache });
     await ex.run();
@@ -97,8 +101,12 @@ describe('a result already paid for', () => {
 
   it('never fails a run when the store cannot read or write', async () => {
     const broken: ResultCache = {
-      get: async () => { throw new Error('disk gone'); },
-      set: async (_s: string, _r: CachedResult) => { throw new Error('disk full'); },
+      get: async () => {
+        throw new Error('disk gone');
+      },
+      set: async (_s: string, _r: CachedResult) => {
+        throw new Error('disk full');
+      },
     };
     const services = testServices();
     const ex = new Executor(pipeline(), services, {}, undefined, { cache: broken });
@@ -134,9 +142,17 @@ describe('a forced run', () => {
   it('tells the node it wants new answers; a normal run does not', async () => {
     const seen: boolean[] = [];
     registerNodeType({
-      type: 'test/asks', version: 1, kind: 'source', inputs: [], outputs: [{ name: 'out', type: TEXT }],
-      paramsSchema: z.object({}), defaultParams: {},
-      run: async ({ fresh }: { fresh: boolean }) => { seen.push(fresh); return { out: { text: 'x' } }; },
+      type: 'test/asks',
+      version: 1,
+      kind: 'source',
+      inputs: [],
+      outputs: [{ name: 'out', type: TEXT }],
+      paramsSchema: z.object({}),
+      defaultParams: {},
+      run: async ({ fresh }: { fresh: boolean }) => {
+        seen.push(fresh);
+        return { out: { text: 'x' } };
+      },
     } as unknown as AnyNodeDefinition);
     const ex = new Executor({ nodes: [{ id: 'a', type: 'test/asks', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] }, testServices());
     await ex.run();

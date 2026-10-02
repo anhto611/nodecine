@@ -58,7 +58,7 @@ describe('JobHub', () => {
     expect(() => hub.submit({ key: '../x', kind: 'run', graph: graph() })).toThrow(/key/);
   });
 
-  it('runs one workflow\'s jobs one after another, and drops a pending one on cancel', async () => {
+  it("runs one workflow's jobs one after another, and drops a pending one on cancel", async () => {
     const hub = new JobHub(() => testServices(), { cache: new MemoryResultCache() });
     const a = hub.submit({ key: 'tab-3', kind: 'run', graph: graph() });
     const b = hub.submit({ key: 'tab-3', kind: 'run', graph: graph(), force: true });
@@ -74,15 +74,18 @@ describe('JobHub', () => {
 
   it('runs each queued job with its own graph, even when another job is submitted for the same key', async () => {
     const seen: string[] = [];
-    const hub = new JobHub(() => {
-      const services = testServices();
-      const invoke = services.invoke.bind(services);
-      services.invoke = async (id, args) => {
-        if (id === 'voice') seen.push(String(args[0]));
-        return invoke(id, args);
-      };
-      return services;
-    }, { cache: new MemoryResultCache() });
+    const hub = new JobHub(
+      () => {
+        const services = testServices();
+        const invoke = services.invoke.bind(services);
+        services.invoke = async (id, args) => {
+          if (id === 'voice') seen.push(String(args[0]));
+          return invoke(id, args);
+        };
+        return services;
+      },
+      { cache: new MemoryResultCache() },
+    );
     const first = graph();
     first.nodes.find((node) => node.id === 'source')!.params.value = 'first';
     const second = graph();
@@ -97,7 +100,11 @@ describe('JobHub', () => {
 
   it('runs different workflows side by side, never more at once than it is allowed', async () => {
     // Each voice takes a while, so jobs that run together overlap and jobs that queue do not.
-    const slow = () => { const s = testServices(); s.delay('voice', 40); return s; };
+    const slow = () => {
+      const s = testServices();
+      s.delay('voice', 40);
+      return s;
+    };
     const spans = (hub: JobHub, ids: string[]) => ids.map((id) => hub.get(id)!).map((j) => [j.startedAt!, j.finishedAt!] as const);
     const overlap = ([a0, a1]: readonly [number, number], [b0, b1]: readonly [number, number]) => a0 < b1 && b0 < a1;
 
@@ -161,7 +168,12 @@ describe('JobHub', () => {
 
     // A new process reads the same directory, no executor needed.
     const again = new JobHub(() => testServices(), { cache: new MemoryResultCache() });
-    expect(again.list().map((j) => j.id).sort()).toEqual([exp.id, job.id].sort());
+    expect(
+      again
+        .list()
+        .map((j) => j.id)
+        .sort(),
+    ).toEqual([exp.id, job.id].sort());
     expect(again.get(job.id)?.status).toBe('done');
   });
 
@@ -169,7 +181,10 @@ describe('JobHub', () => {
     // A recorder that keeps the joined text of a run and files every export under it: the shape of
     // the film history, without a film.
     const recorder: JobRecorder = {
-      run: (_job, ex) => { const text = (ex.runtime('join').outputs.out?.payload as { text?: string } | undefined)?.text; return text ? { text, exports: [] as string[] } : undefined; },
+      run: (_job, ex) => {
+        const text = (ex.runtime('join').outputs.out?.payload as { text?: string } | undefined)?.text;
+        return text ? { text, exports: [] as string[] } : undefined;
+      },
       node: (job, ex, last) => {
         const kept = last?.result as { exports: string[] } | undefined;
         const file = ex.runtime(job.nodeId!).result as { fileName?: string } | undefined;

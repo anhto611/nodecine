@@ -34,7 +34,13 @@ export interface BlockInfo {
 }
 
 const attr = (tag: string, name: string) => new RegExp(`\\b${name}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, 'i').exec(tag)?.[2];
-const unescape = (s: string) => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const unescape = (s: string) =>
+  s
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 
 /** What a block's `<html>` declares, parsed by HyperFrames: a declaration it would drop is dropped here too. */
 export function declaredVariables(html: string): BlockVariable[] {
@@ -50,7 +56,7 @@ export function readBlock(name: string, html: string): BlockInfo {
   const meta = /<meta\b[^>]*\bname\s*=\s*["']description["'][^>]*>/i.exec(html)?.[0] ?? '';
   return {
     name,
-    role: (BLOCK_ROLES as readonly string[]).includes(role ?? '') ? role as BlockRole : 'scene',
+    role: (BLOCK_ROLES as readonly string[]).includes(role ?? '') ? (role as BlockRole) : 'scene',
     description: unescape(attr(meta, 'content') ?? '').trim(),
     variables: declaredVariables(html),
   };
@@ -74,14 +80,18 @@ export interface ComponentInfo {
  */
 export function readComponentCatalog(files: Record<string, string>): ComponentInfo[] {
   let overlays = new Set<string>();
-  try { overlays = new Set(((JSON.parse(files['assemble.json'] ?? '{}') as { overlays?: { component?: string }[] }).overlays ?? []).map((o) => o.component ?? '')); } catch { /* none */ }
+  try {
+    overlays = new Set(((JSON.parse(files['assemble.json'] ?? '{}') as { overlays?: { component?: string }[] }).overlays ?? []).map((o) => o.component ?? ''));
+  } catch {
+    /* none */
+  }
   return Object.entries(files)
     .map(([path, html]) => [COMPONENT_FILE.exec(path)?.[1], html] as const)
     .filter((entry): entry is readonly [string, string] => !!entry[0] && !overlays.has(entry[0]))
     .map(([name, html]) => {
       const info = readBlock(name, html);
       const role = attr(/<html\b[^>]*>/i.exec(html)?.[0] ?? '', 'data-role');
-      return { name, role: (COMPONENT_ROLES as readonly string[]).includes(role ?? '') ? role as ComponentRole : 'piece', description: info.description, variables: info.variables };
+      return { name, role: (COMPONENT_ROLES as readonly string[]).includes(role ?? '') ? (role as ComponentRole) : 'piece', description: info.description, variables: info.variables };
     })
     .filter((c) => c.role !== 'overlay')
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -89,7 +99,11 @@ export function readComponentCatalog(files: Record<string, string>): ComponentIn
 
 /** The named boxes `assemble.json` gives, where a frame's components are mounted: name → [left, top, width, height]. */
 export function readSlots(files: Record<string, string>): Record<string, [number, number, number, number]> {
-  try { return (JSON.parse(files['assemble.json'] ?? '{}') as { slots?: Record<string, [number, number, number, number]> }).slots ?? {}; } catch { return {}; }
+  try {
+    return (JSON.parse(files['assemble.json'] ?? '{}') as { slots?: Record<string, [number, number, number, number]> }).slots ?? {};
+  } catch {
+    return {};
+  }
 }
 
 /** Every block a composition holds, by name. */
@@ -120,7 +134,8 @@ export function checkBlockValues(label: string, values: Record<string, unknown>,
   }
   for (const v of declared) {
     const value = out[v.id];
-    if (v.type === 'string' && v.maxLength && typeof value === 'string' && value.length > v.maxLength) problems.push(`${label}: ${v.id} is ${value.length} characters, the block allows ${v.maxLength}`);
+    if (v.type === 'string' && v.maxLength && typeof value === 'string' && value.length > v.maxLength)
+      problems.push(`${label}: ${v.id} is ${value.length} characters, the block allows ${v.maxLength}`);
   }
   return { values: out, problems };
 }

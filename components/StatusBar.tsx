@@ -24,7 +24,10 @@ export const StatusBar: React.FC = () => {
         <span style={{ marginLeft: 4, opacity: 0.7 }}>{logsOpen ? '▾' : '▴'}</span>
       </button>
       <div style={{ flex: 1 }} />
-      <span className="nc-status-meta">{t('status.nodes', { n: graph.nodes.length, e: graph.edges.length })}{errors > 0 ? ` · ${t('status.errors', { n: errors })}` : ''}</span>
+      <span className="nc-status-meta">
+        {t('status.nodes', { n: graph.nodes.length, e: graph.edges.length })}
+        {errors > 0 ? ` · ${t('status.errors', { n: errors })}` : ''}
+      </span>
     </div>
   );
 };

@@ -11,7 +11,11 @@ const host = {
 
 describe('the rail', () => {
   it('links out to the source once, in a new tab that cannot touch this window', () => {
-    render(<NodeHostProvider host={host}><Rail /></NodeHostProvider>);
+    render(
+      <NodeHostProvider host={host}>
+        <Rail />
+      </NodeHostProvider>,
+    );
     const link = screen.getByRole('link');
     expect(link.getAttribute('href')).toBe('https://github.com/anhto611/nodecine');
     expect(link.getAttribute('target')).toBe('_blank');

@@ -29,8 +29,7 @@ const folders = (await readdir(templatesDir, { withFileTypes: true }))
 /** `LocalizedText` is a plain string or a locale map; a typo in either shape is worth failing on. */
 function isLocalized(value) {
   if (typeof value === 'string') return value.length > 0;
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    && Object.values(value).every((text) => typeof text === 'string' && text.length > 0);
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && Object.values(value).every((text) => typeof text === 'string' && text.length > 0);
 }
 
 const templates = [];

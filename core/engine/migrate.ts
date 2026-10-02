@@ -210,7 +210,11 @@ function migrateNode(node: NodeInstance, notes: MigrationNote[]): NodeInstance {
   const data = parsed.data as Record<string, unknown>;
   const dropped = Object.keys(current.params).filter((key) => !(key in data));
   if (dropped.length) {
-    notes.push({ nodeId: current.id, code: 'PARAMS_DROPPED', message: `"${current.type}" no longer has ${dropped.join(', ')}; ${dropped.length > 1 ? 'those settings were' : 'that setting was'} dropped` });
+    notes.push({
+      nodeId: current.id,
+      code: 'PARAMS_DROPPED',
+      message: `"${current.type}" no longer has ${dropped.join(', ')}; ${dropped.length > 1 ? 'those settings were' : 'that setting was'} dropped`,
+    });
   }
   return { ...current, params: data, version: def.version };
 }

@@ -17,11 +17,12 @@ import { makeFakeServices } from '@/contracts/__tests__/fakes';
  */
 
 const root = process.cwd();
-const walk = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
-  const p = path.join(dir, name);
-  if (name === 'node_modules' || name === '.generated' || name === '__tests__') return [];
-  return statSync(p).isDirectory() ? walk(p) : /\.tsx?$/.test(name) ? [p] : [];
-});
+const walk = (dir: string): string[] =>
+  readdirSync(dir).flatMap((name) => {
+    const p = path.join(dir, name);
+    if (name === 'node_modules' || name === '.generated' || name === '__tests__') return [];
+    return statSync(p).isDirectory() ? walk(p) : /\.tsx?$/.test(name) ? [p] : [];
+  });
 
 describe('node capsules', () => {
   it('the definitions registry is isomorphic: it names no server module, and the server registry names only those', () => {
@@ -36,7 +37,10 @@ describe('node capsules', () => {
   });
 
   it('the hub can find the one node that plays a composition and the one that exports a file', () => {
-    const carriers = (feature: string) => Object.entries(NODE_FEATURES).filter(([, f]) => f.includes(feature)).map(([id]) => id);
+    const carriers = (feature: string) =>
+      Object.entries(NODE_FEATURES)
+        .filter(([, f]) => f.includes(feature))
+        .map(([id]) => id);
     expect(carriers('history-preview')).toEqual(['video-output']);
     expect(carriers('history-file-export')).toEqual(['mp4-export']);
     expect(Object.keys(NODE_FEATURES).sort()).toEqual(ALL_NODES.map((n) => n.type).sort());
@@ -60,10 +64,11 @@ describe('node capsules', () => {
   });
 
   it('every node names and describes itself in both languages, from its own locales.ts', () => {
-    for (const n of ALL_NODES) for (const key of [`node.${n.type}`, `node.desc.${n.type}`]) {
-      expect(NODE_TRANSLATIONS.en![key], `${n.type}: ${key} (en)`).toBeTruthy();
-      expect(NODE_TRANSLATIONS.vi![key], `${n.type}: ${key} (vi)`).toBeTruthy();
-    }
+    for (const n of ALL_NODES)
+      for (const key of [`node.${n.type}`, `node.desc.${n.type}`]) {
+        expect(NODE_TRANSLATIONS.en![key], `${n.type}: ${key} (en)`).toBeTruthy();
+        expect(NODE_TRANSLATIONS.vi![key], `${n.type}: ${key} (vi)`).toBeTruthy();
+      }
   });
 
   it('every string a node body asks for exists in a dictionary', () => {

@@ -173,8 +173,13 @@ export class JobHub {
         // one this build cannot read is dropped rather than left to break the panel that lists it.
         if (job.result !== undefined) {
           let kept: unknown;
-          try { kept = this.recorder ? this.recorder.load(job.result) : undefined; } catch { kept = undefined; }
-          if (kept === undefined) delete job.result; else job.result = kept;
+          try {
+            kept = this.recorder ? this.recorder.load(job.result) : undefined;
+          } catch {
+            kept = undefined;
+          }
+          if (kept === undefined) delete job.result;
+          else job.result = kept;
         }
         this.jobs.set(job.id, job);
         if (job.kind === 'run' && job.result) {
@@ -204,7 +209,11 @@ export class JobHub {
     for (const job of all.slice(MAX_JOB_FILES)) {
       this.jobs.delete(job.id);
       gone.add(job.id);
-      try { unlinkSync(path.join(jobsDir(), `${job.id}.json`)); } catch { /* already gone */ }
+      try {
+        unlinkSync(path.join(jobsDir(), `${job.id}.json`));
+      } catch {
+        /* already gone */
+      }
     }
     // The request ids of jobs that are gone point at nothing; dropping them keeps that map as small
     // as the queue it speaks for, instead of growing for as long as the process lives.
@@ -222,7 +231,11 @@ export class JobHub {
 
   private emit(e: HubEvent): void {
     for (const l of this.listeners) {
-      try { l(e); } catch { /* a dead listener must not stop the run */ }
+      try {
+        l(e);
+      } catch {
+        /* a dead listener must not stop the run */
+      }
     }
   }
 
@@ -234,13 +247,19 @@ export class JobHub {
     if (!slot) {
       const logs = new LogBuffer();
       const holder: { slot?: Slot } = {};
-      const executor = new Executor(graph ?? { nodes: [], edges: [] }, this.servicesFor(() => (holder.slot ? { name: holder.slot.name, graph: holder.slot.executor.getGraph() } : null)), {
-        onStateChange: (nodeId, runtime) => this.emit({ type: 'node', key, nodeId, runtime }),
-        onParamsPatch: (nodeId, patch) => this.emit({ type: 'params', key, nodeId, patch }),
-        onRunStart: (info) => this.emit({ type: 'run:start', key, ...info }),
-        onStep: (info) => this.emit({ type: 'run:step', key, ...info }),
-        onRunEnd: (info) => this.emit({ type: 'run:end', key, ...info }),
-      }, logs, { cache: this.cache, fingerprint: this.fingerprint });
+      const executor = new Executor(
+        graph ?? { nodes: [], edges: [] },
+        this.servicesFor(() => (holder.slot ? { name: holder.slot.name, graph: holder.slot.executor.getGraph() } : null)),
+        {
+          onStateChange: (nodeId, runtime) => this.emit({ type: 'node', key, nodeId, runtime }),
+          onParamsPatch: (nodeId, patch) => this.emit({ type: 'params', key, nodeId, patch }),
+          onRunStart: (info) => this.emit({ type: 'run:start', key, ...info }),
+          onStep: (info) => this.emit({ type: 'run:step', key, ...info }),
+          onRunEnd: (info) => this.emit({ type: 'run:end', key, ...info }),
+        },
+        logs,
+        { cache: this.cache, fingerprint: this.fingerprint },
+      );
       logs.subscribe((entry) => this.emit({ type: 'log', key, entry }));
       slot = { executor, logs, name: name ?? key, running: false };
       holder.slot = slot;
@@ -278,7 +297,15 @@ export class JobHub {
     const seen = input.requestId ? this.jobs.get(this.byRequest.get(input.requestId) ?? '') : undefined;
     if (seen) return seen;
     this.slot(input.key);
-    const job: Job = { id: `job-${Date.now().toString(36)}-${(this.seq++).toString(36)}`, key: input.key, kind: input.kind, nodeId: input.nodeId, force: input.force, status: 'pending', createdAt: Date.now() };
+    const job: Job = {
+      id: `job-${Date.now().toString(36)}-${(this.seq++).toString(36)}`,
+      key: input.key,
+      kind: input.kind,
+      nodeId: input.nodeId,
+      force: input.force,
+      status: 'pending',
+      createdAt: Date.now(),
+    };
     this.submissions.set(job.id, { graph: structuredClone(input.graph), name: input.name ?? input.key });
     this.jobs.set(job.id, job);
     if (input.requestId) this.byRequest.set(input.requestId, job.id);

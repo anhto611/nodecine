@@ -11,7 +11,10 @@ export class UndoStack<T> {
   private lastKey: string | null = null;
   private lastAt = 0;
 
-  constructor(private readonly capacity = 50, private readonly coalesceMs = 800) {}
+  constructor(
+    private readonly capacity = 50,
+    private readonly coalesceMs = 800,
+  ) {}
 
   /** Call with the state *before* a change. */
   record(before: T, opts: { coalesce?: string; now?: number } = {}): void {
@@ -42,6 +45,10 @@ export class UndoStack<T> {
     return next;
   }
 
-  get canUndo(): boolean { return this.past.length > 0; }
-  get canRedo(): boolean { return this.future.length > 0; }
+  get canUndo(): boolean {
+    return this.past.length > 0;
+  }
+  get canRedo(): boolean {
+    return this.future.length > 0;
+  }
 }

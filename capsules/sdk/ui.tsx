@@ -5,10 +5,7 @@ import { Icon } from './icons';
 export { useT } from './host';
 
 export const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean; danger?: boolean; small?: boolean }> = ({ primary, danger, small, className, ...rest }) => (
-  <button
-    {...rest}
-    className={`nc-btn ${primary ? 'nc-btn-pri' : ''} ${danger ? 'nc-btn-danger' : ''} ${small ? 'nc-btn-sm' : ''} ${className ?? ''}`}
-  />
+  <button {...rest} className={`nc-btn ${primary ? 'nc-btn-pri' : ''} ${danger ? 'nc-btn-danger' : ''} ${small ? 'nc-btn-sm' : ''} ${className ?? ''}`} />
 );
 
 /**
@@ -54,10 +51,19 @@ export const Dialog: React.FC<{
       style={{ width, height }}
       onClick={(e) => e.stopPropagation()}
       onKeyDownCapture={(e) => {
-        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onClose(); return; }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+          return;
+        }
         const inField = !!(e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
         if (inField) return;
-        if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); e.stopPropagation(); return; }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         onKey?.(e);
       }}
     >
@@ -67,7 +73,9 @@ export const Dialog: React.FC<{
         <span className="nc-modal-title">{title}</span>
         {titleExtra}
         <div style={{ flex: 1 }} />
-        <button className="nc-chip" style={{ border: 0 }} onClick={onClose} title={closeTitle}><Icon.x /></button>
+        <button className="nc-chip" style={{ border: 0 }} onClick={onClose} title={closeTitle}>
+          <Icon.x />
+        </button>
       </div>
       {children}
       {footer && <div className="nc-modal-foot">{footer}</div>}

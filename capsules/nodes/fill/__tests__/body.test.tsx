@@ -17,23 +17,42 @@ function seed(values: Record<string, unknown>, variables?: unknown[]) {
     edges: [{ id: 'e', source: 'composition', sourcePort: 'composition', target: 'fill', targetPort: 'composition' }],
   };
   useStudio.setState({
-    graph, locale: 'vi', tabs: [], activeTab: 'fill-body-test', executor: null,
+    graph,
+    locale: 'vi',
+    tabs: [],
+    activeTab: 'fill-body-test',
+    executor: null,
     runtimes: {
       composition: {
-        state: 'done', outputs: { composition: { payloadType: 'Composition', payload: {
-          engine: 'hyperframes', width: 1080, height: 1920, fps: 30, files: {}, media: {}, values: {},
-          variables: variables ?? [
-            { id: 'voiceover', type: 'string', label: 'Voice-over file', default: '' },
-            { id: 'videoSeconds', type: 'number', label: 'Length of the film (s)', default: 45 },
-            { id: 'mark', type: 'color', label: 'Marker colour', labels: { vi: 'Màu bút dạ' }, default: '#d6263b' },
-          ],
-        } } },
+        state: 'done',
+        outputs: {
+          composition: {
+            payloadType: 'Composition',
+            payload: {
+              engine: 'hyperframes',
+              width: 1080,
+              height: 1920,
+              fps: 30,
+              files: {},
+              media: {},
+              values: {},
+              variables: variables ?? [
+                { id: 'voiceover', type: 'string', label: 'Voice-over file', default: '' },
+                { id: 'videoSeconds', type: 'number', label: 'Length of the film (s)', default: 45 },
+                { id: 'mark', type: 'color', label: 'Marker colour', labels: { vi: 'Màu bút dạ' }, default: '#d6263b' },
+              ],
+            },
+          },
+        },
       } as never,
     },
   });
 }
 
-beforeEach(() => { _resetNodeRegistry(); registerNodes(); });
+beforeEach(() => {
+  _resetNodeRegistry();
+  registerNodes();
+});
 
 describe('the Data Merge node', () => {
   it('offers only what a person sets: not the voice, not the length the run works out', () => {
@@ -53,7 +72,7 @@ describe('the Data Merge node', () => {
     expect(container.textContent).toContain('kit này tự quyết hình thức');
   });
 
-  it('says a colour is the kit\'s until this film chooses one, and gives it back', () => {
+  it("says a colour is the kit's until this film chooses one, and gives it back", () => {
     seed({});
     const unset = render(<FillBody nodeId="fill" />, { wrapper });
     expect(unset.container.textContent).toContain('theo kit');

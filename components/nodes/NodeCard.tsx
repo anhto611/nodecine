@@ -11,7 +11,11 @@ import { NODE_BODIES } from '@/capsules/nodes/index.client';
 import { hasTranslation } from '@/lib/i18n';
 
 /** A message as text: markup an upstream sent back (an error page) is dropped, its spaces folded. */
-const plainText = (message: string) => message.replace(/<[!/a-z][^>]*?(>|(?= · )|$)/gi, ' ').replace(/[ \t]+/g, ' ').trim();
+const plainText = (message: string) =>
+  message
+    .replace(/<[!/a-z][^>]*?(>|(?= · )|$)/gi, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
 
 /**
  * What a graph issue says. The graph's own checks have `issue.<code>` strings; a node's `validate` reports
@@ -41,10 +45,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
   // a brief says so before it is run, and says so again when it is. The error is the fuller of the two —
   // it carries what to do next — so the issue steps aside when they share a code. Kept apart from
   // `issues` because the card's warning ring should still come on for a node with something to say.
-  const shown = React.useMemo(
-    () => issues.filter((i) => i.code !== rt?.error?.code && i.code !== rt?.blockedBy?.code),
-    [issues, rt?.error?.code, rt?.blockedBy?.code],
-  );
+  const shown = React.useMemo(() => issues.filter((i) => i.code !== rt?.error?.code && i.code !== rt?.blockedBy?.code), [issues, rt?.error?.code, rt?.blockedBy?.code]);
   const runNode = useStudio((s) => s.runNode);
   const running = useStudio((s) => s.running);
   const toggleBypass = useStudio((s) => s.toggleBypass);
@@ -54,7 +55,14 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
   const selected = useStudio((s) => s.selectedNodeId === data.nodeId);
   if (!node || !rt) return null;
   const def = getNodeType(node.type);
-  if (!def) return <div className="nc-node"><div className="nc-hdr"><span className="nc-title">{node.type}</span></div></div>;
+  if (!def)
+    return (
+      <div className="nc-node">
+        <div className="nc-hdr">
+          <span className="nc-title">{node.type}</span>
+        </div>
+      </div>
+    );
   const meta = NODE_META[node.type];
   const IconC = meta ? Icon[meta.icon] : Icon.chip;
   const Body = NODE_BODIES[node.type];
@@ -69,13 +77,18 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
     <div className={`nc-node ${meta?.layout === 'wide' ? 'wide' : ''} ${stateClass} ${selected ? 'selected' : ''}`}>
       <div className="nc-hdr">
         <IconC size={12} />
-        <span className="nc-title" title={t(`node.desc.${node.type}`)}>{t(`node.${node.type}`)}</span>
+        <span className="nc-title" title={t(`node.desc.${node.type}`)}>
+          {t(`node.${node.type}`)}
+        </span>
         {badge}
         {(node.pinned || Object.keys(rt.outputs ?? {}).length > 0) && (
           <button
             className={`nc-hdr-toggle nodrag nopan ${node.pinned ? 'on' : ''}`}
             title={node.pinned ? t('node.unpin') : t('node.pin')}
-            onClick={(e) => { e.stopPropagation(); togglePin(node.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePin(node.id);
+            }}
             aria-pressed={!!node.pinned}
           >
             <Icon.pin size={9} />
@@ -87,7 +100,10 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
           <button
             className={`nc-hdr-toggle nodrag nopan ${node.bypassed ? 'on' : ''}`}
             title={`${t(node.bypassed ? 'node.bypassOff' : 'node.bypass')} · Ctrl+B`}
-            onClick={(e) => { e.stopPropagation(); toggleBypass(node.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleBypass(node.id);
+            }}
             aria-pressed={node.bypassed}
           >
             <Icon.stop size={9} />
@@ -98,21 +114,32 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
         <div className="nc-ports">
           {flowIns.map((p) => (
             <div key={`in-${p.name}`} className="nc-port-row">
-              {t(portLabelKey(p.type))}{p.required === false ? ` · ${t('port.optional')}` : ''}
+              {t(portLabelKey(p.type))}
+              {p.required === false ? ` · ${t('port.optional')}` : ''}
             </div>
           ))}
           {flowOuts.map((p) => (
-            <div key={`out-${p.name}`} className="nc-port-row" style={{ justifyContent: 'flex-end' }}>{t(portLabelKey(p.type))}</div>
+            <div key={`out-${p.name}`} className="nc-port-row" style={{ justifyContent: 'flex-end' }}>
+              {t(portLabelKey(p.type))}
+            </div>
           ))}
         </div>
       )}
       <div className="nc-body">
         {Body ? <Body nodeId={node.id} /> : null}
-        {shown.length > 0 && <div className="nc-hint" style={{ color: 'var(--warn)' }}>{shown.map((i) => issueText(t, i)).join(' · ')}</div>}
+        {shown.length > 0 && (
+          <div className="nc-hint" style={{ color: 'var(--warn)' }}>
+            {shown.map((i) => issueText(t, i)).join(' · ')}
+          </div>
+        )}
         {rt.warnings?.map((w, i) => {
           // A message can carry what an upstream answered, an HTML error page included: its text only, a few lines of it.
           const text = w.code ? t(`error.${w.code}`) : plainText(w.message);
-          return <div key={i} className="nc-hint clamp" style={{ color: 'var(--warn)' }} title={text}>{text}</div>;
+          return (
+            <div key={i} className="nc-hint clamp" style={{ color: 'var(--warn)' }} title={text}>
+              {text}
+            </div>
+          );
         })}
         {rt.blockedBy && (
           <div className="nc-hint" style={{ color: rt.blockedBy.kind === 'capability' ? 'var(--warn)' : 'var(--tx-3)' }}>
@@ -123,7 +150,13 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
         {rt.error && (
           <div className="nc-hint" style={{ color: 'var(--err)' }}>
             {t(`error.${rt.error.code}`)}
-            <div className="clamp" style={{ color: 'var(--tx-3)', whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 4, overflow: 'hidden' }} title={plainText(rt.error.message)}>{plainText(rt.error.message).slice(0, 160)}</div>
+            <div
+              className="clamp"
+              style={{ color: 'var(--tx-3)', whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 4, overflow: 'hidden' }}
+              title={plainText(rt.error.message)}
+            >
+              {plainText(rt.error.message).slice(0, 160)}
+            </div>
             {/* Drawn like the one on a blocked node, because it is the same thing: what to do next. */}
             {rt.error.fix ? <div style={{ color: 'var(--tx-2)' }}>$ {rt.error.fix}</div> : null}
           </div>
@@ -154,11 +187,19 @@ function renderBadge(rt: ReturnType<typeof useRuntime>, t: ReturnType<typeof use
   );
   switch (rt.state) {
     case 'running':
-      return <span className="nc-badge" style={{ color: 'var(--run)' }}><Icon.spin /></span>;
+      return (
+        <span className="nc-badge" style={{ color: 'var(--run)' }}>
+          <Icon.spin />
+        </span>
+      );
     case 'success':
       return dot('var(--ok)', rt.reused ? t('state.reused') : rt.durationMs !== undefined ? `${(rt.durationMs / 1000).toFixed(1)}s` : t('state.success'));
     case 'error':
-      return <span className="nc-badge" style={{ color: 'var(--err)' }}><Icon.warn /></span>;
+      return (
+        <span className="nc-badge" style={{ color: 'var(--err)' }}>
+          <Icon.warn />
+        </span>
+      );
     case 'queued':
       return dot('var(--tx-3)', t('state.queued'));
     case 'blocked':

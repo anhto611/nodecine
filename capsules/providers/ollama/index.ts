@@ -111,7 +111,12 @@ export function createOllamaProvider(settings: Record<string, unknown>, deps: Ol
       };
       if (installed.status === 'ready') {
         try {
-          const res = await deps.fetch(`${base}/api/show`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }), signal: withTimeout(undefined, deps.timeoutMs) });
+          const res = await deps.fetch(`${base}/api/show`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model }),
+            signal: withTimeout(undefined, deps.timeoutMs),
+          });
           if (res.ok) {
             const body = (await res.json()) as { capabilities?: unknown };
             if (Array.isArray(body.capabilities) && body.capabilities.includes('vision')) vision = ready;

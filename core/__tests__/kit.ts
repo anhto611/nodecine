@@ -30,15 +30,25 @@ export function registerTestKit(): void {
   registerPortType(NUMBER, { labelKey: 'port.testNumber', schema: z.object({ value: z.number() }) });
 
   define({
-    type: 'test/count', version: 1, kind: 'source', inputs: [], outputs: [{ name: 'count', type: NUMBER }],
-    paramsSchema: z.object({}), defaultParams: {},
+    type: 'test/count',
+    version: 1,
+    kind: 'source',
+    inputs: [],
+    outputs: [{ name: 'count', type: NUMBER }],
+    paramsSchema: z.object({}),
+    defaultParams: {},
     run: async () => ({ count: { value: 3 } }),
   });
 
   const SourceParams = z.object({ value: z.string().default('hello') });
   define({
-    type: 'test/source', version: 1, kind: 'source', inputs: [], outputs: [port('out')],
-    paramsSchema: SourceParams, defaultParams: { value: 'hello' },
+    type: 'test/source',
+    version: 1,
+    kind: 'source',
+    inputs: [],
+    outputs: [port('out')],
+    paramsSchema: SourceParams,
+    defaultParams: { value: 'hello' },
     validate: (p: z.infer<typeof SourceParams>) => (p.value.trim() ? [] : [{ code: ErrorCode.INPUT_EMPTY, message: 'nothing typed' }]),
     run: async ({ params }: { params: z.infer<typeof SourceParams> }) => ({ out: { text: params.value } }),
   });
@@ -46,26 +56,50 @@ export function registerTestKit(): void {
   /** One unit of paid work: what a voice, a model or a render is to the runtime. */
   const VoiceParams = z.object({ speed: z.number().positive().default(1) });
   define({
-    type: 'test/voice', version: 1, kind: 'process', inputs: [port('in')], outputs: [port('out')],
-    paramsSchema: VoiceParams, defaultParams: { speed: 1 },
-    run: async ({ inputs, params, services }: { inputs: Record<string, { payload: { text: string } }>; params: z.infer<typeof VoiceParams>; services: NodeServices }) =>
-      ({ out: { text: await services.invoke<string>('voice', [inputs.in!.payload.text, params.speed]) } }),
+    type: 'test/voice',
+    version: 1,
+    kind: 'process',
+    inputs: [port('in')],
+    outputs: [port('out')],
+    paramsSchema: VoiceParams,
+    defaultParams: { speed: 1 },
+    run: async ({ inputs, params, services }: { inputs: Record<string, { payload: { text: string } }>; params: z.infer<typeof VoiceParams>; services: NodeServices }) => ({
+      out: { text: await services.invoke<string>('voice', [inputs.in!.payload.text, params.speed]) },
+    }),
   });
 
   /** Joins what reaches it; warns when told to expect a second input that is not wired. */
   const JoinParams = z.object({ fps: z.number().int().min(1).default(30), wantsExtra: z.boolean().default(false) });
   define({
-    type: 'test/join', version: 1, kind: 'process', inputs: [port('in'), port('extra', { required: false })], outputs: [port('out')],
-    paramsSchema: JoinParams, defaultParams: { fps: 30, wantsExtra: false },
-    run: async ({ inputs, params, log }: { inputs: Record<string, { payload: { text: string } } | undefined>; params: z.infer<typeof JoinParams>; log: (l: string, m: string, c?: string) => void }) => {
+    type: 'test/join',
+    version: 1,
+    kind: 'process',
+    inputs: [port('in'), port('extra', { required: false })],
+    outputs: [port('out')],
+    paramsSchema: JoinParams,
+    defaultParams: { fps: 30, wantsExtra: false },
+    run: async ({
+      inputs,
+      params,
+      log,
+    }: {
+      inputs: Record<string, { payload: { text: string } } | undefined>;
+      params: z.infer<typeof JoinParams>;
+      log: (l: string, m: string, c?: string) => void;
+    }) => {
       if (params.wantsExtra && !inputs.extra) log('warn', 'nothing is wired into extra', 'EXTRA_NOT_CONNECTED');
       return { out: { text: [inputs.in!.payload.text, inputs.extra?.payload.text].filter(Boolean).join('+') } };
     },
   });
 
   define({
-    type: 'test/sink', version: 1, kind: 'sink', inputs: [port('in')], outputs: [],
-    paramsSchema: z.object({}), defaultParams: {},
+    type: 'test/sink',
+    version: 1,
+    kind: 'sink',
+    inputs: [port('in')],
+    outputs: [],
+    paramsSchema: z.object({}),
+    defaultParams: {},
     run: async ({ inputs, services }: { inputs: Record<string, { payload: { text: string } }>; services: NodeServices }) => {
       await services.invoke('show', [inputs.in!.payload.text]);
       return {};
@@ -73,8 +107,14 @@ export function registerTestKit(): void {
   });
 
   define({
-    type: 'test/export', version: 1, kind: 'ondemand', defaultBypassed: true, inputs: [port('in')], outputs: [],
-    paramsSchema: z.object({}), defaultParams: {},
+    type: 'test/export',
+    version: 1,
+    kind: 'ondemand',
+    defaultBypassed: true,
+    inputs: [port('in')],
+    outputs: [],
+    paramsSchema: z.object({}),
+    defaultParams: {},
     run: async ({ inputs, services }: { inputs: Record<string, { payload: { text: string } }>; services: NodeServices }) =>
       services.invoke<Record<string, unknown>>('export', [inputs.in!.payload.text]),
   });
@@ -82,15 +122,25 @@ export function registerTestKit(): void {
   /** A part a node needs, reported the way a probe reports one: capabilities on the payload. */
   const PartParams = z.object({ ready: z.boolean().default(true) });
   define({
-    type: 'test/part', version: 1, kind: 'source', inputs: [], outputs: [port('part')],
-    paramsSchema: PartParams, defaultParams: { ready: true },
+    type: 'test/part',
+    version: 1,
+    kind: 'source',
+    inputs: [],
+    outputs: [port('part')],
+    paramsSchema: PartParams,
+    defaultParams: { ready: true },
     run: async ({ params }: { params: z.infer<typeof PartParams> }) => ({
       part: { text: 'part', capabilities: { render: params.ready ? { status: 'ready' } : { status: 'unavailable', reason: 'no renderer', fix: 'install one' } } },
     }),
   });
   define({
-    type: 'test/uses-part', version: 1, kind: 'sink', inputs: [port('in'), port('part', { requires: ['render'] })], outputs: [],
-    paramsSchema: z.object({}), defaultParams: {},
+    type: 'test/uses-part',
+    version: 1,
+    kind: 'sink',
+    inputs: [port('in'), port('part', { requires: ['render'] })],
+    outputs: [],
+    paramsSchema: z.object({}),
+    defaultParams: {},
     run: async () => ({}),
   });
 }
@@ -114,8 +164,13 @@ export function testServices(): TestServices {
   let clock = 1_000_000;
   return {
     calls,
-    fail: (id: string, error: Error | null) => { if (error) failures.set(id, error); else failures.delete(id); },
-    delay: (id: string, ms: number) => { delays.set(id, ms); },
+    fail: (id: string, error: Error | null) => {
+      if (error) failures.set(id, error);
+      else failures.delete(id);
+    },
+    delay: (id: string, ms: number) => {
+      delays.set(id, ms);
+    },
     now: () => (clock += 7),
     async invoke<T>(serviceId: string, args: unknown[]): Promise<T> {
       calls.push({ name: serviceId, args });

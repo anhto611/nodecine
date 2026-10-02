@@ -67,13 +67,23 @@ export async function convertToMp3(input: string, output: string, signal?: Abort
  * importing the same file twice costs nothing. The caller decides which paths may be read.
  */
 export async function importAudioFile(source: string, signal: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number }> {
-  if (!(await stat(source).then((s) => s.isFile(), () => false))) {
+  if (
+    !(await stat(source).then(
+      (s) => s.isFile(),
+      () => false,
+    ))
+  ) {
     throw new Error(`no audio file at "${source}"`);
   }
   const name = `${await hashFile(source)}.mp3`;
   const out = mediaPath(name);
   await ensureTmpDir();
-  if (!(await stat(out).then(() => true, () => false))) {
+  if (
+    !(await stat(out).then(
+      () => true,
+      () => false,
+    ))
+  ) {
     // Convert into place under a temporary name, so an interrupted run never leaves a half file
     // that the hash says is complete.
     const partial = path.join(path.dirname(out), `${path.basename(out, '.mp3')}.part.mp3`);

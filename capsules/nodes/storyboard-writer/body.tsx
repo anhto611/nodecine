@@ -15,7 +15,13 @@ import type { Brief } from '@/contracts/types/brief';
 import { DURATIONS, TONES } from './node';
 
 type Params = { tone: (typeof TONES)[number]; subject: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
-interface Scene { title: string; voiceover: string; block: string; values: Record<string, unknown>; mounts: { component: string; slot: string; at?: string; until?: string }[] }
+interface Scene {
+  title: string;
+  voiceover: string;
+  block: string;
+  values: Record<string, unknown>;
+  mounts: { component: string; slot: string; at?: string; until?: string }[];
+}
 
 /** A value that names a moment: `@word`, set by picking a word the scene says. */
 const isCue = (v: BlockVariable, value: unknown) => (typeof value === 'string' && value.trim().startsWith('@')) || (v.type === 'number' && /(_at|At|_start)$/.test(v.id));
@@ -27,7 +33,11 @@ const WordPick: React.FC<{ id: string; words: string[]; value: unknown; onPick: 
     <div id={id} role="group" style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
       {words.map((word, i) => {
         const on = picked.includes(cueWord(word));
-        return <button key={`${word}-${i}`} className={`nc-chip ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => onPick(cueWord(word))}>{word}</button>;
+        return (
+          <button key={`${word}-${i}`} className={`nc-chip ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => onPick(cueWord(word))}>
+            {word}
+          </button>
+        );
       })}
     </div>
   );
@@ -36,13 +46,25 @@ const WordPick: React.FC<{ id: string; words: string[]; value: unknown; onPick: 
 /** One value of a scene, with the control its declared type calls for. */
 type PictureChoice = { path: string; url: string };
 
-const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown; words: string[]; pictures: PictureChoice[]; onChange: (value: unknown) => void }> = ({ id, variable, value, words, pictures, onChange }) => {
+const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown; words: string[]; pictures: PictureChoice[]; onChange: (value: unknown) => void }> = ({
+  id,
+  variable,
+  value,
+  words,
+  pictures,
+  onChange,
+}) => {
   const t = useT();
   const locale = useLocale();
   const label = (
     <label htmlFor={id}>
-      {labelOf(variable, locale)}{variable.required ? ' *' : ''}
-      {variable.type === 'string' && variable.maxLength && typeof value === 'string' && <span style={{ marginLeft: 6, color: value.length > variable.maxLength ? 'var(--err)' : undefined }}>{value.length}/{variable.maxLength}</span>}
+      {labelOf(variable, locale)}
+      {variable.required ? ' *' : ''}
+      {variable.type === 'string' && variable.maxLength && typeof value === 'string' && (
+        <span style={{ marginLeft: 6, color: value.length > variable.maxLength ? 'var(--err)' : undefined }}>
+          {value.length}/{variable.maxLength}
+        </span>
+      )}
     </label>
   );
   let control: React.ReactNode;
@@ -54,7 +76,11 @@ const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown
   } else if (variable.type === 'enum') {
     control = (
       <select id={id} className="nc-select" value={String(value ?? variable.default)} onChange={(e) => onChange(e.target.value)}>
-        {variable.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {variable.options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
       </select>
     );
   } else if (variable.type === 'boolean') {
@@ -63,10 +89,29 @@ const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown
     wide = true;
     // Pictures are chosen by sight: their names are the storyboard's, not the person's.
     const chosen = typeof value === 'string' ? value : '';
-    const tile = (on: boolean): React.CSSProperties => ({ width: 44, height: 64, padding: 0, borderRadius: 4, overflow: 'hidden', cursor: 'pointer', background: 'var(--bg-2, #0002)', border: `2px solid ${on ? 'var(--accent)' : 'var(--line)'}`, flex: 'none' });
+    const tile = (on: boolean): React.CSSProperties => ({
+      width: 44,
+      height: 64,
+      padding: 0,
+      borderRadius: 4,
+      overflow: 'hidden',
+      cursor: 'pointer',
+      background: 'var(--bg-2, #0002)',
+      border: `2px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+      flex: 'none',
+    });
     control = (
       <div id={id} role="radiogroup" style={{ display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 2 }}>
-        <button type="button" role="radio" aria-checked={!chosen} title={t('node.writerNoPicture')} style={{ ...tile(!chosen), fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }} onClick={() => onChange('')}>—</button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!chosen}
+          title={t('node.writerNoPicture')}
+          style={{ ...tile(!chosen), fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}
+          onClick={() => onChange('')}
+        >
+          —
+        </button>
         {pictures.map((p, i) => (
           <button key={p.path} type="button" role="radio" aria-checked={chosen === p.path} aria-label={`${i + 1}`} style={tile(chosen === p.path)} onClick={() => onChange(p.path)}>
             <img src={p.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }} />
@@ -83,18 +128,34 @@ const ValueField: React.FC<{ id: string; variable: BlockVariable; value: unknown
           const entry = item as Record<string, unknown>;
           return (
             <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <span className="nc-chip" style={{ flex: 'none' }}>{String(entry.type ?? '')}</span>
-              {typeof entry.text === 'string'
-                ? <input aria-label={`${variable.label} ${i + 1}`} className="nc-input" style={{ flex: 1 }} value={entry.text} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...(x as object), text: e.target.value } : x)))} />
-                : <span className="nc-hint" style={{ flex: 1 }}>{String(entry.target ?? '')}</span>}
-              <button className="nc-chip" aria-label={t('node.writerRemove')} onClick={() => onChange(value.filter((_, j) => j !== i))}>×</button>
+              <span className="nc-chip" style={{ flex: 'none' }}>
+                {String(entry.type ?? '')}
+              </span>
+              {typeof entry.text === 'string' ? (
+                <input
+                  aria-label={`${variable.label} ${i + 1}`}
+                  className="nc-input"
+                  style={{ flex: 1 }}
+                  value={entry.text}
+                  onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...(x as object), text: e.target.value } : x)))}
+                />
+              ) : (
+                <span className="nc-hint" style={{ flex: 1 }}>
+                  {String(entry.target ?? '')}
+                </span>
+              )}
+              <button className="nc-chip" aria-label={t('node.writerRemove')} onClick={() => onChange(value.filter((_, j) => j !== i))}>
+                ×
+              </button>
             </div>
           );
         })}
       </div>
     );
   } else if (variable.type === 'number') {
-    control = <input id={id} type="number" className="nc-input" value={typeof value === 'number' ? value : ''} onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))} />;
+    control = (
+      <input id={id} type="number" className="nc-input" value={typeof value === 'number' ? value : ''} onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))} />
+    );
   } else {
     control = <input id={id} className="nc-input" value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value)} />;
   }
@@ -123,19 +184,46 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
   const briefPayload = useInputPayload<Brief>(nodeId, 'brief');
   const briefWire = graph.edges.find((e) => e.target === nodeId && e.targetPort === 'brief');
   const briefAbout = (graph.nodes.find((n) => n.id === briefWire?.source)?.params as { about?: unknown } | undefined)?.about;
-  const briefLanguage = resolveOutputLanguage('auto', typeof briefAbout === 'string' ? briefAbout : briefPayload?.about ?? '');
+  const briefLanguage = resolveOutputLanguage('auto', typeof briefAbout === 'string' ? briefAbout : (briefPayload?.about ?? ''));
   // Language names are only shown in the interface's language; which language the narration is in is this node's.
   const nameOf = React.useMemo(() => {
     let names: Intl.DisplayNames | null = null;
-    try { names = new Intl.DisplayNames([locale], { type: 'language' }); } catch { names = null; }
-    return (code: string) => { try { return names?.of(code) ?? code; } catch { return code; } };
+    try {
+      names = new Intl.DisplayNames([locale], { type: 'language' });
+    } catch {
+      names = null;
+    }
+    return (code: string) => {
+      try {
+        return names?.of(code) ?? code;
+      } catch {
+        return code;
+      }
+    };
   }, [locale]);
 
   const failure = runtime?.state === 'error' ? runtime.error : undefined;
-  const draft = (failure?.details as { written?: WrittenStoryboard; problems?: string[] } | undefined);
+  const draft = failure?.details as { written?: WrittenStoryboard; problems?: string[] } | undefined;
   const scenes: Scene[] = draft?.written
-    ? draft.written.frames.map((f) => ({ title: f.title, voiceover: f.voiceover ?? '', block: f.block, values: f.values, mounts: (f.mounts ?? []).map((m) => ({ component: m.component, slot: m.slot, at: m.at ?? undefined, until: m.until ?? undefined })) }))
-    : (storyboard?.frames ?? []).map((f) => ({ title: f.title, voiceover: f.voiceover ?? '', block: f.block ?? '', values: f.values, mounts: f.mounts.map((m) => ({ component: m.component, slot: typeof m.box === 'string' ? m.box : m.box.join(','), at: typeof m.at === 'string' ? m.at : undefined, until: typeof m.until === 'string' ? m.until : undefined })) }));
+    ? draft.written.frames.map((f) => ({
+        title: f.title,
+        voiceover: f.voiceover ?? '',
+        block: f.block,
+        values: f.values,
+        mounts: (f.mounts ?? []).map((m) => ({ component: m.component, slot: m.slot, at: m.at ?? undefined, until: m.until ?? undefined })),
+      }))
+    : (storyboard?.frames ?? []).map((f) => ({
+        title: f.title,
+        voiceover: f.voiceover ?? '',
+        block: f.block ?? '',
+        values: f.values,
+        mounts: f.mounts.map((m) => ({
+          component: m.component,
+          slot: typeof m.box === 'string' ? m.box : m.box.join(','),
+          at: typeof m.at === 'string' ? m.at : undefined,
+          until: typeof m.until === 'string' ? m.until : undefined,
+        })),
+      }));
   const problemsOf = (i: number) => (draft?.problems ?? []).filter((m) => m.startsWith(`frame ${i + 1}:`) || m.startsWith(`frame ${i + 1},`));
   // Layers: an overlay block over a run of scenes, shown after them with the scenes they cover.
   const layers = draft?.written
@@ -166,26 +254,53 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <ProviderPick nodeId={nodeId} kind="llm" />
-      <FormBody nodeId={nodeId} fields={['durationSeconds', 'language', 'tone', 'notes']} widgets={{
-        durationSeconds: { labelKey: 'node.writerDuration', options: DURATIONS.map((d) => ({ value: d, label: `${d} s` })) },
-        language: { labelKey: 'node.writerLanguage', options: OUTPUT_LANGUAGES.map((l) => ({ value: l, label: l === 'auto' ? t('node.writerLanguageAuto', { lang: nameOf(briefLanguage) }) : nameOf(l) })) },
-        tone: { labelKey: 'node.writerTone', options: TONES.map((tone) => ({ value: tone, label: t(`node.writerTone.${tone}`) })) },
-        notes: { widget: 'textarea', rows: 2, labelKey: 'node.writerNotes' },
-      }} />
+      <FormBody
+        nodeId={nodeId}
+        fields={['durationSeconds', 'language', 'tone', 'notes']}
+        widgets={{
+          durationSeconds: { labelKey: 'node.writerDuration', options: DURATIONS.map((d) => ({ value: d, label: `${d} s` })) },
+          language: {
+            labelKey: 'node.writerLanguage',
+            options: OUTPUT_LANGUAGES.map((l) => ({ value: l, label: l === 'auto' ? t('node.writerLanguageAuto', { lang: nameOf(briefLanguage) }) : nameOf(l) })),
+          },
+          tone: { labelKey: 'node.writerTone', options: TONES.map((tone) => ({ value: tone, label: t(`node.writerTone.${tone}`) })) },
+          notes: { widget: 'textarea', rows: 2, labelKey: 'node.writerNotes' },
+        }}
+      />
       {/* The storyboard is written by the workflow's Run; here only what reworks one already written. */}
       {(pending || scenes.length > 0) && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {pending && <Btn small primary disabled={running} onClick={() => runNode(nodeId)}>{t('node.writerApply')}</Btn>}
-          {scenes.length > 0 && <Btn small disabled={running} onClick={writeAgain}>{t('node.writerWriteAgain')}</Btn>}
+          {pending && (
+            <Btn small primary disabled={running} onClick={() => runNode(nodeId)}>
+              {t('node.writerApply')}
+            </Btn>
+          )}
+          {scenes.length > 0 && (
+            <Btn small disabled={running} onClick={writeAgain}>
+              {t('node.writerWriteAgain')}
+            </Btn>
+          )}
         </div>
       )}
       {subject && (
         <div style={{ display: 'grid', gap: 4, fontSize: 'var(--fs-hint)', color: 'var(--tx-2)', lineHeight: 1.5 }}>
-          <Kv k={<label htmlFor={fid('subject')}>{t('node.writerSubject')}</label>} v={
-            <input id={fid('subject')} className="nc-input" maxLength={120} value={subjectDraft ?? subject} onChange={(e) => setSubjectDraft(e.target.value)} />
-          } />
+          <Kv
+            k={<label htmlFor={fid('subject')}>{t('node.writerSubject')}</label>}
+            v={<input id={fid('subject')} className="nc-input" maxLength={120} value={subjectDraft ?? subject} onChange={(e) => setSubjectDraft(e.target.value)} />}
+          />
           {subjectDraft !== null && subjectDraft.trim() && subjectDraft.trim() !== subject && (
-            <Btn small style={{ justifySelf: 'start' }} disabled={running} onClick={() => { set({ subject: subjectDraft.trim() }); setSubjectDraft(null); setTimeout(() => runNode(nodeId), 0); }}>{t('node.writerRenameEverywhere')}</Btn>
+            <Btn
+              small
+              style={{ justifySelf: 'start' }}
+              disabled={running}
+              onClick={() => {
+                set({ subject: subjectDraft.trim() });
+                setSubjectDraft(null);
+                setTimeout(() => runNode(nodeId), 0);
+              }}
+            >
+              {t('node.writerRenameEverywhere')}
+            </Btn>
           )}
           {message && <div>{message}</div>}
           <div style={{ color: 'var(--tx-3)' }}>{t('node.writerUnderstoodHint')}</div>
@@ -206,30 +321,60 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
           return (
             <div key={i} style={{ display: 'grid', gap: 6, padding: 8, border: `1px solid ${problems.length ? 'var(--err)' : 'var(--line)'}`, borderRadius: 6 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                <b>{i + 1}. {e.title ?? scene.title}</b>
-                <span className="nc-chip">{scene.block}{block ? ` · ${t(`node.writerRole.${block.role}`)}` : ''}</span>
+                <b>
+                  {i + 1}. {e.title ?? scene.title}
+                </b>
+                <span className="nc-chip">
+                  {scene.block}
+                  {block ? ` · ${t(`node.writerRole.${block.role}`)}` : ''}
+                </span>
                 {e.voiceover !== undefined || e.values ? <span className="nc-hint">{t('node.writerEdited')}</span> : null}
               </div>
               {scene.voiceover || e.voiceover !== undefined ? (
-                <Kv wide k={<label htmlFor={fid('voiceover')}>{t('node.writerVoiceover', { words: words.length })}</label>} v={
-                  <textarea id={fid('voiceover')} className="nc-textarea" rows={2} value={voiceover} onChange={(ev) => edit(i, { voiceover: ev.target.value })} />
-                } />
-              ) : <span className="nc-hint">{t('node.writerSilent')}</span>}
-              {(block?.variables ?? []).filter((v) => v.id !== 'seconds' && values[v.id] !== undefined).map((v) => (
-                <ValueField key={v.id} id={fid(v.id)} variable={v} value={values[v.id]} words={words} pictures={pictures} onChange={(value) => edit(i, { values: { [v.id]: value } })} />
-              ))}
+                <Kv
+                  wide
+                  k={<label htmlFor={fid('voiceover')}>{t('node.writerVoiceover', { words: words.length })}</label>}
+                  v={<textarea id={fid('voiceover')} className="nc-textarea" rows={2} value={voiceover} onChange={(ev) => edit(i, { voiceover: ev.target.value })} />}
+                />
+              ) : (
+                <span className="nc-hint">{t('node.writerSilent')}</span>
+              )}
+              {(block?.variables ?? [])
+                .filter((v) => v.id !== 'seconds' && values[v.id] !== undefined)
+                .map((v) => (
+                  <ValueField key={v.id} id={fid(v.id)} variable={v} value={values[v.id]} words={words} pictures={pictures} onChange={(value) => edit(i, { values: { [v.id]: value } })} />
+                ))}
               {scene.mounts.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                   <span className="nc-hint">{t('node.writerMounts')}</span>
                   {scene.mounts.map((m, k) => (
-                    <span key={k} className="nc-chip" title={[m.at && `${m.at}`, m.until && `→ ${m.until}`].filter(Boolean).join(' ')}>{m.component} · {m.slot}{m.at ? ` · ${m.at}` : ''}</span>
+                    <span key={k} className="nc-chip" title={[m.at && `${m.at}`, m.until && `→ ${m.until}`].filter(Boolean).join(' ')}>
+                      {m.component} · {m.slot}
+                      {m.at ? ` · ${m.at}` : ''}
+                    </span>
                   ))}
                 </div>
               )}
-              {problems.map((m) => <div key={m} style={{ fontSize: 'var(--fs-hint)', color: 'var(--err)', overflowWrap: 'anywhere' }}>{m}</div>)}
+              {problems.map((m) => (
+                <div key={m} style={{ fontSize: 'var(--fs-hint)', color: 'var(--err)', overflowWrap: 'anywhere' }}>
+                  {m}
+                </div>
+              ))}
               <div style={{ display: 'flex', gap: 6 }}>
-                <Btn small disabled={running} onClick={() => rewrite(i)}>{t('node.writerRewriteScene')}</Btn>
-                {edits[String(i)] && <Btn small onClick={() => { const { [String(i)]: _gone, ...rest } = edits; set({ edits: rest }); }}>{t('node.writerUndoEdits')}</Btn>}
+                <Btn small disabled={running} onClick={() => rewrite(i)}>
+                  {t('node.writerRewriteScene')}
+                </Btn>
+                {edits[String(i)] && (
+                  <Btn
+                    small
+                    onClick={() => {
+                      const { [String(i)]: _gone, ...rest } = edits;
+                      set({ edits: rest });
+                    }}
+                  >
+                    {t('node.writerUndoEdits')}
+                  </Btn>
+                )}
               </div>
             </div>
           );
@@ -245,16 +390,36 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
           return (
             <div key={key} style={{ display: 'grid', gap: 6, padding: 8, border: `1px dashed ${problems.length ? 'var(--err)' : 'var(--line)'}`, borderRadius: 6 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                <b>{t('node.writerLayer')} · {e.title ?? layer.title}</b>
+                <b>
+                  {t('node.writerLayer')} · {e.title ?? layer.title}
+                </b>
                 <span className="nc-chip">{layer.block}</span>
                 <span className="nc-hint">{t('node.writerLayerScenes', { from: layer.from, to: layer.to })}</span>
                 {e.values ? <span className="nc-hint">{t('node.writerEdited')}</span> : null}
               </div>
-              {(block?.variables ?? []).filter((v) => v.id !== 'seconds' && values[v.id] !== undefined).map((v) => (
-                <ValueField key={v.id} id={fid(v.id)} variable={v} value={values[v.id]} words={words} pictures={pictures} onChange={(value) => edit(key, { values: { [v.id]: value } })} />
+              {(block?.variables ?? [])
+                .filter((v) => v.id !== 'seconds' && values[v.id] !== undefined)
+                .map((v) => (
+                  <ValueField key={v.id} id={fid(v.id)} variable={v} value={values[v.id]} words={words} pictures={pictures} onChange={(value) => edit(key, { values: { [v.id]: value } })} />
+                ))}
+              {problems.map((m) => (
+                <div key={m} style={{ fontSize: 'var(--fs-hint)', color: 'var(--err)', overflowWrap: 'anywhere' }}>
+                  {m}
+                </div>
               ))}
-              {problems.map((m) => <div key={m} style={{ fontSize: 'var(--fs-hint)', color: 'var(--err)', overflowWrap: 'anywhere' }}>{m}</div>)}
-              {edits[key] && <div><Btn small onClick={() => { const { [key]: _gone, ...rest } = edits; set({ edits: rest }); }}>{t('node.writerUndoEdits')}</Btn></div>}
+              {edits[key] && (
+                <div>
+                  <Btn
+                    small
+                    onClick={() => {
+                      const { [key]: _gone, ...rest } = edits;
+                      set({ edits: rest });
+                    }}
+                  >
+                    {t('node.writerUndoEdits')}
+                  </Btn>
+                </div>
+              )}
             </div>
           );
         })}

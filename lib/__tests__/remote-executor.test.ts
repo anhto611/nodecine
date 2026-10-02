@@ -9,10 +9,18 @@ import { pipeline } from '@/core/__tests__/kit';
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
   listeners = new Map<string, ((e: MessageEvent) => void)[]>();
-  constructor(public url: string) { FakeEventSource.instances.push(this); }
-  addEventListener(type: string, fn: (e: MessageEvent) => void) { this.listeners.set(type, [...(this.listeners.get(type) ?? []), fn]); }
-  close() { /* noop */ }
-  set onerror(_: unknown) { /* noop */ }
+  constructor(public url: string) {
+    FakeEventSource.instances.push(this);
+  }
+  addEventListener(type: string, fn: (e: MessageEvent) => void) {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), fn]);
+  }
+  close() {
+    /* noop */
+  }
+  set onerror(_: unknown) {
+    /* noop */
+  }
 }
 
 const calls: { url: string; body: Record<string, unknown> }[] = [];
@@ -22,14 +30,19 @@ beforeEach(() => {
   calls.length = 0;
   release = [];
   vi.stubGlobal('EventSource', FakeEventSource);
-  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-    const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
-    calls.push({ url, body });
-    // The first executor call (attach) answers at once; later ones wait until the test releases them.
-    if (calls.length > 1) await new Promise<void>((r) => release.push(r));
-    const payload = url.startsWith('/api/jobs') ? { job: { id: `j${calls.length}`, key: 'k', kind: body.kind, status: 'done', ok: true, createdAt: 0 } } : { runtimes: {}, logs: [], running: false, pending: [], history: [] };
-    return new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } });
-  }));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
+      calls.push({ url, body });
+      // The first executor call (attach) answers at once; later ones wait until the test releases them.
+      if (calls.length > 1) await new Promise<void>((r) => release.push(r));
+      const payload = url.startsWith('/api/jobs')
+        ? { job: { id: `j${calls.length}`, key: 'k', kind: body.kind, status: 'done', ok: true, createdAt: 0 } }
+        : { runtimes: {}, logs: [], running: false, pending: [], history: [] };
+      return new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } });
+    }),
+  );
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -87,8 +100,12 @@ describe('RemoteExecutor when the server is not ready', () => {
   const emptyServerError = () => new Response('', { status: 500 });
   // The real gaps add up to thirteen seconds, which is the point of them; here they are instant.
   const realDelays = RETRY.delaysMs;
-  beforeEach(() => { RETRY.delaysMs = [1, 1, 1, 1]; });
-  afterEach(() => { RETRY.delaysMs = realDelays; });
+  beforeEach(() => {
+    RETRY.delaysMs = [1, 1, 1, 1];
+  });
+  afterEach(() => {
+    RETRY.delaysMs = realDelays;
+  });
 
   it('retries an empty 500, and carries the same requestId so the job cannot be queued twice', async () => {
     const graph = pipeline();
@@ -118,7 +135,10 @@ describe('RemoteExecutor when the server is not ready', () => {
     await flush();
     release.shift()?.();
     let tries = 0;
-    vi.mocked(fetch).mockImplementation(async () => { tries++; return emptyServerError(); });
+    vi.mocked(fetch).mockImplementation(async () => {
+      tries++;
+      return emptyServerError();
+    });
     await expect(ex.runNode('llm-provider')).rejects.toMatchObject({ code: 'SERVER_NOT_READY' });
     // One try per gap, plus the first: a wedged server is not hammered for ever.
     expect(tries).toBe(RETRY.delaysMs.length + 1);
@@ -143,14 +163,19 @@ describe('RemoteExecutor running state', () => {
   it('shows a workflow running when its tab comes back mid-run, until the job ends', async () => {
     vi.mocked(fetch).mockImplementation(async (url) => {
       calls.push({ url: String(url), body: {} });
-      return new Response(JSON.stringify({ runtimes: {}, logs: [], running: true, pending: [{ id: 'queued', key: 'k', kind: 'run', status: 'pending', createdAt: 0 }], history: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+      return new Response(JSON.stringify({ runtimes: {}, logs: [], running: true, pending: [{ id: 'queued', key: 'k', kind: 'run', status: 'pending', createdAt: 0 }], history: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
     });
     const ex = new RemoteExecutor('other', pipeline(), 'Other');
     await flush();
     await ex.switchTo('k', pipeline(), 'Static');
     expect(ex.isRunning()).toBe(true);
     const es = FakeEventSource.instances.at(-1)!;
-    const send = (job: object) => { for (const fn of es.listeners.get('job') ?? []) fn({ data: JSON.stringify({ job }) } as MessageEvent); };
+    const send = (job: object) => {
+      for (const fn of es.listeners.get('job') ?? []) fn({ data: JSON.stringify({ job }) } as MessageEvent);
+    };
     send({ id: 'first', key: 'k', kind: 'run', status: 'done', ok: true, createdAt: 0 });
     expect(ex.isRunning()).toBe(true);
     send({ id: 'queued', key: 'k', kind: 'run', status: 'running', createdAt: 0 });
@@ -160,8 +185,11 @@ describe('RemoteExecutor running state', () => {
 });
 
 describe('RemoteExecutor attaching to a workflow mid-run', () => {
-  it('says it is running when the server does, and not once that run\'s job ends', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ runtimes: {}, logs: [], running: true, pending: [], history: [] }), { status: 200, headers: { 'content-type': 'application/json' } })));
+  it("says it is running when the server does, and not once that run's job ends", async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ runtimes: {}, logs: [], running: true, pending: [], history: [] }), { status: 200, headers: { 'content-type': 'application/json' } })),
+    );
     FakeEventSource.instances = [];
     const heard: boolean[] = [];
     const ex = new RemoteExecutor('k', pipeline(), 'Static', { onAttached: ({ running }) => heard.push(running) });

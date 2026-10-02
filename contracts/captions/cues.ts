@@ -29,7 +29,7 @@ const GLUE_AFTER = new Set(
   ).split(' '),
 );
 /** Words that lean back on what came before, so a break just before one is bad. */
-const GLUE_BEFORE = new Set(('mươi trăm nghìn ngàn triệu tỷ lăm mốt tư nhất rồi luôn nữa thôi ạ nhé đó này kia ấy').split(' '));
+const GLUE_BEFORE = new Set('mươi trăm nghìn ngàn triệu tỷ lăm mốt tư nhất rồi luôn nữa thôi ạ nhé đó này kia ấy'.split(' '));
 
 const bare = (text: string): string => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 /** Rendered width of a cue, in characters, spaces included. */

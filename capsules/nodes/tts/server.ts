@@ -7,7 +7,7 @@ import { createServerServices } from '@/server/contracts/services.server';
  */
 export async function voices(providerId: unknown, settings: unknown): Promise<TTSRef> {
   if (typeof providerId !== 'string' || !providerId) throw Object.assign(new Error('no voice service chosen'), { code: 'PROVIDER_NOT_CONNECTED' });
-  const given = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings as Record<string, unknown> : {};
+  const given = settings && typeof settings === 'object' && !Array.isArray(settings) ? (settings as Record<string, unknown>) : {};
   return createServerServices().probeTTS(providerId, given);
 }
 

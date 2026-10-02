@@ -17,7 +17,12 @@ describe.skipIf(!enabled)('word timings, for real', () => {
     const file = process.env.NODECINE_MANUAL_VOICE ?? 'ban-thu-san.mp3';
     const { audioUrl, durationSeconds } = await importAudioFile(file, new AbortController().signal);
     const { words: heard, language } = await alignWordsOnServer(audioUrl, '', 'und', { model: 'small' }, new AbortController().signal);
-    console.log(`HEARD ${heard.length} words of ${language} in ${durationSeconds}s · ${heard.slice(0, 12).map((w) => w.text).join(' ')}`);
+    console.log(
+      `HEARD ${heard.length} words of ${language} in ${durationSeconds}s · ${heard
+        .slice(0, 12)
+        .map((w) => w.text)
+        .join(' ')}`,
+    );
     expect(heard.length).toBeGreaterThan(5);
     // Timings have to be inside the recording and in order, or captions land anywhere.
     expect(heard[0]!.start).toBeGreaterThanOrEqual(0);

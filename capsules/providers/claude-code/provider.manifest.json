@@ -1,1 +1,1 @@
-{"id": "claude-code", "kind": "llm", "register": "registerClaudeCode", "settings": "claudeCodeSettings", "widgets": "claudeCodeWidgets", "translations": "claudeCodeTranslations"}
+{ "id": "claude-code", "kind": "llm", "register": "registerClaudeCode", "settings": "claudeCodeSettings", "widgets": "claudeCodeWidgets", "translations": "claudeCodeTranslations" }

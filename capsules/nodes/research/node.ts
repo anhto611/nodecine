@@ -33,10 +33,13 @@ const Params = z.object({
  * settings; the node itself knows no kind of film. Pictures are the Assets node's to find.
  */
 export const research: NodeDefinition<typeof Params> = {
-  type: 'research', version: 1, kind: 'process',
+  type: 'research',
+  version: 1,
+  kind: 'process',
   inputs: [{ name: 'brief', type: 'Brief' }],
   outputs: [{ name: 'research', type: 'Research' }],
-  paramsSchema: Params, defaultParams: Params.parse({}),
+  paramsSchema: Params,
+  defaultParams: Params.parse({}),
   run: async (ctx) => {
     const { params, inputs, services, log } = ctx;
     const brief = inputs.brief!.payload as Brief;
@@ -61,12 +64,17 @@ export const research: NodeDefinition<typeof Params> = {
     if (params.search === 'web' && !web) log('warn', `${ref.displayName} cannot search the web: only the linked pages are read`, ResearchErrorCode.NO_WEB_SEARCH);
 
     ctx.progress(0.3, web ? 'searching' : 'reading the sources');
-    const findings = await completeStructured({ ...ctx, fresh: false }, ref, {
-      outputSchema: FindingsSchema,
-      buildPrompt: () => researchPrompt({ brief, pages, unread, guide: params.guide, web }, params.attempt),
-      languageOf: (o) => o.language,
-      web,
-    }, brief.language);
+    const findings = await completeStructured(
+      { ...ctx, fresh: false },
+      ref,
+      {
+        outputSchema: FindingsSchema,
+        buildPrompt: () => researchPrompt({ brief, pages, unread, guide: params.guide, web }, params.attempt),
+        languageOf: (o) => o.language,
+        web,
+      },
+      brief.language,
+    );
 
     const edits = params.edits;
     const out: Research = {

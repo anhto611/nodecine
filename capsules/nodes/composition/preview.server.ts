@@ -27,7 +27,16 @@ export function sampleValues(part: string, seconds: number): string | undefined 
   const raw = /<html\b[^>]*\bdata-composition-variables\s*=\s*(['"])([\s\S]*?)\1/i.exec(part)?.[2];
   if (!raw) return undefined;
   let declared: { id?: string; sample?: unknown }[];
-  try { declared = JSON.parse(raw.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')) as typeof declared; } catch { return undefined; }
+  try {
+    declared = JSON.parse(
+      raw
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&'),
+    ) as typeof declared;
+  } catch {
+    return undefined;
+  }
   if (!Array.isArray(declared)) return undefined;
   const values: Record<string, unknown> = {};
   for (const v of declared) {
@@ -92,10 +101,14 @@ export async function previewPart(project: Pick<Composition, 'files' | 'media'> 
   if (!factory) throw Object.assign(new Error(`unknown engine ${engineId}`), { code: 'ENGINE_NOT_READY' });
   const { html, width, height, duration } = partHost(project.files, partPath);
   const composition: Composition = {
-    engine: engineId, width, height, fps: 30,
+    engine: engineId,
+    width,
+    height,
+    fps: 30,
     files: { ...project.files, [COMPOSITION_ENTRY]: html },
     media: project.media as Composition['media'],
-    variables: [], values: {},
+    variables: [],
+    values: {},
   };
   const { url } = await factory({}).preview(composition, new AbortController().signal);
   return { engineId, url, width, height, duration };

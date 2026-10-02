@@ -14,7 +14,8 @@ const Params = z.object({
 });
 
 /** Voice selection rule. Returns the voice and whether it is a fallback. Exported for the body. */
-export const voiceSpeaks = (v: Voice, language: string): boolean => v.language === 'mul' || v.language.toLowerCase() === language.toLowerCase() || v.language.toLowerCase().startsWith(language.toLowerCase() + '-');
+export const voiceSpeaks = (v: Voice, language: string): boolean =>
+  v.language === 'mul' || v.language.toLowerCase() === language.toLowerCase() || v.language.toLowerCase().startsWith(language.toLowerCase() + '-');
 
 export function pickVoice(ref: TTSRef, language: string, preferred?: string): { voice: Voice; fallback: boolean } {
   const lang = language.toLowerCase();
@@ -45,9 +46,7 @@ export const ttsEngine: NodeDefinition<typeof Params> = {
   type: 'tts',
   version: 1,
   kind: 'process',
-  inputs: [
-    { name: 'script', type: 'AudioScript' },
-  ],
+  inputs: [{ name: 'script', type: 'AudioScript' }],
   outputs: [{ name: 'voiceover', type: 'Voiceover' }],
   paramsSchema: Params,
   defaultParams: { ttsProvider: '', ttsSettings: {}, speed: 1 },
@@ -72,7 +71,11 @@ export const ttsEngine: NodeDefinition<typeof Params> = {
         } catch (e) {
           const wait = UPSTREAM_RETRY_WAITS[attempt];
           if ((e as { code?: string }).code !== ErrorCode.TTS_UPSTREAM || wait === undefined || signal.aborted) throw e;
-          const why = (e instanceof Error ? e.message : String(e)).replace(/<[^>]*>?/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+          const why = (e instanceof Error ? e.message : String(e))
+            .replace(/<[^>]*>?/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 120);
           log('warn', `${where}: ${why} · trying again in ${wait / 1000}s`);
           await new Promise((r) => setTimeout(r, wait));
         }
@@ -89,11 +92,29 @@ export const ttsEngine: NodeDefinition<typeof Params> = {
       progress(i / segments.length, `${i + 1}/${segments.length}`);
       parts.push(await speak(text, `segment ${i + 1}`));
     }
-    const joined = await services.concatAudio(parts.map((p) => ({ audioUrl: p.audioUrl, durationSeconds: p.durationSeconds })), SCENE_GAP_SECONDS, signal);
+    const joined = await services.concatAudio(
+      parts.map((p) => ({ audioUrl: p.audioUrl, durationSeconds: p.durationSeconds })),
+      SCENE_GAP_SECONDS,
+      signal,
+    );
     log('info', `${segments.length} segments · ${joined.durationSeconds.toFixed(2)}s`);
     const first = parts[0]!;
     // A provider that timed the words of each part timed the whole: shift each part's words to where it starts.
-    const words = parts.every((p) => p.words?.length) ? parts.flatMap((p, i) => p.words!.map((w) => ({ text: w.text, start: Math.round((w.start + joined.segments[i]!.start) * 1000) / 1000, end: Math.round((w.end + joined.segments[i]!.start) * 1000) / 1000 }))) : undefined;
-    return { voiceover: { audioUrl: joined.audioUrl, durationSeconds: joined.durationSeconds, voiceName: first.voiceName, language: first.language, speed: params.speed, segments: joined.segments, ...(words ? { words } : {}) } };
+    const words = parts.every((p) => p.words?.length)
+      ? parts.flatMap((p, i) =>
+          p.words!.map((w) => ({ text: w.text, start: Math.round((w.start + joined.segments[i]!.start) * 1000) / 1000, end: Math.round((w.end + joined.segments[i]!.start) * 1000) / 1000 })),
+        )
+      : undefined;
+    return {
+      voiceover: {
+        audioUrl: joined.audioUrl,
+        durationSeconds: joined.durationSeconds,
+        voiceName: first.voiceName,
+        language: first.language,
+        speed: params.speed,
+        segments: joined.segments,
+        ...(words ? { words } : {}),
+      },
+    };
   },
 };

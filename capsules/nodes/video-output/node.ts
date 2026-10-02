@@ -13,9 +13,13 @@ export type VideoOutputResult = { engineId: string; url: string; width: number; 
  * its player can load, filled with the composition's values, and the card mounts the player on it.
  */
 export const videoOutput: NodeDefinition<typeof Params> = {
-  type: 'video-output', version: 2, kind: 'sink',
+  type: 'video-output',
+  version: 2,
+  kind: 'sink',
   inputs: [{ name: 'composition', type: 'Composition' }],
-  outputs: [], paramsSchema: Params, defaultParams: {},
+  outputs: [],
+  paramsSchema: Params,
+  defaultParams: {},
   // Version 1 chose its engine on the node; a composition names its own now.
   migrate: () => ({}),
   run: async ({ inputs, services, signal, log }) => {

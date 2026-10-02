@@ -150,6 +150,13 @@ export type WorkflowStore = ReturnType<typeof workflowStore>;
 
 /** A file-name-safe id from a human name, suffixed so two saves with the same name do not collide. */
 export function workflowIdFor(name: string, now = Date.now()): string {
-  const base = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workflow';
+  const base =
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40) || 'workflow';
   return `${base}-${now.toString(36)}`;
 }

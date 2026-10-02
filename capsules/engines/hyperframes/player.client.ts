@@ -31,11 +31,15 @@ export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOpti
   // their parts would open on all of them at once. So it is seeked as soon as it is ready, to its first
   // frame, or to the moment a thumbnail shows.
   const still = preview.still;
-  player.addEventListener('ready', () => {
-    player.seek?.(still ?? 0);
-    if (still !== undefined) player.pause?.();
-    else if (preview.loop) player.play?.();
-  }, { once: true });
+  player.addEventListener(
+    'ready',
+    () => {
+      player.seek?.(still ?? 0);
+      if (still !== undefined) player.pause?.();
+      else if (preview.loop) player.play?.();
+    },
+    { once: true },
+  );
   // The page's sound as one file beside it, when it has any: a click on Play does not reach the
   // opaque-origin frame, whose audio is then refused, and the player plays this from the Studio's page
   // instead (see preview-audio.server.ts). A thumbnail makes no sound, so it needs none.
@@ -60,17 +64,21 @@ export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOpti
       // then pauses its copy of the sound and restarts it at once, since it only marks itself paused
       // afterwards, and from then on keeps pulling the playing sound back to the frozen moment. In 16
       // of 25 pauses in a test. Once the player has settled as paused, its sound is paused too.
-      const settle = () => queueMicrotask(() => {
-        if (!owned.paused) return;
-        for (const { el } of owned._parentMedia ?? []) if (!el.paused) el.pause();
-      });
+      const settle = () =>
+        queueMicrotask(() => {
+          if (!owned.paused) return;
+          for (const { el } of owned._parentMedia ?? []) if (!el.paused) el.pause();
+        });
       player.addEventListener('pause', settle);
       player.addEventListener('timeupdate', settle);
-      void fetch(audio, { method: 'HEAD' }).then((res) => {
-        if (!res.ok || !player.isConnected) return;
-        player.setAttribute('audio-src', audio);
-        takeSound();
-      }, () => {});
+      void fetch(audio, { method: 'HEAD' }).then(
+        (res) => {
+          if (!res.ok || !player.isConnected) return;
+          player.setAttribute('audio-src', audio);
+          takeSound();
+        },
+        () => {},
+      );
     }
   }
   element.appendChild(player);
@@ -81,17 +89,27 @@ export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOpti
   // flag is not asked: a message from the frame sent before the seek can still flip it for a moment.
   let playing = false;
   let pressed = false;
-  const press = () => { pressed = true; };
+  const press = () => {
+    pressed = true;
+  };
   const release = () => {
     if (!pressed) return;
     pressed = false;
     // After the click the release belongs to, so a press on Pause has already said so.
-    setTimeout(() => { if (playing && player.isConnected) player.play?.(); }, 0);
+    setTimeout(() => {
+      if (playing && player.isConnected) player.play?.();
+    }, 0);
   };
   if (preview.controls !== false) {
-    player.addEventListener('play', () => { playing = true; });
-    player.addEventListener('pause', () => { playing = false; });
-    player.addEventListener('ended', () => { playing = false; });
+    player.addEventListener('play', () => {
+      playing = true;
+    });
+    player.addEventListener('pause', () => {
+      playing = false;
+    });
+    player.addEventListener('ended', () => {
+      playing = false;
+    });
     // Captured: the scrubber stops its press from going further.
     player.addEventListener('mousedown', press, true);
     player.addEventListener('touchstart', press, { capture: true, passive: true });
@@ -104,7 +122,10 @@ export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOpti
       document.removeEventListener('touchend', release);
       player.remove();
     },
-    seekTo: (seconds) => { player.seek?.(seconds); if (playing) player.play?.(); },
+    seekTo: (seconds) => {
+      player.seek?.(seconds);
+      if (playing) player.play?.();
+    },
     play: () => player.play?.(),
     pause: () => player.pause?.(),
     onTime: (listener) => {

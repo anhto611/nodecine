@@ -12,7 +12,10 @@ export interface LLMProvider {
 }
 
 /** A picture on this machine for the model to look at with the prompt. */
-export interface LLMImage { path: string; mediaType: string }
+export interface LLMImage {
+  path: string;
+  mediaType: string;
+}
 
 export interface LLMCompleteOptions {
   /** Only a provider whose probe reports `vision` ready is given these. */

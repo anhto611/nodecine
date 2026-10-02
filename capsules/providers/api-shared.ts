@@ -30,16 +30,24 @@ export function withTimeout(signal: AbortSignal | undefined, ms: number): AbortS
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(new Error('timeout')), ms);
   const onAbort = () => ctrl.abort(signal?.reason);
-  ctrl.signal.addEventListener('abort', () => {
-    clearTimeout(t);
-    signal?.removeEventListener('abort', onAbort);
-  }, { once: true });
+  ctrl.signal.addEventListener(
+    'abort',
+    () => {
+      clearTimeout(t);
+      signal?.removeEventListener('abort', onAbort);
+    },
+    { once: true },
+  );
   if (signal?.aborted) ctrl.abort(signal.reason);
   else signal?.addEventListener('abort', onAbort, { once: true });
   return ctrl.signal;
 }
 
-export const exists = (p: string): Promise<boolean> => stat(p).then(() => true, () => false);
+export const exists = (p: string): Promise<boolean> =>
+  stat(p).then(
+    () => true,
+    () => false,
+  );
 
 export const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
 

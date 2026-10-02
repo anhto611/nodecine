@@ -27,7 +27,7 @@ narrativeRole: Mở bằng tin.
 `;
 
 describe('reading a storyboard', () => {
-  it('reads frames with HyperFrames\' parser and the mounts under each', () => {
+  it("reads frames with HyperFrames' parser and the mounts under each", () => {
     const { storyboard, problems } = readStoryboard(md);
     expect(problems).toEqual([]);
     expect(storyboard!.format).toBe('1080x1920');
@@ -48,7 +48,8 @@ describe('reading a storyboard', () => {
   });
 
   it('reads a frame that plays a block, with the json object as its values', () => {
-    const played = md.replace('- type: hook\n', '- type: hook\n- block: hook-question\n')
+    const played = md
+      .replace('- type: hook\n', '- type: hook\n- block: hook-question\n')
       .replace('[{ "component": "hero-badge", "box": "hero", "values": { "badge": "6x" }, "at": "@Kimi" }]', '{ "question": "Code nhanh gấp 6?", "pop_at": "@HighSpeed" }');
     const { storyboard, problems } = readStoryboard(played);
     expect(problems).toEqual([]);

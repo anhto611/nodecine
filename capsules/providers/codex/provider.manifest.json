@@ -1,1 +1,1 @@
-{"id": "codex", "kind": "llm", "register": "registerCodex", "settings": "codexSettings", "widgets": "codexWidgets", "translations": "codexTranslations"}
+{ "id": "codex", "kind": "llm", "register": "registerCodex", "settings": "codexSettings", "widgets": "codexWidgets", "translations": "codexTranslations" }

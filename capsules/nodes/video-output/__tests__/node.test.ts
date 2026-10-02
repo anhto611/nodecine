@@ -5,9 +5,14 @@ import { makeFakeServices } from '@/contracts/__tests__/fakes';
 import type { Composition } from '@/contracts/types/composition';
 
 const composition: Composition = {
-  engine: 'hyperframes', width: 1080, height: 1920, fps: 30,
+  engine: 'hyperframes',
+  width: 1080,
+  height: 1920,
+  fps: 30,
   files: { 'index.html': '<html><body><div data-composition-id="main"></div></body></html>' },
-  media: {}, variables: [{ id: 'title', type: 'string', default: 'Hello' }], values: { title: 'Hi' },
+  media: {},
+  variables: [{ id: 'title', type: 'string', default: 'Hello' }],
+  values: { title: 'Hi' },
 };
 
 /**
@@ -16,15 +21,16 @@ const composition: Composition = {
  * engine's ref, with the page the player loads and the size to draw it at.
  */
 describe('the player node’s result', () => {
-  const run = async (services = makeFakeServices()) => (await videoOutput.run({
-    params: {},
-    inputs: { composition: { type: 'Composition', payload: composition } },
-    lists: {},
-    services,
-    signal: new AbortController().signal,
-    log: () => {},
-    progress: () => {},
-  } as never)) as Record<string, unknown>;
+  const run = async (services = makeFakeServices()) =>
+    (await videoOutput.run({
+      params: {},
+      inputs: { composition: { type: 'Composition', payload: composition } },
+      lists: {},
+      services,
+      signal: new AbortController().signal,
+      log: () => {},
+      progress: () => {},
+    } as never)) as Record<string, unknown>;
 
   it('carries the engine’s capabilities, so the card can mount the player', async () => {
     expect(readCapability(await run(), 'preview')?.status).toBe('ready');

@@ -62,7 +62,8 @@ export const WorkflowTabs: React.FC = () => {
       if (mod && !inField && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
         e.preventDefault();
         const { undo, redo } = useStudio.getState();
-        if (e.key.toLowerCase() === 'y' || e.shiftKey) redo(); else undo();
+        if (e.key.toLowerCase() === 'y' || e.shiftKey) redo();
+        else undo();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -79,32 +80,79 @@ export const WorkflowTabs: React.FC = () => {
           return (
             <div key={tab.key} className={`nc-tab ${on ? 'on' : ''}`} onClick={() => activate(tab.key)} title={tab.fileId ? `${tab.name} · ${tab.fileId}.json` : t('tabs.draft')}>
               <span className="nc-tab-name">{tab.name || t('tabs.untitled')}</span>
-              {tab.dirty && <span className="nc-tab-dot" title={t('tabs.unsaved')}>•</span>}
+              {tab.dirty && (
+                <span className="nc-tab-dot" title={t('tabs.unsaved')}>
+                  •
+                </span>
+              )}
               {asking ? (
                 <span className="nc-tab-ask" onClick={(e) => e.stopPropagation()}>
-                  <button className="nc-chip on" onClick={() => { close(tab.key); setConfirmClose(null); }}>{t('tabs.discard')}</button>
-                  <button className="nc-chip" onClick={() => setConfirmClose(null)}>{t('tabs.keep')}</button>
+                  <button
+                    className="nc-chip on"
+                    onClick={() => {
+                      close(tab.key);
+                      setConfirmClose(null);
+                    }}
+                  >
+                    {t('tabs.discard')}
+                  </button>
+                  <button className="nc-chip" onClick={() => setConfirmClose(null)}>
+                    {t('tabs.keep')}
+                  </button>
                 </span>
               ) : (
-                <button className="nc-tab-x" title={t('tabs.close')} onClick={(e) => { e.stopPropagation(); if (tab.dirty) setConfirmClose(tab.key); else close(tab.key); }}><Icon.x size={9} /></button>
+                <button
+                  className="nc-tab-x"
+                  title={t('tabs.close')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (tab.dirty) setConfirmClose(tab.key);
+                    else close(tab.key);
+                  }}
+                >
+                  <Icon.x size={9} />
+                </button>
               )}
             </div>
           );
         })}
-        <button className="nc-tab-add" title={t('tabs.new')} onClick={create}><Icon.plus size={11} /></button>
+        <button className="nc-tab-add" title={t('tabs.new')} onClick={create}>
+          <Icon.plus size={11} />
+        </button>
       </div>
       <div className="nc-tabs-actions">
         {naming !== null ? (
           <>
-            <input className="nc-input" style={{ width: 220, height: 24 }} autoFocus placeholder={t('tabs.saveName')} value={naming} onChange={(e) => setNaming(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void doSaveAs(); if (e.key === 'Escape') setNaming(null); }} />
-            <Btn small primary disabled={!naming.trim() || busy} onClick={() => void doSaveAs()}>{t('tabs.saveDo')}</Btn>
-            <Btn small onClick={() => setNaming(null)}>{t('common.cancel')}</Btn>
+            <input
+              className="nc-input"
+              style={{ width: 220, height: 24 }}
+              autoFocus
+              placeholder={t('tabs.saveName')}
+              value={naming}
+              onChange={(e) => setNaming(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void doSaveAs();
+                if (e.key === 'Escape') setNaming(null);
+              }}
+            />
+            <Btn small primary disabled={!naming.trim() || busy} onClick={() => void doSaveAs()}>
+              {t('tabs.saveDo')}
+            </Btn>
+            <Btn small onClick={() => setNaming(null)}>
+              {t('common.cancel')}
+            </Btn>
           </>
         ) : (
           <>
-            <Btn small onClick={() => setPanel('workflows')} title={`${t('rail.workflows')} (W)`}><Icon.doc size={10} /> {t('rail.workflows')}</Btn>
-            <Btn small disabled={busy || (!current?.dirty && !!current?.fileId)} onClick={() => void doSave()} title="Ctrl+S">{t('tabs.save')}</Btn>
-            <Btn small disabled={busy} onClick={() => setNaming(current?.name ?? '')} title="Ctrl+Shift+S">{t('tabs.saveAs')}</Btn>
+            <Btn small onClick={() => setPanel('workflows')} title={`${t('rail.workflows')} (W)`}>
+              <Icon.doc size={10} /> {t('rail.workflows')}
+            </Btn>
+            <Btn small disabled={busy || (!current?.dirty && !!current?.fileId)} onClick={() => void doSave()} title="Ctrl+S">
+              {t('tabs.save')}
+            </Btn>
+            <Btn small disabled={busy} onClick={() => setNaming(current?.name ?? '')} title="Ctrl+Shift+S">
+              {t('tabs.saveAs')}
+            </Btn>
           </>
         )}
       </div>

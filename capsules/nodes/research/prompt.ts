@@ -8,7 +8,6 @@ import type { LinkedPage } from '@/contracts/types/web';
  * what the video must or must not say, and how long it runs, are the writer's to apply, not a filter here.
  */
 
-
 export interface ResearchMaterial {
   brief: Brief;
   pages: LinkedPage[];
@@ -27,9 +26,11 @@ What the person wrote about the video (the brief; follow it over any source when
 ${m.brief.about}
 ${m.pages.map((p) => `\nA page the brief links to (${p.url}):\n${p.title}\n${p.text.slice(0, 8000)}`).join('\n')}${m.unread.length ? `\n\nLinks that could not be read: ${m.unread.map((u) => `${u.url} (${u.why})`).join('; ')}` : ''}
 ${m.guide.trim() ? `\nWhat this workflow's films need found out:\n${m.guide.trim()}\n` : ''}
-${m.web
-  ? 'You can search the web and read pages. Do: look up what the brief and the pages leave open, prefer the maker\'s own pages and first-hand sources, and check numbers against a second source when you can.'
-  : 'Do not look anything up: use only the brief and the pages above.'}
+${
+  m.web
+    ? "You can search the web and read pages. Do: look up what the brief and the pages leave open, prefer the maker's own pages and first-hand sources, and check numbers against a second source when you can."
+    : 'Do not look anything up: use only the brief and the pages above.'
+}
 
 Rules:
 - Write the subject, the summary and the points in ${language}.

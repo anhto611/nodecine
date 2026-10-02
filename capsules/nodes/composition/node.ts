@@ -19,9 +19,13 @@ const Params = z.object({
  * variables and its size, and the output carries it as it is.
  */
 export const composition: NodeDefinition<typeof Params> = {
-  type: 'composition', version: 1, kind: 'source',
-  inputs: [], outputs: [{ name: 'composition', type: 'Composition' }],
-  paramsSchema: Params, defaultParams: { files: { [COMPOSITION_ENTRY]: STARTER_INDEX }, media: {} },
+  type: 'composition',
+  version: 1,
+  kind: 'source',
+  inputs: [],
+  outputs: [{ name: 'composition', type: 'Composition' }],
+  paramsSchema: Params,
+  defaultParams: { files: { [COMPOSITION_ENTRY]: STARTER_INDEX }, media: {} },
   validate: (params) => (params.files[COMPOSITION_ENTRY]?.trim() ? [] : [{ code: CompositionErrorCode.COMPOSITION_INVALID, message: `the project has no ${COMPOSITION_ENTRY}` }]),
   run: async ({ params, services, log }) => {
     if (!params.files[COMPOSITION_ENTRY]?.trim()) {
@@ -35,7 +39,12 @@ export const composition: NodeDefinition<typeof Params> = {
     if (warnings.length) log('warn', `HyperFrames lint: ${warnings.length} warning${warnings.length > 1 ? 's' : ''}`, CompositionErrorCode.COMPOSITION_LINT_WARNINGS);
     if (errors.length) {
       const first = errors[0]!;
-      throw new NodeError(CompositionErrorCode.COMPOSITION_INVALID, `${first.file ? `${first.file}: ` : ''}${first.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`, false, errors).withFix(first.fixHint ?? 'fix the composition and run again');
+      throw new NodeError(
+        CompositionErrorCode.COMPOSITION_INVALID,
+        `${first.file ? `${first.file}: ` : ''}${first.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`,
+        false,
+        errors,
+      ).withFix(first.fixHint ?? 'fix the composition and run again');
     }
     const out: Composition = {
       engine: 'hyperframes',

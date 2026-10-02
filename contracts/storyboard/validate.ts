@@ -27,7 +27,12 @@ export interface StoryboardRules {
 }
 
 /** Words compared the way cues are matched: case and trailing punctuation aside. */
-export const cueWord = (s: string) => s.normalize('NFC').toLowerCase().replace(/[.,:;!?"'“”‘’()…]+$/g, '').replace(/^[("'“‘]+/g, '');
+export const cueWord = (s: string) =>
+  s
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[.,:;!?"'“”‘’()…]+$/g, '')
+    .replace(/^[("'“‘]+/g, '');
 
 /** Whether `@word` (or `@two words`) is said in a narration. */
 export function cueSaid(cue: string, narration: string): boolean {
@@ -41,7 +46,10 @@ function cuesToNumbers(value: unknown, narration: string, where: string, unsaid:
   if (Array.isArray(value)) return value.map((v, i) => cuesToNumbers(v, narration, `${where}[${i}]`, unsaid));
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cuesToNumbers(v, narration, where ? `${where}.${k}` : k, unsaid)]));
   if (typeof value !== 'string' || !value.trim().startsWith('@')) return value;
-  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
+  const parts = value
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
   for (const part of parts) if (!cueSaid(part, narration)) unsaid.push(`${where}: "${part.slice(1)}" is not said in this frame`);
   return parts.length > 1 ? parts.map(() => 0).join(',') : 0;
 }
@@ -83,9 +91,15 @@ export function storyboardProblems(storyboard: Storyboard, rules: StoryboardRule
     frame.mounts.forEach((mount, j) => {
       const at = `${where}, ${mount.component} (mount ${j + 1})`;
       const component = (rules.components ?? []).find((c) => c.name === mount.component);
-      if (!component) { problems.push(`${at}: there is no component ${mount.component} (there are ${(rules.components ?? []).map((c) => c.name).join(', ') || 'none'})`); return; }
+      if (!component) {
+        problems.push(`${at}: there is no component ${mount.component} (there are ${(rules.components ?? []).map((c) => c.name).join(', ') || 'none'})`);
+        return;
+      }
       if (typeof mount.box === 'string' && !(rules.slots ?? []).includes(mount.box)) problems.push(`${at}: there is no slot ${mount.box} (there are ${(rules.slots ?? []).join(', ') || 'none'})`);
-      for (const [edge, cue] of [['at', mount.at], ['until', mount.until]] as const) {
+      for (const [edge, cue] of [
+        ['at', mount.at],
+        ['until', mount.until],
+      ] as const) {
         if (typeof cue === 'string' && !cueSaid(cue, frame.voiceover ?? '')) problems.push(`${at}, ${edge}: "${cue.replace(/^@/, '')}" is not said in this frame`);
       }
       for (const path of assetPaths(mount.values)) {
@@ -94,7 +108,13 @@ export function storyboardProblems(storyboard: Storyboard, rules: StoryboardRule
       const unsaidHere: string[] = [];
       const mountValues = cuesToNumbers(mount.values, frame.voiceover ?? '', '', unsaidHere) as Record<string, unknown>;
       problems.push(...unsaidHere.map((u) => `${at}, ${u}`));
-      problems.push(...checkBlockValues(at, mountValues, component.variables.filter((v) => v.id !== 'seconds')).problems);
+      problems.push(
+        ...checkBlockValues(
+          at,
+          mountValues,
+          component.variables.filter((v) => v.id !== 'seconds'),
+        ).problems,
+      );
     });
     if (block.role === 'overlay') problems.push(`${where}: ${block.name} is an overlay block: it plays over several frames in a layer, not as a frame's block`);
     if (i === 0 && rules.first && block.role !== rules.first) problems.push(`${where}: the first frame must play a ${rules.first} block (it plays ${block.name}, a ${block.role} block)`);
@@ -106,23 +126,42 @@ export function storyboardProblems(storyboard: Storyboard, rules: StoryboardRule
   (storyboard.layers ?? []).forEach((layer, i) => {
     const where = `layer ${layer.number}`;
     const block = byName.get(layer.block);
-    if (!block) { problems.push(`${where}: there is no block ${layer.block} (there are ${rules.catalog.map((b) => b.name).join(', ')})`); return; }
+    if (!block) {
+      problems.push(`${where}: there is no block ${layer.block} (there are ${rules.catalog.map((b) => b.name).join(', ')})`);
+      return;
+    }
     const label = `${where}, ${layer.block}`;
     if (block.role !== 'overlay') problems.push(`${label}: only an overlay block plays in a layer (this one is a ${block.role} block)`);
     const count = frames.length;
-    if (layer.from < 1 || layer.to > count || layer.from > layer.to) { problems.push(`${where}: it runs over frames ${layer.from} to ${layer.to}, but the film has frames 1 to ${count}`); return; }
-    const first = frames[layer.from - 1]!, last = frames[layer.to - 1]!;
-    for (const [edge, cue, frame] of [['start', layer.start, first], ['end', layer.end, last]] as const) {
+    if (layer.from < 1 || layer.to > count || layer.from > layer.to) {
+      problems.push(`${where}: it runs over frames ${layer.from} to ${layer.to}, but the film has frames 1 to ${count}`);
+      return;
+    }
+    const first = frames[layer.from - 1]!,
+      last = frames[layer.to - 1]!;
+    for (const [edge, cue, frame] of [
+      ['start', layer.start, first],
+      ['end', layer.end, last],
+    ] as const) {
       if (typeof cue === 'string' && !cueSaid(cue, frame.voiceover ?? '')) problems.push(`${label}, ${edge}: "${cue.replace(/^@/, '')}" is not said in frame ${frame.number}`);
     }
     for (const path of assetPaths(layer.values)) {
       if (!rules.assets.includes(path)) problems.push(`${label}: no asset ${path} (${rules.assets.length ? `there are ${rules.assets.join(', ')}` : 'there are no pictures'})`);
     }
-    const narration = frames.slice(layer.from - 1, layer.to).map((f) => f.voiceover ?? '').join(' ');
+    const narration = frames
+      .slice(layer.from - 1, layer.to)
+      .map((f) => f.voiceover ?? '')
+      .join(' ');
     const unsaid: string[] = [];
     const values = cuesToNumbers(layer.values, narration, '', unsaid) as Record<string, unknown>;
     problems.push(...unsaid.map((u) => `${label}, ${u.replace('in this frame', `in frames ${layer.from}–${layer.to}`)}`));
-    problems.push(...checkBlockValues(label, values, block.variables.filter((v) => v.id !== 'seconds')).problems);
+    problems.push(
+      ...checkBlockValues(
+        label,
+        values,
+        block.variables.filter((v) => v.id !== 'seconds'),
+      ).problems,
+    );
     const track = layerTrack(layer, i);
     const clash = (byTrack.get(track) ?? []).find((o) => o.from <= layer.to && layer.from <= o.to);
     if (clash) problems.push(`${where}: it shares track ${track} with layer ${clash.number} over the same frames: give one another track`);
@@ -140,11 +179,14 @@ export function storyboardProblems(storyboard: Storyboard, rules: StoryboardRule
   if (rules.targetSeconds) {
     const rate = rules.wordsPerSecond ?? 2.8;
     const words = frames.reduce((n, f) => n + (f.voiceover ?? '').split(/\s+/).filter(Boolean).length, 0);
-    const silent = frames.reduce((n, f) => n + (f.voiceover ? 0 : f.durationSeconds ?? 0), 0);
+    const silent = frames.reduce((n, f) => n + (f.voiceover ? 0 : (f.durationSeconds ?? 0)), 0);
     const estimate = words / rate + silent;
-    const low = rules.targetSeconds * 0.8, high = rules.targetSeconds * 1.2;
+    const low = rules.targetSeconds * 0.8,
+      high = rules.targetSeconds * 1.2;
     if (estimate < low || estimate > high) {
-      problems.push(`the film runs about ${Math.round(estimate)} s (${words} words at ${rate} a second${silent ? ` and ${Math.round(silent)} s of silent frames` : ''}); it should run ${rules.targetSeconds} s, within ${Math.round(low)}–${Math.round(high)} s: ${estimate > high ? 'say less' : 'say more'}`);
+      problems.push(
+        `the film runs about ${Math.round(estimate)} s (${words} words at ${rate} a second${silent ? ` and ${Math.round(silent)} s of silent frames` : ''}); it should run ${rules.targetSeconds} s, within ${Math.round(low)}–${Math.round(high)} s: ${estimate > high ? 'say less' : 'say more'}`,
+      );
     }
   }
   return problems;

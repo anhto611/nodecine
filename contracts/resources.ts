@@ -21,7 +21,9 @@ const need = (ref: unknown, keys: readonly string[], what: string): void => {
   for (const key of keys) {
     const cap = readCapability(ref, key);
     if (!cap || cap.status !== 'ready') {
-      throw new NodeError(cap?.code ?? ErrorCode.ENGINE_NOT_READY, cap?.reason ?? `${what} is not ready: "${key}" is unavailable`, true).withFix(cap?.fix ?? `open the node and choose a ${what} this machine can use`);
+      throw new NodeError(cap?.code ?? ErrorCode.ENGINE_NOT_READY, cap?.reason ?? `${what} is not ready: "${key}" is unavailable`, true).withFix(
+        cap?.fix ?? `open the node and choose a ${what} this machine can use`,
+      );
     }
   }
 };
@@ -30,7 +32,11 @@ export const LLM_NEEDS = ['installed', 'authenticated'] as const;
 export const TTS_NEEDS = ['installed', 'encoder'] as const;
 
 /** The language model this node writes with. `requires` is empty for a step that can do without one. */
-export async function resolveLLM(services: Pick<NodeServices, 'probeLLM'>, params: { llmProvider: string; llmSettings?: Record<string, unknown> }, requires: readonly string[] = LLM_NEEDS): Promise<LLMRef> {
+export async function resolveLLM(
+  services: Pick<NodeServices, 'probeLLM'>,
+  params: { llmProvider: string; llmSettings?: Record<string, unknown> },
+  requires: readonly string[] = LLM_NEEDS,
+): Promise<LLMRef> {
   if (!params.llmProvider.trim()) throw new NodeError(ErrorCode.INPUT_EMPTY, 'no language model chosen', false).withFix('choose a language model on this node');
   const ref = await services.probeLLM(params.llmProvider, params.llmSettings ?? {});
   need(ref, requires, 'language model');
@@ -38,7 +44,11 @@ export async function resolveLLM(services: Pick<NodeServices, 'probeLLM'>, param
 }
 
 /** The voice this node speaks with. */
-export async function resolveTTS(services: Pick<NodeServices, 'probeTTS'>, params: { ttsProvider: string; ttsSettings?: Record<string, unknown> }, requires: readonly string[] = TTS_NEEDS): Promise<TTSRef> {
+export async function resolveTTS(
+  services: Pick<NodeServices, 'probeTTS'>,
+  params: { ttsProvider: string; ttsSettings?: Record<string, unknown> },
+  requires: readonly string[] = TTS_NEEDS,
+): Promise<TTSRef> {
   if (!params.ttsProvider.trim()) throw new NodeError(ErrorCode.INPUT_EMPTY, 'no voice chosen', false).withFix('choose a voice on this node');
   const ref = await services.probeTTS(params.ttsProvider, params.ttsSettings ?? {});
   need(ref, requires, 'voice');

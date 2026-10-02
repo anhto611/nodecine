@@ -1,1 +1,10 @@
-{"id": "video-output", "definition": "videoOutput", "body": "VideoOutputBody", "icon": "screen", "group": "output", "layout": "wide", "translations": "videoOutputTranslations", "features": ["history-preview"]}
+{
+  "id": "video-output",
+  "definition": "videoOutput",
+  "body": "VideoOutputBody",
+  "icon": "screen",
+  "group": "output",
+  "layout": "wide",
+  "translations": "videoOutputTranslations",
+  "features": ["history-preview"]
+}

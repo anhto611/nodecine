@@ -4,7 +4,8 @@ import { UndoStack } from '../undo-stack';
 describe('UndoStack', () => {
   it('undoes and redoes in order, and a new change drops the redo branch', () => {
     const s = new UndoStack<string>();
-    s.record('a'); s.record('b');
+    s.record('a');
+    s.record('b');
     expect(s.canUndo).toBe(true);
     expect(s.undo('c')).toBe('b');
     expect(s.undo('b')).toBe('a');

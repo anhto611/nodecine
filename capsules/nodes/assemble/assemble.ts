@@ -48,12 +48,29 @@ export interface Assembly {
 }
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
-const slug = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || 'frame';
-const norm = (s: string) => s.normalize('NFC').toLowerCase().replace(/[.,:;!?"'“”‘’()…]+$/g, '').replace(/^[("'“‘]+/g, '');
+const slug = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 32) || 'frame';
+const norm = (s: string) =>
+  s
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[.,:;!?"'“”‘’()…]+$/g, '')
+    .replace(/^[("'“‘]+/g, '');
 const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/'/g, '&#39;');
 
 /** Where each spoken word of a frame falls, in seconds from the frame's start. */
-interface FrameWords { words: { text: string; at: number }[]; duration: number }
+interface FrameWords {
+  words: { text: string; at: number }[];
+  duration: number;
+}
 
 /** The words of a spoken frame, from the voice when it timed them, else spread evenly over an estimate. */
 function wordsFor(frame: StoryboardFrame, voice: Voiceover | undefined, segment: { start: number; durationSeconds: number } | undefined): FrameWords {
@@ -97,11 +114,12 @@ function clipTag(id: string, mount: { component: string; src?: string; rect: Rec
 const SOFT = new Set(['crossfade', 'blur-crossfade']);
 
 function frameFile(id: string, frame: StoryboardFrame, width: number, height: number, duration: number, clips: string[], entrance: string | undefined, overlap: number): string {
-  const enter = entrance === 'blur-crossfade'
-    ? `tl.fromTo(root, { opacity: 0, filter: 'blur(20px)' }, { opacity: 1, filter: 'blur(0px)', duration: ${overlap}, ease: 'power2.out' }, 0);`
-    : entrance === 'crossfade'
-      ? `tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: ${overlap}, ease: 'power1.inOut' }, 0);`
-      : '';
+  const enter =
+    entrance === 'blur-crossfade'
+      ? `tl.fromTo(root, { opacity: 0, filter: 'blur(20px)' }, { opacity: 1, filter: 'blur(0px)', duration: ${overlap}, ease: 'power2.out' }, 0);`
+      : entrance === 'crossfade'
+        ? `tl.fromTo(root, { opacity: 0 }, { opacity: 1, duration: ${overlap}, ease: 'power1.inOut' }, 0);`
+        : '';
   return `<!doctype html>
 <html lang="vi" data-composition-id="${id}" data-composition-duration="${round(duration)}">
   <!--
@@ -156,14 +174,21 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
   const shell = kit.files[COMPOSITION_ENTRY] ?? '';
   if (!shell.includes(FRAMES_MARKER)) problems.push(`the composition's index.html has no ${FRAMES_MARKER} where the frames go`);
   let config: AssemblyConfig = {};
-  try { config = kit.files[ASSEMBLY_FILE] ? JSON.parse(kit.files[ASSEMBLY_FILE]!) as AssemblyConfig : {}; } catch (e) { problems.push(`${ASSEMBLY_FILE} does not parse: ${e instanceof Error ? e.message : String(e)}`); }
+  try {
+    config = kit.files[ASSEMBLY_FILE] ? (JSON.parse(kit.files[ASSEMBLY_FILE]!) as AssemblyConfig) : {};
+  } catch (e) {
+    problems.push(`${ASSEMBLY_FILE} does not parse: ${e instanceof Error ? e.message : String(e)}`);
+  }
   const slots = config.slots ?? {};
   const overlap = Math.max(0, Math.min(1.5, config.transition ?? 0.4));
   const { width, height } = kit;
   const rectOf = (box: Mount['box'], where: string): Rect | null => {
     if (Array.isArray(box)) return box as Rect;
     const slot = slots[box];
-    if (!slot) { problems.push(`${where}: no slot named "${box}" (the composition has ${Object.keys(slots).join(', ') || 'none'})`); return null; }
+    if (!slot) {
+      problems.push(`${where}: no slot named "${box}" (the composition has ${Object.keys(slots).join(', ') || 'none'})`);
+      return null;
+    }
     return slot;
   };
 
@@ -208,7 +233,10 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
         const parts = value.split(',').map((p) => p.trim());
         const secs = parts.map((p) => (p ? cueSeconds(p, fw.words, Math.max(0, from)) : 0));
         const bad = secs.find((x) => typeof x === 'string');
-        if (bad) { problems.push(`${label}, ${where}: ${bad}`); return value; }
+        if (bad) {
+          problems.push(`${label}, ${where}: ${bad}`);
+          return value;
+        }
         const rel = (secs as number[]).map((x) => round(Math.max(0, x - from)));
         return parts.length > 1 ? rel.join(',') : rel[0];
       };
@@ -241,7 +269,10 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
     frame.mounts.forEach((mount, j) => {
       const label = `${where}, ${mount.component}`;
       checkAssets(mount.values, label);
-      if (!hasComponent(kit.files, mount.component)) { problems.push(`${label}: the composition has no component ${mount.component}`); return; }
+      if (!hasComponent(kit.files, mount.component)) {
+        problems.push(`${label}: the composition has no component ${mount.component}`);
+        return;
+      }
       const rect = rectOf(mount.box, label);
       const at = cueSeconds(mount.at ?? 0, fw.words, 0);
       const until = cueSeconds(mount.until ?? duration, fw.words, typeof at === 'number' ? at : 0);
@@ -254,7 +285,16 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
       inner.push(clipTag(`${id}-${j + 1}`, { component: mount.component, rect, values, start: from + offset, duration: to - from, track: mount.layer ?? j + 1 }));
     });
 
-    files[file] = frameFile(id, frame, width, height, length, inner.map((c) => c.replace(/^ {2}/gm, '        ')), soft ? frame.transitionIn : undefined, overlap);
+    files[file] = frameFile(
+      id,
+      frame,
+      width,
+      height,
+      length,
+      inner.map((c) => c.replace(/^ {2}/gm, '        ')),
+      soft ? frame.transitionIn : undefined,
+      overlap,
+    );
     clips.push(`  <div id="${id}" class="clip" style="position: absolute; left: 0; top: 0; width: ${width}px; height: ${height}px;"
     data-composition-id="${id}" data-composition-src="${file}"
     data-start="${round(start)}" data-duration="${round(length)}" data-track-index="${1 + (i % 2)}" data-width="${width}" data-height="${height}"></div>`);
@@ -278,16 +318,29 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
     }
     placed.push({ number: frame.number, title: frame.title, start: round(start), duration: round(length), file, ...(frame.block ? { block: frame.block } : {}) });
     // `spokenFrom`: how far into the scene its narration starts — a soft transition opens it early.
-    scenes.push({ number: frame.number, title: frame.title, start: round(start), duration: round(length), spokenFrom: round(offset), ...(frame.block ? { block: frame.block } : {}), values: blockValues });
+    scenes.push({
+      number: frame.number,
+      title: frame.title,
+      start: round(start),
+      duration: round(length),
+      spokenFrom: round(offset),
+      ...(frame.block ? { block: frame.block } : {}),
+      values: blockValues,
+    });
     onFilm.push({ start: cursor, duration, words: fw.words });
     cursor += duration;
   });
 
   // A word lasts until the next one starts, or a little past its own start at the end of a frame.
-  timeline.forEach((w, i) => { const next = timeline[i + 1]; w.end = round(next && next.start - w.start < 1.2 ? next.start : w.start + 0.5); });
+  timeline.forEach((w, i) => {
+    const next = timeline[i + 1];
+    w.end = round(next && next.start - w.start < 1.2 ? next.start : w.start + 0.5);
+  });
 
   voiceRuns.forEach((run, k) => {
-    clips.push(`  <audio id="voice-${k + 1}" data-start="${round(run.filmStart)}" data-duration="${round(run.duration)}" data-media-start="${round(run.mediaStart)}" data-track-index="${20 + (k % 2)}" data-var-src="voiceover"></audio>`);
+    clips.push(
+      `  <audio id="voice-${k + 1}" data-start="${round(run.filmStart)}" data-duration="${round(run.duration)}" data-media-start="${round(run.mediaStart)}" data-track-index="${20 + (k % 2)}" data-var-src="voiceover"></audio>`,
+    );
   });
 
   const total = round(cursor);
@@ -297,13 +350,23 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
   (storyboard.layers ?? []).forEach((layer, i) => {
     const label = `layer ${layer.number}, ${layer.block}`;
     const html = kit.files[blockPath(layer.block)];
-    if (html === undefined) { problems.push(`${label}: the composition has no block ${layer.block}`); return; }
-    const first = onFilm[layer.from - 1], last = onFilm[layer.to - 1];
-    if (!first || !last || layer.from > layer.to) { problems.push(`${label}: frames ${layer.from} to ${layer.to} are not in the film`); return; }
+    if (html === undefined) {
+      problems.push(`${label}: the composition has no block ${layer.block}`);
+      return;
+    }
+    const first = onFilm[layer.from - 1],
+      last = onFilm[layer.to - 1];
+    if (!first || !last || layer.from > layer.to) {
+      problems.push(`${label}: frames ${layer.from} to ${layer.to} are not in the film`);
+      return;
+    }
     const inFrame = (cue: Cue | undefined, frame: typeof first, edge: number) => {
       if (cue === undefined) return edge;
       const at = cueSeconds(cue, frame.words, 0);
-      if (typeof at === 'string') { problems.push(`${label}: ${at.replace('this frame', `frame ${frame === first ? layer.from : layer.to}`)}`); return edge; }
+      if (typeof at === 'string') {
+        problems.push(`${label}: ${at.replace('this frame', `frame ${frame === first ? layer.from : layer.to}`)}`);
+        return edge;
+      }
       return frame.start + at;
     };
     const from = inFrame(layer.start, first, first.start);
@@ -317,7 +380,10 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
       const parts = value.split(',').map((p) => p.trim());
       const secs = parts.map((p) => cueSeconds(p, words, from));
       const bad = secs.find((x) => typeof x === 'string');
-      if (bad) { problems.push(`${label}, ${where}: ${String(bad).replace('this frame', `frames ${layer.from}–${layer.to}`)}`); return value; }
+      if (bad) {
+        problems.push(`${label}, ${where}: ${String(bad).replace('this frame', `frames ${layer.from}–${layer.to}`)}`);
+        return value;
+      }
       const rel = (secs as number[]).map((x) => round(Math.max(0, x - from)));
       return parts.length > 1 ? rel.join(',') : rel[0];
     };
@@ -326,11 +392,24 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
     if (declared.some((v) => v.id === 'seconds')) values.seconds = round(to - from);
     const checked = checkBlockValues(label, values, declared);
     problems.push(...checked.problems);
-    clips.push(clipTag(`layer-${layer.number}`, { component: layer.block, src: blockPath(layer.block), rect: [0, 0, width, height], values: { ...values, ...checked.values }, start: from, duration: to - from, track: layerTrack(layer, i) }));
+    clips.push(
+      clipTag(`layer-${layer.number}`, {
+        component: layer.block,
+        src: blockPath(layer.block),
+        rect: [0, 0, width, height],
+        values: { ...values, ...checked.values },
+        start: from,
+        duration: to - from,
+        track: layerTrack(layer, i),
+      }),
+    );
   });
   (config.overlays ?? []).forEach((overlay, i) => {
     const label = `overlay ${overlay.component}`;
-    if (!hasComponent(kit.files, overlay.component)) { problems.push(`${label}: the composition has no component ${overlay.component}`); return; }
+    if (!hasComponent(kit.files, overlay.component)) {
+      problems.push(`${label}: the composition has no component ${overlay.component}`);
+      return;
+    }
     const rect = rectOf(overlay.box, label);
     if (!rect) return;
     const duration = overlay.span === 'spoken' ? Math.max(0.5, spokenEnd) : total;

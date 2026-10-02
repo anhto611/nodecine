@@ -61,7 +61,10 @@ export const filmRecorder: JobRecorder = {
   history(jobs: Job[], key: string): RunRecord[] {
     const runs = jobs.filter((j) => j.key === key && j.kind === 'run' && j.result).sort((a, b) => a.createdAt - b.createdAt);
     return runs
-      .map((j, i) => { const film = j.result as FilmResult; return { seq: i + 1, startedAt: j.startedAt ?? j.createdAt, durationMs: film.durationMs, composition: film.composition, preview: film.preview, exports: film.exports }; })
+      .map((j, i) => {
+        const film = j.result as FilmResult;
+        return { seq: i + 1, startedAt: j.startedAt ?? j.createdAt, durationMs: film.durationMs, composition: film.composition, preview: film.preview, exports: film.exports };
+      })
       .reverse()
       .slice(0, HISTORY_PER_KEY);
   },

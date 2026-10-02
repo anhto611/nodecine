@@ -41,11 +41,13 @@ const deps = (fetch: FetchFn): ApiDeps => ({ fetch, timeoutMs: 1000, measure: as
 
 describe('ElevenLabs', () => {
   it('lists voices as multilingual with the labels that tell them apart', () => {
-    const voices = parseElevenlabsVoices({ voices: [
-      { voice_id: 'v1', name: 'Rachel', labels: { accent: 'american', gender: 'female' } },
-      { voice_id: 'v2', name: 'Bare' },
-      { voice_id: '', name: 'broken' },
-    ] });
+    const voices = parseElevenlabsVoices({
+      voices: [
+        { voice_id: 'v1', name: 'Rachel', labels: { accent: 'american', gender: 'female' } },
+        { voice_id: 'v2', name: 'Bare' },
+        { voice_id: '', name: 'broken' },
+      ],
+    });
     expect(voices).toEqual([
       { id: 'v1', displayName: 'Rachel · american · female', language: 'mul' },
       { id: 'v2', displayName: 'Bare', language: 'mul' },
@@ -63,7 +65,9 @@ describe('ElevenLabs', () => {
     const r = await createElevenlabsProvider({}, deps(fetch)).probe();
     expect(r.capabilities.installed).toMatchObject({ status: 'unavailable', code: 'KEY_MISSING' });
     expect(calls).toHaveLength(0);
-    await expect(createElevenlabsProvider({}, deps(fetch)).synthesize('hi', { id: 'v1', displayName: 'Rachel', language: 'mul' }, 1, new AbortController().signal)).rejects.toMatchObject({ code: 'KEY_MISSING' });
+    await expect(createElevenlabsProvider({}, deps(fetch)).synthesize('hi', { id: 'v1', displayName: 'Rachel', language: 'mul' }, 1, new AbortController().signal)).rejects.toMatchObject({
+      code: 'KEY_MISSING',
+    });
   });
 
   it('reports a rejected key as KEY_INVALID and sends the key as the xi-api-key header', async () => {
@@ -94,17 +98,24 @@ describe('ElevenLabs', () => {
   it('turns an upstream failure into TTS_UPSTREAM', async () => {
     process.env.ELEVENLABS_API_KEY = 'sk-test';
     const { fetch } = fakeFetch(() => new Response('quota', { status: 429 }));
-    await expect(createElevenlabsProvider({}, deps(fetch)).synthesize('hi', { id: 'v1', displayName: 'R', language: 'mul' }, 1, new AbortController().signal)).rejects.toMatchObject({ code: 'TTS_UPSTREAM' });
+    await expect(createElevenlabsProvider({}, deps(fetch)).synthesize('hi', { id: 'v1', displayName: 'R', language: 'mul' }, 1, new AbortController().signal)).rejects.toMatchObject({
+      code: 'TTS_UPSTREAM',
+    });
   });
 });
 
 describe('Vbee', () => {
-  const catalogue = { status: 1, result: { voices: [
-    { code: 'hn_male_minhquan_yt_24k-pre', name: 'Minh Quân Pro', gender: 'male', language_code: 'vi-VN', level: 'PREMIUM', active: true },
-    { code: 'en_female_x', name: 'Emma', gender: 'female', language_code: 'en-US', level: 'BASIC', active: true },
-    { code: 'hn_female_ngochuyen_full_48k-fhg', name: 'HN - Ngọc Huyền', gender: 'female', language_code: 'vi-VN', level: 'BASIC', active: true },
-    { code: 'gone', name: 'Gone', active: false },
-  ] } };
+  const catalogue = {
+    status: 1,
+    result: {
+      voices: [
+        { code: 'hn_male_minhquan_yt_24k-pre', name: 'Minh Quân Pro', gender: 'male', language_code: 'vi-VN', level: 'PREMIUM', active: true },
+        { code: 'en_female_x', name: 'Emma', gender: 'female', language_code: 'en-US', level: 'BASIC', active: true },
+        { code: 'hn_female_ngochuyen_full_48k-fhg', name: 'HN - Ngọc Huyền', gender: 'female', language_code: 'vi-VN', level: 'BASIC', active: true },
+        { code: 'gone', name: 'Gone', active: false },
+      ],
+    },
+  };
 
   it('lists Vietnamese first, basic before premium, and skips inactive voices', () => {
     expect(parseVbeeVoices(catalogue).map((v) => v.id)).toEqual(['hn_female_ngochuyen_full_48k-fhg', 'hn_male_minhquan_yt_24k-pre', 'en_female_x']);
@@ -153,8 +164,14 @@ describe('Vbee', () => {
     process.env.VBEE_APP_ID = 'app';
     const voice = { id: 'v-pre', displayName: 'V', language: 'vi-VN' };
     const refused = fakeFetch(() => json({ status: 0, error_code: 1045, error_message: null }));
-    await expect(createVbeeProvider({}, deps(refused.fetch)).synthesize('a', voice, 1, new AbortController().signal)).rejects.toMatchObject({ code: 'TTS_UPSTREAM', message: expect.stringContaining('1045') });
+    await expect(createVbeeProvider({}, deps(refused.fetch)).synthesize('a', voice, 1, new AbortController().signal)).rejects.toMatchObject({
+      code: 'TTS_UPSTREAM',
+      message: expect.stringContaining('1045'),
+    });
     const plain = fakeFetch(() => json({ status: 1, result: { audio_link: 'http://evil/a.mp3' } }));
-    await expect(createVbeeProvider({}, deps(plain.fetch)).synthesize('b', voice, 1, new AbortController().signal)).rejects.toMatchObject({ code: 'TTS_UPSTREAM', message: expect.stringContaining('https') });
+    await expect(createVbeeProvider({}, deps(plain.fetch)).synthesize('b', voice, 1, new AbortController().signal)).rejects.toMatchObject({
+      code: 'TTS_UPSTREAM',
+      message: expect.stringContaining('https'),
+    });
   });
 });

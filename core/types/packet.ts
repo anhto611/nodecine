@@ -12,14 +12,7 @@ export interface Packet<T = unknown> {
   contentHash: string;
 }
 
-export function makePacket<T>(args: {
-  sourceNodeId: string;
-  sourcePort: string;
-  targetPort: string;
-  payloadType: PortType;
-  payload: T;
-  now?: () => number;
-}): Packet<T> {
+export function makePacket<T>(args: { sourceNodeId: string; sourcePort: string; targetPort: string; payloadType: PortType; payload: T; now?: () => number }): Packet<T> {
   return {
     sourceNodeId: args.sourceNodeId,
     sourcePort: args.sourcePort,

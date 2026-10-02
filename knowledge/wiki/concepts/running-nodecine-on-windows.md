@@ -1,5 +1,5 @@
 ---
-title: "Running NodeCine on Windows"
+title: 'Running NodeCine on Windows'
 type: concept
 created: 2026-10-02
 updated: 2026-10-02

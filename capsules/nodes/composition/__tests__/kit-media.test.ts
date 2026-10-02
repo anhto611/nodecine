@@ -62,7 +62,7 @@ describe('the pictures a kit draws with', () => {
   });
 });
 
-describe('the kit\'s own colours', () => {
+describe("the kit's own colours", () => {
   const shell = `<!doctype html>
 <html data-composition-variables='[{"id":"videoSeconds","type":"number","default":45},{"id":"mark","type":"color","label":"Marker colour","default":"#d6263b"}]'>
 <style>#root { --mark: #d6263b; --ink: #1f2430; --red: #d6263b; --bg: var(--paper); }</style>

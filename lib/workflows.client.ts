@@ -3,7 +3,14 @@ import type { LocalizedText, WorkflowDocument } from '@/core/engine/document';
 
 /** The browser's side of the workflow files (server/workflows.ts). Thin: every function is one request. */
 
-export interface WorkflowSummary { id: string; name: WorkflowDocument['name']; description?: WorkflowDocument['description']; category: string; updatedAt: string; nodes: number }
+export interface WorkflowSummary {
+  id: string;
+  name: WorkflowDocument['name'];
+  description?: WorkflowDocument['description'];
+  category: string;
+  updatedAt: string;
+  nodes: number;
+}
 export type TemplateSummary = WorkflowSummary & { group: 'video'; thumbnail: string; tagline: LocalizedText; tags: LocalizedText[] };
 
 /** A file that had to be brought forward reports what changed, so the person is told, not surprised. */

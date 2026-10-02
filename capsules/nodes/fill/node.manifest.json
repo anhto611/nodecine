@@ -1,1 +1,1 @@
-{"id": "fill", "definition": "fill", "body": "FillBody", "icon": "layers", "group": "visual", "translations": "fillTranslations", "errors": "FillErrorCode"}
+{ "id": "fill", "definition": "fill", "body": "FillBody", "icon": "layers", "group": "visual", "translations": "fillTranslations", "errors": "FillErrorCode" }

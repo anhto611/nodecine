@@ -61,13 +61,19 @@ const need = async (bin: 'ffmpeg' | 'ffprobe'): Promise<string> => {
 /** What the clip is: its size, how fast it runs, how long, and whether anything can be heard on it. */
 export async function readClip(clipUrl: string, signal?: AbortSignal): Promise<ClipFacts> {
   const file = assetPath(fileNameFromAssetUrl(clipUrl));
-  if (!(await stat(file).then((s) => s.isFile(), () => false))) {
+  if (
+    !(await stat(file).then(
+      (s) => s.isFile(),
+      () => false,
+    ))
+  ) {
     throw new NodeError(ErrorCode.INPUT_EMPTY, 'that clip is not on this machine any more', false).withFix('choose the clip again');
   }
   const bin = await need('ffprobe');
   const r = await exec(bin, {
     args: ['-v', 'error', '-show_entries', 'stream=codec_type,codec_name,width,height,avg_frame_rate:format=duration', '-of', 'json', file],
-    timeoutMs: 60_000, signal,
+    timeoutMs: 60_000,
+    signal,
   });
   if (r.code !== 0) throw new NodeError(ErrorCode.CLIP_UNREADABLE, `ffprobe could not read the clip: ${r.stderr.trim().slice(0, 200)}`);
   const probed = JSON.parse(r.stdout) as {
@@ -105,14 +111,19 @@ export async function readClip(clipUrl: string, signal?: AbortSignal): Promise<C
  */
 async function keyframeGap(ffprobe: string, file: string, durationSeconds: number, signal?: AbortSignal): Promise<number> {
   const r = await exec(ffprobe, {
-    args: ['-v', 'error', '-select_streams', 'v:0', '-skip_frame', 'nokey',
-      '-show_entries', 'frame=pts_time', '-of', 'csv=p=0', '-read_intervals', `%+${WINDOW}`, file],
-    timeoutMs: 120_000, maxOutput: 1024 * 1024, signal,
+    args: ['-v', 'error', '-select_streams', 'v:0', '-skip_frame', 'nokey', '-show_entries', 'frame=pts_time', '-of', 'csv=p=0', '-read_intervals', `%+${WINDOW}`, file],
+    timeoutMs: 120_000,
+    maxOutput: 1024 * 1024,
+    signal,
   });
   if (r.code !== 0) return Math.min(durationSeconds, WINDOW);
   // Frame side data can add CSV columns (including a trailing comma). Blank lines are not time zero.
-  const times = r.stdout.split(/\r?\n/).map((line) => line.split(',')[0]!.trim())
-    .filter(Boolean).map(Number).filter((n) => Number.isFinite(n));
+  const times = r.stdout
+    .split(/\r?\n/)
+    .map((line) => line.split(',')[0]!.trim())
+    .filter(Boolean)
+    .map(Number)
+    .filter((n) => Number.isFinite(n));
   // One keyframe in half a minute: the worst seek decodes everything up to it, capped by the window.
   if (times.length < 2) return Math.min(durationSeconds, WINDOW);
   let widest = 0;
@@ -137,17 +148,50 @@ export async function webClip(clipUrl: string, facts: ClipFacts, signal?: AbortS
   // An asset is named by a hash and nothing else, so the copy gets its own, derived from the original's.
   // The suffix carries what this copy is for: when the rule changed, copies made under the old one
   // had to stop being found, or every clip already brought in would have kept its eight-second gaps.
-  const name = `${createHash('sha1').update(`${fileNameFromAssetUrl(clipUrl)}:h264-seekable`).digest('hex')}.mp4`;
+  const name = `${createHash('sha1')
+    .update(`${fileNameFromAssetUrl(clipUrl)}:h264-seekable`)
+    .digest('hex')}.mp4`;
   const out = assetPath(name);
-  if (!(await stat(out).then(() => true, () => false))) {
+  if (
+    !(await stat(out).then(
+      () => true,
+      () => false,
+    ))
+  ) {
     const bin = await need('ffmpeg');
     const partial = `${out}.part.mp4`;
     const r = await exec(bin, {
-      args: ['-v', 'error', '-y', '-i', source, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      args: [
+        '-v',
+        'error',
+        '-y',
+        '-i',
+        source,
+        '-c:v',
+        'libx264',
+        '-preset',
+        'veryfast',
+        '-crf',
+        '20',
+        '-pix_fmt',
+        'yuv420p',
         // A keyframe a second, and none of the extra ones a scene change would otherwise put in.
-        '-g', '30', '-keyint_min', '30', '-sc_threshold', '0',
-        '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', partial],
-      timeoutMs: 60 * 60_000, signal,
+        '-g',
+        '30',
+        '-keyint_min',
+        '30',
+        '-sc_threshold',
+        '0',
+        '-c:a',
+        'aac',
+        '-b:a',
+        '160k',
+        '-movflags',
+        '+faststart',
+        partial,
+      ],
+      timeoutMs: 60 * 60_000,
+      signal,
     });
     if (r.code !== 0) throw new NodeError(ErrorCode.CLIP_UNREADABLE, `ffmpeg could not make that clip playable: ${r.stderr.trim().slice(0, 200)}`);
     await rename(partial, out);
@@ -162,10 +206,17 @@ export async function webClip(clipUrl: string, facts: ClipFacts, signal?: AbortS
  */
 export async function clipAudio(clipUrl: string, signal?: AbortSignal): Promise<{ audioUrl: string; durationSeconds: number }> {
   const source = assetPath(fileNameFromAssetUrl(clipUrl));
-  const name = `${fileNameFromAssetUrl(clipUrl).replace(/\.[a-z0-9]+$/, '').slice(0, 40)}.mp3`;
+  const name = `${fileNameFromAssetUrl(clipUrl)
+    .replace(/\.[a-z0-9]+$/, '')
+    .slice(0, 40)}.mp3`;
   const out = mediaPath(name);
   await ensureTmpDir();
-  if (!(await stat(out).then(() => true, () => false))) {
+  if (
+    !(await stat(out).then(
+      () => true,
+      () => false,
+    ))
+  ) {
     const bin = await need('ffmpeg');
     const partial = path.join(path.dirname(out), `${path.basename(out, '.mp3')}.part.mp3`);
     const r = await exec(bin, { args: ['-v', 'error', '-y', '-i', source, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', partial], timeoutMs: 15 * 60_000, signal });

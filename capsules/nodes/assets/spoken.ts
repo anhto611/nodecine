@@ -18,7 +18,10 @@ const CAP = 3000;
  * for turning this into picture searches, which is why no second one is put in the way.
  */
 export function spokenBrief(voiceover: Voiceover): Brief | undefined {
-  const said = (voiceover.words ?? []).map((w) => w.text).join(' ').trim();
+  const said = (voiceover.words ?? [])
+    .map((w) => w.text)
+    .join(' ')
+    .trim();
   if (!said) return undefined;
   const language = voiceover.language && voiceover.language !== 'und' ? voiceover.language : detectLanguage(said);
   return { about: trim(said), language };

@@ -27,8 +27,9 @@ async function discover(dir, manifestName) {
   for (const folder of folders) {
     const file = path.join(dir, folder, manifestName);
     let manifest;
-    try { manifest = JSON.parse(await readFile(file, 'utf8')); }
-    catch (error) {
+    try {
+      manifest = JSON.parse(await readFile(file, 'utf8'));
+    } catch (error) {
       if (error?.code === 'ENOENT') continue;
       throw new Error(`${path.relative(root, file)}: ${error.message}`);
     }
@@ -52,18 +53,22 @@ const engines = await discover(enginesDir, 'engine.manifest.json');
 const ids = new Set();
 for (const item of capsules) {
   if (item.libraries) throw new Error(`${item.folder}/node.manifest.json: libraries are gone; a node that reads the user's files says so in its own code`);
-  for (const key of ['id', 'icon', 'group', 'translations', 'definition', 'body']) if (typeof item[key] !== 'string' || !item[key]) throw new Error(`${item.folder}/node.manifest.json: ${key} is required`);
+  for (const key of ['id', 'icon', 'group', 'translations', 'definition', 'body'])
+    if (typeof item[key] !== 'string' || !item[key]) throw new Error(`${item.folder}/node.manifest.json: ${key} is required`);
   if (item.register) throw new Error(`${item.folder}/node.manifest.json: a node registers nothing of its own; an engine is a capsule under capsules/engines`);
   if (item.locales) throw new Error(`${item.folder}/node.manifest.json: put the name and description in locales.ts as node.<id> and node.desc.<id>, not in the manifest`);
-  if (item.actions !== undefined && (typeof item.actions !== 'string' || !item.actions)) throw new Error(`${item.folder}/node.manifest.json: actions must be the name of the table exported from server.ts`);
-  if (item.errors !== undefined && (typeof item.errors !== 'string' || !item.errors)) throw new Error(`${item.folder}/node.manifest.json: errors must be the name of the code table exported from errors.ts`);
+  if (item.actions !== undefined && (typeof item.actions !== 'string' || !item.actions))
+    throw new Error(`${item.folder}/node.manifest.json: actions must be the name of the table exported from server.ts`);
+  if (item.errors !== undefined && (typeof item.errors !== 'string' || !item.errors))
+    throw new Error(`${item.folder}/node.manifest.json: errors must be the name of the code table exported from errors.ts`);
   if (ids.has(item.id)) throw new Error(`duplicate node id: ${item.id}`);
   if (retired[item.id]) throw new Error(`${item.folder}/node.manifest.json: "${item.id}" is listed in retired.json`);
   ids.add(item.id);
 }
 for (const item of engines) {
   for (const key of ['id', 'translations']) if (typeof item[key] !== 'string' || !item[key]) throw new Error(`engines/${item.folder}/engine.manifest.json: ${key} is required`);
-  if (typeof item.register?.server !== 'string' || typeof item.register?.client !== 'string') throw new Error(`engines/${item.folder}/engine.manifest.json: register.server and register.client are required`);
+  if (typeof item.register?.server !== 'string' || typeof item.register?.client !== 'string')
+    throw new Error(`engines/${item.folder}/engine.manifest.json: register.server and register.client are required`);
   if (ids.has(item.id)) throw new Error(`duplicate capsule id: ${item.id}`);
   ids.add(item.id);
 }
@@ -76,7 +81,7 @@ function imports(side) {
   const modules = new Map();
   if (side !== 'server') {
     for (const item of capsules.filter((entry) => entry.definition)) {
-      const file = side === 'definitions' ? 'node' : (item.bodyModule || 'body');
+      const file = side === 'definitions' ? 'node' : item.bodyModule || 'body';
       const name = side === 'definitions' ? item.definition : item.body;
       const key = `${item.folder}/${file}`;
       modules.set(key, [...(modules.get(key) || []), name]);
@@ -114,7 +119,10 @@ import { registerDocMigrations } from '../../migrations';
 ${imports('definitions')}
 
 export const ALL_NODES: AnyNodeDefinition[] = [
-${capsules.filter((item) => item.definition).map((item) => `  ${item.definition},`).join('\n')}
+${capsules
+  .filter((item) => item.definition)
+  .map((item) => `  ${item.definition},`)
+  .join('\n')}
 ] as unknown as AnyNodeDefinition[];
 
 const expectedIds = ${JSON.stringify(capsules.filter((item) => item.definition).map((item) => item.id))};
@@ -131,7 +139,10 @@ export const NODE_FEATURES: Record<string, string[]> = ${JSON.stringify(Object.f
  * layer raise. Listed here so a test can check every one of them can be shown to a person.
  */
 export const NODE_ERROR_CODES: Record<string, string[]> = ${JSON.stringify(Object.fromEntries(capsules.filter((item) => item.errors).map((item) => [item.id, []])), null, 2)};
-${capsules.filter((item) => item.errors).map((item) => `NODE_ERROR_CODES['${item.id}'] = Object.values(${item.errors});`).join('\n')}
+${capsules
+  .filter((item) => item.errors)
+  .map((item) => `NODE_ERROR_CODES['${item.id}'] = Object.values(${item.errors});`)
+  .join('\n')}
 
 /** Node types that are gone, and what became of them (capsules/retired.json). */
 export const RETIRED_NODES: Record<string, RetiredNodeType> = ${JSON.stringify(retired, null, 2)};
@@ -152,7 +163,10 @@ import type { NodeService } from '@/core/engine/services';
 ${imports('server')}
 
 export const NODE_SERVICE_EXTENSIONS: Record<string, NodeService>[] = [
-${capsules.filter((item) => item.services).map((item) => `  ${item.services},`).join('\n')}
+${capsules
+  .filter((item) => item.services)
+  .map((item) => `  ${item.services},`)
+  .join('\n')}
 ];
 
 /**
@@ -161,7 +175,10 @@ ${capsules.filter((item) => item.services).map((item) => `  ${item.services},`).
  * action is reachable from the canvas.
  */
 export const NODE_ACTIONS: Record<string, NodeService>[] = [
-${capsules.filter((item) => item.actions).map((item) => `  ${item.actions},`).join('\n')}
+${capsules
+  .filter((item) => item.actions)
+  .map((item) => `  ${item.actions},`)
+  .join('\n')}
 ];
 
 /**
@@ -178,15 +195,24 @@ import type { BodyProps, NodeMeta } from '@/capsules/sdk/meta';
 ${imports('client')}
 
 export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
-${capsules.filter((item) => item.body).map((item) => `  '${item.id}': ${item.body},`).join('\n')}
+${capsules
+  .filter((item) => item.body)
+  .map((item) => `  '${item.id}': ${item.body},`)
+  .join('\n')}
 };
 
 export const NODE_OVERLAYS: React.FC[] = [
-${capsules.filter((item) => item.overlay).map((item) => `  ${item.overlay},`).join('\n')}
+${capsules
+  .filter((item) => item.overlay)
+  .map((item) => `  ${item.overlay},`)
+  .join('\n')}
 ];
 
 export const NODE_META: Record<string, NodeMeta> = {
-${capsules.filter((item) => item.definition).map((item) => `  '${item.id}': { icon: '${item.icon}', group: '${item.group}'${item.layout === 'wide' ? ", layout: 'wide'" : ''} },`).join('\n')}
+${capsules
+  .filter((item) => item.definition)
+  .map((item) => `  '${item.id}': { icon: '${item.icon}', group: '${item.group}'${item.layout === 'wide' ? ", layout: 'wide'" : ''} },`)
+  .join('\n')}
 };
 
 `;

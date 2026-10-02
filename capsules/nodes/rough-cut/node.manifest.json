@@ -1,1 +1,1 @@
-{"id": "rough-cut", "definition": "roughCut", "body": "RoughCutBody", "icon": "branch", "group": "script", "translations": "roughCutTranslations", "errors": "RoughCutErrorCode"}
+{ "id": "rough-cut", "definition": "roughCut", "body": "RoughCutBody", "icon": "branch", "group": "script", "translations": "roughCutTranslations", "errors": "RoughCutErrorCode" }

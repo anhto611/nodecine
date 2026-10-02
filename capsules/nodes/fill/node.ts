@@ -44,12 +44,20 @@ const Params = z.object({
 /** Whether a value suits a declared type; the engine checks again, this says it on the node. */
 function suits(value: unknown, variable: CompositionVariable): boolean {
   switch (variable.type) {
-    case 'string': case 'color': case 'enum': return typeof value === 'string';
-    case 'number': return typeof value === 'number' && Number.isFinite(value);
-    case 'boolean': return typeof value === 'boolean';
-    case 'image': return typeof value === 'string' || (!!value && typeof value === 'object' && typeof (value as { url?: unknown }).url === 'string');
-    case 'font': return typeof value === 'string' || (!!value && typeof value === 'object' && typeof (value as { name?: unknown }).name === 'string');
-    default: return true;
+    case 'string':
+    case 'color':
+    case 'enum':
+      return typeof value === 'string';
+    case 'number':
+      return typeof value === 'number' && Number.isFinite(value);
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'image':
+      return typeof value === 'string' || (!!value && typeof value === 'object' && typeof (value as { url?: unknown }).url === 'string');
+    case 'font':
+      return typeof value === 'string' || (!!value && typeof value === 'object' && typeof (value as { name?: unknown }).name === 'string');
+    default:
+      return true;
   }
 }
 
@@ -59,7 +67,9 @@ function suits(value: unknown, variable: CompositionVariable): boolean {
  * decides what to do with each; this node only puts them where the composition looks.
  */
 export const fill: NodeDefinition<typeof Params> = {
-  type: 'fill', version: 1, kind: 'process',
+  type: 'fill',
+  version: 1,
+  kind: 'process',
   inputs: [
     { name: 'composition', type: 'Composition' },
     { name: 'voiceover', type: 'Voiceover', required: false },
@@ -68,7 +78,8 @@ export const fill: NodeDefinition<typeof Params> = {
     { name: 'cutout', type: 'Footage', required: false },
   ],
   outputs: [{ name: 'composition', type: 'Composition' }],
-  paramsSchema: Params, defaultParams: { values: {} },
+  paramsSchema: Params,
+  defaultParams: { values: {} },
   run: async ({ params, inputs, log }) => {
     const base = inputs.composition!.payload as Composition;
     const voice = inputs.voiceover?.payload as Voiceover | undefined;

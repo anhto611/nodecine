@@ -30,8 +30,14 @@ describe.skipIf(!enabled)('a HyperFrames composition, for real', () => {
 </body>
 </html>`;
   const starter = async (): Promise<Composition> => ({
-    engine: 'hyperframes', width: 1080, height: 1920, fps: 30, files: { 'index.html': INDEX }, media: {},
-    variables: [{ id: 'title', type: 'string', label: 'Title', default: 'Hello' }], values: { title: 'Filled by NodeCine' },
+    engine: 'hyperframes',
+    width: 1080,
+    height: 1920,
+    fps: 30,
+    files: { 'index.html': INDEX },
+    media: {},
+    variables: [{ id: 'title', type: 'string', label: 'Title', default: 'Hello' }],
+    values: { title: 'Filled by NodeCine' },
   });
 
   it('bundles a preview page with the values set ahead of every script', async () => {

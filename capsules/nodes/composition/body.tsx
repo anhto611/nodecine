@@ -54,17 +54,34 @@ export const CompositionBody: React.FC<BodyProps> = ({ nodeId }) => {
     return (
       <div style={{ display: 'grid', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>
-          <span>{t('node.compositionKit')} · {Object.keys(media).length}</span>
-          <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={openKit}>{t('node.compositionSeeAll')}</button>
+          <span>
+            {t('node.compositionKit')} · {Object.keys(media).length}
+          </span>
+          <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={openKit}>
+            {t('node.compositionSeeAll')}
+          </button>
         </div>
         {shown.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: GAP, overflowX: 'auto', paddingBottom: 2 }}>
             {shown.map((path) => (
-              <button key={path} className="nc-chip" title={path} onClick={openKit}
-                style={{ flex: `0 0 ${cardWidth('component')}`, minWidth: 0, padding: 4, display: 'grid', gap: 4, justifyItems: 'stretch' }}>
-                {isClip(path)
-                  ? <video src={media[path]} muted playsInline preload="metadata" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }} />
-                  : <img src={media[path]} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'contain', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }} />}
+              <button
+                key={path}
+                className="nc-chip"
+                title={path}
+                onClick={openKit}
+                style={{ flex: `0 0 ${cardWidth('component')}`, minWidth: 0, padding: 4, display: 'grid', gap: 4, justifyItems: 'stretch' }}
+              >
+                {isClip(path) ? (
+                  <video
+                    src={media[path]}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }}
+                  />
+                ) : (
+                  <img src={media[path]} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'contain', background: 'var(--bg-sunk, #0002)', borderRadius: 4 }} />
+                )}
                 <span style={{ color: 'var(--tx-2)', fontSize: 'var(--fs-hint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(path)}</span>
               </button>
             ))}
@@ -81,19 +98,49 @@ export const CompositionBody: React.FC<BodyProps> = ({ nodeId }) => {
     return (
       <div style={{ display: 'grid', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 'var(--fs-hint)', color: 'var(--tx-3)' }}>
-          <span>{t(`node.compositionKind.${kind}`)} · {all.length}</span>
-          <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => openWall(kind)}>{t('node.compositionSeeAll')}</button>
+          <span>
+            {t(`node.compositionKind.${kind}`)} · {all.length}
+          </span>
+          <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => openWall(kind)}>
+            {t('node.compositionSeeAll')}
+          </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: GAP, overflowX: 'auto', paddingBottom: 2 }}>
           {shown.map((path) => (
-            <Thumbnail key={path} path={path} project={project} engine={out?.engine} width={cardWidth(kind)} onOpen={() => openWall(kind, path)} title={`${nameOf(path)} · ${t(`node.compositionRole.${roleOf(files, path)}`)}\n${readPart(files[path] ?? '').variables.length} ${t('node.compositionVariables')}`}>
+            <Thumbnail
+              key={path}
+              path={path}
+              project={project}
+              engine={out?.engine}
+              width={cardWidth(kind)}
+              onOpen={() => openWall(kind, path)}
+              title={`${nameOf(path)} · ${t(`node.compositionRole.${roleOf(files, path)}`)}\n${readPart(files[path] ?? '').variables.length} ${t('node.compositionVariables')}`}
+            >
               <div style={{ color: 'var(--tx-2)', fontSize: 'var(--fs-hint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(path)}</div>
             </Thumbnail>
           ))}
           {all.length > shown.length && (
-            <button className="nc-chip" style={{ flex: `0 0 ${cardWidth(kind)}`, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: 6 }} onClick={() => openWall(kind)}>
-              <div style={{ aspectRatio: out ? `${out.width} / ${out.height}` : '9 / 16', borderRadius: 4, background: 'var(--bg-sunk, #0002)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-body)' }}>+{all.length - shown.length}</div>
-              <div className="nc-hint" style={{ marginTop: 0 }}>{t('node.compositionSeeAll')}</div>
+            <button
+              className="nc-chip"
+              style={{ flex: `0 0 ${cardWidth(kind)}`, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: 6 }}
+              onClick={() => openWall(kind)}
+            >
+              <div
+                style={{
+                  aspectRatio: out ? `${out.width} / ${out.height}` : '9 / 16',
+                  borderRadius: 4,
+                  background: 'var(--bg-sunk, #0002)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 'var(--fs-body)',
+                }}
+              >
+                +{all.length - shown.length}
+              </div>
+              <div className="nc-hint" style={{ marginTop: 0 }}>
+                {t('node.compositionSeeAll')}
+              </div>
             </button>
           )}
         </div>

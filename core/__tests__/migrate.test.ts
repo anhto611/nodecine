@@ -51,7 +51,10 @@ describe('a file from an older format', () => {
     g.nodes.push({ id: 'speaker', type: 'tts', params: {}, bypassed: false, position: { x: 0, y: 0 } });
     g.edges.push({ id: 'e1', source: 'voice', sourcePort: 'tts', target: 'speaker', targetPort: 'tts' });
     const { doc } = migrateDoc(doc0);
-    expect(doc.graph.nodes.map((n) => n.id), 'a provider node survived the fold').not.toContain('voice');
+    expect(
+      doc.graph.nodes.map((n) => n.id),
+      'a provider node survived the fold',
+    ).not.toContain('voice');
     expect(doc.graph.edges, 'a wire to a node that is gone survived').toHaveLength(0);
     const speaker = doc.graph.nodes.find((n) => n.id === 'speaker')!;
     expect(speaker.params).toMatchObject({ ttsProvider: 'system-tts', ttsSettings: { rate: 1.15 } });
@@ -80,11 +83,18 @@ describe('a node type that is gone', () => {
 
 describe('a node type whose parameters changed', () => {
   const Params = z.object({ headline: z.string().default('') });
-  const register = (version: number, migrate?: AnyNodeDefinition['migrate']) => registerNodeType({
-    type: 'test/renamed-field', version, kind: 'source', inputs: [], outputs: [],
-    paramsSchema: Params, defaultParams: { headline: '' }, migrate,
-    run: async () => ({}),
-  } as unknown as AnyNodeDefinition);
+  const register = (version: number, migrate?: AnyNodeDefinition['migrate']) =>
+    registerNodeType({
+      type: 'test/renamed-field',
+      version,
+      kind: 'source',
+      inputs: [],
+      outputs: [],
+      paramsSchema: Params,
+      defaultParams: { headline: '' },
+      migrate,
+      run: async () => ({}),
+    } as unknown as AnyNodeDefinition);
   const saved = (version?: number): Graph => ({
     nodes: [{ id: 'n', type: 'test/renamed-field', version, params: { title: 'The old name' }, bypassed: false, position: { x: 0, y: 0 } }],
     edges: [],
@@ -113,8 +123,13 @@ describe('a node type whose parameters changed', () => {
 
   it('falls back to the defaults when the parameters are not merely stale but wrong', () => {
     registerNodeType({
-      type: 'test/strict', version: 2, kind: 'source', inputs: [], outputs: [],
-      paramsSchema: z.object({ count: z.number().int().positive() }), defaultParams: { count: 3 },
+      type: 'test/strict',
+      version: 2,
+      kind: 'source',
+      inputs: [],
+      outputs: [],
+      paramsSchema: z.object({ count: z.number().int().positive() }),
+      defaultParams: { count: 3 },
       run: async () => ({}),
     } as unknown as AnyNodeDefinition);
     const { graph, notes } = migrateGraph({ nodes: [{ id: 'n', type: 'test/strict', version: 1, params: { count: -4 }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] });
@@ -138,7 +153,16 @@ describe('a node type whose parameters changed', () => {
 describe('saving', () => {
   it('stamps every node with the version that wrote its parameters', () => {
     registerRetiredNodeType('test/ghost', { since: '2026-01-01' });
-    registerNodeType({ type: 'test/current', version: 1, kind: 'source', inputs: [], outputs: [], paramsSchema: z.object({}), defaultParams: {}, run: async () => ({}) } as unknown as AnyNodeDefinition);
+    registerNodeType({
+      type: 'test/current',
+      version: 1,
+      kind: 'source',
+      inputs: [],
+      outputs: [],
+      paramsSchema: z.object({}),
+      defaultParams: {},
+      run: async () => ({}),
+    } as unknown as AnyNodeDefinition);
     const graph: Graph = {
       nodes: [
         { id: 'a', type: 'test/current', params: {}, bypassed: false, position: { x: 0, y: 0 } },
@@ -165,19 +189,29 @@ describe('a file already at this format', () => {
     // The bug this holds shut: a workflow saved this morning, opened this afternoon, came back with
     // node types the build no longer had — the doc version matched, so nothing ran.
     registerNodeType({
-      type: 'test/renamed-field', version: 2, kind: 'source', inputs: [], outputs: [],
-      paramsSchema: z.object({ headline: z.string().default('') }), defaultParams: { headline: '' },
+      type: 'test/renamed-field',
+      version: 2,
+      kind: 'source',
+      inputs: [],
+      outputs: [],
+      paramsSchema: z.object({ headline: z.string().default('') }),
+      defaultParams: { headline: '' },
       migrate: (params: Record<string, unknown>) => ({ headline: params.title ?? '' }),
       run: async () => ({}),
     } as unknown as AnyNodeDefinition);
     const doc = {
       schemaVersion: PROJECT_SCHEMA_VERSION,
-      id: 'x', name: 'x', category: 'mine',
+      id: 'x',
+      name: 'x',
+      category: 'mine',
       graph: { nodes: [{ id: 's', type: 'test/renamed-field', version: 1, params: { title: 'x' }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] },
     } as unknown as SavedDoc;
     const { doc: after, notes } = migrateDoc(doc);
     expect(after.graph.nodes[0]!.params).toEqual({ headline: 'x' });
-    expect(notes.some((n) => n.code === 'DOC_FORMAT'), 'nothing about the format changed').toBe(false);
+    expect(
+      notes.some((n) => n.code === 'DOC_FORMAT'),
+      'nothing about the format changed',
+    ).toBe(false);
   });
 });
 
@@ -185,9 +219,17 @@ describe('a node type that was only renamed', () => {
   it('takes the new name and keeps its parameters and their version, running no migration', () => {
     let migrated = false;
     registerNodeType({
-      type: 'test/new-name', version: 2, kind: 'source', inputs: [], outputs: [],
-      paramsSchema: z.object({ model: z.string() }), defaultParams: { model: 'small' },
-      migrate: (params: Record<string, unknown>) => { migrated = true; return params; },
+      type: 'test/new-name',
+      version: 2,
+      kind: 'source',
+      inputs: [],
+      outputs: [],
+      paramsSchema: z.object({ model: z.string() }),
+      defaultParams: { model: 'small' },
+      migrate: (params: Record<string, unknown>) => {
+        migrated = true;
+        return params;
+      },
       run: async () => ({}),
     } as unknown as AnyNodeDefinition);
     registerRetiredNodeType('test/old-name', { since: '2026-09-14', renamedTo: 'test/new-name' });

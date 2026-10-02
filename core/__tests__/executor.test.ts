@@ -45,7 +45,7 @@ describe('graph validation', () => {
     expect(issues.find((i) => i.code === 'GRAPH_NO_SINK')?.severity).toBe('warning');
     expect(issues.some((i) => i.severity === 'error')).toBe(false);
   });
-  it('a node\'s own check on its parameters is continuous', () => {
+  it("a node's own check on its parameters is continuous", () => {
     setup();
     const g: Graph = { nodes: [{ id: 'in', type: 'test/source', params: { value: '  ' }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] };
     expect(validateGraph(g).some((i) => i.code === 'INPUT_EMPTY')).toBe(true);
@@ -196,7 +196,11 @@ describe('on-demand and single-node runs', () => {
   it('is not counted among the steps of a Run, so the progress reads true', async () => {
     const { graph, services } = setup();
     let stepTotal = -1;
-    const executor = new Executor(graph, services, { onRunStart: (i) => { stepTotal = i.stepTotal; } });
+    const executor = new Executor(graph, services, {
+      onRunStart: (i) => {
+        stepTotal = i.stepTotal;
+      },
+    });
     await executor.run();
     expect(stepTotal).toBe(4);
   });
@@ -223,7 +227,7 @@ describe('errors and cancellation', () => {
     expect(executor.runtime('voice').state).toBe('success');
   });
 
-  it('a throw with no code is the core\'s own failure, not a provider\'s', async () => {
+  it("a throw with no code is the core's own failure, not a provider's", async () => {
     const { executor, services } = setup();
     services.fail('voice', new Error('something broke'));
     await executor.run();
@@ -264,9 +268,16 @@ describe('a run always ends', () => {
   function withThrowingPreflight() {
     const { services } = setup();
     registerNodeType({
-      type: 'test/boom', version: 1, kind: 'source', inputs: [], outputs: [],
-      paramsSchema: z.object({}), defaultParams: {},
-      preflight: () => { throw new Error('preflight blew up'); },
+      type: 'test/boom',
+      version: 1,
+      kind: 'source',
+      inputs: [],
+      outputs: [],
+      paramsSchema: z.object({}),
+      defaultParams: {},
+      preflight: () => {
+        throw new Error('preflight blew up');
+      },
       run: async () => ({}),
     } as unknown as AnyNodeDefinition);
     return new Executor(boomGraph(), services);
@@ -317,9 +328,16 @@ describe('the way out of a failure', () => {
   const boom = (build: () => Error) => {
     const { services } = setup();
     registerNodeType({
-      type: 'test/fails', version: 1, kind: 'source', inputs: [], outputs: [],
-      paramsSchema: z.object({}), defaultParams: {},
-      run: async () => { throw build(); },
+      type: 'test/fails',
+      version: 1,
+      kind: 'source',
+      inputs: [],
+      outputs: [],
+      paramsSchema: z.object({}),
+      defaultParams: {},
+      run: async () => {
+        throw build();
+      },
     } as unknown as AnyNodeDefinition);
     const graph: Graph = { nodes: [{ id: 'f', type: 'test/fails', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] };
     return new Executor(graph, services);

@@ -1,1 +1,1 @@
-{"id": "hyperframes", "translations": "hyperframesEngineTranslations", "register": {"server": "registerHyperframesServer", "client": "registerHyperframesClient"}}
+{ "id": "hyperframes", "translations": "hyperframesEngineTranslations", "register": { "server": "registerHyperframesServer", "client": "registerHyperframesClient" } }

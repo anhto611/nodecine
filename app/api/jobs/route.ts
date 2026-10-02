@@ -12,7 +12,10 @@ const Body = z.object({
   nodeId: z.string().optional(),
   force: z.boolean().optional(),
   /** The browser's id for this submission; a retry of the same one gets the same job back. */
-  requestId: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/).optional(),
+  requestId: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]{1,64}$/)
+    .optional(),
 });
 
 /** Submit a job (like ComfyUI's POST /prompt) or list recent ones. An invalid graph is refused with its issues. */
@@ -25,7 +28,8 @@ export async function POST(req: Request) {
   } catch (e) {
     // Matched by shape, not instanceof: in dev the hub outlives a hot reload and throws the class from the previous module graph.
     const issues = (e as { issues?: unknown }).issues;
-    if (e instanceof GraphInvalidError || (e instanceof Error && e.name === 'GraphInvalidError' && Array.isArray(issues))) return NextResponse.json({ error: 'GRAPH_INVALID', message: e.message, issues }, { status: 400 });
+    if (e instanceof GraphInvalidError || (e instanceof Error && e.name === 'GraphInvalidError' && Array.isArray(issues)))
+      return NextResponse.json({ error: 'GRAPH_INVALID', message: e.message, issues }, { status: 400 });
     return NextResponse.json({ error: (e as { code?: string }).code ?? 'JOB_INVALID', message: e instanceof Error ? e.message : String(e) }, { status: 400 });
   }
 }

@@ -47,9 +47,7 @@ export interface NodeHost {
 
 const HostContext = React.createContext<NodeHost | null>(null);
 
-export const NodeHostProvider: React.FC<{ host: NodeHost; children: React.ReactNode }> = ({ host, children }) => (
-  <HostContext.Provider value={host}>{children}</HostContext.Provider>
-);
+export const NodeHostProvider: React.FC<{ host: NodeHost; children: React.ReactNode }> = ({ host, children }) => <HostContext.Provider value={host}>{children}</HostContext.Provider>;
 
 export function useHost(): NodeHost {
   const host = React.useContext(HostContext);

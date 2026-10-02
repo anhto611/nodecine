@@ -28,7 +28,12 @@ const KEY_HINT = 'set ELEVENLABS_API_KEY in .env.local';
 
 export const elevenlabsKey = (): string | undefined => envFirst('ELEVENLABS_API_KEY');
 
-interface ApiVoice { voice_id: string; name: string; category?: string; labels?: Record<string, string | undefined> }
+interface ApiVoice {
+  voice_id: string;
+  name: string;
+  category?: string;
+  labels?: Record<string, string | undefined>;
+}
 
 /** `Rachel · american · female`: the name plus the two labels that tell voices apart at a glance. */
 export function parseElevenlabsVoices(body: unknown): Voice[] {

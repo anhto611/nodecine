@@ -34,8 +34,14 @@ export const assetProjectPath = (asset: Pick<Asset, 'name' | 'url'>): string => 
 /** A name from any text (a file name, a note) that no other asset has: lowercase, dashed, numbered when taken. */
 export function assetNameFor(text: string, taken: Iterable<string>): string {
   const used = new Set(taken);
-  const whole = text.replace(/\.[a-z0-9]{2,5}$/i, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const whole = text
+    .replace(/\.[a-z0-9]{2,5}$/i, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/gi, 'd')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   const base = (whole.length <= 36 ? whole : whole.slice(0, 37).replace(/-[^-]*$/, '')).replace(/-+$/, '') || 'image';
   if (!used.has(base)) return base;
   let n = 2;

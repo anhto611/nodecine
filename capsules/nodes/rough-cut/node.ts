@@ -29,7 +29,9 @@ const Params = z.object({
  * scene by the stretch of voice it carries; the two have to be cut by the same hand or they disagree.
  */
 export const roughCut: NodeDefinition<typeof Params> = {
-  type: 'rough-cut', version: 1, kind: 'process',
+  type: 'rough-cut',
+  version: 1,
+  kind: 'process',
   inputs: [
     { name: 'footage', type: 'Footage' },
     { name: 'voiceover', type: 'Voiceover' },
@@ -38,13 +40,13 @@ export const roughCut: NodeDefinition<typeof Params> = {
     { name: 'storyboard', type: 'Storyboard' },
     { name: 'voiceover', type: 'Voiceover' },
   ],
-  paramsSchema: Params, defaultParams: Params.parse({}),
+  paramsSchema: Params,
+  defaultParams: Params.parse({}),
   run: async ({ params, inputs, log }) => {
     const footage = inputs.footage!.payload as Footage;
     const voice = inputs.voiceover!.payload as Voiceover;
     if (!voice.words?.length) {
-      throw new NodeError(RoughCutErrorCode.ROUGH_CUT_NO_WORDS, 'the voice carries no word timings')
-        .withFix('wire the Caption Sync node between the Footage node and this one');
+      throw new NodeError(RoughCutErrorCode.ROUGH_CUT_NO_WORDS, 'the voice carries no word timings').withFix('wire the Caption Sync node between the Footage node and this one');
     }
     const scenes = cutIntoScenes(voice.words, Math.min(footage.durationSeconds, voice.durationSeconds), params);
     if (!scenes.length) throw new NodeError(RoughCutErrorCode.ROUGH_CUT_NO_WORDS, 'nothing is said on this recording');
@@ -61,18 +63,24 @@ export const roughCut: NodeDefinition<typeof Params> = {
       extra: {},
     }));
     const markdown = [
-      '---', `format: ${footage.width}x${footage.height}`, `subject: ${footage.name}`, '---', '',
-      ...frames.map((f, i) => [
-        `## Frame ${f.number} — ${f.title}`,
-        `- voiceover: "${(f.voiceover ?? '').replace(/"/g, '”')}"`,
-        `- transition_in: ${f.transitionIn}`,
-        `- block: ${f.block}`,
-        '',
-        '```json',
-        JSON.stringify({ from: scenes[i]!.start }, null, 2),
-        '```',
-        '',
-      ].join('\n')),
+      '---',
+      `format: ${footage.width}x${footage.height}`,
+      `subject: ${footage.name}`,
+      '---',
+      '',
+      ...frames.map((f, i) =>
+        [
+          `## Frame ${f.number} — ${f.title}`,
+          `- voiceover: "${(f.voiceover ?? '').replace(/"/g, '”')}"`,
+          `- transition_in: ${f.transitionIn}`,
+          `- block: ${f.block}`,
+          '',
+          '```json',
+          JSON.stringify({ from: scenes[i]!.start }, null, 2),
+          '```',
+          '',
+        ].join('\n'),
+      ),
     ].join('\n');
 
     const storyboard: Storyboard = {

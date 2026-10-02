@@ -37,7 +37,10 @@ export const StoryboardFrameSchema = z.object({
   durationSeconds: z.number().positive().optional(),
   transitionIn: z.string().max(60).optional(),
   /** The block this frame plays: the name of a file under `compositions/`. */
-  block: z.string().regex(/^[a-z][a-z0-9-]{1,40}$/).optional(),
+  block: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]{1,40}$/)
+    .optional(),
   /** The block's variables for this frame. A string `@word` (or a comma list of them) becomes seconds from the frame's start. */
   values: z.record(z.string(), z.unknown()).default({}),
   /** Components placed by hand, for a frame that plays no block. */

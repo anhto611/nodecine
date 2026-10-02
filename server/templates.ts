@@ -60,7 +60,18 @@ export async function listTemplates(prepare: () => void): Promise<TemplateSummar
   const summaries: TemplateSummary[] = [];
   for (const entry of BY_ID.values()) {
     const doc = (await readTemplate(entry.id, prepare))!;
-    summaries.push({ id: entry.id, name: doc.name, description: doc.description, category: 'template', updatedAt: doc.updatedAt, nodes: doc.graph.nodes.length, group: entry.group, thumbnail: thumbnailUrl(entry.id), tagline: entry.tagline, tags: entry.tags });
+    summaries.push({
+      id: entry.id,
+      name: doc.name,
+      description: doc.description,
+      category: 'template',
+      updatedAt: doc.updatedAt,
+      nodes: doc.graph.nodes.length,
+      group: entry.group,
+      thumbnail: thumbnailUrl(entry.id),
+      tagline: entry.tagline,
+      tags: entry.tags,
+    });
   }
   return summaries;
 }

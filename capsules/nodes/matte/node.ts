@@ -32,18 +32,19 @@ const Params = z.object({
  * throws away the reading of the clip itself.
  */
 export const matte: NodeDefinition<typeof Params> = {
-  type: 'matte', version: 2, kind: 'process',
+  type: 'matte',
+  version: 2,
+  kind: 'process',
   inputs: [{ name: 'footage', type: 'Footage' }],
   outputs: [{ name: 'footage', type: 'Footage' }],
-  paramsSchema: Params, defaultParams: Params.parse({}),
+  paramsSchema: Params,
+  defaultParams: Params.parse({}),
   run: async ({ params, inputs, services, signal, log }) => {
     const source = inputs.footage!.payload as Footage;
     if (source.hasAlpha) throw new NodeError(MatteErrorCode.MATTE_FAILED, 'that clip has already been cut out').withFix('wire the recording itself in, not a cut-out of it');
     const facts = await services.invoke<ClipFacts>('footage/read', [source.url, signal]);
     const cut = await services.invoke<CutOut>('matte/cut', [source.url, facts, params.detail as MatteDetail, signal]);
-    log('info', cut.frames
-      ? `${cut.frames} frames cut at ${cut.width}×${cut.height} in ${cut.seconds.toFixed(0)}s`
-      : `already cut at ${cut.width}×${cut.height}`);
+    log('info', cut.frames ? `${cut.frames} frames cut at ${cut.width}×${cut.height} in ${cut.seconds.toFixed(0)}s` : `already cut at ${cut.width}×${cut.height}`);
     const footage: Footage = {
       ...source,
       url: cut.url,

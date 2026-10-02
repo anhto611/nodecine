@@ -13,7 +13,11 @@ const FRAMES = /^compositions\/frames\//;
 export const kindOf = (file: string): Kind | null =>
   !/\.html?$/i.test(file) || FRAMES.test(file) ? null : file.startsWith(COMPONENTS_DIR) ? 'component' : file.startsWith('compositions/') ? 'block' : null;
 export const pathFor = (kind: Kind, name: string): string => `${kind === 'component' ? COMPONENTS_DIR : 'compositions/'}${name}.html`;
-export const nameOf = (path: string): string => path.split('/').pop()!.replace(/\.html?$/i, '');
+export const nameOf = (path: string): string =>
+  path
+    .split('/')
+    .pop()!
+    .replace(/\.html?$/i, '');
 export const PART_NAME = /^[a-z][a-z0-9-]{1,40}$/;
 
 /**
@@ -44,7 +48,9 @@ export function roleOf(files: Record<string, string>, path: string): Role {
     try {
       const config = JSON.parse(files[ASSEMBLY_FILE] ?? '{}') as { overlays?: { component?: string }[] };
       if (config.overlays?.some((o) => o.component === nameOf(path))) return 'overlay';
-    } catch { /* an assemble.json that does not parse says nothing about roles */ }
+    } catch {
+      /* an assemble.json that does not parse says nothing about roles */
+    }
   }
   return roles[0] as Role;
 }
@@ -55,7 +61,11 @@ const attr = (tag: string, name: string) => new RegExp(`\\b${name}\\s*=\\s*(["']
 export function readPart(html: string) {
   const root = /<template[^>]*>[\s\S]*?(<[a-z][^>]*\bdata-composition-id\s*=[^>]*>)/i.exec(html)?.[1] ?? /<[a-z][^>]*\bdata-composition-id\s*=[^>]*>/i.exec(html)?.[0] ?? '';
   let variables: { id: string; type: string; default?: unknown }[] = [];
-  try { variables = JSON.parse(attr(html, 'data-composition-variables') ?? '[]'); } catch { variables = []; }
+  try {
+    variables = JSON.parse(attr(html, 'data-composition-variables') ?? '[]');
+  } catch {
+    variables = [];
+  }
   return {
     id: attr(root, 'data-composition-id') ?? attr(html, 'data-composition-id') ?? '',
     variables: Array.isArray(variables) ? variables : [],
@@ -141,7 +151,11 @@ export function scaffoldPart(kind: Kind, name: string, frame: { width: number; h
  * block's defaults, to paste and rewrite. `seconds` is left out: the Assemble node gives it.
  */
 export function storyboardSnippet(name: string, html: string): string {
-  const values = Object.fromEntries(readPart(html).variables.filter((v) => v.id !== 'seconds').map((v) => [v.id, v.default]));
+  const values = Object.fromEntries(
+    readPart(html)
+      .variables.filter((v) => v.id !== 'seconds')
+      .map((v) => [v.id, v.default]),
+  );
   return `- block: ${name}\n\n\`\`\`json\n${JSON.stringify(values, null, 2)}\n\`\`\``;
 }
 
@@ -180,8 +194,16 @@ export function replaceMedia(project: Project, path: string, url: string): Proje
 /** A picture added to the kit under `art/`, named after the file the person chose. */
 export function addMedia(project: Project, fileName: string, url: string): { project: Project; path: string } {
   const ext = (/\.([a-z0-9]+)(?:\?|$)/i.exec(url)?.[1] ?? 'png').toLowerCase();
-  const stem = fileName.replace(/\.[^.]*$/, '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'picture';
+  const stem =
+    fileName
+      .replace(/\.[^.]*$/, '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/đ/gi, 'd')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40) || 'picture';
   let path = `art/${stem}.${ext}`;
   for (let n = 2; project.media[path] !== undefined; n++) path = `art/${stem}-${n}.${ext}`;
   return { project: { ...project, media: { ...project.media, [path]: url } }, path };
@@ -224,7 +246,11 @@ export function setVariableDefault(html: string, id: string, value: string): str
   const attribute = /(\bdata-composition-variables\s*=\s*')([\s\S]*?)(')/i.exec(html);
   if (!attribute) return html;
   let declared: { id?: string; default?: unknown }[];
-  try { declared = JSON.parse(attribute[2]!) as typeof declared; } catch { return html; }
+  try {
+    declared = JSON.parse(attribute[2]!) as typeof declared;
+  } catch {
+    return html;
+  }
   if (!Array.isArray(declared) || !declared.some((v) => v?.id === id)) return html;
   const next = JSON.stringify(declared.map((v) => (v?.id === id ? { ...v, default: value } : v)));
   // The attribute is quoted with ' and holds JSON quoted with ": a value with a ' in it would end it.

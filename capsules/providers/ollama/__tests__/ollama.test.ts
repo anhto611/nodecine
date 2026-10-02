@@ -80,10 +80,15 @@ describe('probe with no server running', () => {
 
 describe('probe with a server running', () => {
   it('blocks on the model rather than the server when the model is not pulled', async () => {
-    const p = createOllamaProvider({ model: 'mistral' }, deps(fakeFetch({
-      '/api/tags': { body: { models: [{ name: 'llama3.2:latest' }] } },
-      '/api/version': { body: { version: '0.5.7' } },
-    })));
+    const p = createOllamaProvider(
+      { model: 'mistral' },
+      deps(
+        fakeFetch({
+          '/api/tags': { body: { models: [{ name: 'llama3.2:latest' }] } },
+          '/api/version': { body: { version: '0.5.7' } },
+        }),
+      ),
+    );
     const caps = await p.probe();
     expect(caps.authenticated.status).toBe('ready');
     expect(caps.structuredOutput.status).toBe('ready');
@@ -96,18 +101,28 @@ describe('probe with a server running', () => {
   });
 
   it('is ready once the model is there', async () => {
-    const p = createOllamaProvider({ model: 'llama3.2' }, deps(fakeFetch({
-      '/api/tags': { body: { models: [{ name: 'llama3.2:latest' }] } },
-      '/api/version': { body: { version: '0.5.7' } },
-    })));
+    const p = createOllamaProvider(
+      { model: 'llama3.2' },
+      deps(
+        fakeFetch({
+          '/api/tags': { body: { models: [{ name: 'llama3.2:latest' }] } },
+          '/api/version': { body: { version: '0.5.7' } },
+        }),
+      ),
+    );
     const caps = await p.probe();
     expect(caps.installed.status).toBe('ready');
   });
 
   it('stays ready when the server is too old to report a version', async () => {
-    const p = createOllamaProvider({ model: 'llama3.2' }, deps(fakeFetch({
-      '/api/tags': { body: { models: [{ name: 'llama3.2:latest' }] } },
-    })));
+    const p = createOllamaProvider(
+      { model: 'llama3.2' },
+      deps(
+        fakeFetch({
+          '/api/tags': { body: { models: [{ name: 'llama3.2:latest' }] } },
+        }),
+      ),
+    );
     const caps = await p.probe();
     expect(caps.installed.status).toBe('ready');
     expect(caps.version).toBeUndefined();
@@ -139,7 +154,9 @@ describe('pictures', () => {
       return new Response(JSON.stringify({ response: '{"headline":"SEEN"}' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }) as typeof fetch;
     const p = createOllamaProvider({ model: 'gemma3' }, deps(fetchImpl));
-    await expect(p.complete('what is this', z.object({ headline: z.string() }), new AbortController().signal, { images: [{ path: png, mediaType: 'image/png' }] })).resolves.toEqual({ headline: 'SEEN' });
+    await expect(p.complete('what is this', z.object({ headline: z.string() }), new AbortController().signal, { images: [{ path: png, mediaType: 'image/png' }] })).resolves.toEqual({
+      headline: 'SEEN',
+    });
     expect(sent.images).toHaveLength(1);
     expect(sent.images![0]).toMatch(/^[A-Za-z0-9+/]+=*$/);
   });
@@ -149,16 +166,26 @@ describe('complete', () => {
   const Schema = z.object({ headline: z.string() });
 
   it('parses the model output against the caller schema', async () => {
-    const p = createOllamaProvider({ model: 'llama3.2' }, deps(fakeFetch({
-      '/api/generate': { body: { response: '{"headline":"SHIP IT"}' } },
-    })));
+    const p = createOllamaProvider(
+      { model: 'llama3.2' },
+      deps(
+        fakeFetch({
+          '/api/generate': { body: { response: '{"headline":"SHIP IT"}' } },
+        }),
+      ),
+    );
     await expect(p.complete('write a headline', Schema, new AbortController().signal)).resolves.toEqual({ headline: 'SHIP IT' });
   });
 
   it('keeps the raw output when the shape is wrong, so the node can show it', async () => {
-    const p = createOllamaProvider({ model: 'llama3.2' }, deps(fakeFetch({
-      '/api/generate': { body: { response: '{"nope":1}' } },
-    })));
+    const p = createOllamaProvider(
+      { model: 'llama3.2' },
+      deps(
+        fakeFetch({
+          '/api/generate': { body: { response: '{"nope":1}' } },
+        }),
+      ),
+    );
     const err = await p.complete('x', Schema, new AbortController().signal).catch((e: unknown) => e);
     expect((err as { code: string }).code).toBe('LLM_SCHEMA_INVALID');
     expect((err as { raw: string }).raw).toBe('{"nope":1}');
@@ -171,9 +198,14 @@ describe('complete', () => {
   });
 
   it('surfaces an error envelope from the server', async () => {
-    const p = createOllamaProvider({ model: 'llama3.2' }, deps(fakeFetch({
-      '/api/generate': { body: { error: 'model requires more system memory' } },
-    })));
+    const p = createOllamaProvider(
+      { model: 'llama3.2' },
+      deps(
+        fakeFetch({
+          '/api/generate': { body: { error: 'model requires more system memory' } },
+        }),
+      ),
+    );
     const err = await p.complete('x', Schema, new AbortController().signal).catch((e: unknown) => e);
     expect((err as { code: string }).code).toBe('LLM_UPSTREAM');
     expect((err as Error).message).toContain('system memory');

@@ -3,7 +3,10 @@ import { ErrorCode } from '@/contracts/errors';
 import { ttsEngine, UPSTREAM_RETRY_WAITS } from '../node';
 
 const ref = {
-  providerId: 'fake', displayName: 'Fake', settings: {}, capabilities: { installed: { status: 'ready' }, encoder: { status: 'ready' } },
+  providerId: 'fake',
+  displayName: 'Fake',
+  settings: {},
+  capabilities: { installed: { status: 'ready' }, encoder: { status: 'ready' } },
   voices: [{ id: 'v-vi', displayName: 'Vi', language: 'vi' }],
 };
 
@@ -27,11 +30,19 @@ function setup(outcomes: unknown[], script: { text: string; language: string; se
       segments: parts.map((_, i) => ({ start: i * (1 + gap), durationSeconds: 1 })),
     }),
   };
-  const run = () => ttsEngine.run({
-    nodeId: 'tts', params: ttsEngine.paramsSchema.parse({ ttsProvider: 'fake' }), lists: {}, signal: new AbortController().signal,
-    inputs: { script: { type: 'AudioScript', payload: script } },
-    services, fresh: false, log: (_: string, m: string) => logs.push(m), progress: () => {}, patchParams: () => {},
-  } as never) as Promise<{ voiceover: { durationSeconds: number } }>;
+  const run = () =>
+    ttsEngine.run({
+      nodeId: 'tts',
+      params: ttsEngine.paramsSchema.parse({ ttsProvider: 'fake' }),
+      lists: {},
+      signal: new AbortController().signal,
+      inputs: { script: { type: 'AudioScript', payload: script } },
+      services,
+      fresh: false,
+      log: (_: string, m: string) => logs.push(m),
+      progress: () => {},
+      patchParams: () => {},
+    } as never) as Promise<{ voiceover: { durationSeconds: number } }>;
   return { tries, logs, run };
 }
 
@@ -39,10 +50,11 @@ describe('the Voiceover node when the service falters', () => {
   it('asks a gateway that timed out again, and gets the narration in the end', async () => {
     vi.useFakeTimers();
     try {
-      const { tries, logs, run } = setup(
-        [upstream('Vbee HTTP 504 Gateway Timeout'), upstream('Vbee HTTP 504 Gateway Timeout')],
-        { text: 'Một hai ba.', language: 'vi', segments: ['Một hai.', 'Ba bốn.'] },
-      );
+      const { tries, logs, run } = setup([upstream('Vbee HTTP 504 Gateway Timeout'), upstream('Vbee HTTP 504 Gateway Timeout')], {
+        text: 'Một hai ba.',
+        language: 'vi',
+        segments: ['Một hai.', 'Ba bốn.'],
+      });
       const done = run();
       await vi.runAllTimersAsync();
       await done;

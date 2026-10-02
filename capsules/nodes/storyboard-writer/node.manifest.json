@@ -1,1 +1,10 @@
-{"id": "storyboard-writer", "definition": "storyboardWriter", "body": "StoryboardWriterBody", "icon": "bot", "group": "script", "layout": "wide", "translations": "storyboardWriterTranslations", "errors": "StoryboardWriterErrorCode"}
+{
+  "id": "storyboard-writer",
+  "definition": "storyboardWriter",
+  "body": "StoryboardWriterBody",
+  "icon": "bot",
+  "group": "script",
+  "layout": "wide",
+  "translations": "storyboardWriterTranslations",
+  "errors": "StoryboardWriterErrorCode"
+}

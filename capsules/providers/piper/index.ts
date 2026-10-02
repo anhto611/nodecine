@@ -73,8 +73,7 @@ async function listVoices(dir: string): Promise<Voice[]> {
 }
 
 /** Piper measures speed as seconds per unit of text, so it is the reciprocal of a rate. */
-export const lengthScaleFor = (speed: number, rate: number): number =>
-  Math.min(4, Math.max(0.25, 1 / (Math.max(0.1, speed) * Math.max(0.1, rate))));
+export const lengthScaleFor = (speed: number, rate: number): number => Math.min(4, Math.max(0.25, 1 / (Math.max(0.1, speed) * Math.max(0.1, rate))));
 
 export function createPiperProvider(settings: Record<string, unknown>): TTSProvider {
   return {
@@ -92,9 +91,7 @@ export function createPiperProvider(settings: Record<string, unknown>): TTSProvi
           ? { status: 'unavailable', code: 'PROVIDER_NOT_INSTALLED', reason: `No voice models in ${dir}`, fix: INSTALL_HINT }
           : ready;
       const ffmpeg = await ffmpegBin();
-      const encoder: Capability = ffmpeg
-        ? ready
-        : { status: 'unavailable', code: 'PROVIDER_NOT_INSTALLED', reason: 'ffmpeg was not found', fix: 'brew install ffmpeg' };
+      const encoder: Capability = ffmpeg ? ready : { status: 'unavailable', code: 'PROVIDER_NOT_INSTALLED', reason: 'ffmpeg was not found', fix: 'brew install ffmpeg' };
       void settings;
       return { capabilities: { installed, encoder }, voices };
     },

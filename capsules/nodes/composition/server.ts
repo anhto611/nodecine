@@ -44,7 +44,10 @@ export async function inspectComposition(files: Record<string, string>): Promise
   }
 
   const root = /<[a-z][^>]*\bdata-composition-id\s*=[^>]*>/i.exec(entry)?.[0] ?? '';
-  const dim = (name: string) => { const m = new RegExp(`\\bdata-${name}\\s*=\\s*["']?(\\d+)`, 'i').exec(root); return m ? Number(m[1]) : null; };
+  const dim = (name: string) => {
+    const m = new RegExp(`\\bdata-${name}\\s*=\\s*["']?(\\d+)`, 'i').exec(root);
+    return m ? Number(m[1]) : null;
+  };
   return { width: dim('width'), height: dim('height'), variables, findings };
 }
 

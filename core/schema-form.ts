@@ -14,7 +14,15 @@ export type FormField =
   | { name: string; kind: 'select'; optional: boolean; options: string[]; defaultValue?: string }
   | { name: string; kind: 'boolean'; optional: boolean; defaultValue?: boolean };
 
-type Def = { typeName: string; innerType?: ZodTypeAny; defaultValue?: () => unknown; values?: string[]; checks?: { kind: string; value?: number; inclusive?: boolean }[]; schema?: ZodTypeAny; shape?: () => Record<string, ZodTypeAny> };
+type Def = {
+  typeName: string;
+  innerType?: ZodTypeAny;
+  defaultValue?: () => unknown;
+  values?: string[];
+  checks?: { kind: string; value?: number; inclusive?: boolean }[];
+  schema?: ZodTypeAny;
+  shape?: () => Record<string, ZodTypeAny>;
+};
 const defOf = (s: ZodTypeAny): Def => (s as unknown as { _def: Def })._def;
 
 /** Strip default / optional / nullable / effects wrappers, remembering what they said. */
@@ -24,9 +32,20 @@ function unwrap(schema: ZodTypeAny): { core: ZodTypeAny; optional: boolean; defa
   let defaultValue: unknown;
   for (let i = 0; i < 8; i++) {
     const d = defOf(s);
-    if (d.typeName === 'ZodDefault' && d.innerType) { defaultValue = d.defaultValue?.(); s = d.innerType; continue; }
-    if ((d.typeName === 'ZodOptional' || d.typeName === 'ZodNullable') && d.innerType) { optional = true; s = d.innerType; continue; }
-    if (d.typeName === 'ZodEffects' && d.schema) { s = d.schema; continue; }
+    if (d.typeName === 'ZodDefault' && d.innerType) {
+      defaultValue = d.defaultValue?.();
+      s = d.innerType;
+      continue;
+    }
+    if ((d.typeName === 'ZodOptional' || d.typeName === 'ZodNullable') && d.innerType) {
+      optional = true;
+      s = d.innerType;
+      continue;
+    }
+    if (d.typeName === 'ZodEffects' && d.schema) {
+      s = d.schema;
+      continue;
+    }
     break;
   }
   return { core: s, optional, defaultValue };

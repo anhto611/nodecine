@@ -25,8 +25,9 @@ const capsules = [];
 for (const folder of folders) {
   const file = path.join(providersDir, folder, 'provider.manifest.json');
   let manifest;
-  try { manifest = JSON.parse(await readFile(file, 'utf8')); }
-  catch (error) {
+  try {
+    manifest = JSON.parse(await readFile(file, 'utf8'));
+  } catch (error) {
     if (error?.code === 'ENOENT') continue;
     throw new Error(`${path.relative(root, file)}: ${error.message}`);
   }

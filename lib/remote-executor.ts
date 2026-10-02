@@ -44,9 +44,10 @@ export const RETRY = { delaysMs: [700, 2000, 5000, 5000] };
 /** One request, retried while the server is still coming up. `body` absent is a GET. */
 async function request<T>(url: string, body?: unknown, requestId?: string): Promise<T> {
   for (let attempt = 0; ; attempt++) {
-    const res = body === undefined
-      ? await fetch(url)
-      : await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestId ? { ...(body as object), requestId } : body) });
+    const res =
+      body === undefined
+        ? await fetch(url)
+        : await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestId ? { ...(body as object), requestId } : body) });
     const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string; issues?: GraphIssue[] };
     if (res.ok) return data;
     if (data.error === 'GRAPH_INVALID' && data.issues) throw new GraphInvalidError(data.issues);
@@ -62,8 +63,8 @@ async function request<T>(url: string, body?: unknown, requestId?: string): Prom
   }
 }
 
-const getJson = <T,>(url: string): Promise<T> => request<T>(url);
-const postJson = <T,>(url: string, body: unknown, requestId?: string): Promise<T> => request<T>(url, body, requestId);
+const getJson = <T>(url: string): Promise<T> => request<T>(url);
+const postJson = <T>(url: string, body: unknown, requestId?: string): Promise<T> => request<T>(url, body, requestId);
 
 const RUNNING_BEFORE_ATTACH = 'running-before-attach';
 
@@ -101,11 +102,19 @@ export class RemoteExecutor {
 
   private inOrder<T>(fn: () => Promise<T>): Promise<T> {
     const next = this.chain.then(fn, fn);
-    this.chain = next.then(() => undefined, () => undefined);
+    this.chain = next.then(
+      () => undefined,
+      () => undefined,
+    );
     return next;
   }
 
-  constructor(key: string, graph: Graph, name: string, private readonly hooks: RemoteHooks = {}) {
+  constructor(
+    key: string,
+    graph: Graph,
+    name: string,
+    private readonly hooks: RemoteHooks = {},
+  ) {
     this.key = key;
     this.graph = graph;
     this.name = name;
@@ -137,7 +146,9 @@ export class RemoteExecutor {
     this.graph = graph;
     this.syncRuntimes();
     if (this.pushGraph) clearTimeout(this.pushGraph);
-    this.pushGraph = setTimeout(() => { void this.send({ action: 'graph', graph: this.graph, name: this.name }, false); }, 250);
+    this.pushGraph = setTimeout(() => {
+      void this.send({ action: 'graph', graph: this.graph, name: this.name }, false);
+    }, 250);
   }
 
   setName(name: string): void {
@@ -146,7 +157,10 @@ export class RemoteExecutor {
 
   /** Follow another tab: new key, new graph, new stream, state read back from the server. */
   async switchTo(key: string, graph: Graph, name: string): Promise<void> {
-    if (this.pushGraph) { clearTimeout(this.pushGraph); this.pushGraph = null; }
+    if (this.pushGraph) {
+      clearTimeout(this.pushGraph);
+      this.pushGraph = null;
+    }
     this.key = key;
     this.graph = graph;
     this.name = name;
@@ -183,7 +197,6 @@ export class RemoteExecutor {
     return this.runtime(nodeId).state;
   }
 
-
   dispose(): void {
     this.source?.close();
     this.source = null;
@@ -192,22 +205,37 @@ export class RemoteExecutor {
   // ---------- wire ----------
 
   private async submit(kind: 'run' | 'node', extra: { nodeId?: string; force?: boolean }, graph?: Graph): Promise<Job> {
-    if (this.pushGraph) { clearTimeout(this.pushGraph); this.pushGraph = null; }
+    if (this.pushGraph) {
+      clearTimeout(this.pushGraph);
+      this.pushGraph = null;
+    }
     const requestId = newRequestId();
     const submission = { key: this.key, kind, graph: structuredClone(graph ?? this.graph), name: this.name, ...extra };
     const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', submission, requestId));
     const early = this.finished.get(job.id);
-    if (early) { this.finished.delete(job.id); return early; }
+    if (early) {
+      this.finished.delete(job.id);
+      return early;
+    }
     if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return job;
     return new Promise<Job>((resolve) => {
       this.waiting.set(job.id, resolve);
       // Belt and braces: if the stream drops the event, ask the server directly now and then.
       const poll = setInterval(async () => {
-        if (!this.waiting.has(job.id)) { clearInterval(poll); return; }
+        if (!this.waiting.has(job.id)) {
+          clearInterval(poll);
+          return;
+        }
         try {
           const { job: now } = await getJson<{ job: Job }>(`/api/jobs/${encodeURIComponent(job.id)}`);
-          if (now && (now.status === 'done' || now.status === 'failed' || now.status === 'cancelled')) { this.waiting.delete(job.id); clearInterval(poll); resolve(now); }
-        } catch { /* next tick */ }
+          if (now && (now.status === 'done' || now.status === 'failed' || now.status === 'cancelled')) {
+            this.waiting.delete(job.id);
+            clearInterval(poll);
+            resolve(now);
+          }
+        } catch {
+          /* next tick */
+        }
       }, 2000);
     });
   }
@@ -244,18 +272,36 @@ export class RemoteExecutor {
     }
     const es = new EventSource(`/api/jobs/events?key=${encodeURIComponent(key)}`);
     this.source = es;
-    es.addEventListener('node', (m) => { const e = JSON.parse((m as MessageEvent).data) as { nodeId: string; runtime: NodeRuntime }; this.setRuntime(e.nodeId, e.runtime); });
-    es.addEventListener('run:start', (m) => { const e = JSON.parse((m as MessageEvent).data) as { runId: number; stepTotal: number }; this.hooks.onRunStart?.(e); });
-    es.addEventListener('run:step', (m) => { const e = JSON.parse((m as MessageEvent).data) as { nodeId: string; step: number; stepTotal: number }; this.hooks.onStep?.(e); });
-    es.addEventListener('run:end', (m) => { const e = JSON.parse((m as MessageEvent).data) as { runId: number; ok: boolean; durationMs: number }; this.hooks.onRunEnd?.(e); });
-    es.addEventListener('history', (m) => { const e = JSON.parse((m as MessageEvent).data) as { history: RunRecord[] }; this.hooks.onHistory?.(e.history); });
+    es.addEventListener('node', (m) => {
+      const e = JSON.parse((m as MessageEvent).data) as { nodeId: string; runtime: NodeRuntime };
+      this.setRuntime(e.nodeId, e.runtime);
+    });
+    es.addEventListener('run:start', (m) => {
+      const e = JSON.parse((m as MessageEvent).data) as { runId: number; stepTotal: number };
+      this.hooks.onRunStart?.(e);
+    });
+    es.addEventListener('run:step', (m) => {
+      const e = JSON.parse((m as MessageEvent).data) as { nodeId: string; step: number; stepTotal: number };
+      this.hooks.onStep?.(e);
+    });
+    es.addEventListener('run:end', (m) => {
+      const e = JSON.parse((m as MessageEvent).data) as { runId: number; ok: boolean; durationMs: number };
+      this.hooks.onRunEnd?.(e);
+    });
+    es.addEventListener('history', (m) => {
+      const e = JSON.parse((m as MessageEvent).data) as { history: RunRecord[] };
+      this.hooks.onHistory?.(e.history);
+    });
     es.addEventListener('params', (m) => {
       const e = JSON.parse((m as MessageEvent).data) as { nodeId: string; patch: Record<string, unknown> };
       // Mirror it here first so the next graph push does not undo what the node just did.
       this.graph = { ...this.graph, nodes: this.graph.nodes.map((n) => (n.id === e.nodeId ? { ...n, params: { ...n.params, ...e.patch } } : n)) };
       this.hooks.onParamsPatch?.(e.nodeId, e.patch);
     });
-    es.addEventListener('log', (m) => { const e = JSON.parse((m as MessageEvent).data) as { entry: LogEntry }; this.logs.push(e.entry); });
+    es.addEventListener('log', (m) => {
+      const e = JSON.parse((m as MessageEvent).data) as { entry: LogEntry };
+      this.logs.push(e.entry);
+    });
     es.addEventListener('job', (m) => {
       const { job } = JSON.parse((m as MessageEvent).data) as { job: Job };
       if (job.status === 'pending' || job.status === 'running') this.activeJobs.add(job.id);
@@ -266,8 +312,13 @@ export class RemoteExecutor {
         if (!this.isRunning()) this.hooks.onAttached?.({ running: false });
         if (job.error && job.status === 'failed') this.logs.push({ ts: Date.now(), nodeId: 'run', level: 'error', code: job.error.code, message: job.error.message });
         const waiter = this.waiting.get(job.id);
-        if (waiter) { waiter(job); this.waiting.delete(job.id); }
-        else { this.finished.set(job.id, job); if (this.finished.size > 50) this.finished.delete(this.finished.keys().next().value!); }
+        if (waiter) {
+          waiter(job);
+          this.waiting.delete(job.id);
+        } else {
+          this.finished.set(job.id, job);
+          if (this.finished.size > 50) this.finished.delete(this.finished.keys().next().value!);
+        }
       }
     });
   }

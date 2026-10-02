@@ -30,9 +30,13 @@ const learner: NodeDefinition<typeof Params> = {
 const graph = (): Graph => ({ nodes: [{ id: 'l', type: 'test/learner', params: { seen: [] }, bypassed: false, position: { x: 0, y: 0 } }], edges: [] });
 
 describe('a node that patches its own params', () => {
-  beforeEach(() => { _resetNodeRegistry(); registerNodeType(learner as unknown as AnyNodeDefinition); runs = 0; });
+  beforeEach(() => {
+    _resetNodeRegistry();
+    registerNodeType(learner as unknown as AnyNodeDefinition);
+    runs = 0;
+  });
 
-  it('lands the patch in the executor\'s graph and the hook, and is reused on the next run', async () => {
+  it("lands the patch in the executor's graph and the hook, and is reused on the next run", async () => {
     const patches: unknown[] = [];
     const ex = new Executor(graph(), testServices(), { onParamsPatch: (id, p) => patches.push([id, p]) });
     await ex.run();

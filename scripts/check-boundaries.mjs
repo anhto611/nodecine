@@ -29,9 +29,7 @@ const nodeIds = new Map();
 for (const kind of KINDS) {
   const abs = path.join(root, kind.dir);
   kind.abs = abs;
-  kind.folders = new Set((await readdir(abs, { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('_'))
-    .map((entry) => entry.name));
+  kind.folders = new Set((await readdir(abs, { withFileTypes: true })).filter((entry) => entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('_')).map((entry) => entry.name));
   for (const folder of kind.folders) {
     const manifest = path.join(abs, folder, kind.manifest);
     try {
@@ -50,7 +48,7 @@ async function walk(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (['node_modules', '.next', '.git', '.generated', '.nodecine'].includes(entry.name)) continue;
     const target = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...await walk(target));
+    if (entry.isDirectory()) files.push(...(await walk(target)));
     else if (/\.[cm]?[jt]sx?$/.test(entry.name)) files.push(target);
   }
   return files;
@@ -109,7 +107,8 @@ for (const file of await walk(root)) {
   const capsuleFile = under(relative, 'capsules') && !under(relative, 'capsules/sdk');
   if (capsuleFile && imports(source, '(app|components|store|lib|locales)')) errors.push(`${relative}: a capsule may not import the Studio; use capsules/sdk/`);
   // The SDK is what capsules stand on, so it stands on nothing above the contracts: no capsule, no Studio, no server.
-  if (under(relative, 'capsules/sdk') && imports(source, '(capsules/(nodes|engines|providers)|app|components|store|lib|locales|server)')) errors.push(`${relative}: the SDK may use only the core and the contracts`);
+  if (under(relative, 'capsules/sdk') && imports(source, '(capsules/(nodes|engines|providers)|app|components|store|lib|locales|server)'))
+    errors.push(`${relative}: the SDK may use only the core and the contracts`);
   // A server registry pulls in node:fs, child processes and puppeteer: only the server may load it, or the browser bundle breaks.
   if (!under(relative, 'server') && /\.generated\/server['"]/.test(source)) errors.push(`${relative}: only server/ may import a .generated/server registry`);
   // The one file whose whole subject is node ids across time: a migration has to name the type a

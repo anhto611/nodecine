@@ -23,7 +23,13 @@ export interface Request {
   research?: Research;
 }
 
-export interface Picture { path: string; name: string; note: string; width?: number; height?: number }
+export interface Picture {
+  path: string;
+  name: string;
+  note: string;
+  width?: number;
+  height?: number;
+}
 
 export interface WriterMaterial {
   request: Request;
@@ -46,33 +52,47 @@ export interface WriterMaterial {
 const TONES: Record<string, string> = { energetic: 'energetic and upbeat', trustworthy: 'calm and trustworthy', playful: 'playful and witty', expert: 'precise, like an expert explaining' };
 
 function describeBlocks(catalog: BlockInfo[]): string {
-  return catalog.map((block) => {
-    const vars = block.variables.filter((v) => v.id !== 'seconds').map((v) => {
-      const extra = [
-        v.type === 'string' && v.maxLength ? `at most ${v.maxLength} characters` : '',
-        v.type === 'enum' ? `one of ${v.options.map((o) => `"${o.value}" (${o.label})`).join(', ')}` : '',
-        v.default !== undefined && v.default !== '' ? `default ${JSON.stringify(v.default)}` : '',
-      ].filter(Boolean).join('; ');
-      return `    - ${v.id} (${v.type}${v.required ? ', required' : ''}): ${v.label}${extra ? ` — ${extra}` : ''}`;
-    }).join('\n');
-    return `- ${block.name} [role: ${block.role}]\n  ${block.description || '(no description)'}\n  values:\n${vars || '    (none)'}`;
-  }).join('\n');
+  return catalog
+    .map((block) => {
+      const vars = block.variables
+        .filter((v) => v.id !== 'seconds')
+        .map((v) => {
+          const extra = [
+            v.type === 'string' && v.maxLength ? `at most ${v.maxLength} characters` : '',
+            v.type === 'enum' ? `one of ${v.options.map((o) => `"${o.value}" (${o.label})`).join(', ')}` : '',
+            v.default !== undefined && v.default !== '' ? `default ${JSON.stringify(v.default)}` : '',
+          ]
+            .filter(Boolean)
+            .join('; ');
+          return `    - ${v.id} (${v.type}${v.required ? ', required' : ''}): ${v.label}${extra ? ` — ${extra}` : ''}`;
+        })
+        .join('\n');
+      return `- ${block.name} [role: ${block.role}]\n  ${block.description || '(no description)'}\n  values:\n${vars || '    (none)'}`;
+    })
+    .join('\n');
 }
 
 function describeComponents(m: WriterMaterial): string {
   if (!m.components.length) return '';
-  const vars = (c: ComponentInfo) => c.variables.filter((v) => v.id !== 'seconds').map((v) => {
-    const extra = [
-      v.type === 'string' && v.maxLength ? `at most ${v.maxLength} characters` : '',
-      v.type === 'enum' ? `one of ${v.options.map((o) => `"${o.value}"`).join(', ')}` : '',
-    ].filter(Boolean).join('; ');
-    return `    - ${v.id} (${v.type}${v.required ? ', required' : ''}): ${v.label}${extra ? ` — ${extra}` : ''}`;
-  }).join('\n');
+  const vars = (c: ComponentInfo) =>
+    c.variables
+      .filter((v) => v.id !== 'seconds')
+      .map((v) => {
+        const extra = [v.type === 'string' && v.maxLength ? `at most ${v.maxLength} characters` : '', v.type === 'enum' ? `one of ${v.options.map((o) => `"${o.value}"`).join(', ')}` : '']
+          .filter(Boolean)
+          .join('; ');
+        return `    - ${v.id} (${v.type}${v.required ? ', required' : ''}): ${v.label}${extra ? ` — ${extra}` : ''}`;
+      })
+      .join('\n');
   return `\nThe components a scene may mount over its block (in "mounts"):
 ${m.components.map((c) => `- ${c.name} [role: ${c.role}]\n  ${c.description || '(no description)'}\n  values:\n${vars(c) || '    (none)'}`).join('\n')}
 
 The slots a component goes in (name: left, top, width, height in pixels of the frame):
-${Object.entries(m.slots).map(([name, r]) => `- ${name}: ${r.join(', ')}`).join('\n') || '(none)'}
+${
+  Object.entries(m.slots)
+    .map(([name, r]) => `- ${name}: ${r.join(', ')}`)
+    .join('\n') || '(none)'
+}
 `;
 }
 
@@ -88,15 +108,17 @@ function describeRequest(r: Request): string {
   const { brief, research, tone, notes, durationSeconds } = r;
   return [
     `What the person wrote about it:\n${brief.about.trim()}`,
-    research ? [
-      `What was found out about it${research.subject ? ` (${research.subject})` : ''}:`,
-      research.summary,
-      ...research.points.map((p) => `- ${p.text}${p.source ? ` [${p.source}]` : ''}`),
-    ].filter(Boolean).join('\n') : '',
+    research
+      ? [`What was found out about it${research.subject ? ` (${research.subject})` : ''}:`, research.summary, ...research.points.map((p) => `- ${p.text}${p.source ? ` [${p.source}]` : ''}`)]
+          .filter(Boolean)
+          .join('\n')
+      : '',
     `Length: ${durationSeconds} seconds`,
     `Tone: ${TONES[tone] ?? tone}`,
     notes.trim() ? `Must say / must not say: ${notes.trim()}` : '',
-  ].filter(Boolean).join('\n\n');
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 const UNDERSTAND = `First work out, from what the person wrote, what was found out and the pictures, what the film is about and what it should say, the way this workflow's guide asks. What the person wrote is the brief: follow it over the findings when they differ. Say only facts the brief or the findings give; never invent a number or a claim.`;

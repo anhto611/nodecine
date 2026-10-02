@@ -4,7 +4,8 @@ import { contentHash } from '@/core/hash';
 import { assetProblems, assets, nameFor } from '../node';
 
 const url = (n: number) => `/api/assets/${String(n).repeat(40)}.png`;
-const run = (items: { name: string; url: string; note?: string }[]) => assets.run({ params: assets.paramsSchema.parse({ items }), inputs: {}, lists: {}, log: () => {} } as never) as Promise<{ assets: { items: unknown[] } }>;
+const run = (items: { name: string; url: string; note?: string }[]) =>
+  assets.run({ params: assets.paramsSchema.parse({ items }), inputs: {}, lists: {}, log: () => {} } as never) as Promise<{ assets: { items: unknown[] } }>;
 
 describe('the Assets node', () => {
   it('hands on its pictures by name, each landing under assets/', async () => {
@@ -20,7 +21,12 @@ describe('the Assets node', () => {
 
   it('refuses two assets with one name', async () => {
     expect(assetProblems([{ name: 'logo' }, { name: 'logo' }, { name: 'Bad Name' }])).toEqual(['two assets are named "logo"', '"Bad Name" is not a name: use lowercase letters, digits and dashes']);
-    await expect(run([{ name: 'logo', url: url(1) }, { name: 'logo', url: url(2) }])).rejects.toMatchObject({ code: 'ASSETS_INVALID' });
+    await expect(
+      run([
+        { name: 'logo', url: url(1) },
+        { name: 'logo', url: url(2) },
+      ]),
+    ).rejects.toMatchObject({ code: 'ASSETS_INVALID' });
   });
 });
 
@@ -28,7 +34,10 @@ const asset = (n: number, ext = 'png') => `/api/assets/${String(n).repeat(40)}.$
 const brief = { about: 'Kimi K2.7 HighSpeed https://kimi.com/blog/k2-7', language: 'vi' };
 const pages: Record<string, { url: string; alt: string; page: string }[]> = {
   'https://kimi.com/blog/k2-7': ['og', 'icon', 'chart'].map((n) => ({ url: `https://kimi.com/${n}.png`, alt: n, page: 'https://kimi.com/blog/k2-7' })),
-  'https://news.example/k2-7': [{ url: 'https://kimi.com/chart.png', alt: 'chart again', page: 'https://news.example/k2-7' }, { url: 'https://news.example/photo.jpg', alt: 'photo', page: 'https://news.example/k2-7' }],
+  'https://news.example/k2-7': [
+    { url: 'https://kimi.com/chart.png', alt: 'chart again', page: 'https://news.example/k2-7' },
+    { url: 'https://news.example/photo.jpg', alt: 'photo', page: 'https://news.example/k2-7' },
+  ],
 };
 const fetched: Record<string, { url: string; width?: number; height?: number }> = {
   'https://kimi.com/og.png': { url: asset(1), width: 1200, height: 630 },
@@ -42,28 +51,61 @@ function searching(params: Record<string, unknown>, options: { web?: boolean; in
   const read: string[] = [];
   let patched: Record<string, unknown> = {};
   const services = {
-    probeLLM: async () => ({ providerId: 'fake', displayName: 'Fake', transport: 'cli', settings: {}, capabilities: { installed: { status: 'ready' }, authenticated: { status: 'ready' }, structuredOutput: { status: 'ready' }, vision: { status: 'ready' }, ...(options.web === false ? {} : { webSearch: { status: 'ready' } }) } }),
+    probeLLM: async () => ({
+      providerId: 'fake',
+      displayName: 'Fake',
+      transport: 'cli',
+      settings: {},
+      capabilities: {
+        installed: { status: 'ready' },
+        authenticated: { status: 'ready' },
+        structuredOutput: { status: 'ready' },
+        vision: { status: 'ready' },
+        ...(options.web === false ? {} : { webSearch: { status: 'ready' } }),
+      },
+    }),
     complete: async (_ref: unknown, prompt: string, _schema: unknown, _signal: unknown, opts?: { images?: string[]; web?: boolean }) => {
       calls.push({ prompt, images: opts?.images, web: opts?.web });
       if (prompt.includes('Search the web for the pages')) return { pages: [{ url: 'https://kimi.com/blog/k2-7' }, { url: 'https://news.example/k2-7' }] };
-      return { language: 'vi', pictures: [{ number: 2, note: 'Biểu đồ tốc độ token' }, { number: 3, note: 'Ảnh trong bài báo' }, { number: 9, note: 'không có' }] };
+      return {
+        language: 'vi',
+        pictures: [
+          { number: 2, note: 'Biểu đồ tốc độ token' },
+          { number: 3, note: 'Ảnh trong bài báo' },
+          { number: 9, note: 'không có' },
+        ],
+      };
     },
     invoke: async (id: string, [link]: [string]) => {
-      if (id === 'assets/read-page') { read.push(link); return { url: link, title: '', text: '', pictures: pages[link] ?? [] }; }
+      if (id === 'assets/read-page') {
+        read.push(link);
+        return { url: link, title: '', text: '', pictures: pages[link] ?? [] };
+      }
       const f = fetched[link];
       if (!f) throw new Error('404');
       return f;
     },
   };
-  const run = (extra: Record<string, unknown> = {}) => assets.run({
-    nodeId: 'assets', params: assets.paramsSchema.parse({ llmProvider: 'fake', ...params, ...patched, ...extra }), inputs: options.inputs ?? { brief: { type: 'Brief', payload: brief } }, lists: {}, signal: new AbortController().signal, fresh: false,
-    services, log: () => {}, progress: () => {}, patchParams: (p: Record<string, unknown>) => { patched = { ...patched, ...p }; },
-  } as never) as Promise<{ assets: { items: { name: string; url: string; note: string; source?: string }[] } }>;
+  const run = (extra: Record<string, unknown> = {}) =>
+    assets.run({
+      nodeId: 'assets',
+      params: assets.paramsSchema.parse({ llmProvider: 'fake', ...params, ...patched, ...extra }),
+      inputs: options.inputs ?? { brief: { type: 'Brief', payload: brief } },
+      lists: {},
+      signal: new AbortController().signal,
+      fresh: false,
+      services,
+      log: () => {},
+      progress: () => {},
+      patchParams: (p: Record<string, unknown>) => {
+        patched = { ...patched, ...p };
+      },
+    } as never) as Promise<{ assets: { items: { name: string; url: string; note: string; source?: string }[] } }>;
   return { calls, read, run, patched: () => patched };
 }
 
 describe('the Assets node finding pictures', () => {
-  it('reads the brief\'s links and the pages a web search finds, shows the model the pictures big enough for a film, and keeps the ones it picks', async () => {
+  it("reads the brief's links and the pages a web search finds, shows the model the pictures big enough for a film, and keeps the ones it picks", async () => {
     const { calls, read, run } = searching({ pictures: 4, wanted: 'Benchmark charts and the logo.' });
     const out = await run();
     expect(calls[0]!.web).toBe(true);
@@ -79,7 +121,7 @@ describe('the Assets node finding pictures', () => {
     ]);
   });
 
-  it('reads only the brief\'s links with a model that cannot search, and finds nothing without any', async () => {
+  it("reads only the brief's links with a model that cannot search, and finds nothing without any", async () => {
     const linked = searching({ pictures: 4 }, { web: false });
     await linked.run();
     expect(linked.read).toEqual(['https://kimi.com/blog/k2-7']);
@@ -141,7 +183,13 @@ describe('the Assets node with pictures it found', () => {
   // What an earlier search found, kept on the node for the brief it was found for.
   const runWith = (params: Record<string, unknown>) => {
     const key = contentHash({ about: 'x', language: 'vi', pictures: 8, wanted: '', attempt: 0, llm: ['', {}], existing: ((params.items ?? []) as { url: string }[]).map((a) => a.url) });
-    return assets.run({ params: assets.paramsSchema.parse({ ...params, found, foundFor: key }), inputs: { brief: { type: 'Brief', payload: { about: 'x', language: 'vi' } } }, lists: {}, log: () => {}, patchParams: () => {} } as never) as Promise<{ assets: { items: { name: string; url: string; note: string }[] } }>;
+    return assets.run({
+      params: assets.paramsSchema.parse({ ...params, found, foundFor: key }),
+      inputs: { brief: { type: 'Brief', payload: { about: 'x', language: 'vi' } } },
+      lists: {},
+      log: () => {},
+      patchParams: () => {},
+    } as never) as Promise<{ assets: { items: { name: string; url: string; note: string }[] } }>;
   };
 
   it('leaves out a found picture a person removed', async () => {

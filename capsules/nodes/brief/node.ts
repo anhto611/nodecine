@@ -18,10 +18,13 @@ const Params = z.object({
  * the language it is written in, so what is found out about it reads the way the person wrote.
  */
 export const brief: NodeDefinition<typeof Params> = {
-  type: 'brief', version: 1, kind: 'source',
+  type: 'brief',
+  version: 1,
+  kind: 'source',
   inputs: [],
   outputs: [{ name: 'brief', type: 'Brief' }],
-  paramsSchema: Params, defaultParams: Params.parse({}),
+  paramsSchema: Params,
+  defaultParams: Params.parse({}),
   validate: (params) => (params.about.trim() ? [] : [{ code: BriefErrorCode.BRIEF_EMPTY, message: 'say what the video is about: a link or a few sentences' }]),
   run: async ({ params, log }) => {
     const about = params.about.trim();

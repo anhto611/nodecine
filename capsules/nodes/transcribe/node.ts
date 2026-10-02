@@ -70,7 +70,10 @@ export const transcribe: NodeDefinition<typeof Params> = {
         const heard = await align(text, { start: segment.start, duration: segment.durationSeconds }).catch(() => ({ words: [] as Word[] }));
         let timed = retime(text, heard.words);
         const span = timed.length ? timed[timed.length - 1]!.end - timed[0]!.start : 0;
-        if (!timed.length || span < 0.4 * segment.durationSeconds) { timed = evenly(text, segment.start + 0.15, segment.start + segment.durationSeconds - 0.15); spread++; }
+        if (!timed.length || span < 0.4 * segment.durationSeconds) {
+          timed = evenly(text, segment.start + 0.15, segment.start + segment.durationSeconds - 0.15);
+          spread++;
+        }
         words.push(...timed);
       }
       note = `${words.length} words aligned with ${params.model}, segment by segment${spread ? ` (${spread} spread evenly)` : ''}`;
@@ -84,7 +87,10 @@ export const transcribe: NodeDefinition<typeof Params> = {
         ? `${words.length} words aligned with ${params.model}${heard.words.length !== words.length ? ` (aligner heard ${heard.words.length}, retimed by position)` : ''}`
         : `${words.length} words transcribed with ${params.model} · ${language === voiceover.language ? 'no script wired in' : `heard in ${language}`}`;
     }
-    if (!words.length) throw new NodeError(TranscribeErrorCode.TRANSCRIBE_NO_WORDS, script ? 'the aligner returned no words' : 'the model heard no words in this recording').withFix('check the recording has speech, and that its language matches the one set on the node that made it');
+    if (!words.length)
+      throw new NodeError(TranscribeErrorCode.TRANSCRIBE_NO_WORDS, script ? 'the aligner returned no words' : 'the model heard no words in this recording').withFix(
+        'check the recording has speech, and that its language matches the one set on the node that made it',
+      );
     log('info', note);
     return cut({ ...voiceover, words, language }, params.maxChars, log);
   },

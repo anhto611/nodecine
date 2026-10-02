@@ -1,1 +1,11 @@
-{"id": "footage", "definition": "footage", "body": "FootageBody", "icon": "film", "group": "source", "layout": "wide", "translations": "footageTranslations", "services": "footageServices", "errors": "FootageErrorCode"}
+{
+  "id": "footage",
+  "definition": "footage",
+  "body": "FootageBody",
+  "icon": "film",
+  "group": "source",
+  "layout": "wide",
+  "translations": "footageTranslations",
+  "services": "footageServices",
+  "errors": "FootageErrorCode"
+}

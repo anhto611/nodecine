@@ -41,11 +41,18 @@ const PortPicker: React.FC<{ pick: { x: number; y: number; type: PortType; from:
   const t = useT();
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    const away = (e: MouseEvent) => { if (!ref.current?.contains(e.target as globalThis.Node)) onClose(); };
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const away = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as globalThis.Node)) onClose();
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     document.addEventListener('mousedown', away);
     document.addEventListener('keydown', esc);
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
   }, [onClose]);
   const options = listNodeTypes().filter((d) => (pick.from === 'source' ? d.inputs : d.outputs).some((p) => p.type === pick.type));
   return (
@@ -54,7 +61,14 @@ const PortPicker: React.FC<{ pick: { x: number; y: number; type: PortType; from:
       {options.length === 0 && <div className="nc-menu-item nc-dim">{t('canvas.connectNone')}</div>}
       {options.map((d) => {
         const IconC = Icon[NODE_META[d.type]?.icon ?? 'chip'];
-        return <button key={d.type} className="nc-menu-item" onClick={() => onAdd(d.type)}><span className="nc-menu-check"><IconC size={11} /></span>{t(`node.${d.type}`)}</button>;
+        return (
+          <button key={d.type} className="nc-menu-item" onClick={() => onAdd(d.type)}>
+            <span className="nc-menu-check">
+              <IconC size={11} />
+            </span>
+            {t(`node.${d.type}`)}
+          </button>
+        );
       })}
     </div>
   );
@@ -93,7 +107,6 @@ function CanvasInner() {
   const modalOpen = useStudio((s) => !!s.overlay);
 
   const [zoom, setZoom] = React.useState(1);
-
 
   // React Flow owns node positions while a drag is in progress (so the node follows the pointer
   // every frame); the store is only written on drop. `syncNodes` reuses node objects whose
@@ -152,7 +165,10 @@ function CanvasInner() {
   // same connection gesture as drawing a new one. Dropping it on bare canvas therefore used to ask
   // what node should go there, when what the person did was pull a wire off.
   const reconnecting = React.useRef(false);
-  const onReconnectStart = () => { reconnected.current = false; reconnecting.current = true; };
+  const onReconnectStart = () => {
+    reconnected.current = false;
+    reconnecting.current = true;
+  };
   const onReconnect = (oldEdge: RfEdge, c: Connection) => {
     if (!c.source || !c.target || !c.sourceHandle || !c.targetHandle) return;
     reconnected.current = true;
@@ -161,7 +177,9 @@ function CanvasInner() {
   const onReconnectEnd = (_e: MouseEvent | TouchEvent, edge: RfEdge) => {
     if (!reconnected.current) removeEdges([edge.id]);
     // Cleared a tick later: the drop reaches onConnectEnd too, and that has to know what this was.
-    setTimeout(() => { reconnecting.current = false; }, 0);
+    setTimeout(() => {
+      reconnecting.current = false;
+    }, 0);
   };
 
   // A wire dropped on empty canvas asks what should go there: only nodes with a port of that type.
@@ -181,9 +199,9 @@ function CanvasInner() {
     const id = addNode(type, { x: pick.flow.x - (pick.from === 'source' ? 0 : 220), y: pick.flow.y - 40 });
     const def = getNodeType(type)!;
     const port = (pick.from === 'source' ? def.inputs : def.outputs).find((p) => p.type === pick.type)!;
-    connect(pick.from === 'source'
-      ? { source: pick.nodeId, sourcePort: pick.port, target: id, targetPort: port.name }
-      : { source: id, sourcePort: port.name, target: pick.nodeId, targetPort: pick.port });
+    connect(
+      pick.from === 'source' ? { source: pick.nodeId, sourcePort: pick.port, target: id, targetPort: port.name } : { source: id, sourcePort: port.name, target: pick.nodeId, targetPort: pick.port },
+    );
     setPick(null);
   };
   const isValidConnection: IsValidConnection = (c) => {
@@ -212,14 +230,27 @@ function CanvasInner() {
   };
 
   return (
-    <div style={{ position: 'relative', flex: 1, minWidth: 0, background: 'var(--bg-canvas)' }} onDrop={onDrop} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}>
+    <div
+      style={{ position: 'relative', flex: 1, minWidth: 0, background: 'var(--bg-canvas)' }}
+      onDrop={onDrop}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
-        onNodeDragStart={() => { dragged.current = true; }}
-        onNodeDragStop={() => { setTimeout(() => { dragged.current = false; }, 0); }}
+        onNodeDragStart={() => {
+          dragged.current = true;
+        }}
+        onNodeDragStop={() => {
+          setTimeout(() => {
+            dragged.current = false;
+          }, 0);
+        }}
         onNodeClick={(_, n) => gesture(n.id)}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -232,7 +263,10 @@ function CanvasInner() {
         // Shift and drag draws a selection box; the nodes it catches move and delete as one.
         selectionKeyCode="Shift"
         selectionOnDrag={false}
-        onPaneClick={() => { setPick(null); gesture(null); }}
+        onPaneClick={() => {
+          setPick(null);
+          gesture(null);
+        }}
         onMove={(_, vp) => setZoom(vp.zoom)}
         fitView
         fitViewOptions={{ padding: 0.08 }}
@@ -267,23 +301,43 @@ function CanvasInner() {
       <div className="nc-tools" style={{ bottom: 12 }}>
         <div className="nc-tbar">
           <span className="nc-zoom">{Math.round(zoom * 100)}%</span>
-          <button className="nc-tbtn" title={t('canvas.zoomIn')} onClick={() => rf.zoomIn()}><Icon.plus /></button>
-          <button className="nc-tbtn" title={t('canvas.zoomOut')} onClick={() => rf.zoomOut()}><Icon.minus /></button>
-          <button className="nc-tbtn" title={t('canvas.fit')} onClick={() => rf.fitView({ padding: 0.08 })}><Icon.fit /></button>
-          <button className="nc-tbtn" title={t('canvas.undo')} disabled={!canUndo} onClick={undo}><Icon.undo /></button>
-          <button className="nc-tbtn" title={t('canvas.redo')} disabled={!canRedo} onClick={redo}><Icon.redo /></button>
-          <button className="nc-tbtn" title={t('canvas.layout')} onClick={() => {
-            // Sizes come from what is actually on screen. React Flow's own `measured` can lag a card
-            // that grew after it was first measured — the Preview player is the usual one — and a
-            // resource node hangs *below* its consumer, so a height reported short puts it on top of it.
-            const sizes = Object.fromEntries(rf.getNodes().map((n) => {
-              const el = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(n.id)}"]`);
-              return [n.id, { width: el?.offsetWidth || n.measured?.width || 220, height: el?.offsetHeight || n.measured?.height || 180 }];
-            }));
-            setNodePositions(layoutGraph(graph, sizes));
-            requestAnimationFrame(() => void rf.fitView({ padding: 0.08, duration: 300 }));
-          }}><Icon.branch /></button>
-          <button className="nc-tbtn" title={t('canvas.add')} onClick={() => setPanel('library')}><Icon.plus /></button>
+          <button className="nc-tbtn" title={t('canvas.zoomIn')} onClick={() => rf.zoomIn()}>
+            <Icon.plus />
+          </button>
+          <button className="nc-tbtn" title={t('canvas.zoomOut')} onClick={() => rf.zoomOut()}>
+            <Icon.minus />
+          </button>
+          <button className="nc-tbtn" title={t('canvas.fit')} onClick={() => rf.fitView({ padding: 0.08 })}>
+            <Icon.fit />
+          </button>
+          <button className="nc-tbtn" title={t('canvas.undo')} disabled={!canUndo} onClick={undo}>
+            <Icon.undo />
+          </button>
+          <button className="nc-tbtn" title={t('canvas.redo')} disabled={!canRedo} onClick={redo}>
+            <Icon.redo />
+          </button>
+          <button
+            className="nc-tbtn"
+            title={t('canvas.layout')}
+            onClick={() => {
+              // Sizes come from what is actually on screen. React Flow's own `measured` can lag a card
+              // that grew after it was first measured — the Preview player is the usual one — and a
+              // resource node hangs *below* its consumer, so a height reported short puts it on top of it.
+              const sizes = Object.fromEntries(
+                rf.getNodes().map((n) => {
+                  const el = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(n.id)}"]`);
+                  return [n.id, { width: el?.offsetWidth || n.measured?.width || 220, height: el?.offsetHeight || n.measured?.height || 180 }];
+                }),
+              );
+              setNodePositions(layoutGraph(graph, sizes));
+              requestAnimationFrame(() => void rf.fitView({ padding: 0.08, duration: 300 }));
+            }}
+          >
+            <Icon.branch />
+          </button>
+          <button className="nc-tbtn" title={t('canvas.add')} onClick={() => setPanel('library')}>
+            <Icon.plus />
+          </button>
         </div>
       </div>
     </div>

@@ -2,17 +2,7 @@ import { ErrorCode, NodeError, toNodeError } from '../errors';
 import { makePacket, type Packet } from '../types/packet';
 import { getPortType } from '../types/ports';
 import { getNodeType, readCapability, type AnyNodeDefinition, type BlockReason } from '../nodes/definition';
-import {
-  downstreamOf,
-  flowNodes,
-  hasBlockingIssues,
-  incomingEdges,
-  nodeById,
-  topoSort,
-  validateGraph,
-  GraphInvalidError,
-  type Graph,
-} from './graph';
+import { downstreamOf, flowNodes, hasBlockingIssues, incomingEdges, nodeById, topoSort, validateGraph, GraphInvalidError, type Graph } from './graph';
 import { canTransition, initialRuntime, type NodeRuntime, type NodeState } from './state';
 import { computeSignature } from './signature';
 import { MemoryResultCache, type CachedResult, type ResultCache } from './result-cache';
@@ -110,7 +100,10 @@ export class Executor {
       // An on-demand node is never bypassed: it is out of every Run by type, so a flag left over in
       // a saved graph must not grey its card out and must not follow it into a run.
       const ondemand = getNodeType(n.type)?.kind === 'ondemand';
-      if (!this.runtimes.has(n.id)) { this.runtimes.set(n.id, initialRuntime(!ondemand && n.bypassed)); continue; }
+      if (!this.runtimes.has(n.id)) {
+        this.runtimes.set(n.id, initialRuntime(!ondemand && n.bypassed));
+        continue;
+      }
       if (ondemand) continue;
       if (n.bypassed && this.runtimes.get(n.id)!.state !== 'bypassed') this.setState(n.id, { state: 'bypassed' });
       else if (!n.bypassed && this.runtimes.get(n.id)!.state === 'bypassed') this.setState(n.id, { state: 'idle' });
@@ -200,7 +193,19 @@ export class Executor {
     // What each node waits on, among the nodes of this run. A wire from outside the run — an
     // on-demand node's old result — is read when the node starts, not waited for.
     const members = new Set(toRun);
-    const waitsOn = new Map(toRun.map((id) => [id, new Set(incomingEdges(this.graph, id).map((e) => e.source).filter((src) => members.has(src)))] as const));
+    const waitsOn = new Map(
+      toRun.map(
+        (id) =>
+          [
+            id,
+            new Set(
+              incomingEdges(this.graph, id)
+                .map((e) => e.source)
+                .filter((src) => members.has(src)),
+            ),
+          ] as const,
+      ),
+    );
     const limit = Math.max(1, Math.floor(this.options.maxParallel ?? DEFAULT_MAX_PARALLEL));
 
     let ok = true;
@@ -215,15 +220,21 @@ export class Executor {
         const finished = new Set<string>();
         let running = 0;
         const pump = (): void => {
-          for (let i = 0; i < pending.length && !thrown && running < limit; ) {
+          for (let i = 0; i < pending.length && !thrown && running < limit;) {
             const nodeId = pending[i]!;
-            if (![...waitsOn.get(nodeId)!].every((id) => finished.has(id))) { i++; continue; }
+            if (![...waitsOn.get(nodeId)!].every((id) => finished.has(id))) {
+              i++;
+              continue;
+            }
             pending.splice(i, 1);
             // Something may have become ready by this one finishing on the spot; look again from the top.
             i = 0;
             const node = nodeById(this.graph, nodeId);
             // The canvas can push a graph while this runs; a node that left it has nothing to run.
-            if (!node) { finished.add(nodeId); continue; }
+            if (!node) {
+              finished.add(nodeId);
+              continue;
+            }
             if (node.bypassed) {
               this.log(nodeId, 'info', 'bypassed');
               finished.add(nodeId);
@@ -237,17 +248,24 @@ export class Executor {
             step += 1;
             running += 1;
             this.hooks.onStep?.({ nodeId, step, stepTotal: willRun.length });
-            this.executeNode(nodeId, { force: opts.force ?? false }).then(
-              (outcome) => {
-                if (outcome === 'cancelled') { cancelledAt ??= nodeId; ok = false; }
-                else if (outcome === 'error' || outcome === 'blocked') ok = false;
-              },
-              (error: unknown) => { ok = false; thrown ??= { error }; },
-            ).finally(() => {
-              running -= 1;
-              finished.add(nodeId);
-              pump();
-            });
+            this.executeNode(nodeId, { force: opts.force ?? false })
+              .then(
+                (outcome) => {
+                  if (outcome === 'cancelled') {
+                    cancelledAt ??= nodeId;
+                    ok = false;
+                  } else if (outcome === 'error' || outcome === 'blocked') ok = false;
+                },
+                (error: unknown) => {
+                  ok = false;
+                  thrown ??= { error };
+                },
+              )
+              .finally(() => {
+                running -= 1;
+                finished.add(nodeId);
+                pump();
+              });
           }
           if (running === 0 && (pending.length === 0 || thrown)) settle();
         };
@@ -370,7 +388,10 @@ export class Executor {
         const payload = node.pinned.outputs[port.name];
         if (payload === undefined) continue;
         const schema = getPortType(port.type)?.schema;
-        if (schema && !schema.safeParse(payload).success) { bad.push(port.name); continue; }
+        if (schema && !schema.safeParse(payload).success) {
+          bad.push(port.name);
+          continue;
+        }
         outputs[port.name] = makePacket({ sourceNodeId: nodeId, sourcePort: port.name, targetPort: '', payloadType: port.type, payload, now: () => this.services.now() });
       }
       // A pin this build can no longer read is worse than no pin: it would feed the film something
@@ -432,7 +453,18 @@ export class Executor {
       }
       const kept = await this.readCache(nodeId, def, signature);
       if (kept) {
-        this.setState(nodeId, { state: 'success', outputs: kept.outputs, signature, reused: true, durationMs: kept.durationMs, warnings: kept.warnings, result: undefined, error: undefined, blockedBy: undefined, progress: undefined });
+        this.setState(nodeId, {
+          state: 'success',
+          outputs: kept.outputs,
+          signature,
+          reused: true,
+          durationMs: kept.durationMs,
+          warnings: kept.warnings,
+          result: undefined,
+          error: undefined,
+          blockedBy: undefined,
+          progress: undefined,
+        });
         this.log(nodeId, 'info', 'reused (kept result)');
         return 'success';
       }
@@ -474,7 +506,11 @@ export class Executor {
         const schema = getPortType(port.type)?.schema;
         if (schema) {
           const parsed = schema.safeParse(value);
-          if (!parsed.success) throw new NodeError(ErrorCode.NODE_OUTPUT_INVALID, `output "${port.name}"${parsed.error.issues[0]?.path.length ? `.${parsed.error.issues[0]!.path.join(".")}` : ""}: ${parsed.error.issues[0]?.message ?? "invalid"}`);
+          if (!parsed.success)
+            throw new NodeError(
+              ErrorCode.NODE_OUTPUT_INVALID,
+              `output "${port.name}"${parsed.error.issues[0]?.path.length ? `.${parsed.error.issues[0]!.path.join('.')}` : ''}: ${parsed.error.issues[0]?.message ?? 'invalid'}`,
+            );
         }
         outputs[port.name] = makePacket({ sourceNodeId: nodeId, sourcePort: port.name, targetPort: '', payloadType: port.type, payload: value, now: () => this.services.now() });
       }
@@ -484,7 +520,12 @@ export class Executor {
       const finalSignature = patched ? computeSignature({ type: def.type, version: def.version, fingerprint, params: nodeById(this.graph, nodeId)!.params, inputHashes }) : signature;
       this.setState(nodeId, { state: 'success', outputs, signature: finalSignature, durationMs, reused: false, result, progress: undefined, warnings: warnings.length ? warnings : undefined });
       this.log(nodeId, 'info', `done in ${durationMs}ms`);
-      if (cacheable) await this.writeCache(nodeId, finalSignature, { outputs: Object.fromEntries(Object.entries(outputs).map(([port, p]) => [port, { payloadType: p.payloadType, payload: p.payload, contentHash: p.contentHash }])), durationMs, ...(warnings.length ? { warnings } : {}) });
+      if (cacheable)
+        await this.writeCache(nodeId, finalSignature, {
+          outputs: Object.fromEntries(Object.entries(outputs).map(([port, p]) => [port, { payloadType: p.payloadType, payload: p.payload, contentHash: p.contentHash }])),
+          durationMs,
+          ...(warnings.length ? { warnings } : {}),
+        });
       return 'success';
     } catch (err) {
       const e = toNodeError(err, ErrorCode.NODE_RUN_FAILED);
@@ -505,7 +546,7 @@ export class Executor {
    * Checked against the port schemas the way a pin is: a result kept by an older build that no
    * longer parses is a miss, and the node runs, rather than a wrong shape fed downstream.
    */
-  private async readCache(nodeId: string, def: AnyNodeDefinition, signature: string): Promise<CachedResult & { outputs: Record<string, Packet> } | undefined> {
+  private async readCache(nodeId: string, def: AnyNodeDefinition, signature: string): Promise<(CachedResult & { outputs: Record<string, Packet> }) | undefined> {
     let kept: CachedResult | undefined;
     try {
       kept = await this.cache.get(signature);
@@ -520,7 +561,15 @@ export class Executor {
       if (!entry) continue;
       const schema = getPortType(port.type)?.schema;
       if (entry.payloadType !== port.type || (schema && !schema.safeParse(entry.payload).success)) return undefined;
-      outputs[port.name] = { sourceNodeId: nodeId, sourcePort: port.name, targetPort: '', payloadType: port.type, timestamp: this.services.now(), payload: entry.payload, contentHash: entry.contentHash };
+      outputs[port.name] = {
+        sourceNodeId: nodeId,
+        sourcePort: port.name,
+        targetPort: '',
+        payloadType: port.type,
+        timestamp: this.services.now(),
+        payload: entry.payload,
+        contentHash: entry.contentHash,
+      };
     }
     if (Object.keys(outputs).length === 0) return undefined;
     return { ...kept, outputs };

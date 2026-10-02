@@ -36,7 +36,10 @@ export const VoiceoverSchema = z.object({
   /** Word timings, when a provider returned them or the Transcribe node aligned them. */
   words: z.array(WordSchema).optional(),
   /** One entry per narration segment, in order: where it starts and how long it lasts in the file, gap included. */
-  segments: z.array(z.object({ start: z.number().nonnegative(), durationSeconds: z.number().positive() })).min(1).optional(),
+  segments: z
+    .array(z.object({ start: z.number().nonnegative(), durationSeconds: z.number().positive() }))
+    .min(1)
+    .optional(),
 });
 export type Voiceover = z.infer<typeof VoiceoverSchema>;
 

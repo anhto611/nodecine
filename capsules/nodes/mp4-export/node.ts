@@ -13,9 +13,13 @@ const Params = z.object({
 
 /** The composition rendered to a file by the engine it names, when its button is pressed. */
 export const mp4Export: NodeDefinition<typeof Params> = {
-  type: 'mp4-export', version: 2, kind: 'ondemand',
-  inputs: [{ name: 'composition', type: 'Composition' }], outputs: [],
-  paramsSchema: Params, defaultParams: { quality: 'high', fileName: 'nodecine.mp4' },
+  type: 'mp4-export',
+  version: 2,
+  kind: 'ondemand',
+  inputs: [{ name: 'composition', type: 'Composition' }],
+  outputs: [],
+  paramsSchema: Params,
+  defaultParams: { quality: 'high', fileName: 'nodecine.mp4' },
   // Version 1 chose its engine, codec and resolution on the node; the composition decides those now.
   migrate: (params) => ({
     ...(params.quality !== undefined ? { quality: params.quality } : {}),

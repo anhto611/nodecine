@@ -41,22 +41,46 @@ export const AssetsBody: React.FC<BodyProps> = ({ nodeId }) => {
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <ProviderPick nodeId={nodeId} kind="llm" />
       <FormBody nodeId={nodeId} fields={['pictures']} widgets={{ pictures: { labelKey: 'node.assetsPictureCount', options: PICTURE_COUNTS.map((n) => ({ value: n, label: String(n) })) } }} />
-      {!searchable && (p.pictures ?? 8) > 0 && <div className="nc-hint" style={{ marginTop: 0 }}>{t('node.assetsSearchUnwired')}</div>}
-      <button className="nc-chip" style={{ alignSelf: 'flex-start' }} aria-expanded={settings} onClick={() => setSettings(!settings)}>{settings ? t('node.assetsSearchHide') : t('node.assetsSearch')}</button>
+      {!searchable && (p.pictures ?? 8) > 0 && (
+        <div className="nc-hint" style={{ marginTop: 0 }}>
+          {t('node.assetsSearchUnwired')}
+        </div>
+      )}
+      <button className="nc-chip" style={{ alignSelf: 'flex-start' }} aria-expanded={settings} onClick={() => setSettings(!settings)}>
+        {settings ? t('node.assetsSearchHide') : t('node.assetsSearch')}
+      </button>
       {settings && <FormBody nodeId={nodeId} fields={['wanted']} widgets={{ wanted: { widget: 'textarea', rows: 4, labelKey: 'node.assetsWanted', placeholder: t('node.assetsWantedHint') } }} />}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span className="nc-k">{t('node.assetsCount', { count: pictures.length })}</span>
         <AddPictures busy={busy} label={t('node.assetsAdd')} onFiles={(files) => void add(files)} />
-        {pictures.length > 0 && <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => openWall()}>{t('node.assetsSeeAll')}</button>}
+        {pictures.length > 0 && (
+          <button className="nc-chip" style={{ marginLeft: 'auto', border: 0 }} onClick={() => openWall()}>
+            {t('node.assetsSeeAll')}
+          </button>
+        )}
       </div>
-      {error && <div className="nc-hint" style={{ marginTop: 0, color: 'var(--err)' }}>{error}</div>}
+      {error && (
+        <div className="nc-hint" style={{ marginTop: 0, color: 'var(--err)' }}>
+          {error}
+        </div>
+      )}
       {pictures.length ? (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: GAP, overflowX: 'auto', paddingBottom: 2 }}>
-          {pictures.map((picture) => <PictureTile key={picture.key} picture={picture} onOpen={() => openWall(picture.key)} style={{ flex: `0 0 ${TILE}` }} />)}
+          {pictures.map((picture) => (
+            <PictureTile key={picture.key} picture={picture} onOpen={() => openWall(picture.key)} style={{ flex: `0 0 ${TILE}` }} />
+          ))}
         </div>
-      ) : <div className="nc-hint" style={{ marginTop: 0 }}>{t('node.assetsNone')}</div>}
-      {searchable && (p.pictures ?? 8) > 0 && <Btn small style={{ alignSelf: 'flex-start' }} disabled={running} onClick={findAgain}>{t('node.assetsFindAgain')}</Btn>}
+      ) : (
+        <div className="nc-hint" style={{ marginTop: 0 }}>
+          {t('node.assetsNone')}
+        </div>
+      )}
+      {searchable && (p.pictures ?? 8) > 0 && (
+        <Btn small style={{ alignSelf: 'flex-start' }} disabled={running} onClick={findAgain}>
+          {t('node.assetsFindAgain')}
+        </Btn>
+      )}
     </div>
   );
 };

@@ -1,1 +1,1 @@
-{"id": "piper", "kind": "tts", "register": "registerPiper", "settings": "piperSettings", "widgets": "piperWidgets", "translations": "piperTranslations"}
+{ "id": "piper", "kind": "tts", "register": "registerPiper", "settings": "piperSettings", "widgets": "piperWidgets", "translations": "piperTranslations" }

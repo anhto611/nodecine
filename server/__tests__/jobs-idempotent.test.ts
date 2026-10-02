@@ -16,11 +16,22 @@ describe('submitting the same request twice', () => {
   // Its own jobs directory: a test must not write into the run history of whoever is using the app.
   let dir = '';
   const previous = process.env.NODECINE_JOBS_DIR;
-  beforeAll(() => { dir = mkdtempSync(path.join(tmpdir(), 'nodecine-jobs-')); process.env.NODECINE_JOBS_DIR = dir; });
-  afterAll(() => { if (previous === undefined) delete process.env.NODECINE_JOBS_DIR; else process.env.NODECINE_JOBS_DIR = previous; rmSync(dir, { recursive: true, force: true }); });
+  beforeAll(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'nodecine-jobs-'));
+    process.env.NODECINE_JOBS_DIR = dir;
+  });
+  afterAll(() => {
+    if (previous === undefined) delete process.env.NODECINE_JOBS_DIR;
+    else process.env.NODECINE_JOBS_DIR = previous;
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   const graph = () => pipeline();
-  const hub = () => { _resetNodeRegistry(); registerTestKit(); return new JobHub(() => ({}) as never, { cache: new MemoryResultCache() }); };
+  const hub = () => {
+    _resetNodeRegistry();
+    registerTestKit();
+    return new JobHub(() => ({}) as never, { cache: new MemoryResultCache() });
+  };
 
   it('queues one job and hands the same one back', () => {
     const h = hub();

@@ -14,7 +14,6 @@ const DICTS: Record<Locale, Record<string, string>> = {
   vi: { ...vi, ...NODE_TRANSLATIONS.vi, ...ENGINE_TRANSLATIONS.vi, ...PROVIDER_TRANSLATIONS.vi },
 };
 
-
 /** Whether either dictionary carries the key: a body that labels enum values asks before it falls back to the raw value. */
 export const hasTranslation = (key: string): boolean => key in DICTS.en || key in DICTS.vi;
 

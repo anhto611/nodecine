@@ -68,11 +68,56 @@ function block(kind, scene) {
     markup: scene.markup,
     motion: scene.motion,
     variables: [
-    { id: 'title', type: 'string', label: 'Short, source-supported headline', labels: { vi: 'Tiêu đề ngắn có căn cứ từ nguồn' }, default: scene.heading, sample: kind === 'hook' ? 'One article, three things to know' : kind === 'point' ? 'The context is the story' : 'Understand it before you share it', maxLength: 40, required: true },
-    { id: 'detail', type: 'string', label: 'One clear explanatory sentence grounded in the source', labels: { vi: 'Một câu giải thích dựa trên bài gốc' }, default: 'The key point, explained briefly from the article.', sample: kind === 'hook' ? 'Pull the point out of the detail and grasp it in seconds.' : kind === 'point' ? 'Read the explanation beside it to understand the article’s claim.' : 'The summary gives you the point; the original gives you the context.', maxLength: kind === 'point' ? 108 : 94, required: true },
-    { id: 'source', type: 'string', label: 'Short name or domain of the source article', labels: { vi: 'Tên ngắn hoặc tên miền của nguồn' }, default: 'THE ORIGINAL ARTICLE', sample: 'THE ORIGINAL ARTICLE', maxLength: 48, required: true },
-    ...(kind === 'point' ? [{ id: 'number', type: 'string', label: 'Two-digit sequence number of this key point', labels: { vi: 'Số thứ tự luận điểm, gồm hai chữ số' }, default: '01', sample: '01', maxLength: 2, required: true }] : []),
-    { id: 'seconds', type: 'number', label: 'Length in seconds (the Assemble node gives it)', default: 4 },
+      {
+        id: 'title',
+        type: 'string',
+        label: 'Short, source-supported headline',
+        labels: { vi: 'Tiêu đề ngắn có căn cứ từ nguồn' },
+        default: scene.heading,
+        sample: kind === 'hook' ? 'One article, three things to know' : kind === 'point' ? 'The context is the story' : 'Understand it before you share it',
+        maxLength: 40,
+        required: true,
+      },
+      {
+        id: 'detail',
+        type: 'string',
+        label: 'One clear explanatory sentence grounded in the source',
+        labels: { vi: 'Một câu giải thích dựa trên bài gốc' },
+        default: 'The key point, explained briefly from the article.',
+        sample:
+          kind === 'hook'
+            ? 'Pull the point out of the detail and grasp it in seconds.'
+            : kind === 'point'
+              ? 'Read the explanation beside it to understand the article’s claim.'
+              : 'The summary gives you the point; the original gives you the context.',
+        maxLength: kind === 'point' ? 108 : 94,
+        required: true,
+      },
+      {
+        id: 'source',
+        type: 'string',
+        label: 'Short name or domain of the source article',
+        labels: { vi: 'Tên ngắn hoặc tên miền của nguồn' },
+        default: 'THE ORIGINAL ARTICLE',
+        sample: 'THE ORIGINAL ARTICLE',
+        maxLength: 48,
+        required: true,
+      },
+      ...(kind === 'point'
+        ? [
+            {
+              id: 'number',
+              type: 'string',
+              label: 'Two-digit sequence number of this key point',
+              labels: { vi: 'Số thứ tự luận điểm, gồm hai chữ số' },
+              default: '01',
+              sample: '01',
+              maxLength: 2,
+              required: true,
+            },
+          ]
+        : []),
+      { id: 'seconds', type: 'number', label: 'Length in seconds (the Assemble node gives it)', default: 4 },
     ],
   });
 }
@@ -80,6 +125,7 @@ function block(kind, scene) {
 // Keep the self-contained workflow JSON in sync with those three designs.
 await editComposition(new URL('./workflow.json', import.meta.url), (files) => {
   for (const [kind, scene] of Object.entries(scenes)) files[`compositions/summary-${kind}.html`] = block(kind, scene);
-  files['storyboard-guide.md'] = `---\nfirst: hook\nlast: outro\nrepeat: 2\n---\nMake a summary of an article in English, vertical 9:16, about 30–45 seconds.\nUse only what is in Research and the URLs the person gave. Never invent a number, a quote or a conclusion.\nOpen with the most important point; each following scene makes one point; close with what the viewer should remember.\nEvery scene carries a title of at most 40 characters, a detail that is one short sentence adding meaning (not repeating the title), and a source of at most 48 characters: the name or domain of the article. Leave the source label out when the article is unknown.\nThe narration explains briefly, in plain English, and keeps the tone of the original. Drop a point when the source has no evidence for it. Do not call an article a scientific study when it is not.`;
+  files['storyboard-guide.md'] =
+    `---\nfirst: hook\nlast: outro\nrepeat: 2\n---\nMake a summary of an article in English, vertical 9:16, about 30–45 seconds.\nUse only what is in Research and the URLs the person gave. Never invent a number, a quote or a conclusion.\nOpen with the most important point; each following scene makes one point; close with what the viewer should remember.\nEvery scene carries a title of at most 40 characters, a detail that is one short sentence adding meaning (not repeating the title), and a source of at most 48 characters: the name or domain of the article. Leave the source label out when the article is unknown.\nThe narration explains briefly, in plain English, and keeps the tone of the original. Drop a point when the source has no evidence for it. Do not call an article a scientific study when it is not.`;
   files['storyboard-guide.md'] += '\nIn summary-point scenes, fill number with the point’s order: 01, 02, 03…';
 });

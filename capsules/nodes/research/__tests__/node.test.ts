@@ -3,8 +3,13 @@ import { research } from '../node';
 
 const brief = { about: 'Kimi K2.7 HighSpeed nhanh gấp 6 lần https://kimi.com/blog/k2-7 và https://broken.example', language: 'vi' };
 const findings = {
-  language: 'vi', subject: 'Kimi K2.7 Code HighSpeed', summary: 'Bản K2.7 chạy nhanh hơn cho lập trình.',
-  points: [{ text: 'Khoảng 180 token/giây ở coding task trung bình.', source: 'https://kimi.com/blog/k2-7' }, { text: 'Đang mở cho Beta Program.', source: null }],
+  language: 'vi',
+  subject: 'Kimi K2.7 Code HighSpeed',
+  summary: 'Bản K2.7 chạy nhanh hơn cho lập trình.',
+  points: [
+    { text: 'Khoảng 180 token/giây ở coding task trung bình.', source: 'https://kimi.com/blog/k2-7' },
+    { text: 'Đang mở cho Beta Program.', source: null },
+  ],
   sources: [{ url: 'https://kimi.com/blog/k2-7', title: 'K2.7 HighSpeed' }],
 };
 
@@ -12,7 +17,19 @@ function setup(settings: Record<string, unknown>, options: { web?: boolean } = {
   const calls: { prompt: string; images?: string[]; web?: boolean }[] = [];
   const logs: string[] = [];
   const services = {
-    probeLLM: async () => ({ providerId: 'fake', displayName: 'Fake', transport: 'cli', settings: {}, capabilities: { installed: { status: 'ready' }, authenticated: { status: 'ready' }, structuredOutput: { status: 'ready' }, vision: { status: 'ready' }, ...(options.web ? { webSearch: { status: 'ready' } } : {}) } }),
+    probeLLM: async () => ({
+      providerId: 'fake',
+      displayName: 'Fake',
+      transport: 'cli',
+      settings: {},
+      capabilities: {
+        installed: { status: 'ready' },
+        authenticated: { status: 'ready' },
+        structuredOutput: { status: 'ready' },
+        vision: { status: 'ready' },
+        ...(options.web ? { webSearch: { status: 'ready' } } : {}),
+      },
+    }),
     complete: async (_ref: unknown, prompt: string, _schema: unknown, _signal: unknown, opts?: { images?: string[]; web?: boolean }) => {
       calls.push({ prompt, images: opts?.images, web: opts?.web });
       return structuredClone(findings);
@@ -22,11 +39,19 @@ function setup(settings: Record<string, unknown>, options: { web?: boolean } = {
       return { url: link, title: 'K2.7 HighSpeed', text: 'K2.7 Code HighSpeed runs about 180 tokens a second.', pictures: [] };
     },
   };
-  const run = () => research.run({
-    nodeId: 'research', params: research.paramsSchema.parse({ llmProvider: 'fake', ...settings }), lists: {}, signal: new AbortController().signal, fresh: false,
-    inputs: { brief: { type: 'Brief', payload: brief } },
-    services, log: (_: string, m: string) => logs.push(m), progress: () => {}, patchParams: () => {},
-  } as never) as Promise<{ research: { subject: string; points: { text: string; source: string }[]; sources: unknown[] } }>;
+  const run = () =>
+    research.run({
+      nodeId: 'research',
+      params: research.paramsSchema.parse({ llmProvider: 'fake', ...settings }),
+      lists: {},
+      signal: new AbortController().signal,
+      fresh: false,
+      inputs: { brief: { type: 'Brief', payload: brief } },
+      services,
+      log: (_: string, m: string) => logs.push(m),
+      progress: () => {},
+      patchParams: () => {},
+    } as never) as Promise<{ research: { subject: string; points: { text: string; source: string }[]; sources: unknown[] } }>;
   return { calls, logs, run };
 }
 
@@ -41,8 +66,13 @@ describe('Research', () => {
     expect(calls[0]!.prompt).toContain('K2.7 Code HighSpeed runs about 180 tokens a second.');
     expect(calls[0]!.prompt).toContain('Do not look anything up');
     expect(out.research).toEqual({
-      language: 'vi', subject: 'Kimi K2.7 Code HighSpeed', summary: 'Bản K2.7 chạy nhanh hơn cho lập trình.',
-      points: [{ text: 'Khoảng 180 token/giây ở coding task trung bình.', source: 'https://kimi.com/blog/k2-7' }, { text: 'Đang mở cho Beta Program.', source: '' }],
+      language: 'vi',
+      subject: 'Kimi K2.7 Code HighSpeed',
+      summary: 'Bản K2.7 chạy nhanh hơn cho lập trình.',
+      points: [
+        { text: 'Khoảng 180 token/giây ở coding task trung bình.', source: 'https://kimi.com/blog/k2-7' },
+        { text: 'Đang mở cho Beta Program.', source: '' },
+      ],
       sources: [{ url: 'https://kimi.com/blog/k2-7', title: 'K2.7 HighSpeed' }],
     });
     expect(Object.keys(out)).toEqual(['research']);
@@ -60,7 +90,7 @@ describe('Research', () => {
     expect(unable.logs.some((m) => m.includes('cannot search the web'))).toBe(true);
   });
 
-  it('lays a person\'s corrections over what the model found', async () => {
+  it("lays a person's corrections over what the model found", async () => {
     const { run } = setup({ edits: { subject: 'Kimi K2.7', points: [{ text: 'Nhanh gấp 6 lần.', source: '' }] } });
     const out = await run();
     expect(out.research.subject).toBe('Kimi K2.7');

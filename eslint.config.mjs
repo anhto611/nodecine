@@ -12,7 +12,18 @@ const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta
  * would. Nothing here repeats either of those.
  */
 export default [
-  { ignores: ['.next/**', '.nodecine/**', 'node_modules/**', 'capsules/nodes/.generated/**', 'capsules/engines/.generated/**', 'capsules/providers/.generated/**', 'templates/.generated/**', 'next-env.d.ts'] },
+  {
+    ignores: [
+      '.next/**',
+      '.nodecine/**',
+      'node_modules/**',
+      'capsules/nodes/.generated/**',
+      'capsules/engines/.generated/**',
+      'capsules/providers/.generated/**',
+      'templates/.generated/**',
+      'next-env.d.ts',
+    ],
+  },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     rules: {

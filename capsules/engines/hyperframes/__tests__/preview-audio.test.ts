@@ -10,7 +10,7 @@ const entry = `<!doctype html><html><body><div id="root" data-composition-id="fi
 
 /** The sound a preview plays from the Studio's page. */
 describe('the preview sound', () => {
-  it('reads the film\'s top-level clips, their sources through its values', () => {
+  it("reads the film's top-level clips, their sources through its values", () => {
     expect(audioClips(entry, { voiceover: 'voiceover.mp3' })).toEqual([
       { file: 'voiceover.mp3', start: 0, mediaStart: 0, duration: 30 },
       { file: 'voiceover.mp3', start: 33.5, mediaStart: 30, duration: 4 },
@@ -31,7 +31,8 @@ describe('the preview sound', () => {
 describe('a preview page with its sound in a file', () => {
   it('drops the audio clips the file carries and keeps one from elsewhere', async () => {
     const { withoutMixedAudio } = await import('../preview-audio.server');
-    const html = '<div><audio id="voice-1" data-start="0" data-duration="29.49" data-var-src="voiceover" data-end="29.49">\n</audio><audio data-start="2" src="https://cdn.example/a.mp3"></audio><video data-start="0" src="clip.mp4"></video></div>';
+    const html =
+      '<div><audio id="voice-1" data-start="0" data-duration="29.49" data-var-src="voiceover" data-end="29.49">\n</audio><audio data-start="2" src="https://cdn.example/a.mp3"></audio><video data-start="0" src="clip.mp4"></video></div>';
     expect(withoutMixedAudio(html)).toBe('<div><audio data-start="2" src="https://cdn.example/a.mp3"></audio><video data-start="0" src="clip.mp4"></video></div>');
   });
 });

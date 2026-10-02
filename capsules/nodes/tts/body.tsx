@@ -21,7 +21,7 @@ function useScriptLanguage(nodeId: string, script: AudioScript | undefined): { l
   if (script?.language && upstreamState !== 'stale') return { lang: script.language, source: 'script' };
   const chosen = (upstream?.params as { language?: unknown } | undefined)?.language;
   const briefWire = upstream ? graph.edges.find((e) => e.target === upstream.id && e.targetPort === 'brief') : undefined;
-  const about = (briefWire ? graph.nodes.find((n) => n.id === briefWire.source)?.params as { about?: unknown } | undefined : undefined)?.about;
+  const about = (briefWire ? (graph.nodes.find((n) => n.id === briefWire.source)?.params as { about?: unknown } | undefined) : undefined)?.about;
   return { lang: resolveOutputLanguage(typeof chosen === 'string' ? chosen : 'auto', typeof about === 'string' ? about : ''), source: 'guess' };
 }
 
@@ -38,9 +38,20 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
     if (!p.ttsProvider) return;
     let gone = false;
     setVoicesError(null);
-    action<TTSRef>('tts/voices', [p.ttsProvider, p.ttsSettings ?? {}])
-      .then((r) => { if (!gone) setRef(r); }, (e: unknown) => { if (!gone) { setRef(null); setVoicesError(e instanceof Error ? e.message : String(e)); } });
-    return () => { gone = true; };
+    action<TTSRef>('tts/voices', [p.ttsProvider, p.ttsSettings ?? {}]).then(
+      (r) => {
+        if (!gone) setRef(r);
+      },
+      (e: unknown) => {
+        if (!gone) {
+          setRef(null);
+          setVoicesError(e instanceof Error ? e.message : String(e));
+        }
+      },
+    );
+    return () => {
+      gone = true;
+    };
     // The settings are compared by content, not by the object that carries them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.ttsProvider, settingsKey]);
@@ -51,25 +62,69 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
   // Every other voice stays reachable, grouped by language, so a choice is never off the menu.
   const others = new Map<string, typeof all>();
   for (const v of all) if (!voiceSpeaks(v, lang)) others.set(v.language, [...(others.get(v.language) ?? []), v]);
-  const auto = ref ? (() => { try { return pickVoice(ref, lang, p.voice); } catch { return null; } })() : null;
+  const auto = ref
+    ? (() => {
+        try {
+          return pickVoice(ref, lang, p.voice);
+        } catch {
+          return null;
+        }
+      })()
+    : null;
   return (
     <>
       <ProviderPick nodeId={nodeId} kind="tts" />
-      <Kv k={t('node.voice')} v={<select className={`nc-select ${stopFlow}`} value={p.voice ?? ''} onChange={(e) => set({ voice: e.target.value || undefined })}>
-        <option value="">{t('node.auto')}{auto && !p.voice ? ` · ${auto.voice.displayName}` : ''}</option>
-        {matching.length > 0 && <optgroup label={lang}>{matching.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}</optgroup>}
-        {[...others.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([language, voices]) => (
-          <optgroup key={language} label={language}>{voices.map((v) => <option key={v.id} value={v.id}>{v.displayName}</option>)}</optgroup>
-        ))}
-      </select>} />
-      {voicesError && <div className="nc-hint clamp" style={{ color: 'var(--warn)' }} title={voicesError}>{t('node.voicesUnavailable')}: {voicesError}</div>}
+      <Kv
+        k={t('node.voice')}
+        v={
+          <select className={`nc-select ${stopFlow}`} value={p.voice ?? ''} onChange={(e) => set({ voice: e.target.value || undefined })}>
+            <option value="">
+              {t('node.auto')}
+              {auto && !p.voice ? ` · ${auto.voice.displayName}` : ''}
+            </option>
+            {matching.length > 0 && (
+              <optgroup label={lang}>
+                {matching.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.displayName}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {[...others.entries()]
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([language, voices]) => (
+                <optgroup key={language} label={language}>
+                  {voices.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.displayName}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+          </select>
+        }
+      />
+      {voicesError && (
+        <div className="nc-hint clamp" style={{ color: 'var(--warn)' }} title={voicesError}>
+          {t('node.voicesUnavailable')}: {voicesError}
+        </div>
+      )}
       {!ref && !voicesError && p.ttsProvider && <div className="nc-hint">{t('node.voicesLoading')}</div>}
       <FormBody nodeId={nodeId} fields={['speed']} widgets={{ speed: { widget: 'range', step: 0.05, format: (v) => `${v.toFixed(2)}x` } }} />
-      <div className="nc-hint">{t(source === 'script' ? 'node.matchesLanguage' : 'node.guessedLanguage', { lang })}{auto?.fallback ? ` · ${t('node.voiceMismatch')}` : ''}</div>
-      {vo && (() => {
-        const name = all.find((v) => v.id === vo.voiceName)?.displayName ?? vo.voiceName;
-        return <div className="nc-hint one-line" style={{ color: 'var(--tx-2)' }} title={`${vo.durationSeconds.toFixed(2)}s · ${name}`}>{vo.durationSeconds.toFixed(2)}s · {name}</div>;
-      })()}
+      <div className="nc-hint">
+        {t(source === 'script' ? 'node.matchesLanguage' : 'node.guessedLanguage', { lang })}
+        {auto?.fallback ? ` · ${t('node.voiceMismatch')}` : ''}
+      </div>
+      {vo &&
+        (() => {
+          const name = all.find((v) => v.id === vo.voiceName)?.displayName ?? vo.voiceName;
+          return (
+            <div className="nc-hint one-line" style={{ color: 'var(--tx-2)' }} title={`${vo.durationSeconds.toFixed(2)}s · ${name}`}>
+              {vo.durationSeconds.toFixed(2)}s · {name}
+            </div>
+          );
+        })()}
     </>
   );
 };

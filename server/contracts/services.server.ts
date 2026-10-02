@@ -32,7 +32,7 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
     async invoke<T>(serviceId: string, args: unknown[]): Promise<T> {
       const service = extensions[serviceId];
       if (!service) throw new Error(`unknown node service ${serviceId}`);
-      return await service(...args) as T;
+      return (await service(...args)) as T;
     },
     now: () => Date.now(),
     async probeLLM(providerId, settings) {
@@ -59,7 +59,13 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       const r = await f(ref.settings).synthesize(text, voice, speed, signal);
       return { audioUrl: mediaUrl(path.basename(r.filePath)), durationSeconds: r.durationSeconds, voiceName: r.voice.id, language: r.voice.language, speed };
     },
-    async complete<S extends ZodTypeAny>(ref: { providerId: string; settings: Record<string, unknown>; capabilities?: { vision?: { status: string }; webSearch?: { status: string } } }, prompt: string, schema: S, signal: AbortSignal, opts?: { fresh?: boolean; images?: string[]; web?: boolean }): Promise<z.infer<S>> {
+    async complete<S extends ZodTypeAny>(
+      ref: { providerId: string; settings: Record<string, unknown>; capabilities?: { vision?: { status: string }; webSearch?: { status: string } } },
+      prompt: string,
+      schema: S,
+      signal: AbortSignal,
+      opts?: { fresh?: boolean; images?: string[]; web?: boolean },
+    ): Promise<z.infer<S>> {
       const f = getLLMProviderFactory(ref.providerId);
       if (!f) throw Object.assign(new Error(`unknown llm provider ${ref.providerId}`), { code: 'PROVIDER_NOT_CONNECTED' });
       // The same prompt to the same provider *set up the same way* is the same answer:
@@ -72,7 +78,10 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       const web = !!opts?.web && ref.capabilities?.webSearch?.status === 'ready';
       const file = path.join(llmCacheDir(), `${contentHash({ providerId: ref.providerId, settings: ref.settings, prompt, ...(images.length ? { images } : {}), ...(web ? { web } : {}) })}.json`);
       if (!opts?.fresh) {
-        const hit = await fs.readFile(file, 'utf8').then((t) => JSON.parse(t) as unknown, () => undefined);
+        const hit = await fs.readFile(file, 'utf8').then(
+          (t) => JSON.parse(t) as unknown,
+          () => undefined,
+        );
         if (hit !== undefined) {
           const parsed = schema.safeParse(hit);
           if (parsed.success) return parsed.data as z.infer<S>;
@@ -81,7 +90,11 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       const attached = images.map((url) => ({ path: assetPath(fileNameFromAssetUrl(url)), mediaType: IMAGE_TYPES[url.split('.').pop()!.toLowerCase()] ?? 'image/png' }));
       const raw = await f(ref.settings).complete(prompt, schema, signal, attached.length || web ? { ...(attached.length ? { images: attached } : {}), ...(web ? { web } : {}) } : undefined);
       const out = schema.parse(raw) as z.infer<S>;
-      await fs.mkdir(llmCacheDir(), { recursive: true }).then(() => fs.writeFile(`${file}.part`, JSON.stringify(out))).then(() => fs.rename(`${file}.part`, file)).catch(() => undefined);
+      await fs
+        .mkdir(llmCacheDir(), { recursive: true })
+        .then(() => fs.writeFile(`${file}.part`, JSON.stringify(out)))
+        .then(() => fs.rename(`${file}.part`, file))
+        .catch(() => undefined);
       return out;
     },
     async saveText(text, extension) {
@@ -100,11 +113,18 @@ export function createServerServices(opts: { workflow?: () => { name: string; gr
       // Named by what went in, so the same parts joined twice are one file.
       const name = `${contentHash({ files: files.map((f) => path.basename(f)), gapSeconds })}.mp3`;
       const out = mediaPath(name);
-      const exists = await fs.stat(out).then(() => true, () => false);
+      const exists = await fs.stat(out).then(
+        () => true,
+        () => false,
+      );
       if (!exists) await concatMp3(files, gapSeconds, out, signal);
       const durationSeconds = await measureDurationSeconds(out, signal);
       let start = 0;
-      const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
+      const segments = parts.map((p) => {
+        const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 };
+        start += p.durationSeconds + gapSeconds;
+        return seg;
+      });
       return { audioUrl: mediaUrl(name), durationSeconds, segments };
     },
     async preview(ref, composition, signal) {

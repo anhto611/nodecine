@@ -28,7 +28,10 @@ export interface ExecResult {
 }
 
 export class ExecError extends Error {
-  constructor(message: string, public readonly result: ExecResult) {
+  constructor(
+    message: string,
+    public readonly result: ExecResult,
+  ) {
     super(message);
     this.name = 'ExecError';
   }
@@ -54,7 +57,12 @@ export function exec(bin: string, opts: ExecOptions = {}): Promise<ExecResult> {
     let stdout = '';
     let stderr = '';
     let timedOut = false;
-    const timer = opts.timeoutMs ? setTimeout(() => { timedOut = true; child.kill('SIGKILL'); }, opts.timeoutMs) : undefined;
+    const timer = opts.timeoutMs
+      ? setTimeout(() => {
+          timedOut = true;
+          child.kill('SIGKILL');
+        }, opts.timeoutMs)
+      : undefined;
     const onAbort = () => child.kill('SIGKILL');
     opts.signal?.addEventListener('abort', onAbort, { once: true });
 
@@ -64,8 +72,13 @@ export function exec(bin: string, opts: ExecOptions = {}): Promise<ExecResult> {
       if (stdout.length + text.length > max) truncated = true;
       if (stdout.length < max) stdout += text.slice(0, max - stdout.length);
     });
-    child.stderr.on('data', (d: Buffer) => { if (stderr.length < max) stderr += d.toString('utf8').slice(0, max - stderr.length); });
-    child.on('error', (err) => { cleanup(); reject(err); });
+    child.stderr.on('data', (d: Buffer) => {
+      if (stderr.length < max) stderr += d.toString('utf8').slice(0, max - stderr.length);
+    });
+    child.on('error', (err) => {
+      cleanup();
+      reject(err);
+    });
     child.on('close', (code) => {
       cleanup();
       resolve({ code, stdout: scrub(stdout), stderr: scrub(stderr), timedOut, truncated });
@@ -89,7 +102,13 @@ export async function findBinary(name: string, overrideEnv?: string): Promise<st
     for (const dir of dirs) {
       for (const ext of extensions) {
         const candidate = path.join(dir.replace(/^"|"$/g, ''), name + ext.toLowerCase());
-        if (await access(candidate).then(() => true, () => false)) return candidate;
+        if (
+          await access(candidate).then(
+            () => true,
+            () => false,
+          )
+        )
+          return candidate;
       }
     }
     return null;

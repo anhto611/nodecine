@@ -22,16 +22,14 @@ const SCRIPTS: Range[] = [
 ];
 
 /** Letters that occur in Vietnamese and in (almost) no other Latin-script language. */
-const VIETNAMESE_MARKERS =
-  /[đĐăĂơƠưƯạảẠẢấầẩẫậẤẦẨẪẬắằẳẵặẮẰẲẴẶẹẻẽẸẺẼếềểễệẾỀỂỄỆịỉĩỊỈĨọỏõỌỎÕốồổỗộỐỒỔỖỘớờởỡợỚỜỞỠỢụủũỤỦŨứừửữựỨỪỬỮỰỳỷỹỵỲỶỸỴ]/g;
+const VIETNAMESE_MARKERS = /[đĐăĂơƠưƯạảẠẢấầẩẫậẤẦẨẪẬắằẳẵặẮẰẲẴẶẹẻẽẸẺẼếềểễệẾỀỂỄỆịỉĩỊỈĨọỏõỌỎÕốồổỗộỐỒỔỖỘớờởỡợỚỜỞỠỢụủũỤỦŨứừửữựỨỪỬỮỰỳỷỹỵỲỶỸỴ]/g;
 
 /**
  * Short Vietnamese sentences can carry none of those letters — "so sánh frontend và backend" has only
  * the tone marks Spanish and French use too. Everyday Vietnamese words settle those: a word from this
  * list beside a Latin tone mark, or two of them, is Vietnamese.
  */
-const VIETNAMESE_WORDS =
-  /(?<![\p{L}])(và|là|của|có|không|được|một|những|với|cho|khi|thì|ở|để|nào|sao|gì|nhưng|hoặc|rồi|chưa|nữa|rất|này|về|theo|trong|làm|nói|bạn|tôi|mình)(?![\p{L}])/giu;
+const VIETNAMESE_WORDS = /(?<![\p{L}])(và|là|của|có|không|được|một|những|với|cho|khi|thì|ở|để|nào|sao|gì|nhưng|hoặc|rồi|chưa|nữa|rất|này|về|theo|trong|làm|nói|bạn|tôi|mình)(?![\p{L}])/giu;
 
 /** A Latin letter carrying any accent: Vietnamese tone marks, and every other language's too. */
 const LATIN_ACCENTS = /[À-ɏḀ-ỿ]/g;

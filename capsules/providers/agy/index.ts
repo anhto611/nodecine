@@ -92,8 +92,7 @@ export function createAgyProvider(settings: Record<string, unknown>): LLMProvide
         });
 
         if (r.timedOut) {
-          throw new NodeError('LLM_UPSTREAM', `agy did not answer within ${Math.round(AGY_TIMEOUT_MS / 1000)}s`, true)
-            .withFix(`give it longer with ${AGY_TIMEOUT_ENV}`);
+          throw new NodeError('LLM_UPSTREAM', `agy did not answer within ${Math.round(AGY_TIMEOUT_MS / 1000)}s`, true).withFix(`give it longer with ${AGY_TIMEOUT_ENV}`);
         }
         if (r.code !== 0) {
           throw new NodeError('LLM_UPSTREAM', `agy exited ${r.code}: ${r.stderr.trim() || r.stdout.trim() || 'no output'}`, true);

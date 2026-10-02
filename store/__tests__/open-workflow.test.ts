@@ -20,7 +20,10 @@ afterEach(() => vi.restoreAllMocks());
 describe('opening a saved workflow', () => {
   it('says what had to be brought forward, and leaves the tab unsaved so it can be written back', async () => {
     vi.spyOn(workflowsApi, 'read').mockResolvedValue({
-      id: 'old', name: 'Old', category: 'mine', graph: { nodes: [], edges: [] },
+      id: 'old',
+      name: 'Old',
+      category: 'mine',
+      graph: { nodes: [], edges: [] },
       migrations: [{ code: 'NODE_REPLACED', message: '"core/art-director" became "core/illustrator" in 2026-09-10' }],
     });
     const outcome = await useStudio.getState().openWorkflow('old');
@@ -30,9 +33,7 @@ describe('opening a saved workflow', () => {
   });
 
   it('hands back why the server refused it', async () => {
-    vi.spyOn(workflowsApi, 'read').mockRejectedValue(
-      Object.assign(new Error('this workflow was saved in format 1; this build reads 2'), { code: 'WORKFLOW_VERSION_UNSUPPORTED' }),
-    );
+    vi.spyOn(workflowsApi, 'read').mockRejectedValue(Object.assign(new Error('this workflow was saved in format 1; this build reads 2'), { code: 'WORKFLOW_VERSION_UNSUPPORTED' }));
     const outcome = await useStudio.getState().openWorkflow('from-an-older-build');
     expect(outcome).toMatchObject({ kind: 'failed' });
     expect(outcome!.why).toContain('saved in format 1');
@@ -53,7 +54,7 @@ describe('opening a saved workflow', () => {
     expect(useStudio.getState().tabs).toHaveLength(1);
   });
 
-  it('gives an open tab with nothing unsaved the file\'s version when the file changed on disk, and leaves unsaved work alone', async () => {
+  it("gives an open tab with nothing unsaved the file's version when the file changed on disk, and leaves unsaved work alone", async () => {
     const node = (about: string) => ({ id: 'b', type: 'brief', params: { about }, bypassed: false, position: { x: 0, y: 0 } });
     const read = vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [node('first')], edges: [] } });
     await useStudio.getState().openWorkflow('mine');
@@ -74,7 +75,9 @@ describe('saving a workflow', () => {
     vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } });
     let finish!: () => void;
     const replace = vi.spyOn(workflowsApi, 'replace').mockImplementation(async () => {
-      await new Promise<void>((resolve) => { finish = resolve; });
+      await new Promise<void>((resolve) => {
+        finish = resolve;
+      });
       return { id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } };
     });
     await useStudio.getState().openWorkflow('mine');
@@ -106,5 +109,4 @@ describe('using a template', () => {
     expect(draft.graph).not.toBe(source.graph);
     expect(draft.graph).toEqual(source.graph);
   });
-
 });

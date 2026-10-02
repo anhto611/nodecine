@@ -2,8 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { needsRemaking, type ClipFacts } from '../video';
 
 const clip = (over: Partial<ClipFacts> = {}): ClipFacts => ({
-  durationSeconds: 227, width: 1080, height: 1920, fps: 30, hasAudio: true,
-  codec: 'h264', keyframeSeconds: 1, ...over,
+  durationSeconds: 227,
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  hasAudio: true,
+  codec: 'h264',
+  keyframeSeconds: 1,
+  ...over,
 });
 
 describe('whether a recording has to be made again before a film is cut from it', () => {

@@ -64,7 +64,11 @@ const SchemaControl: React.FC<{ id: string; field: FormField; widget: FieldWidge
     const current = value ?? ('defaultValue' in field ? field.defaultValue : undefined) ?? '';
     return (
       <select id={id} className={`nc-select ${stopFlow}`} value={String(current)} onChange={(e) => onChange(field.kind === 'number' ? Number(e.target.value) : e.target.value)}>
-        {widget.options.map((o) => <option key={String(o.value)} value={String(o.value)}>{o.label}</option>)}
+        {widget.options.map((o) => (
+          <option key={String(o.value)} value={String(o.value)}>
+            {o.label}
+          </option>
+        ))}
       </select>
     );
   }
@@ -72,21 +76,51 @@ const SchemaControl: React.FC<{ id: string; field: FormField; widget: FieldWidge
     case 'select':
       return (
         <select id={id} className={`nc-select ${stopFlow}`} value={String(value ?? field.defaultValue ?? '')} onChange={(e) => onChange(e.target.value)}>
-          {field.options.map((o) => <option key={o} value={o}>{hasTranslation(`node.${field.name}.${o}`) ? t(`node.${field.name}.${o}`) : o}</option>)}
+          {field.options.map((o) => (
+            <option key={o} value={o}>
+              {hasTranslation(`node.${field.name}.${o}`) ? t(`node.${field.name}.${o}`) : o}
+            </option>
+          ))}
         </select>
       );
     case 'boolean':
       return <input id={id} className={stopFlow} type="checkbox" checked={!!(value ?? field.defaultValue)} onChange={(e) => onChange(e.target.checked)} />;
     case 'text':
-      if (widget.widget === 'textarea') return <textarea id={id} className={`nc-textarea ${stopFlow}`} rows={widget.rows} value={String(value ?? '')} placeholder={widget.placeholder} maxLength={field.max} onChange={(e) => onChange(e.target.value)} />;
-      return <input id={id} className={`nc-input ${stopFlow}`} value={String(value ?? '')} placeholder={widget.placeholder} maxLength={field.max} onChange={(e) => onChange(field.optional && e.target.value === '' ? undefined : e.target.value)} />;
+      if (widget.widget === 'textarea')
+        return (
+          <textarea
+            id={id}
+            className={`nc-textarea ${stopFlow}`}
+            rows={widget.rows}
+            value={String(value ?? '')}
+            placeholder={widget.placeholder}
+            maxLength={field.max}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        );
+      return (
+        <input
+          id={id}
+          className={`nc-input ${stopFlow}`}
+          value={String(value ?? '')}
+          placeholder={widget.placeholder}
+          maxLength={field.max}
+          onChange={(e) => onChange(field.optional && e.target.value === '' ? undefined : e.target.value)}
+        />
+      );
     case 'number':
       return <NumberControl id={id} field={field} widget={widget} value={value as number | undefined} onChange={onChange} />;
   }
 };
 
 /** Free typing while focused; the schema's bounds apply when the field is left. */
-const NumberControl: React.FC<{ id: string; field: Extract<FormField, { kind: 'number' }>; widget: FieldWidget; value: number | undefined; onChange: (v: number | undefined) => void }> = ({ id, field, widget, value, onChange }) => {
+const NumberControl: React.FC<{ id: string; field: Extract<FormField, { kind: 'number' }>; widget: FieldWidget; value: number | undefined; onChange: (v: number | undefined) => void }> = ({
+  id,
+  field,
+  widget,
+  value,
+  onChange,
+}) => {
   const [draft, setDraft] = React.useState<string | null>(null);
   const step = widget.step ?? (field.integer ? 1 : 0.01);
   if (widget.widget === 'range' && field.min !== undefined && field.max !== undefined) {
@@ -109,7 +143,12 @@ const NumberControl: React.FC<{ id: string; field: Extract<FormField, { kind: 'n
       placeholder={widget.placeholder}
       value={draft ?? (value === undefined ? '' : String(value))}
       onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => { if (draft !== null) { onChange(settleNumber(field, draft)); setDraft(null); } }}
+      onBlur={() => {
+        if (draft !== null) {
+          onChange(settleNumber(field, draft));
+          setDraft(null);
+        }
+      }}
     />
   );
 };

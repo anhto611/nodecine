@@ -10,7 +10,9 @@ import { getNodeType, type AnyNodeDefinition, type NodeIssue } from '../nodes/de
  * left alone rather than given a pin that holds air.
  */
 export function pinNode(graph: Graph, nodeId: string, outputs: Record<string, { payload: unknown }>, at: string): Graph {
-  const entries = Object.entries(outputs).filter(([, p]) => p?.payload !== undefined).map(([port, p]) => [port, p.payload] as const);
+  const entries = Object.entries(outputs)
+    .filter(([, p]) => p?.payload !== undefined)
+    .map(([port, p]) => [port, p.payload] as const);
   if (!entries.length) return graph;
   const pinned = { outputs: Object.fromEntries(entries), at };
   return { ...graph, nodes: graph.nodes.map((n) => (n.id === nodeId ? { ...n, pinned } : n)) };
@@ -139,7 +141,10 @@ export function topoSort(graph: Graph): { order: string[] } | { cycleEdges: stri
  */
 export function flowNodes(graph: Graph): Set<string> {
   const wired = new Set<string>();
-  for (const e of graph.edges) { wired.add(e.source); wired.add(e.target); }
+  for (const e of graph.edges) {
+    wired.add(e.source);
+    wired.add(e.target);
+  }
   return wired;
 }
 
@@ -210,7 +215,14 @@ export function validateGraph(graph: Graph): GraphIssue[] {
         });
       }
       if (edges.length > 1 && !port.multiple) {
-        issues.push({ severity: 'error', nodeId: n.id, port: port.name, code: ErrorCode.GRAPH_PORT_UNCONNECTED, message: `Input "${port.name}" has more than one edge`, edgeIds: edges.map((e) => e.id) });
+        issues.push({
+          severity: 'error',
+          nodeId: n.id,
+          port: port.name,
+          code: ErrorCode.GRAPH_PORT_UNCONNECTED,
+          message: `Input "${port.name}" has more than one edge`,
+          edgeIds: edges.map((e) => e.id),
+        });
       }
       for (const e of edges) {
         const srcDef = defs.get(e.source);

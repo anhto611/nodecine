@@ -56,7 +56,9 @@ export const nameFor = assetNameFor;
  * node puts them into the project under `assets/`, where a storyboard refers to them by name.
  */
 export const assets: NodeDefinition<typeof Params> = {
-  type: 'assets', version: 1, kind: 'process',
+  type: 'assets',
+  version: 1,
+  kind: 'process',
   inputs: [
     { name: 'brief', type: 'Brief', required: false },
     /*
@@ -68,7 +70,8 @@ export const assets: NodeDefinition<typeof Params> = {
     { name: 'voiceover', type: 'Voiceover', required: false },
   ],
   outputs: [{ name: 'assets', type: 'Assets' }],
-  paramsSchema: Params, defaultParams: Params.parse({}),
+  paramsSchema: Params,
+  defaultParams: Params.parse({}),
   validate: (params) => assetProblems(params.items).map((message) => ({ code: AssetsErrorCode.ASSETS_INVALID, message })),
   run: async (ctx) => {
     const { params, inputs, log } = ctx;
@@ -82,7 +85,15 @@ export const assets: NodeDefinition<typeof Params> = {
     if (params.pictures > 0 && brief) {
       const input = { brief, pictures: params.pictures, wanted: params.wanted, attempt: params.attempt, existing: params.items, removed: params.removed };
       // The pictures a person brought are part of the question: adding one searches again, so nothing found repeats it.
-      const key = contentHash({ about: brief.about, language: brief.language, pictures: params.pictures, wanted: params.wanted, attempt: params.attempt, llm: [params.llmProvider, params.llmSettings], existing: params.items.map((a) => a.url) });
+      const key = contentHash({
+        about: brief.about,
+        language: brief.language,
+        pictures: params.pictures,
+        wanted: params.wanted,
+        attempt: params.attempt,
+        llm: [params.llmProvider, params.llmSettings],
+        existing: params.items.map((a) => a.url),
+      });
       if (key === params.foundFor) offered = params.found;
       else {
         offered = await findPictures(ctx, input);

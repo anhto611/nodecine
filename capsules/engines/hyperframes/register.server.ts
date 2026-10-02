@@ -31,7 +31,11 @@ export const previewWithBundler: ServerPreview = async (composition) => {
   // `s` for a page whose sound is the file beside it: pages from before, which still play their own, are not reused.
   const name = `preview-s-${contentHash(values)}.html`;
   const target = projectFilePath(key, name);
-  const exists = (file: string) => stat(file).then(() => true, () => false);
+  const exists = (file: string) =>
+    stat(file).then(
+      () => true,
+      () => false,
+    );
   // Its sound on the film's clock, beside it, for the player to play from the Studio's page (see preview-audio.server.ts).
   const audio = projectFilePath(key, name.replace(/\.html$/, '.m4a'));
   if (!(await exists(audio))) {
@@ -68,14 +72,26 @@ export const renderWithProducer: ServerRender = async (composition, settings, on
   const outputPath = path.join(tmp, fileName);
   const run = async (lowMemoryMode: boolean) => {
     const job = createRenderJob({
-      fps: composition.fps, quality: QUALITY[settings.quality], format: 'mp4', entryFile: COMPOSITION_ENTRY, variables: valuesOf(composition),
+      fps: composition.fps,
+      quality: QUALITY[settings.quality],
+      format: 'mp4',
+      entryFile: COMPOSITION_ENTRY,
+      variables: valuesOf(composition),
       ...(lowMemoryMode ? { producerConfig: resolveConfig({ lowMemoryMode: true }) } : {}),
     });
     // The producer's file server would swap the global Request/Response out from under Next (see server/web-globals.ts).
-    await keepWebGlobals(() => executeRenderJob(job, dir, outputPath, (j, message) => {
-      const fraction = j.progress > 1 ? j.progress / 100 : j.progress;
-      onProgress({ fraction: Math.max(0, Math.min(1, fraction)), message });
-    }, signal));
+    await keepWebGlobals(() =>
+      executeRenderJob(
+        job,
+        dir,
+        outputPath,
+        (j, message) => {
+          const fraction = j.progress > 1 ? j.progress / 100 : j.progress;
+          onProgress({ fraction: Math.max(0, Math.min(1, fraction)), message });
+        },
+        signal,
+      ),
+    );
   };
   try {
     await run(false);

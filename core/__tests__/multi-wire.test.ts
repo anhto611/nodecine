@@ -130,7 +130,10 @@ describe('a wire from a port the upstream left silent', () => {
     version: 1,
     kind: 'source',
     inputs: [],
-    outputs: [{ name: 'out', type: TEXT }, { name: 'extra', type: TEXT }],
+    outputs: [
+      { name: 'out', type: TEXT },
+      { name: 'extra', type: TEXT },
+    ],
     paramsSchema: Params,
     defaultParams: { value: '' },
     run: async ({ params }) => (params.value ? { out: { value: params.value }, extra: { value: 'extra' } } : { out: { value: 'plain' } }),

@@ -1,1 +1,1 @@
-{"id": "assemble", "definition": "assemble", "body": "AssembleBody", "icon": "layers", "group": "visual", "translations": "assembleTranslations", "errors": "AssembleErrorCode"}
+{ "id": "assemble", "definition": "assemble", "body": "AssembleBody", "icon": "layers", "group": "visual", "translations": "assembleTranslations", "errors": "AssembleErrorCode" }

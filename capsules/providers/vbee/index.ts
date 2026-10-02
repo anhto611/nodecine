@@ -33,7 +33,14 @@ export function vbeeCreds(): { token: string; appId: string } | undefined {
   return token && appId ? { token, appId } : undefined;
 }
 
-interface ApiVoice { code: string; name: string; active?: boolean; gender?: string; language_code?: string; level?: string }
+interface ApiVoice {
+  code: string;
+  name: string;
+  active?: boolean;
+  gender?: string;
+  language_code?: string;
+  level?: string;
+}
 
 const LEVEL_RANK: Record<string, number> = { BASIC: 0, ADVANCED: 1, PREMIUM: 2 };
 

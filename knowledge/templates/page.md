@@ -1,5 +1,5 @@
 ---
-title: "Page Title"
+title: 'Page Title'
 type: concept
 created: YYYY-MM-DD
 updated: YYYY-MM-DD

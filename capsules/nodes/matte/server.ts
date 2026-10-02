@@ -25,7 +25,10 @@ export const MATTE_INSTALL_HINT = 'npm run setup:matte';
 export async function matteModel(): Promise<string | null> {
   const override = process.env.NODECINE_MATTE_MODEL?.trim();
   if (override) return override;
-  return access(MATTE_MODEL).then(() => MATTE_MODEL, () => null);
+  return access(MATTE_MODEL).then(
+    () => MATTE_MODEL,
+    () => null,
+  );
 }
 
 /**
@@ -45,13 +48,26 @@ export function matteSize(facts: ClipFacts, detail: MatteDetail): { width: numbe
   return { width: even(facts.width * scale), height: even(facts.height * scale) };
 }
 
-export interface CutOut { url: string; width: number; height: number; frames: number; seconds: number }
+export interface CutOut {
+  url: string;
+  width: number;
+  height: number;
+  frames: number;
+  seconds: number;
+}
 
 export async function cutOutClip(clipUrl: string, facts: ClipFacts, detail: MatteDetail, signal?: AbortSignal): Promise<CutOut> {
   const { width, height } = matteSize(facts, detail);
-  const name = `${createHash('sha1').update(`${fileNameFromAssetUrl(clipUrl)}:matte-v2:${detail}`).digest('hex')}.webm`;
+  const name = `${createHash('sha1')
+    .update(`${fileNameFromAssetUrl(clipUrl)}:matte-v2:${detail}`)
+    .digest('hex')}.webm`;
   const out = assetPath(name);
-  if (await stat(out).then((s) => s.isFile(), () => false)) {
+  if (
+    await stat(out).then(
+      (s) => s.isFile(),
+      () => false,
+    )
+  ) {
     return { url: assetUrl(name), width, height, frames: 0, seconds: 0 };
   }
 
@@ -62,8 +78,23 @@ export async function cutOutClip(clipUrl: string, facts: ClipFacts, detail: Matt
 
   const partial = `${out}.part.webm`;
   const r = await exec(process.execPath, {
-    args: [MATTE_SCRIPT, '--clip', assetPath(fileNameFromAssetUrl(clipUrl)), '--out', partial, '--model', model,
-      '--width', String(width), '--height', String(height), '--fps', String(facts.fps), '--ffmpeg', ffmpeg],
+    args: [
+      MATTE_SCRIPT,
+      '--clip',
+      assetPath(fileNameFromAssetUrl(clipUrl)),
+      '--out',
+      partial,
+      '--model',
+      model,
+      '--width',
+      String(width),
+      '--height',
+      String(height),
+      '--fps',
+      String(facts.fps),
+      '--ffmpeg',
+      ffmpeg,
+    ],
     // Minutes a frame at worst, and a talking-head clip runs to thousands of them.
     timeoutMs: 4 * 60 * 60_000,
     signal,
@@ -72,8 +103,11 @@ export async function cutOutClip(clipUrl: string, facts: ClipFacts, detail: Matt
     throw new NodeError(MatteErrorCode.MATTE_FAILED, `the speaker could not be cut out: ${r.stderr.trim().split('\n').slice(-3).join(' ').slice(0, 400) || r.code}`);
   }
   let told: { frames?: number; seconds?: number };
-  try { told = JSON.parse(r.stdout) as { frames?: number; seconds?: number }; }
-  catch { throw new NodeError(MatteErrorCode.MATTE_FAILED, 'the cutter said nothing about what it did'); }
+  try {
+    told = JSON.parse(r.stdout) as { frames?: number; seconds?: number };
+  } catch {
+    throw new NodeError(MatteErrorCode.MATTE_FAILED, 'the cutter said nothing about what it did');
+  }
   await rename(partial, out);
   return { url: assetUrl(name), width, height, frames: told.frames ?? 0, seconds: told.seconds ?? 0 };
 }

@@ -39,10 +39,14 @@ function measured(ms: number) {
   let now = 0;
   let most = 0;
   const invoke = services.invoke.bind(services);
-  services.invoke = async <T,>(id: string, args: unknown[]): Promise<T> => {
+  services.invoke = async <T>(id: string, args: unknown[]): Promise<T> => {
     if (id !== 'voice') return invoke<T>(id, args);
     most = Math.max(most, ++now);
-    try { return await invoke<T>(id, args); } finally { now--; }
+    try {
+      return await invoke<T>(id, args);
+    } finally {
+      now--;
+    }
   };
   return { services, most: () => most };
 }
@@ -73,7 +77,12 @@ describe('a run', () => {
   it('counts every node that runs as one step, whatever order they start in', async () => {
     const steps: number[] = [];
     let total = 0;
-    const ex = new Executor(twoBranches(), testServices(), { onRunStart: (i) => { total = i.stepTotal; }, onStep: (i) => steps.push(i.step) });
+    const ex = new Executor(twoBranches(), testServices(), {
+      onRunStart: (i) => {
+        total = i.stepTotal;
+      },
+      onStep: (i) => steps.push(i.step),
+    });
     await ex.run();
     expect(total).toBe(6);
     expect(steps).toEqual([1, 2, 3, 4, 5, 6]);
@@ -105,7 +114,7 @@ describe('a run', () => {
     graph.nodes.find((n) => n.id === 'va')!.params.speed = 0.5;
     const ex = new Executor(graph, services);
     const invoke = services.invoke.bind(services);
-    services.invoke = async <T,>(id: string, args: unknown[]): Promise<T> => {
+    services.invoke = async <T>(id: string, args: unknown[]): Promise<T> => {
       if (id === 'voice' && args[1] === 0.5) throw Object.assign(new Error('say exited 1'), { code: 'PROVIDER_PROCESS_FAILED' });
       return invoke<T>(id, args);
     };

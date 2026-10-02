@@ -12,10 +12,27 @@ import { footage } from '../node';
 function makeClip(): string {
   const dir = fs.mkdtempSync(path.join(tmpdir(), 'nodecine-clip-'));
   const file = path.join(dir, 'spoken.mp4');
-  execFileSync('ffmpeg', ['-v', 'error', '-y',
-    '-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=25:duration=2',
-    '-f', 'lavfi', '-i', 'sine=frequency=440:duration=2',
-    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', file]);
+  execFileSync('ffmpeg', [
+    '-v',
+    'error',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    'testsrc=size=640x360:rate=25:duration=2',
+    '-f',
+    'lavfi',
+    '-i',
+    'sine=frequency=440:duration=2',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    '-shortest',
+    file,
+  ]);
   const bytes = fs.readFileSync(file);
   const name = `${createHash('sha1').update(bytes).digest('hex')}.mp4`;
   const assets = path.resolve(process.cwd(), '.nodecine/assets');
@@ -33,17 +50,21 @@ describe('a recorded clip brought in', () => {
     expect(facts.durationSeconds).toBeCloseTo(2, 1);
 
     const logs: string[] = [];
-    const out = await footage.run({
-      nodeId: 'f', params: footage.paramsSchema.parse({ clip, name: 'spoken.mp4' }),
-      lists: {}, signal: new AbortController().signal, inputs: {}, fresh: false,
+    const out = (await footage.run({
+      nodeId: 'f',
+      params: footage.paramsSchema.parse({ clip, name: 'spoken.mp4' }),
+      lists: {},
+      signal: new AbortController().signal,
+      inputs: {},
+      fresh: false,
       services: {
-        invoke: (id: string, args: unknown[]) => (
-          id === 'footage/read' ? readClip(args[0] as string)
-            : id === 'footage/playable' ? webClip(args[0] as string, args[1] as never)
-              : clipAudio(args[0] as string)),
+        invoke: (id: string, args: unknown[]) =>
+          id === 'footage/read' ? readClip(args[0] as string) : id === 'footage/playable' ? webClip(args[0] as string, args[1] as never) : clipAudio(args[0] as string),
       },
-      log: (_: string, m: string) => logs.push(m), progress: () => {}, patchParams: () => {},
-    } as never) as { footage: { name: string; width: number; hasAudio: boolean }; voice?: { audioUrl: string; language: string; durationSeconds: number } };
+      log: (_: string, m: string) => logs.push(m),
+      progress: () => {},
+      patchParams: () => {},
+    } as never)) as { footage: { name: string; width: number; hasAudio: boolean }; voice?: { audioUrl: string; language: string; durationSeconds: number } };
 
     expect(out.footage).toMatchObject({ name: 'spoken.mp4', width: 640, hasAudio: true });
     // Nobody has listened to it yet: the Caption Sync node writes down what it hears.
@@ -69,11 +90,25 @@ describe('a recorded clip brought in', () => {
     try {
       const original = path.join(dir, 'original.mp4');
       const rotated = path.join(dir, 'rotated.mp4');
-      execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i',
-        'testsrc=size=64x48:rate=30:duration=10', '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-        '-g', '250', '-sc_threshold', '0', original]);
-      execFileSync('ffmpeg', ['-v', 'error', '-y', '-display_rotation:v:0', '90', '-i', original,
-        '-c', 'copy', rotated]);
+      execFileSync('ffmpeg', [
+        '-v',
+        'error',
+        '-y',
+        '-f',
+        'lavfi',
+        '-i',
+        'testsrc=size=64x48:rate=30:duration=10',
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-g',
+        '250',
+        '-sc_threshold',
+        '0',
+        original,
+      ]);
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-display_rotation:v:0', '90', '-i', original, '-c', 'copy', rotated]);
       const bytes = fs.readFileSync(rotated);
       const name = `${createHash('sha1').update(bytes).digest('hex')}.mp4`;
       await ensureAssetsDir();
@@ -82,14 +117,18 @@ describe('a recorded clip brought in', () => {
       const facts = await readClip(clip);
       expect(facts.keyframeSeconds).toBeCloseTo(8.333, 2);
       expect(facts).toMatchObject({ width: 64, height: 48 });
-      const out = await footage.run({
-        nodeId: 'f', params: footage.paramsSchema.parse({ clip }),
-        lists: {}, signal: new AbortController().signal, inputs: {}, fresh: false,
-        services: { invoke: (id: string, args: unknown[]) =>
-          id === 'footage/read' ? readClip(args[0] as string)
-            : webClip(args[0] as string, args[1] as never) },
-        log: () => {}, progress: () => {}, patchParams: () => {},
-      } as never) as { footage: { url: string; width: number; height: number } };
+      const out = (await footage.run({
+        nodeId: 'f',
+        params: footage.paramsSchema.parse({ clip }),
+        lists: {},
+        signal: new AbortController().signal,
+        inputs: {},
+        fresh: false,
+        services: { invoke: (id: string, args: unknown[]) => (id === 'footage/read' ? readClip(args[0] as string) : webClip(args[0] as string, args[1] as never)) },
+        log: () => {},
+        progress: () => {},
+        patchParams: () => {},
+      } as never)) as { footage: { url: string; width: number; height: number } };
       expect(out.footage).toMatchObject({ width: 48, height: 64 });
       expect(out.footage.url).not.toBe(clip);
       fs.unlinkSync(assetPath(fileNameFromAssetUrl(out.footage.url)));

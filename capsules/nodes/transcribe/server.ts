@@ -22,12 +22,21 @@ export const ALIGN_INSTALL_HINT = 'npm run setup:align';
 export async function alignerPython(): Promise<string | null> {
   const override = process.env.NODECINE_ALIGN_PYTHON?.trim();
   if (override) return override;
-  if (await access(ALIGN_VENV_PYTHON).then(() => true, () => false)) return ALIGN_VENV_PYTHON;
+  if (
+    await access(ALIGN_VENV_PYTHON).then(
+      () => true,
+      () => false,
+    )
+  )
+    return ALIGN_VENV_PYTHON;
   return findBinary('python3');
 }
 
 /** What the aligner said: the words, and the language it decided on when it was left to hear one. */
-export interface Heard { words: Word[]; language?: string }
+export interface Heard {
+  words: Word[];
+  language?: string;
+}
 
 export function parseAlignerOutput(stdout: string): Heard {
   const parsed = JSON.parse(stdout) as unknown;
@@ -48,7 +57,13 @@ export function parseAlignerOutput(stdout: string): Heard {
  * first, the timings given back on the recording's clock. A narration of several segments is aligned
  * one segment at a time, so the aligner losing its place in one cannot pull the others off.
  */
-export async function alignWordsOnServer(audioUrl: string, text: string, language: string, options: { model: string; window?: { start: number; duration: number } }, signal: AbortSignal): Promise<Heard> {
+export async function alignWordsOnServer(
+  audioUrl: string,
+  text: string,
+  language: string,
+  options: { model: string; window?: { start: number; duration: number } },
+  signal: AbortSignal,
+): Promise<Heard> {
   const python = await alignerPython();
   if (!python) throw new NodeError(ErrorCode.PROVIDER_NOT_INSTALLED, 'No Python interpreter with stable-ts').withFix(ALIGN_INSTALL_HINT);
   const whole = mediaPath(fileNameFromMediaUrl(audioUrl));
@@ -61,8 +76,15 @@ export async function alignWordsOnServer(audioUrl: string, text: string, languag
     if (!ffmpeg) throw new NodeError(ErrorCode.PROVIDER_NOT_INSTALLED, 'ffmpeg is needed to cut the recording').withFix('brew install ffmpeg');
     dir = await mkdtemp(path.join(os.tmpdir(), 'nodecine-align-'));
     audio = path.join(dir, 'segment.wav');
-    const cut = await exec(ffmpeg, { args: ['-v', 'error', '-y', '-ss', String(Math.max(0, window.start)), '-t', String(Math.max(0.1, window.duration)), '-i', whole, '-ac', '1', '-ar', '16000', audio], timeoutMs: 60_000, signal });
-    if (cut.code !== 0) { await rm(dir, { recursive: true, force: true }); throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, `could not cut the recording: ${cut.stderr.trim().slice(0, 200)}`); }
+    const cut = await exec(ffmpeg, {
+      args: ['-v', 'error', '-y', '-ss', String(Math.max(0, window.start)), '-t', String(Math.max(0.1, window.duration)), '-i', whole, '-ac', '1', '-ar', '16000', audio],
+      timeoutMs: 60_000,
+      signal,
+    });
+    if (cut.code !== 0) {
+      await rm(dir, { recursive: true, force: true });
+      throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, `could not cut the recording: ${cut.stderr.trim().slice(0, 200)}`);
+    }
   }
   try {
     const heard = await alignFile(python, audio, text, language, model, signal);
@@ -92,7 +114,10 @@ async function alignFile(python: string, audio: string, text: string, language: 
   try {
     heard = parseAlignerOutput(r.stdout);
   } catch (e) {
-    throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, `aligner output unreadable (${r.stdout.length} bytes${r.truncated ? ', cut at the output cap' : ''}): ${e instanceof Error ? e.message : String(e)}`);
+    throw new NodeError(
+      TranscribeErrorCode.ALIGN_FAILED,
+      `aligner output unreadable (${r.stdout.length} bytes${r.truncated ? ', cut at the output cap' : ''}): ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
   if (!heard.words.length) throw new NodeError(TranscribeErrorCode.ALIGN_FAILED, 'aligner returned no words');
   return heard;

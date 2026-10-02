@@ -23,15 +23,26 @@ const MAX_CANDIDATES = 40;
 const PRIVATE_HOST = /(^|\.)localhost$|(^|\.)local$|(^|\.)internal$/i;
 const PICTURE_TYPES: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
 
-const decode = (s: string) => s.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
+const decode = (s: string) =>
+  s
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
 
 function publicUrl(link: string, base?: string): URL {
   let url: URL;
-  try { url = new URL(link, base); } catch { throw new Error('not a web address'); }
+  try {
+    url = new URL(link, base);
+  } catch {
+    throw new Error('not a web address');
+  }
   if (!/^https?:$/.test(url.protocol)) throw new Error('only http and https addresses can be read');
   const host = url.hostname.replace(/^\[|\]$/g, '');
-  if (url.username || url.password || PRIVATE_HOST.test(host) ||
-    (isIP(host) ? privateAddress(host) : !host.includes('.'))) {
+  if (url.username || url.password || PRIVATE_HOST.test(host) || (isIP(host) ? privateAddress(host) : !host.includes('.'))) {
     throw new Error('that address is not on the public web');
   }
   return url;
@@ -43,14 +54,20 @@ function privateAddress(address: string): boolean {
   if (mapped) return privateAddress(mapped[1]!);
   if (isIP(ip) === 4) {
     const [a, b] = ip.split('.').map(Number);
-    return a === 0 || a === 10 || a === 127 || a! >= 224 || a === 169 && b === 254 ||
-      a === 172 && b! >= 16 && b! <= 31 || a === 192 && b === 168 ||
-      a === 100 && b! >= 64 && b! <= 127 || a === 198 && (b === 18 || b === 19);
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      a! >= 224 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b! >= 16 && b! <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 100 && b! >= 64 && b! <= 127) ||
+      (a === 198 && (b === 18 || b === 19))
+    );
   }
   if (isIP(ip) === 6) {
-    return ip === '::' || ip === '::1' || ip.startsWith('fc') || ip.startsWith('fd') ||
-      /^fe[89ab]/.test(ip) || ip.startsWith('ff') || ip.startsWith('2001:db8:') ||
-      ip.startsWith('::ffff:');
+    return ip === '::' || ip === '::1' || ip.startsWith('fc') || ip.startsWith('fd') || /^fe[89ab]/.test(ip) || ip.startsWith('ff') || ip.startsWith('2001:db8:') || ip.startsWith('::ffff:');
   }
   return true;
 }
@@ -65,35 +82,39 @@ async function publicAddress(url: URL): Promise<string> {
 /** Connect to the address we checked, while retaining the original host for HTTP and TLS. */
 async function requestPublic(url: URL, address: string, init: RequestInit, maxBytes: number): Promise<Response> {
   return new Promise((resolve, reject) => {
-    const request = (url.protocol === 'https:' ? https : http).request(url, {
-      method: 'GET',
-      headers: { 'accept-encoding': 'identity', ...Object.fromEntries(new Headers(init.headers)) },
-      agent: false,
-      signal: init.signal ?? undefined,
-      lookup: (_host, _options, callback) => callback(null, address, isIP(address) as 4 | 6),
-    }, (incoming) => {
-      const status = incoming.statusCode ?? 502;
-      const headers = new Headers();
-      for (const [key, value] of Object.entries(incoming.headers)) {
-        if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(', ') : value);
-      }
-      if (status >= 300 && status < 400) {
-        incoming.destroy();
-        resolve(new Response(null, { status, headers }));
-        return;
-      }
-      const chunks: Buffer[] = [];
-      let size = 0;
-      incoming.on('data', (chunk: Buffer) => {
-        size += chunk.length;
-        if (size > maxBytes) {
+    const request = (url.protocol === 'https:' ? https : http).request(
+      url,
+      {
+        method: 'GET',
+        headers: { 'accept-encoding': 'identity', ...Object.fromEntries(new Headers(init.headers)) },
+        agent: false,
+        signal: init.signal ?? undefined,
+        lookup: (_host, _options, callback) => callback(null, address, isIP(address) as 4 | 6),
+      },
+      (incoming) => {
+        const status = incoming.statusCode ?? 502;
+        const headers = new Headers();
+        for (const [key, value] of Object.entries(incoming.headers)) {
+          if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+        }
+        if (status >= 300 && status < 400) {
           incoming.destroy();
-          reject(new Error(`web response exceeds ${maxBytes} bytes`));
-        } else chunks.push(chunk);
-      });
-      incoming.on('end', () => resolve(new Response(status === 204 || status === 205 || status === 304 ? null : Buffer.concat(chunks), { status, headers })));
-      incoming.on('error', reject);
-    });
+          resolve(new Response(null, { status, headers }));
+          return;
+        }
+        const chunks: Buffer[] = [];
+        let size = 0;
+        incoming.on('data', (chunk: Buffer) => {
+          size += chunk.length;
+          if (size > maxBytes) {
+            incoming.destroy();
+            reject(new Error(`web response exceeds ${maxBytes} bytes`));
+          } else chunks.push(chunk);
+        });
+        incoming.on('end', () => resolve(new Response(status === 204 || status === 205 || status === 304 ? null : Buffer.concat(chunks), { status, headers })));
+        incoming.on('error', reject);
+      },
+    );
     request.on('error', reject);
     request.end();
   });
@@ -120,7 +141,11 @@ export function pagePictures(html: string, pageUrl: string): FoundPicture[] {
   const add = (raw: string | undefined, alt = '') => {
     if (!raw || raw.startsWith('data:')) return;
     let url: URL;
-    try { url = publicUrl(decode(raw.trim()), pageUrl); } catch { return; }
+    try {
+      url = publicUrl(decode(raw.trim()), pageUrl);
+    } catch {
+      return;
+    }
     if (/\.(svg|gif|ico)(\?|$)/i.test(url.pathname)) return;
     const href = largest(url.toString());
     const key = sameness(href);
@@ -128,7 +153,12 @@ export function pagePictures(html: string, pageUrl: string): FoundPicture[] {
     seen.add(key);
     found.push({ url: href, alt: decode(alt).trim().slice(0, 200), page: pageUrl });
   };
-  const bestOf = (srcset: string) => srcset.split(',').map((part) => part.trim().split(/\s+/)).map(([u, w]) => ({ u, w: Number.parseFloat(w ?? '') || 0 })).sort((a, b) => b.w - a.w)[0]?.u;
+  const bestOf = (srcset: string) =>
+    srcset
+      .split(',')
+      .map((part) => part.trim().split(/\s+/))
+      .map(([u, w]) => ({ u, w: Number.parseFloat(w ?? '') || 0 }))
+      .sort((a, b) => b.w - a.w)[0]?.u;
   const meta = (name: string) => new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]*content=["']([^"']*)["']`, 'i').exec(html)?.[1];
   add(meta('og:image'), meta('og:title'));
   add(meta('twitter:image'), meta('twitter:title'));
@@ -136,7 +166,7 @@ export function pagePictures(html: string, pageUrl: string): FoundPicture[] {
     const tag = m[0];
     const attr = (name: string) => new RegExp(`\\b${name}=["']([^"']*)["']`, 'i').exec(tag)?.[1];
     const srcset = attr('srcset') ?? attr('data-srcset');
-    add(srcset ? bestOf(srcset) : attr('src') ?? attr('data-src'), attr('alt') ?? '');
+    add(srcset ? bestOf(srcset) : (attr('src') ?? attr('data-src')), attr('alt') ?? '');
     if (found.length >= MAX_CANDIDATES) break;
   }
   return found.slice(0, MAX_CANDIDATES);
@@ -150,16 +180,26 @@ export function pageText(html: string, url: string): { url: string; title: strin
     try {
       const walk = (v: unknown): void => {
         if (Array.isArray(v)) v.forEach(walk);
-        else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) { if (k === 'description' && typeof x === 'string') described.push(x); else walk(x); }
+        else if (v && typeof v === 'object')
+          for (const [k, x] of Object.entries(v)) {
+            if (k === 'description' && typeof x === 'string') described.push(x);
+            else walk(x);
+          }
       };
       walk(JSON.parse(m[1]!));
-    } catch { /* structured data that does not parse says nothing */ }
+    } catch {
+      /* structured data that does not parse says nothing */
+    }
   }
-  const body = decode(html
-    .replace(/<(script|style|noscript|svg|nav|footer|header)[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<br\s*\/?>|<\/(p|div|li|h\d)>/gi, '\n')
-    .replace(/<[^>]+>/g, ' '))
-    .replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
+  const body = decode(
+    html
+      .replace(/<(script|style|noscript|svg|nav|footer|header)[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<br\s*\/?>|<\/(p|div|li|h\d)>/gi, '\n')
+      .replace(/<[^>]+>/g, ' '),
+  )
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*\n\s*/g, '\n')
+    .trim();
   const text = [meta('description') || meta('og:description'), ...described, body].filter(Boolean).join('\n\n').slice(0, MAX_TEXT);
   return { url, title, text };
 }
@@ -185,10 +225,14 @@ async function fetchPublic(initialLink: string, init: RequestInit, maxBytes: num
 }
 
 export async function readPage(link: string): Promise<LinkedPage> {
-  const { res, finalUrl } = await fetchPublic(link, {
-    headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)', 'accept-language': 'vi,en;q=0.8' },
-    signal: AbortSignal.timeout(15_000),
-  }, MAX_PAGE_BYTES);
+  const { res, finalUrl } = await fetchPublic(
+    link,
+    {
+      headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)', 'accept-language': 'vi,en;q=0.8' },
+      signal: AbortSignal.timeout(15_000),
+    },
+    MAX_PAGE_BYTES,
+  );
   if (!res.ok) throw new Error(`the page answered ${res.status}`);
   const type = res.headers.get('content-type') ?? '';
   if (!/html|text/.test(type)) throw new Error(`the page is ${type || 'not text'}`);
@@ -210,10 +254,14 @@ async function sizeOf(file: string): Promise<{ width: number; height: number } |
  * the same picture found twice is one file and a film never depends on someone else's server.
  */
 export async function fetchPicture(link: string): Promise<FetchedPicture> {
-  const { res } = await fetchPublic(link, {
-    headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)' },
-    signal: AbortSignal.timeout(20_000),
-  }, MAX_PICTURE_BYTES);
+  const { res } = await fetchPublic(
+    link,
+    {
+      headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)' },
+      signal: AbortSignal.timeout(20_000),
+    },
+    MAX_PICTURE_BYTES,
+  );
   if (!res.ok) throw new Error(`the picture answered ${res.status}`);
   const ext = PICTURE_TYPES[(res.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase()];
   if (!ext) throw new Error(`not a picture a film can use (${res.headers.get('content-type') || 'no type'})`);
@@ -221,7 +269,12 @@ export async function fetchPicture(link: string): Promise<FetchedPicture> {
   if (!bytes.length || bytes.length > MAX_PICTURE_BYTES) throw new Error(`pictures up to ${MAX_PICTURE_BYTES / 1024 / 1024} MB`);
   const name = `${createHash('sha1').update(bytes).digest('hex')}.${ext}`;
   const target = path.join(await ensureAssetsDir(), name);
-  if (!(await stat(target).then(() => true, () => false))) {
+  if (
+    !(await stat(target).then(
+      () => true,
+      () => false,
+    ))
+  ) {
     const part = `${target}.${randomUUID()}.part`;
     try {
       await writeFile(part, bytes);
@@ -232,4 +285,3 @@ export async function fetchPicture(link: string): Promise<FetchedPicture> {
   }
   return { url: assetUrl(name), ...(await sizeOf(assetPath(name))) };
 }
-

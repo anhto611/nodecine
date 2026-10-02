@@ -9,7 +9,10 @@ import type { Graph } from '@/core/engine/graph';
  * them, the way an n8n sub-node hangs under its consumer. A model or an engine is a thing a node
  * names for itself now, so every node is on the path and there is one shape.
  */
-export interface NodeSize { width: number; height: number }
+export interface NodeSize {
+  width: number;
+  height: number;
+}
 
 const DEFAULT_SIZE: NodeSize = { width: 220, height: 180 };
 

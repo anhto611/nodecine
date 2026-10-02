@@ -3,15 +3,17 @@ import type { NodeServices } from '@/core/engine/services';
 import type { EngineRef, LLMRef, TTSRef, Voice, Voiceover } from '../types/payloads';
 
 /** Deterministic fake services for executor tests. Records every call. */
-export function makeFakeServices(overrides: Partial<{
-  ttsInstalled: boolean;
-  encoder: boolean;
-  voices: Voice[];
-  renderReady: boolean;
-  claudeAuthenticated: boolean;
-  secondsPerChar: number;
-  complete: (prompt: string) => Promise<unknown>;
-}> = {}) {
+export function makeFakeServices(
+  overrides: Partial<{
+    ttsInstalled: boolean;
+    encoder: boolean;
+    voices: Voice[];
+    renderReady: boolean;
+    claudeAuthenticated: boolean;
+    secondsPerChar: number;
+    complete: (prompt: string) => Promise<unknown>;
+  }> = {},
+) {
   const o = {
     ttsInstalled: true,
     encoder: true,
@@ -23,7 +25,9 @@ export function makeFakeServices(overrides: Partial<{
     claudeAuthenticated: true,
     secondsPerChar: 0.07,
     // No shipped node asks a model today; a test that wants an answer passes its own.
-    complete: (async () => { throw new Error('no model answer was faked for this test'); }) as (prompt: string) => Promise<unknown>,
+    complete: (async () => {
+      throw new Error('no model answer was faked for this test');
+    }) as (prompt: string) => Promise<unknown>,
     ...overrides,
   };
   const calls: { name: string; args: unknown[] }[] = [];
@@ -101,7 +105,11 @@ export function makeFakeServices(overrides: Partial<{
     async concatAudio(parts, gapSeconds) {
       calls.push({ name: 'concatAudio', args: [parts.map((p) => p.audioUrl), gapSeconds] });
       let start = 0;
-      const segments = parts.map((p) => { const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 }; start += p.durationSeconds + gapSeconds; return seg; });
+      const segments = parts.map((p) => {
+        const seg = { start: Math.round(start * 100) / 100, durationSeconds: Math.round((p.durationSeconds + gapSeconds) * 100) / 100 };
+        start += p.durationSeconds + gapSeconds;
+        return seg;
+      });
       return { audioUrl: `/api/media/${contentHash({ parts: parts.map((p) => p.audioUrl), gapSeconds })}.mp3`, durationSeconds: Math.round(start * 100) / 100, segments };
     },
     async preview(ref, composition) {

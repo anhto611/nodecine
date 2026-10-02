@@ -14,7 +14,13 @@ export async function writeProject(composition: Composition): Promise<{ key: str
   const key = contentHash({ engine: composition.engine, files: composition.files, media: composition.media });
   const dir = projectDir(key);
   const done = path.join(dir, '.written');
-  if (await stat(done).then(() => true, () => false)) return { key, dir };
+  if (
+    await stat(done).then(
+      () => true,
+      () => false,
+    )
+  )
+    return { key, dir };
 
   await mkdir(dir, { recursive: true });
   for (const [relative, text] of Object.entries(composition.files)) {

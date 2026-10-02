@@ -69,7 +69,22 @@ export function assetsDir(): string {
   return path.resolve(process.cwd(), process.env.NODECINE_ASSETS_DIR ?? '.nodecine/assets');
 }
 
-export const ASSET_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/x-m4v', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', otf: 'font/otf' };
+export const ASSET_TYPES: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  mov: 'video/quicktime',
+  m4v: 'video/x-m4v',
+  woff2: 'font/woff2',
+  woff: 'font/woff',
+  ttf: 'font/ttf',
+  otf: 'font/otf',
+};
 
 export async function ensureAssetsDir(): Promise<string> {
   const dir = assetsDir();

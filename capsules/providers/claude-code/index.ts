@@ -87,18 +87,19 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
         // With the web, the model may search and read pages before it answers, and only that: every
         // other tool stays off, and those two are allowed without a prompt nobody is there to answer.
         const tools = options?.web ? ['--max-turns', String(WEB_TURNS), '--tools', 'WebSearch', 'WebFetch', '--allowedTools', 'WebSearch', 'WebFetch'] : ['--max-turns', '1', '--tools', ''];
-        const args = images.length
-          ? ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', ...tools]
-          : ['-p', '--output-format', 'json', ...tools];
+        const args = images.length ? ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', ...tools] : ['-p', '--output-format', 'json', ...tools];
         const model = settings.model as string | undefined;
         if (model) args.push('--model', model);
-        const stdin = images.length ? `${JSON.stringify({ type: 'user', message: { role: 'user', content: [...(await imageBlocks(images, cwd, signal)), { type: 'text', text: prompt }] } })}\n` : prompt;
+        const stdin = images.length
+          ? `${JSON.stringify({ type: 'user', message: { role: 'user', content: [...(await imageBlocks(images, cwd, signal)), { type: 'text', text: prompt }] } })}\n`
+          : prompt;
         const r = await exec(bin, { args, stdin, cwd, timeoutMs: CLAUDE_TIMEOUT_MS, signal, maxOutput: images.length ? 4 * 1024 * 1024 : 256 * 1024 });
         if (r.timedOut) {
           // A killed process exits with a null code and an empty stderr, so without this the failure
           // read as "claude exited null:" — true, useless, and impossible to act on.
-          throw new NodeError('LLM_UPSTREAM', `claude did not answer within ${Math.round(CLAUDE_TIMEOUT_MS / 1000)}s`, true)
-            .withFix(`give it longer with ${CLAUDE_TIMEOUT_ENV}, or ask for less in one go`);
+          throw new NodeError('LLM_UPSTREAM', `claude did not answer within ${Math.round(CLAUDE_TIMEOUT_MS / 1000)}s`, true).withFix(
+            `give it longer with ${CLAUDE_TIMEOUT_ENV}, or ask for less in one go`,
+          );
         }
         if (r.code !== 0) {
           let msg = r.stderr.trim();
@@ -127,7 +128,11 @@ export function createClaudeCodeProvider(settings: Record<string, unknown>): LLM
 
 /** The last line of a streamed answer that carries the result envelope. */
 function resultLine(stdout: string): unknown {
-  const line = stdout.trim().split('\n').reverse().find((l) => l.includes('"type":"result"'));
+  const line = stdout
+    .trim()
+    .split('\n')
+    .reverse()
+    .find((l) => l.includes('"type":"result"'));
   if (!line) throw Object.assign(new Error('claude returned no result'), { code: 'LLM_UPSTREAM' });
   return JSON.parse(line);
 }

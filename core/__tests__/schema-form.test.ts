@@ -6,15 +6,17 @@ import { _resetNodeRegistry, listNodeTypes } from '@/core/nodes/definition';
 
 describe('schemaFields', () => {
   it('reads enums, strings, bounded numbers and booleans off an object schema, in order', () => {
-    const fields = schemaFields(z.object({
-      codec: z.enum(['h264', 'h265']).default('h264'),
-      fileName: z.string().min(1).max(80).default('out.mp4'),
-      fps: z.number().int().positive().default(30),
-      speed: z.number().min(0.5).max(2).default(1),
-      concurrency: z.number().int().positive().optional(),
-      burn: z.boolean().default(false),
-      settings: z.record(z.string(), z.unknown()).default({}),
-    }));
+    const fields = schemaFields(
+      z.object({
+        codec: z.enum(['h264', 'h265']).default('h264'),
+        fileName: z.string().min(1).max(80).default('out.mp4'),
+        fps: z.number().int().positive().default(30),
+        speed: z.number().min(0.5).max(2).default(1),
+        concurrency: z.number().int().positive().optional(),
+        burn: z.boolean().default(false),
+        settings: z.record(z.string(), z.unknown()).default({}),
+      }),
+    );
     expect(fields.map((f) => `${f.name}:${f.kind}`)).toEqual(['codec:select', 'fileName:text', 'fps:number', 'speed:number', 'concurrency:number', 'burn:boolean']);
     expect(fields[0]).toMatchObject({ options: ['h264', 'h265'], defaultValue: 'h264', optional: false });
     expect(fields[1]).toMatchObject({ max: 80, defaultValue: 'out.mp4' });

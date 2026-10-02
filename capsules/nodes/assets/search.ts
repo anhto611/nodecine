@@ -26,12 +26,18 @@ export const MAX_CANDIDATES = 20;
 export const MIN_SIDE = 320;
 
 export const PagesSchema = z.object({
-  pages: z.array(z.object({ url: z.string().max(2000) })).max(20).default([]),
+  pages: z
+    .array(z.object({ url: z.string().max(2000) }))
+    .max(20)
+    .default([]),
 });
 
 export const PicksSchema = z.object({
   language: z.string().min(2).max(35),
-  pictures: z.array(z.object({ number: z.number().int().min(1), note: z.string().max(500) })).max(40).default([]),
+  pictures: z
+    .array(z.object({ number: z.number().int().min(1), note: z.string().max(500) }))
+    .max(40)
+    .default([]),
 });
 
 export interface SearchInput {
@@ -52,7 +58,16 @@ type Usable = { picture: FoundPicture; f: FetchedPicture };
 type SearchContext = Pick<RunContext, 'services' | 'log' | 'progress' | 'signal' | 'fresh'> & { params: { llmProvider: string; llmSettings?: Record<string, unknown> } };
 
 /** A picture's name from its note: the note's first phrase, a few words of it. */
-const nameFrom = (note: string, taken: string[]) => assetNameFor(note.split(/[,:;(“"«]/)[0]!.trim().split(/\s+/).slice(0, 5).join(' ') || note, taken);
+const nameFrom = (note: string, taken: string[]) =>
+  assetNameFor(
+    note
+      .split(/[,:;(“"«]/)[0]!
+      .trim()
+      .split(/\s+/)
+      .slice(0, 5)
+      .join(' ') || note,
+    taken,
+  );
 
 /** In small batches: a page shows many pictures, and a server asked for all at once may refuse. */
 async function inBatches<T, R>(items: T[], size: number, work: (item: T) => Promise<R>): Promise<R[]> {
@@ -91,8 +106,12 @@ ${already}${seen ? `The candidates${existing.length ? ', attached after those,' 
 ${candidates.map((c, i) => `${i + 1}. ${c.picture.alt || '(no description)'}${c.f.width ? ` · ${c.f.width}×${c.f.height}` : ''} · on ${c.picture.page}`).join('\n')}
 
 Rules:
-- Pick at most ${input.pictures} candidates that show the subject itself (its screens, its product, its logo, its charts), each with a note saying what it shows in a few words, in ${language}, so a storyboard writer can match a scene to it.${existing.length ? `
-- Never pick a candidate that shows the same thing as a picture already in the video (the same screen, the same logo, the same chart), even at another size, crop or quality: the video has it.` : ''}
+- Pick at most ${input.pictures} candidates that show the subject itself (its screens, its product, its logo, its charts), each with a note saying what it shows in a few words, in ${language}, so a storyboard writer can match a scene to it.${
+    existing.length
+      ? `
+- Never pick a candidate that shows the same thing as a picture already in the video (the same screen, the same logo, the same chart), even at another size, crop or quality: the video has it.`
+      : ''
+  }
 - Never pick two candidates that show the same thing; keep the sharper one.
 - Leave out banners, ads, avatars, portraits, stock photos, decoration and pictures of something else. Picking none is a fine answer.
 Answer with the JSON object only, no commentary, no code fence, in this shape:
@@ -112,16 +131,24 @@ export async function findPictures(ctx: SearchContext, input: SearchInput): Prom
   let searched: string[] = [];
   if (ref.capabilities.webSearch?.status === 'ready') {
     ctx.progress(0.05, 'searching for pages');
-    const found = await completeStructured(asking, ref, {
-      outputSchema: PagesSchema,
-      buildPrompt: () => pagesPrompt(input, given),
-      languageOf: () => input.brief.language,
-      web: true,
-    }, input.brief.language).catch((e: unknown) => {
+    const found = await completeStructured(
+      asking,
+      ref,
+      {
+        outputSchema: PagesSchema,
+        buildPrompt: () => pagesPrompt(input, given),
+        languageOf: () => input.brief.language,
+        web: true,
+      },
+      input.brief.language,
+    ).catch((e: unknown) => {
       log('warn', `could not search for pages: ${e instanceof Error ? e.message : String(e)}`);
       return { pages: [] };
     });
-    searched = found.pages.map((p) => p.url).filter((u) => /^https?:\/\//.test(u) && !given.includes(u)).slice(0, MAX_FOUND_PAGES);
+    searched = found.pages
+      .map((p) => p.url)
+      .filter((u) => /^https?:\/\//.test(u) && !given.includes(u))
+      .slice(0, MAX_FOUND_PAGES);
   } else if (!given.length) {
     log('info', `${ref.displayName} cannot search the web and the brief links to no page: no pictures to find`);
     return [];
@@ -133,14 +160,23 @@ export async function findPictures(ctx: SearchContext, input: SearchInput): Prom
   }
 
   ctx.progress(0.3, 'reading the pages');
-  const pages = (await inBatches(links, 4, (link) => services.invoke<LinkedPage>('assets/read-page', [link]).catch((e: unknown) => {
-    log('warn', `could not read ${link}: ${e instanceof Error ? e.message : String(e)}`);
-    return null;
-  }))).filter((p): p is LinkedPage => !!p);
+  const pages = (
+    await inBatches(links, 4, (link) =>
+      services.invoke<LinkedPage>('assets/read-page', [link]).catch((e: unknown) => {
+        log('warn', `could not read ${link}: ${e instanceof Error ? e.message : String(e)}`);
+        return null;
+      }),
+    )
+  ).filter((p): p is LinkedPage => !!p);
 
   ctx.progress(0.45, 'bringing the pictures');
   const offered = pages.flatMap((p) => p.pictures.slice(0, PER_PAGE)).slice(0, MAX_CANDIDATES);
-  const fetched = await inBatches(offered, 4, (picture) => services.invoke<FetchedPicture>('assets/fetch-picture', [picture.url]).then((f) => ({ picture, f }), () => null));
+  const fetched = await inBatches(offered, 4, (picture) =>
+    services.invoke<FetchedPicture>('assets/fetch-picture', [picture.url]).then(
+      (f) => ({ picture, f }),
+      () => null,
+    ),
+  );
   const usable = fetched.filter((x): x is Usable => !!x && (!x.f.width || Math.max(x.f.width, x.f.height ?? 0) >= MIN_SIDE));
   // A picture already in the video, byte for byte, is no candidate: its address is its content.
   const have = new Set([...input.existing.map((a) => a.url), ...(input.removed ?? [])]);
@@ -153,19 +189,33 @@ export async function findPictures(ctx: SearchContext, input: SearchInput): Prom
   ctx.progress(0.6, 'picking');
   const seen = ref.capabilities.vision?.status === 'ready';
   const existing = input.existing.slice(0, MAX_EXISTING);
-  const picks = await completeStructured(asking, ref, {
-    outputSchema: PicksSchema,
-    buildPrompt: () => picturesPrompt(input, candidates, seen, existing),
-    languageOf: (o) => o.language,
-    // What the video has first, then the candidates: the prompt names them in that order.
-    images: seen ? [...existing.map((a) => a.url), ...candidates.map((x) => x.f.url)] : [],
-  }, input.brief.language);
+  const picks = await completeStructured(
+    asking,
+    ref,
+    {
+      outputSchema: PicksSchema,
+      buildPrompt: () => picturesPrompt(input, candidates, seen, existing),
+      languageOf: (o) => o.language,
+      // What the video has first, then the candidates: the prompt names them in that order.
+      images: seen ? [...existing.map((a) => a.url), ...candidates.map((x) => x.f.url)] : [],
+    },
+    input.brief.language,
+  );
 
   const items: Asset[] = [];
   for (const pick of picks.pictures.slice(0, input.pictures)) {
     const chosen = candidates[pick.number - 1];
     if (!chosen || items.some((a) => a.url === chosen.f.url)) continue;
-    items.push({ name: nameFrom(pick.note, items.map((a) => a.name)), url: chosen.f.url, note: pick.note, ...(chosen.f.width ? { width: chosen.f.width, height: chosen.f.height } : {}), source: chosen.picture.page });
+    items.push({
+      name: nameFrom(
+        pick.note,
+        items.map((a) => a.name),
+      ),
+      url: chosen.f.url,
+      note: pick.note,
+      ...(chosen.f.width ? { width: chosen.f.width, height: chosen.f.height } : {}),
+      source: chosen.picture.page,
+    });
   }
   log('info', `${pages.length} pages${searched.length ? ` (${searched.length} found on the web)` : ''} · ${candidates.length} pictures looked at · ${items.length} picked`);
   return items;

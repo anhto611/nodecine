@@ -22,7 +22,35 @@ const ready: Capability = { status: 'ready' };
 
 /** `say -v ?` prints `Name<spaces>lang_REGION<spaces># sample`. Names may contain spaces and parentheses. */
 /** macOS ships novelty voices (Bells, Zarvox, …) that are never a sensible default; list them last. */
-const NOVELTY = new Set(['Albert', 'Bad News', 'Bahh', 'Bells', 'Boing', 'Bubbles', 'Cellos', 'Wobble', 'Good News', 'Jester', 'Organ', 'Superstar', 'Trinoids', 'Whisper', 'Zarvox', 'Junior', 'Ralph', 'Kathy', 'Fred', 'Grandma', 'Grandpa', 'Rocko', 'Sandy', 'Shelley', 'Eddy', 'Flo', 'Reed']);
+const NOVELTY = new Set([
+  'Albert',
+  'Bad News',
+  'Bahh',
+  'Bells',
+  'Boing',
+  'Bubbles',
+  'Cellos',
+  'Wobble',
+  'Good News',
+  'Jester',
+  'Organ',
+  'Superstar',
+  'Trinoids',
+  'Whisper',
+  'Zarvox',
+  'Junior',
+  'Ralph',
+  'Kathy',
+  'Fred',
+  'Grandma',
+  'Grandpa',
+  'Rocko',
+  'Sandy',
+  'Shelley',
+  'Eddy',
+  'Flo',
+  'Reed',
+]);
 /** Voices that sound best as automatic picks, in order. */
 const PREFERRED = ['Samantha', 'Alex', 'Daniel', 'Karen', 'Moira', 'Tessa', 'Rishi', 'Linh', 'Kyoko', 'Yuna', 'Tingting', 'Monica', 'Thomas', 'Anna'];
 
@@ -67,9 +95,7 @@ export function createSystemTtsProvider(settings: Record<string, unknown>): TTSP
             code: 'PROVIDER_NOT_INSTALLED',
             reason: os.platform() === 'darwin' ? '`say` was not found' : `System TTS is not supported on ${os.platform()} in v0.1`,
           };
-      const encoder: Capability = ffmpeg
-        ? ready
-        : { status: 'unavailable', code: 'PROVIDER_NOT_INSTALLED', reason: 'ffmpeg was not found', fix: 'brew install ffmpeg' };
+      const encoder: Capability = ffmpeg ? ready : { status: 'unavailable', code: 'PROVIDER_NOT_INSTALLED', reason: 'ffmpeg was not found', fix: 'brew install ffmpeg' };
       let voices: Voice[] = [];
       if (say) {
         const r = await exec(say, { args: ['-v', '?'], timeoutMs: 5000, maxOutput: 64 * 1024 });

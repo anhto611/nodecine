@@ -18,9 +18,35 @@ beforeEach(() => {
 
 const saved: Graph = {
   nodes: [
-    { id: 'composition', type: 'composition', version: 1, params: { files: { 'index.html': '<html></html>', 'storyboard-guide.md': '---\nhint.vi: Dán link bài viết\nhint.en: Paste the article link\nfirst: hook\n---\nBody' }, media: {} }, bypassed: false, position: { x: 40, y: 692 } },
+    {
+      id: 'composition',
+      type: 'composition',
+      version: 1,
+      params: { files: { 'index.html': '<html></html>', 'storyboard-guide.md': '---\nhint.vi: Dán link bài viết\nhint.en: Paste the article link\nfirst: hook\n---\nBody' }, media: {} },
+      bypassed: false,
+      position: { x: 40, y: 692 },
+    },
     { id: 'assets', type: 'assets', version: 1, params: { items: [] }, bypassed: false, position: { x: 40, y: 43 } },
-    { id: 'writer', type: 'storyboard-writer', version: 1, params: { llmProvider: 'claude-code', llmSettings: { model: 'opus' }, attempt: 0, rewrites: {}, edits: {}, subject: '', about: 'Kimi K2.7 https://kimi.com', durationSeconds: 90, tone: 'expert', language: 'vi', notes: 'không nói giá' }, bypassed: false, position: { x: 470, y: 576 } },
+    {
+      id: 'writer',
+      type: 'storyboard-writer',
+      version: 1,
+      params: {
+        llmProvider: 'claude-code',
+        llmSettings: { model: 'opus' },
+        attempt: 0,
+        rewrites: {},
+        edits: {},
+        subject: '',
+        about: 'Kimi K2.7 https://kimi.com',
+        durationSeconds: 90,
+        tone: 'expert',
+        language: 'vi',
+        notes: 'không nói giá',
+      },
+      bypassed: false,
+      position: { x: 470, y: 576 },
+    },
     { id: 'voice', type: 'tts', version: 1, params: { ttsProvider: 'system-tts', ttsSettings: {}, speed: 1 }, bypassed: false, position: { x: 900, y: 585 } },
   ],
   edges: [
@@ -31,7 +57,7 @@ const saved: Graph = {
 };
 
 describe('a workflow whose Storyboard Writer held its brief', () => {
-  it('opens with a Brief and Research before the writer, wired, and the writer\'s settings where they belong', () => {
+  it("opens with a Brief and Research before the writer, wired, and the writer's settings where they belong", () => {
     const { graph, notes } = migrateGraph(structuredClone(saved));
     const byType = (type: string) => graph.nodes.find((n) => n.type === type)!;
     expect(byType('brief').params).toEqual({ about: 'Kimi K2.7 https://kimi.com', hint: { vi: 'Dán link bài viết', en: 'Paste the article link' } });
@@ -39,10 +65,7 @@ describe('a workflow whose Storyboard Writer held its brief', () => {
     expect(Object.keys(byType('storyboard-writer').params).sort()).toEqual(['attempt', 'durationSeconds', 'edits', 'language', 'llmProvider', 'llmSettings', 'notes', 'rewrites', 'subject', 'tone']);
     expect(byType('storyboard-writer').params).toMatchObject({ durationSeconds: 90, language: 'vi', tone: 'expert', notes: 'không nói giá' });
     const wire = (e: { source: string; sourcePort: string; target: string; targetPort: string }) => `${e.source}.${e.sourcePort} → ${e.target}.${e.targetPort}`;
-    expect(graph.edges.map(wire)).toEqual(expect.arrayContaining([
-      'brief.brief → research.brief', 'brief.brief → writer.brief', 'research.research → writer.research',
-      'brief.brief → assets.brief',
-    ]));
+    expect(graph.edges.map(wire)).toEqual(expect.arrayContaining(['brief.brief → research.brief', 'brief.brief → writer.brief', 'research.research → writer.research', 'brief.brief → assets.brief']));
     expect(graph.edges.some((e) => e.target === 'assets' && e.targetPort === 'research')).toBe(false);
     expect(byType('assets').params).toMatchObject({ llmProvider: 'claude-code', llmSettings: { model: 'opus' } });
     expect(graph.edges.some((e) => e.target === byType('research').id && e.targetPort === 'composition')).toBe(false);
@@ -55,10 +78,17 @@ describe('a workflow whose Storyboard Writer held its brief', () => {
 });
 
 describe('a workflow whose Research read its guide from the composition', () => {
-  it('opens with the guide as Research\'s own settings, and neither the wire nor the file left', () => {
+  it("opens with the guide as Research's own settings, and neither the wire nor the file left", () => {
     const graph: Graph = {
       nodes: [
-        { id: 'composition', type: 'composition', version: 1, params: { files: { 'index.html': '<html></html>', 'research-guide.md': '---\nsearch: web\npictures: 6\n---\n# What to find\n- The number behind the claim.\n' }, media: {} }, bypassed: false, position: { x: 0, y: 0 } },
+        {
+          id: 'composition',
+          type: 'composition',
+          version: 1,
+          params: { files: { 'index.html': '<html></html>', 'research-guide.md': '---\nsearch: web\npictures: 6\n---\n# What to find\n- The number behind the claim.\n' }, media: {} },
+          bypassed: false,
+          position: { x: 0, y: 0 },
+        },
         { id: 'brief', type: 'brief', version: 1, params: { about: 'Kimi K2.7' }, bypassed: false, position: { x: 0, y: 0 } },
         { id: 'research', type: 'research', version: 1, params: { llmProvider: 'claude-code', llmSettings: {} }, bypassed: false, position: { x: 0, y: 0 } },
       ],

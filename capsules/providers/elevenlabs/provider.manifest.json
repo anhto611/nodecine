@@ -1,1 +1,1 @@
-{"id": "elevenlabs", "kind": "tts", "register": "registerElevenlabs", "settings": "elevenlabsSettings", "widgets": "elevenlabsWidgets", "translations": "elevenlabsTranslations"}
+{ "id": "elevenlabs", "kind": "tts", "register": "registerElevenlabs", "settings": "elevenlabsSettings", "widgets": "elevenlabsWidgets", "translations": "elevenlabsTranslations" }

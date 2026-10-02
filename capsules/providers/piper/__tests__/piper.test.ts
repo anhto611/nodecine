@@ -54,7 +54,7 @@ describe('voicesDir', () => {
     expect(voicesDir()).toBe('/tmp/my-voices');
   });
 
-  it('falls back to piper\'s own location', () => {
+  it("falls back to piper's own location", () => {
     delete process.env.NODECINE_PIPER_VOICES;
     expect(voicesDir()).toMatch(/piper-voices$/);
   });

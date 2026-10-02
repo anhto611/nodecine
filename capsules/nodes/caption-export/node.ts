@@ -8,9 +8,13 @@ import { NodeError } from '@/contracts/errors';
 
 const Params = z.object({ format: z.enum(SUBTITLE_FORMATS).default('srt'), fileName: z.string().min(1).max(80).default('nodecine') });
 export const captionExport: NodeDefinition<typeof Params> = {
-  type: 'caption-export', version: 1, kind: 'sink',
-  inputs: [{ name: 'captions', type: 'CaptionTrack' }], outputs: [],
-  paramsSchema: Params, defaultParams: { format: 'srt', fileName: 'nodecine' },
+  type: 'caption-export',
+  version: 1,
+  kind: 'sink',
+  inputs: [{ name: 'captions', type: 'CaptionTrack' }],
+  outputs: [],
+  paramsSchema: Params,
+  defaultParams: { format: 'srt', fileName: 'nodecine' },
   run: async ({ params, inputs, services, log }) => {
     const track = inputs.captions!.payload as CaptionTrack;
     if (!track.cues.length) throw new NodeError(CaptionExportErrorCode.CAPTIONS_EMPTY, 'the caption track has no lines').withFix('run Captions on a timed voice-over');

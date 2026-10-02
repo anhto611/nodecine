@@ -21,15 +21,31 @@ const ImageControl: React.FC<{ value: unknown; onChange: (v: unknown) => void }>
       {url && <img src={url} alt="" style={{ width: 22, height: 22, objectFit: 'cover', borderRadius: 3, flex: 'none' }} />}
       <label className="nc-chip" style={{ cursor: 'pointer' }} title={error ?? undefined}>
         {busy ? '…' : url ? t('node.fillReplace') : t('node.fillChoose')}
-        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden onChange={async (e) => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (!file) return;
-          setBusy(true); setError(null);
-          try { onChange(await uploadImage(file)); } catch (err) { setError(err instanceof Error ? err.message : String(err)); } finally { setBusy(false); }
-        }} />
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+          hidden
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            setBusy(true);
+            setError(null);
+            try {
+              onChange(await uploadImage(file));
+            } catch (err) {
+              setError(err instanceof Error ? err.message : String(err));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
       </label>
-      {url && <button className="nc-chip" onClick={() => onChange(undefined)}>×</button>}
+      {url && (
+        <button className="nc-chip" onClick={() => onChange(undefined)}>
+          ×
+        </button>
+      )}
       {error && <span style={{ color: 'var(--err)', fontSize: 'var(--fs-hint)' }}>{error}</span>}
     </span>
   );
@@ -45,9 +61,13 @@ const ColourControl: React.FC<{ variable: CompositionVariable; value: unknown; o
   return (
     <span className={stopFlow} style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
       <input type="color" value={set ? value : String(variable.default ?? '#000000')} onChange={(e) => onChange(e.target.value)} />
-      {set
-        ? <button className="nc-chip" title={t('node.fillFollowKit')} onClick={() => onChange(undefined)}>×</button>
-        : <span style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>{t('node.fillFromKit')}</span>}
+      {set ? (
+        <button className="nc-chip" title={t('node.fillFollowKit')} onClick={() => onChange(undefined)}>
+          ×
+        </button>
+      ) : (
+        <span style={{ color: 'var(--tx-3)', fontSize: 'var(--fs-hint)' }}>{t('node.fillFromKit')}</span>
+      )}
     </span>
   );
 };
@@ -57,7 +77,9 @@ const Control: React.FC<{ variable: CompositionVariable; value: unknown; onChang
   const options = (variable as { options?: { value: string; label?: string }[] }).options;
   switch (variable.type) {
     case 'number':
-      return <input className={`nc-input ${stopFlow}`} type="number" value={typeof value === 'number' ? value : ''} onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))} />;
+      return (
+        <input className={`nc-input ${stopFlow}`} type="number" value={typeof value === 'number' ? value : ''} onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))} />
+      );
     case 'boolean':
       return <input className={stopFlow} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} />;
     case 'color':
@@ -68,11 +90,22 @@ const Control: React.FC<{ variable: CompositionVariable; value: unknown; onChang
       return (
         <select className={`nc-select ${stopFlow}`} value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value || undefined)}>
           <option value="">—</option>
-          {(options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label ?? o.value}</option>)}
+          {(options ?? []).map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label ?? o.value}
+            </option>
+          ))}
         </select>
       );
     default:
-      return <input className={`nc-input ${stopFlow}`} value={typeof value === 'string' ? value : ''} placeholder={variable.default === undefined ? '' : String(variable.default)} onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)} />;
+      return (
+        <input
+          className={`nc-input ${stopFlow}`}
+          value={typeof value === 'string' ? value : ''}
+          placeholder={variable.default === undefined ? '' : String(variable.default)}
+          onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
+        />
+      );
   }
 };
 
@@ -89,10 +122,20 @@ export const FillBody: React.FC<BodyProps> = ({ nodeId }) => {
   return (
     <>
       {asked.map((v) => (
-        <Kv key={v.id} k={v.label ? labelOf(v as unknown as BlockVariable, locale) : v.id} v={<Control variable={v} value={values[v.id]} onChange={(next) => {
-          const { [v.id]: _old, ...rest } = values;
-          set({ values: next === undefined ? rest : { ...rest, [v.id]: next } });
-        }} />} />
+        <Kv
+          key={v.id}
+          k={v.label ? labelOf(v as unknown as BlockVariable, locale) : v.id}
+          v={
+            <Control
+              variable={v}
+              value={values[v.id]}
+              onChange={(next) => {
+                const { [v.id]: _old, ...rest } = values;
+                set({ values: next === undefined ? rest : { ...rest, [v.id]: next } });
+              }}
+            />
+          }
+        />
       ))}
     </>
   );

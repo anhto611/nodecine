@@ -1,5 +1,5 @@
 ---
-title: "Source: NodeCine README"
+title: 'Source: NodeCine README'
 type: source
 created: 2026-10-02
 updated: 2026-10-02

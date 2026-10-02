@@ -60,9 +60,7 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
         // A block keeps its scene in `<template>`, which the runtime instantiates only for a
         // sub-composition of a host page. Standalone, the scene is the page — so the template comes
         // off, GSAP is loaded the way Assemble loads it, and the values arrive before any script.
-        const page = entry
-          .replace(/<template>([\s\S]*?)<\/template>/i, '$1')
-          .replace(/<head([^>]*)>/i, '<head$1><script src="gsap.min.js"></script>');
+        const page = entry.replace(/<template>([\s\S]*?)<\/template>/i, '$1').replace(/<head([^>]*)>/i, '<head$1><script src="gsap.min.js"></script>');
         const composition: Composition = {
           engine: 'hyperframes',
           width: WIDTH,

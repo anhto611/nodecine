@@ -1,4 +1,4 @@
-import type { DictKey } from "./en";
+import type { DictKey } from './en';
 
 /** UI dictionary — Vietnamese. */
 export const vi: Record<DictKey, string> = {
@@ -77,7 +77,8 @@ export const vi: Record<DictKey, string> = {
   'logs.clear': 'Xóa',
   'logs.search': 'Tìm trong nhật ký…',
   'settings.title': 'Cài đặt',
-  'settings.noKeys': 'Nhà cung cấp cục bộ không cần khóa: Claude Code, Ollama, giọng hệ điều hành, Piper. ElevenLabs và Vbee đọc khóa từ .env.local (ELEVENLABS_API_KEY, VBEE_TOKEN + VBEE_APP_ID); node nhà cung cấp báo khóa có dùng được không. Không nhập khóa vào app.',
+  'settings.noKeys':
+    'Nhà cung cấp cục bộ không cần khóa: Claude Code, Ollama, giọng hệ điều hành, Piper. ElevenLabs và Vbee đọc khóa từ .env.local (ELEVENLABS_API_KEY, VBEE_TOKEN + VBEE_APP_ID); node nhà cung cấp báo khóa có dùng được không. Không nhập khóa vào app.',
   'settings.locale': 'Ngôn ngữ giao diện',
   'settings.claudeBin': 'Tệp thực thi Claude Code',
   'settings.ffmpegBin': 'Tệp thực thi ffmpeg',
@@ -99,7 +100,9 @@ export const vi: Record<DictKey, string> = {
   'node.checkAgain': 'Kiểm tra lại',
   'node.download': 'Tải xuống',
   'node.bypassOff': 'đang bỏ qua · bấm để chạy lại',
-  'node.pin': 'ghim kết quả này vào workflow: mọi lần chạy đều dùng lại, không hỏi mô hình nữa', 'node.unpin': 'bỏ ghim: cho node chạy lại', 'node.bypass': 'bỏ qua',
+  'node.pin': 'ghim kết quả này vào workflow: mọi lần chạy đều dùng lại, không hỏi mô hình nữa',
+  'node.unpin': 'bỏ ghim: cho node chạy lại',
+  'node.bypass': 'bỏ qua',
   'node.scenes': 'cảnh',
   'node.addScene': 'thêm cảnh',
   'node.weight': 'w',

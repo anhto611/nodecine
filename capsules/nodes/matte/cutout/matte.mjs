@@ -21,8 +21,12 @@ import ort from 'onnxruntime-node';
 
 const args = new Map();
 for (let i = 2; i < process.argv.length; i += 2) args.set(process.argv[i].replace(/^--/, ''), process.argv[i + 1]);
-const clip = args.get('clip'), out = args.get('out'), model = args.get('model');
-const W = Number(args.get('width')), H = Number(args.get('height')), fps = Number(args.get('fps')) || 30;
+const clip = args.get('clip'),
+  out = args.get('out'),
+  model = args.get('model');
+const W = Number(args.get('width')),
+  H = Number(args.get('height')),
+  fps = Number(args.get('fps')) || 30;
 const ffmpeg = args.get('ffmpeg') || 'ffmpeg';
 const isNodeScript = ffmpeg.endsWith('.js') || ffmpeg.endsWith('.mjs') || ffmpeg.endsWith('.cjs');
 const ffmpegBin = isNodeScript ? process.execPath : ffmpeg;
@@ -74,51 +78,94 @@ function cutOut(frame) {
     planes[pixels + i] = frame[p + 1] / 255;
     planes[2 * pixels + i] = frame[p + 2] / 255;
   }
-  return session.run({
-    src: new ort.Tensor('float32', planes, [1, 3, H, W]),
-    r1i: state[0], r2i: state[1], r3i: state[2], r4i: state[3],
-    downsample_ratio: ratio,
-  }).then((result) => {
-    state = [result.r1o, result.r2o, result.r3o, result.r4o];
-    const fgr = result.fgr.data, pha = result.pha.data;
-    // Premultiplied, which is what VP9's alpha expects and what keeps edges from fringing.
-    for (let i = 0, p = 0; i < pixels; i++, p += 4) {
-      const a = pha[i];
-      canvas[p] = fgr[i] * a * 255;
-      canvas[p + 1] = fgr[pixels + i] * a * 255;
-      canvas[p + 2] = fgr[2 * pixels + i] * a * 255;
-      canvas[p + 3] = a * 255;
-    }
-    return canvas;
-  });
+  return session
+    .run({
+      src: new ort.Tensor('float32', planes, [1, 3, H, W]),
+      r1i: state[0],
+      r2i: state[1],
+      r3i: state[2],
+      r4i: state[3],
+      downsample_ratio: ratio,
+    })
+    .then((result) => {
+      state = [result.r1o, result.r2o, result.r3o, result.r4o];
+      const fgr = result.fgr.data,
+        pha = result.pha.data;
+      // Premultiplied, which is what VP9's alpha expects and what keeps edges from fringing.
+      for (let i = 0, p = 0; i < pixels; i++, p += 4) {
+        const a = pha[i];
+        canvas[p] = fgr[i] * a * 255;
+        canvas[p + 1] = fgr[pixels + i] * a * 255;
+        canvas[p + 2] = fgr[2 * pixels + i] * a * 255;
+        canvas[p + 3] = a * 255;
+      }
+      return canvas;
+    });
 }
 
-const decode = spawn(ffmpegBin, [...ffmpegPrefix, '-v', 'error', '-i', clip,
-  '-vf', `fps=${fps},scale=${W}:${H},format=rgba`, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-']);
+const decode = spawn(ffmpegBin, [...ffmpegPrefix, '-v', 'error', '-i', clip, '-vf', `fps=${fps},scale=${W}:${H},format=rgba`, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-']);
 // Listen immediately: the decoder can exit while the model is still processing its last frame.
 const decoded = new Promise((done) => {
   decode.once('close', done);
   decode.once('error', () => done(-1));
 });
-const encode = spawn(ffmpegBin, [...ffmpegPrefix, '-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(fps), '-i', '-',
-  '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-auto-alt-ref', '0', '-b:v', '0', '-crf', '34',
+const encode = spawn(ffmpegBin, [
+  ...ffmpegPrefix,
+  '-v',
+  'error',
+  '-f',
+  'rawvideo',
+  '-pix_fmt',
+  'rgba',
+  '-s',
+  `${W}x${H}`,
+  '-r',
+  String(fps),
+  '-i',
+  '-',
+  '-c:v',
+  'libvpx-vp9',
+  '-pix_fmt',
+  'yuva420p',
+  '-auto-alt-ref',
+  '0',
+  '-b:v',
+  '0',
+  '-crf',
+  '34',
   // A keyframe a second. A film seeks into the cut-out at every scene exactly as it does the
   // recording, and a layer that stalls while the one under it does not is worse than both stalling.
-  '-g', String(fps), '-keyint_min', String(fps),
-  '-speed', '8', '-deadline', 'realtime', '-an', out, '-y']);
+  '-g',
+  String(fps),
+  '-keyint_min',
+  String(fps),
+  '-speed',
+  '8',
+  '-deadline',
+  'realtime',
+  '-an',
+  out,
+  '-y',
+]);
 const encoded = new Promise((done) => {
   encode.once('close', done);
   encode.once('error', () => done(-1));
 });
 
 let trouble = '';
-for (const [name, child] of [['decoder', decode], ['encoder', encode]]) {
-  child.stderr.on('data', (d) => { trouble += `${name}: ${d}`; });
+for (const [name, child] of [
+  ['decoder', decode],
+  ['encoder', encode],
+]) {
+  child.stderr.on('data', (d) => {
+    trouble += `${name}: ${d}`;
+  });
 }
-const write = (buffer) => new Promise((done) => {
-  if (encode.stdin.write(buffer)) done();
-  else encode.stdin.once('drain', done);
-});
+const write = (buffer) =>
+  new Promise((done) => {
+    if (encode.stdin.write(buffer)) done();
+    else encode.stdin.once('drain', done);
+  });
 
 let frames = 0;
 const started = Date.now();
@@ -147,5 +194,4 @@ if (decodeCode !== 0 || code !== 0 || !frames || held.length) {
 // throws out of a destructor ("recursive_mutex lock failed") long after the work is finished and
 // printed, which would look from the outside exactly like a cut-out that failed.
 await session.release().catch(() => {});
-process.stdout.write(JSON.stringify({ frames, seconds: (Date.now() - started) / 1000, width: W, height: H }),
-  () => process.exit(0));
+process.stdout.write(JSON.stringify({ frames, seconds: (Date.now() - started) / 1000, width: W, height: H }), () => process.exit(0));

@@ -13,7 +13,9 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
     observe(): void {}
     unobserve(): void {}
     disconnect(): void {}
-    takeRecords(): [] { return []; }
+    takeRecords(): [] {
+      return [];
+    }
     readonly root = null;
     readonly rootMargin = '';
     readonly thresholds = [];

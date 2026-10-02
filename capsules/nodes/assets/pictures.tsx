@@ -16,15 +16,28 @@ export interface Picture {
 }
 
 /** The pixel size of a picture file, read in the browser. */
-const sizeOf = (file: File) => new Promise<{ width?: number; height?: number }>((resolve) => {
-  const url = URL.createObjectURL(file);
-  const img = new Image();
-  img.onload = () => { resolve({ width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(url); };
-  img.onerror = () => { resolve({}); URL.revokeObjectURL(url); };
-  img.src = url;
-});
+const sizeOf = (file: File) =>
+  new Promise<{ width?: number; height?: number }>((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      resolve({});
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
 
-export const hostOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
+export const hostOf = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+};
 
 /**
  * The node's pictures and what a person does to them, shared by the card and the dialog: add files,
@@ -50,7 +63,18 @@ export function usePictures(nodeId: string) {
     for (const file of files) {
       try {
         const [url, size] = await Promise.all([uploadImage(file), sizeOf(file)]);
-        next = [...next, { name: nameFor(file.name, next.map((a) => a.name)), url, note: '', ...size }];
+        next = [
+          ...next,
+          {
+            name: nameFor(
+              file.name,
+              next.map((a) => a.name),
+            ),
+            url,
+            note: '',
+            ...size,
+          },
+        ];
         set({ items: next });
       } catch (e) {
         setError(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
@@ -65,7 +89,10 @@ export function usePictures(nodeId: string) {
     else set({ items: items.map((a, i) => (i === indexOf(picture) ? { ...a, note } : a)) });
   };
   const remove = (picture: Picture) => {
-    if (!picture.found) { set({ items: items.filter((_, i) => i !== indexOf(picture)) }); return; }
+    if (!picture.found) {
+      set({ items: items.filter((_, i) => i !== indexOf(picture)) });
+      return;
+    }
     // A found picture is remembered as removed, so the next search does not bring it back.
     const { [picture.asset.url]: _note, ...notes } = p.notes ?? {};
     set({ removed: [...removed, picture.asset.url], notes });
@@ -78,21 +105,33 @@ export function usePictures(nodeId: string) {
 export const AddPictures: React.FC<{ busy: number; label: string; onFiles: (files: File[]) => void }> = ({ busy, label, onFiles }) => (
   <label className="nc-chip" style={{ cursor: 'pointer' }}>
     {busy ? `… ${busy}` : label}
-    <input type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden onChange={(e) => {
-      const files = Array.from(e.target.files ?? []);
-      e.target.value = '';
-      if (files.length) onFiles(files);
-    }} />
+    <input
+      type="file"
+      multiple
+      accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+      hidden
+      onChange={(e) => {
+        const files = Array.from(e.target.files ?? []);
+        e.target.value = '';
+        if (files.length) onFiles(files);
+      }}
+    />
   </label>
 );
 
 /** A picture as a tile: the whole picture on a dark ground, its name under it. */
 export const PictureTile: React.FC<{ picture: Picture; selected?: boolean; onOpen: () => void; style?: React.CSSProperties }> = ({ picture, selected, onOpen, style }) => (
-  <button className={`nc-chip ${selected ? 'on' : ''}`} onClick={onOpen} title={picture.note || picture.asset.name}
-    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 4, padding: 4, minWidth: 0, textAlign: 'left', whiteSpace: 'normal', ...style }}>
+  <button
+    className={`nc-chip ${selected ? 'on' : ''}`}
+    onClick={onOpen}
+    title={picture.note || picture.asset.name}
+    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 4, padding: 4, minWidth: 0, textAlign: 'left', whiteSpace: 'normal', ...style }}
+  >
     <div style={{ aspectRatio: '3 / 4', background: '#000', borderRadius: 3, overflow: 'hidden' }}>
       <img src={picture.asset.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
     </div>
-    <div className="nc-hint one-line" style={{ marginTop: 0 }}>{picture.asset.name}</div>
+    <div className="nc-hint one-line" style={{ marginTop: 0 }}>
+      {picture.asset.name}
+    </div>
   </button>
 );

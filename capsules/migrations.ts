@@ -54,13 +54,15 @@ function mergeCaptionsIntoTranscribe(graph: Graph, notes: { nodeId?: string; cod
   // unknown type behind, so it goes and its wires go with it. Nothing downstream could run anyway.
   const gone = new Set(captions.map((c) => c.id));
   const chars = (id: string) => (graph.nodes.find((n) => n.id === id)?.params as { maxChars?: unknown } | undefined)?.maxChars;
-  const nodes = graph.nodes.filter((n) => !gone.has(n.id)).map((n) => {
-    const from = [...moved].find(([, host]) => host === n.id)?.[0];
-    if (!from) return n;
-    notes.push({ nodeId: n.id, code: 'NODE_REPLACED', message: '"core/captions" moved onto "transcribe" in 2026-09-12' });
-    const maxChars = chars(from);
-    return { ...n, params: { ...n.params, ...(typeof maxChars === 'number' ? { maxChars } : {}) } };
-  });
+  const nodes = graph.nodes
+    .filter((n) => !gone.has(n.id))
+    .map((n) => {
+      const from = [...moved].find(([, host]) => host === n.id)?.[0];
+      if (!from) return n;
+      notes.push({ nodeId: n.id, code: 'NODE_REPLACED', message: '"core/captions" moved onto "transcribe" in 2026-09-12' });
+      const maxChars = chars(from);
+      return { ...n, params: { ...n.params, ...(typeof maxChars === 'number' ? { maxChars } : {}) } };
+    });
   const edges = graph.edges
     // The wire that fed the captions node is the merge itself; it has nothing left to join.
     .filter((e) => !(gone.has(e.target) && e.targetPort === 'voiceover'))
@@ -87,9 +89,19 @@ function briefAndResearchBeforeTheWriter(graph: Graph, notes: { nodeId?: string;
   const writers = graph.nodes.filter((n) => n.type === 'storyboard-writer' && 'about' in n.params && !graph.edges.some((e) => e.target === n.id && e.targetPort === 'brief'));
   if (!writers.length) return graph;
   const ids = new Set(graph.nodes.map((n) => n.id));
-  const fresh = (base: string) => { let id = base; for (let i = 2; ids.has(id); i++) id = `${base}-${i}`; ids.add(id); return id; };
+  const fresh = (base: string) => {
+    let id = base;
+    for (let i = 2; ids.has(id); i++) id = `${base}-${i}`;
+    ids.add(id);
+    return id;
+  };
   const edgeIds = new Set(graph.edges.map((e) => e.id));
-  const edgeId = () => { let i = graph.edges.length + 1; while (edgeIds.has(`e${i}`)) i++; edgeIds.add(`e${i}`); return `e${i}`; };
+  const edgeId = () => {
+    let i = graph.edges.length + 1;
+    while (edgeIds.has(`e${i}`)) i++;
+    edgeIds.add(`e${i}`);
+    return `e${i}`;
+  };
   let nodes = [...graph.nodes];
   const edges = [...graph.edges];
   for (const writer of writers) {
@@ -110,7 +122,13 @@ function briefAndResearchBeforeTheWriter(graph: Graph, notes: { nodeId?: string;
       ...(n.id === writer.id ? { params: Object.fromEntries(Object.entries(params).filter(([k]) => !(BRIEF_FIELDS as readonly string[]).includes(k))) } : {}),
     }));
     nodes.push(
-      { id: briefId, type: 'brief', params: { ...Object.fromEntries(BRIEF_FIELDS.filter((k) => params[k] !== undefined).map((k) => [k, params[k]])), hint }, bypassed: false, position: { x: left, y: top } },
+      {
+        id: briefId,
+        type: 'brief',
+        params: { ...Object.fromEntries(BRIEF_FIELDS.filter((k) => params[k] !== undefined).map((k) => [k, params[k]])), hint },
+        bypassed: false,
+        position: { x: left, y: top },
+      },
       { id: researchId, type: 'research', params: { llmProvider: params.llmProvider ?? '', llmSettings: params.llmSettings ?? {} }, bypassed: false, position: { x: left + COLUMN, y: top } },
     );
     edges.push(
@@ -120,7 +138,12 @@ function briefAndResearchBeforeTheWriter(graph: Graph, notes: { nodeId?: string;
       // The Assets node the writer reads finds pictures for the same brief.
       ...(assets ? [{ id: edgeId(), source: briefId, sourcePort: 'brief', target: assets.source, targetPort: 'brief' }] : []),
     );
-    if (assets) nodes = nodes.map((n) => (n.id === assets.source && !(n.params as { llmProvider?: string }).llmProvider ? { ...n, params: { ...n.params, llmProvider: params.llmProvider ?? '', llmSettings: params.llmSettings ?? {} } } : n));
+    if (assets)
+      nodes = nodes.map((n) =>
+        n.id === assets.source && !(n.params as { llmProvider?: string }).llmProvider
+          ? { ...n, params: { ...n.params, llmProvider: params.llmProvider ?? '', llmSettings: params.llmSettings ?? {} } }
+          : n,
+      );
     notes.push({ nodeId: writer.id, code: 'NODE_REPLACED', message: 'what the video is about moved from the Storyboard Writer onto a Brief node, and Research now reads its links (2026-09-15)' });
   }
   return { ...graph, nodes, edges };
@@ -174,7 +197,12 @@ function picturesOntoAssets(graph: Graph, notes: { nodeId?: string; code: string
   const counted = graph.nodes.filter((n) => research.has(n.id) && 'pictures' in n.params);
   if (!wires.length && !counted.length) return graph;
   const edgeIds = new Set(graph.edges.map((e) => e.id));
-  const edgeId = () => { let i = graph.edges.length + 1; while (edgeIds.has(`e${i}`)) i++; edgeIds.add(`e${i}`); return `e${i}`; };
+  const edgeId = () => {
+    let i = graph.edges.length + 1;
+    while (edgeIds.has(`e${i}`)) i++;
+    edgeIds.add(`e${i}`);
+    return `e${i}`;
+  };
   const edges = graph.edges.filter((e) => !wires.includes(e));
   const patches = new Map<string, Record<string, unknown>>();
   for (const wire of wires) {
@@ -270,9 +298,7 @@ export function registerDocMigrations(): void {
         if (!moved) return n;
         // The vendor moved into `providerId`, and what used to be loose parameters became `settings`.
         const { defaultVoice, rate, model } = n.params as Record<string, unknown>;
-        const settings = moved.providerId === 'claude-code'
-          ? (model !== undefined ? { model } : {})
-          : { rate: typeof rate === 'number' ? rate : 1 };
+        const settings = moved.providerId === 'claude-code' ? (model !== undefined ? { model } : {}) : { rate: typeof rate === 'number' ? rate : 1 };
         return { ...n, type: moved.type, params: { providerId: moved.providerId, settings, ...(defaultVoice !== undefined ? { defaultVoice } : {}) } };
       }),
     },

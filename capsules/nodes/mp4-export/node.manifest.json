@@ -1,1 +1,10 @@
-{"id": "mp4-export", "definition": "mp4Export", "body": "ExportBody", "icon": "down", "group": "output", "translations": "mp4ExportTranslations", "features": ["history-file-export"], "errors": "Mp4ExportErrorCode"}
+{
+  "id": "mp4-export",
+  "definition": "mp4Export",
+  "body": "ExportBody",
+  "icon": "down",
+  "group": "output",
+  "translations": "mp4ExportTranslations",
+  "features": ["history-file-export"],
+  "errors": "Mp4ExportErrorCode"
+}

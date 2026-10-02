@@ -27,7 +27,10 @@ const source: NodeDefinition<typeof Params> = {
   outputs: [{ name: 'out', type: TEXT }],
   paramsSchema: Params,
   defaultParams: { value: '' },
-  run: async ({ params }) => { ran++; return { out: { value: params.value } }; },
+  run: async ({ params }) => {
+    ran++;
+    return { out: { value: params.value } };
+  },
 };
 const NoParams = z.object({});
 let downstream = 0;
@@ -39,7 +42,10 @@ const sink: NodeDefinition<typeof NoParams> = {
   outputs: [{ name: 'out', type: TEXT }],
   paramsSchema: NoParams,
   defaultParams: {},
-  run: async ({ inputs }) => { downstream++; return { out: inputs.in!.payload }; },
+  run: async ({ inputs }) => {
+    downstream++;
+    return { out: inputs.in!.payload };
+  },
 };
 
 const graph = (): Graph => ({

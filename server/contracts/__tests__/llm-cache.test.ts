@@ -42,7 +42,7 @@ afterAll(() => {
 });
 
 const Answer = z.object({ model: z.string() });
-const refFor = (model: string) => ({ providerId: 'test-echo', settings: { model } } as unknown as LLMRef);
+const refFor = (model: string) => ({ providerId: 'test-echo', settings: { model } }) as unknown as LLMRef;
 
 describe('the model-answer cache', () => {
   it('asks once for the same prompt, and asks again when the provider is set up differently', async () => {

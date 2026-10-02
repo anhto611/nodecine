@@ -24,14 +24,25 @@ export const ProviderPick: React.FC<{ nodeId: string; kind: 'llm' | 'tts'; optio
   }, [current, options, set, field, settingsField, optional]);
 
   return (
-    <Kv k={t(kind === 'llm' ? 'node.llmProvider' : 'node.ttsProvider')} v={
-      <select className={`nc-select ${stopFlow}`} value={current} onChange={(e) => {
-        const next = options.find((o) => o.id === e.target.value);
-        set({ [field]: e.target.value, [settingsField]: { ...(next?.defaultSettings ?? {}) } });
-      }}>
-        {(optional || !current) && <option value="">—</option>}
-        {options.map((o) => <option key={o.id} value={o.id}>{t(o.nameKey)}</option>)}
-      </select>
-    } />
+    <Kv
+      k={t(kind === 'llm' ? 'node.llmProvider' : 'node.ttsProvider')}
+      v={
+        <select
+          className={`nc-select ${stopFlow}`}
+          value={current}
+          onChange={(e) => {
+            const next = options.find((o) => o.id === e.target.value);
+            set({ [field]: e.target.value, [settingsField]: { ...(next?.defaultSettings ?? {}) } });
+          }}
+        >
+          {(optional || !current) && <option value="">—</option>}
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {t(o.nameKey)}
+            </option>
+          ))}
+        </select>
+      }
+    />
   );
 };

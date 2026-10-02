@@ -5,10 +5,20 @@ import type { Storyboard } from '@/contracts/types/storyboard';
 import type { Voiceover } from '@/contracts/types/payloads';
 
 const kit: Composition = {
-  engine: 'hyperframes', width: 1080, height: 1920, fps: 30, media: {}, variables: [], values: {},
+  engine: 'hyperframes',
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  media: {},
+  variables: [],
+  values: {},
   files: {
     'index.html': `<html><body><div id="root" data-composition-id="shell">\n  ${FRAMES_MARKER}\n</div></body></html>`,
-    'assemble.json': JSON.stringify({ slots: { top: [60, 200, 960, 400], full: [0, 0, 1080, 1920] }, overlays: [{ component: 'captions', box: [40, 1400, 1000, 160], span: 'spoken' }], transition: 0.4 }),
+    'assemble.json': JSON.stringify({
+      slots: { top: [60, 200, 960, 400], full: [0, 0, 1080, 1920] },
+      overlays: [{ component: 'captions', box: [40, 1400, 1000, 160], span: 'spoken' }],
+      transition: 0.4,
+    }),
     'compositions/components/card.html': '<template><div data-composition-id="card"></div></template>',
     'compositions/components/chips.html': '<template><div data-composition-id="chips"></div></template>',
     'compositions/components/captions.html': '<template><div data-composition-id="captions"></div></template>',
@@ -20,19 +30,41 @@ const storyboard: Storyboard = {
   layers: [],
   frames: [
     { number: 1, title: 'Tin mới', voiceover: 'Kimi vừa ra mắt HighSpeed.', mounts: [{ component: 'card', box: 'top', values: { line1: 'Kimi' } }], values: {}, extra: {} },
-    { number: 2, title: 'Ai dùng được', voiceover: 'Mở cho Beta, API và Business.', transitionIn: 'crossfade', mounts: [
-      { component: 'chips', box: 'top', values: { cues: '@Beta,@API,@Business' }, at: '@Beta' },
-    ], values: {}, extra: {} },
+    {
+      number: 2,
+      title: 'Ai dùng được',
+      voiceover: 'Mở cho Beta, API và Business.',
+      transitionIn: 'crossfade',
+      mounts: [{ component: 'chips', box: 'top', values: { cues: '@Beta,@API,@Business' }, at: '@Beta' }],
+      values: {},
+      extra: {},
+    },
     { number: 3, title: 'Kết', durationSeconds: 3, mounts: [{ component: 'card', box: 'full', values: {} }], values: {}, extra: {} },
   ],
 };
 
 const voice: Voiceover = {
-  audioUrl: '/api/media/0123456789abcdef.mp3', durationSeconds: 5, voiceName: 'Linh', language: 'vi', speed: 1,
-  segments: [{ start: 0, durationSeconds: 2 }, { start: 2, durationSeconds: 3 }],
+  audioUrl: '/api/media/0123456789abcdef.mp3',
+  durationSeconds: 5,
+  voiceName: 'Linh',
+  language: 'vi',
+  speed: 1,
+  segments: [
+    { start: 0, durationSeconds: 2 },
+    { start: 2, durationSeconds: 3 },
+  ],
   words: [
-    { text: 'Kimi', start: 0.1, end: 0.4 }, { text: 'vừa', start: 0.4, end: 0.6 }, { text: 'ra', start: 0.6, end: 0.8 }, { text: 'mắt', start: 0.8, end: 1 }, { text: 'HighSpeed.', start: 1, end: 1.6 },
-    { text: 'Mở', start: 2.1, end: 2.3 }, { text: 'cho', start: 2.3, end: 2.5 }, { text: 'Beta,', start: 2.6, end: 3 }, { text: 'API', start: 3.2, end: 3.5 }, { text: 'và', start: 3.5, end: 3.7 }, { text: 'Business.', start: 3.9, end: 4.5 },
+    { text: 'Kimi', start: 0.1, end: 0.4 },
+    { text: 'vừa', start: 0.4, end: 0.6 },
+    { text: 'ra', start: 0.6, end: 0.8 },
+    { text: 'mắt', start: 0.8, end: 1 },
+    { text: 'HighSpeed.', start: 1, end: 1.6 },
+    { text: 'Mở', start: 2.1, end: 2.3 },
+    { text: 'cho', start: 2.3, end: 2.5 },
+    { text: 'Beta,', start: 2.6, end: 3 },
+    { text: 'API', start: 3.2, end: 3.5 },
+    { text: 'và', start: 3.5, end: 3.7 },
+    { text: 'Business.', start: 3.9, end: 4.5 },
   ],
 };
 
@@ -41,22 +73,28 @@ describe('assembling scenes', () => {
     const { frames, problems, composition } = assemble(kit, storyboard, voice);
     expect(problems).toEqual([]);
     // Frame 2 fades in over frame 1's last 0.4s, so it starts early and runs that much longer.
-    expect(frames.map((f) => [f.start, f.duration])).toEqual([[0, 2], [1.6, 3.4], [5, 3]]);
+    expect(frames.map((f) => [f.start, f.duration])).toEqual([
+      [0, 2],
+      [1.6, 3.4],
+      [5, 3],
+    ]);
     expect(composition.values.videoSeconds).toBe(8);
     expect(Object.keys(composition.files).filter((f) => f.startsWith('compositions/frames/'))).toEqual([
-      'compositions/frames/01-tin-moi.html', 'compositions/frames/02-ai-dung-duoc.html', 'compositions/frames/03-ket.html',
+      'compositions/frames/01-tin-moi.html',
+      'compositions/frames/02-ai-dung-duoc.html',
+      'compositions/frames/03-ket.html',
     ]);
   });
 
-  it('puts each part on its word, and turns @word values into seconds from the part\'s start', () => {
+  it("puts each part on its word, and turns @word values into seconds from the part's start", () => {
     const frame2 = assemble(kit, storyboard, voice).composition.files['compositions/frames/02-ai-dung-duoc.html']!;
     // "Beta," is said 0.6s into the frame's narration, which starts 0.4s into the frame's clip.
     expect(frame2).toContain('data-start="1" data-duration="2.4"');
     expect(frame2).toContain('"cues":"0,0.6,1.3"');
-    expect(frame2).toContain("tl.fromTo(root, { opacity: 0 }");
+    expect(frame2).toContain('tl.fromTo(root, { opacity: 0 }');
   });
 
-  it('plays frames spoken back to back from one stretch of the voice, and lays the words on the film\'s clock', () => {
+  it("plays frames spoken back to back from one stretch of the voice, and lays the words on the film's clock", () => {
     const { composition } = assemble(kit, storyboard, voice);
     const index = composition.files['index.html']!;
     // Never cut between two spoken frames: a cut right before a frame's first word played it twice.
@@ -66,8 +104,6 @@ describe('assembling scenes', () => {
     const timeline = JSON.parse(composition.files[TIMELINE_FILE]!);
     expect(timeline.words.find((w: { text: string }) => w.text === 'API').start).toBe(3.2);
   });
-
-
 
   it('cuts the voice only where a silent frame sits between spoken ones', () => {
     const withPause: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { number: 9, title: 'Nghỉ', durationSeconds: 1.5, mounts: [], values: {}, extra: {} }, storyboard.frames[1]!] };
@@ -95,8 +131,19 @@ describe('assembling scenes', () => {
 <body><template><div id="root" data-composition-id="hook-question" data-width="1080" data-height="1920"></div></template></body></html>`;
   const withBlock: Composition = { ...kit, files: { ...kit.files, 'compositions/hook-question.html': block } };
 
-  it('plays the block a frame names for the whole frame, with the frame\'s values and its words as seconds', () => {
-    const played: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right', effects: [{ type: 'pill', at: '@Business.' }], cues: '@Beta' } }] };
+  it("plays the block a frame names for the whole frame, with the frame's values and its words as seconds", () => {
+    const played: Storyboard = {
+      ...storyboard,
+      frames: [
+        storyboard.frames[0]!,
+        {
+          ...storyboard.frames[1]!,
+          mounts: [],
+          block: 'hook-question',
+          values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right', effects: [{ type: 'pill', at: '@Business.' }], cues: '@Beta' },
+        },
+      ],
+    };
     const { composition, frames, problems } = assemble(withBlock, played, voice);
     expect(problems).toEqual([]);
     expect(frames[1]!.block).toBe('hook-question');
@@ -108,26 +155,37 @@ describe('assembling scenes', () => {
   });
 
   it('writes the film its own account: each scene when it plays and with the values its block got', () => {
-    const played: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right', cues: '@Beta' } }] };
+    const played: Storyboard = {
+      ...storyboard,
+      frames: [storyboard.frames[0]!, { ...storyboard.frames[1]!, mounts: [], block: 'hook-question', values: { question: 'Ai dùng được?', pop_at: '@API', side: 'right', cues: '@Beta' } }],
+    };
     const { composition, frames } = assemble(withBlock, played, voice);
     const timeline = JSON.parse(composition.files[TIMELINE_FILE]!) as {
       durationSeconds: number;
       frames: { number: number; block?: string; start: number; duration: number; values: Record<string, unknown> }[];
     };
     expect(timeline.durationSeconds).toBe(composition.values.videoSeconds);
-    expect(timeline.frames.map((f) => [f.number, f.block, f.start, f.duration]))
-      .toEqual(frames.map((f) => [f.number, f.block, f.start, f.duration]));
+    expect(timeline.frames.map((f) => [f.number, f.block, f.start, f.duration])).toEqual(frames.map((f) => [f.number, f.block, f.start, f.duration]));
     // A part that runs across the film reads what the scene plays, its @words already in seconds.
     const second = timeline.frames.find((f) => f.number === 2)!;
     expect(second.values).toEqual({ question: 'Ai dùng được?', pop_at: 1.6, side: 'right', cues: '1', seconds: 3.4 });
     // A frame that plays no block still says when it is on screen.
     expect(timeline.frames.find((f) => f.number === 1)!.values).toEqual({});
     // A frame opened by a soft transition is on screen before its narration starts, and says by how much.
-    expect(timeline.frames.map((f) => [f.number, (f as { spokenFrom?: number }).spokenFrom])).toEqual([[1, 0], [2, 0.4]]);
+    expect(timeline.frames.map((f) => [f.number, (f as { spokenFrom?: number }).spokenFrom])).toEqual([
+      [1, 0],
+      [2, 0.4],
+    ]);
   });
 
-  it('holds a block\'s values to what the block declares, the way HyperFrames does', () => {
-    const played: Storyboard = { ...storyboard, frames: [{ ...storyboard.frames[0]!, mounts: [], block: 'hook-question', values: { side: 'up', colour: 'red', question: 'Một câu hỏi dài quá khung' } }, { ...storyboard.frames[2]!, mounts: [], block: 'outro' }] };
+  it("holds a block's values to what the block declares, the way HyperFrames does", () => {
+    const played: Storyboard = {
+      ...storyboard,
+      frames: [
+        { ...storyboard.frames[0]!, mounts: [], block: 'hook-question', values: { side: 'up', colour: 'red', question: 'Một câu hỏi dài quá khung' } },
+        { ...storyboard.frames[2]!, mounts: [], block: 'outro' },
+      ],
+    };
     const { problems } = assemble(withBlock, played, { ...voice, segments: [voice.segments![0]!] });
     expect(problems.some((p) => p.startsWith('frame 1, hook-question:') && p.includes('side'))).toBe(true);
     expect(problems.some((p) => p.startsWith('frame 1, hook-question:') && p.includes('colour'))).toBe(true);
@@ -135,9 +193,15 @@ describe('assembling scenes', () => {
     expect(problems).toContain('frame 3, outro: the composition has no block outro');
   });
 
-  it('puts the Assets node\'s pictures under assets/, and refuses a value naming one that is not there', () => {
+  it("puts the Assets node's pictures under assets/, and refuses a value naming one that is not there", () => {
     const pictures = { items: [{ name: 'calendar', url: '/api/assets/' + 'a'.repeat(40) + '.png', note: '' }] };
-    const played = (screen: string): Storyboard => ({ ...storyboard, frames: [{ ...storyboard.frames[0]!, mounts: [], block: 'hook-question', values: { question: 'Lịch?', effects: [{ type: 'pill' }], side: 'left' } }, { ...storyboard.frames[2]!, mounts: [{ component: 'card', box: 'full', values: { image: screen } }] }] });
+    const played = (screen: string): Storyboard => ({
+      ...storyboard,
+      frames: [
+        { ...storyboard.frames[0]!, mounts: [], block: 'hook-question', values: { question: 'Lịch?', effects: [{ type: 'pill' }], side: 'left' } },
+        { ...storyboard.frames[2]!, mounts: [{ component: 'card', box: 'full', values: { image: screen } }] },
+      ],
+    });
     const ok = assemble(withBlock, played('assets/calendar.png'), { ...voice, segments: [voice.segments![0]!] }, pictures);
     expect(ok.problems).toEqual([]);
     expect(ok.composition.media['assets/calendar.png']).toBe(pictures.items[0]!.url);

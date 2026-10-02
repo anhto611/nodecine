@@ -10,7 +10,11 @@ describe('matte decoder completion', () => {
     try {
       // Exercise the actual subprocess pipeline without downloading the matting model.
       const source = readFileSync(path.resolve('capsules/nodes/matte/cutout/matte.mjs'), 'utf8');
-      writeFileSync(path.join(dir, 'matte.mjs'), source.replace("import ort from 'onnxruntime-node';", `
+      writeFileSync(
+        path.join(dir, 'matte.mjs'),
+        source.replace(
+          "import ort from 'onnxruntime-node';",
+          `
         const ort = {
           Tensor: class { constructor(type, data) { this.data = data; } },
           InferenceSession: { create: async () => ({
@@ -19,19 +23,25 @@ describe('matte decoder completion', () => {
             release: async () => {},
           }) },
         };
-      `));
+      `,
+        ),
+      );
       const ffmpeg = path.join(dir, 'ffmpeg.mjs');
-      writeFileSync(ffmpeg, `
+      writeFileSync(
+        ffmpeg,
+        `
         if (process.argv.includes('-vf')) {
           process.stdout.write(Buffer.alloc(16), () => process.exit(${exitCode}));
         } else {
           process.stdin.resume();
           process.stdin.on('end', () => process.exit(0));
         }
-      `);
-      const result = spawnSync(process.execPath, [path.join(dir, 'matte.mjs'),
-        '--clip', 'clip', '--out', 'out.webm', '--model', 'model',
-        '--width', '2', '--height', '2', '--ffmpeg', ffmpeg], { encoding: 'utf8', timeout: 10_000 });
+      `,
+      );
+      const result = spawnSync(process.execPath, [path.join(dir, 'matte.mjs'), '--clip', 'clip', '--out', 'out.webm', '--model', 'model', '--width', '2', '--height', '2', '--ffmpeg', ffmpeg], {
+        encoding: 'utf8',
+        timeout: 10_000,
+      });
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(exitCode);
       if (exitCode) {

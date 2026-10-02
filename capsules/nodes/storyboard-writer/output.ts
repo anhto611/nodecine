@@ -59,10 +59,18 @@ export type WrittenStoryboard = z.infer<typeof WrittenStoryboardSchema>;
 export function unwrapJson(written: WrittenStoryboard): WrittenStoryboard {
   const unwrap = (value: unknown): unknown => {
     if (typeof value !== 'string' || !/^\s*[[{]/.test(value)) return value;
-    try { return JSON.parse(value); } catch { return value; }
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
   };
   const each = (values: Record<string, unknown>) => Object.fromEntries(Object.entries(values).map(([k, v]) => [k, unwrap(v)]));
-  return { ...written, frames: written.frames.map((f) => ({ ...f, values: each(f.values), mounts: (f.mounts ?? []).map((m) => ({ ...m, values: each(m.values) })) })), layers: (written.layers ?? []).map((l) => ({ ...l, values: each(l.values) })) };
+  return {
+    ...written,
+    frames: written.frames.map((f) => ({ ...f, values: each(f.values), mounts: (f.mounts ?? []).map((m) => ({ ...m, values: each(m.values) })) })),
+    layers: (written.layers ?? []).map((l) => ({ ...l, values: each(l.values) })),
+  };
 }
 
 /**
@@ -73,7 +81,8 @@ export function renameEverywhere(written: WrittenStoryboard, from: string, to: s
   if (!from.trim() || from === to) return written;
   const pattern = new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
   // A moment still said after the rename stays; one on a word of the old name moves to the matching word of the new one.
-  const oldWords = from.trim().split(/\s+/), newWords = to.trim().split(/\s+/);
+  const oldWords = from.trim().split(/\s+/),
+    newWords = to.trim().split(/\s+/);
   const cue = (part: string, narration: string) => {
     const word = part.trim().replace(/^@/, '');
     if (!word || cueSaid(part.trim(), narration)) return part;
@@ -82,7 +91,11 @@ export function renameEverywhere(written: WrittenStoryboard, from: string, to: s
     return at < 0 ? part : `@${newWords[Math.min(at, newWords.length - 1)]}`;
   };
   const swap = (value: unknown, narration: string): unknown => {
-    if (typeof value === 'string' && value.trim().startsWith('@')) return value.split(',').map((part) => cue(part, narration)).join(',');
+    if (typeof value === 'string' && value.trim().startsWith('@'))
+      return value
+        .split(',')
+        .map((part) => cue(part, narration))
+        .join(',');
     if (typeof value === 'string') return value.replace(pattern, to);
     if (Array.isArray(value)) return value.map((v) => swap(v, narration));
     if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, swap(v, narration)]));
@@ -94,10 +107,19 @@ export function renameEverywhere(written: WrittenStoryboard, from: string, to: s
     message: written.message.replace(pattern, to),
     frames: written.frames.map((f) => {
       const voiceover = f.voiceover === null ? null : f.voiceover.replace(pattern, to);
-      return { ...f, title: f.title.replace(pattern, to), voiceover, values: swap(f.values, voiceover ?? '') as Record<string, unknown>, mounts: (f.mounts ?? []).map((m) => ({ ...m, values: swap(m.values, voiceover ?? '') as Record<string, unknown> })) };
+      return {
+        ...f,
+        title: f.title.replace(pattern, to),
+        voiceover,
+        values: swap(f.values, voiceover ?? '') as Record<string, unknown>,
+        mounts: (f.mounts ?? []).map((m) => ({ ...m, values: swap(m.values, voiceover ?? '') as Record<string, unknown> })),
+      };
     }),
     layers: (written.layers ?? []).map((l) => {
-      const narration = written.frames.slice(l.from_frame - 1, l.to_frame).map((f) => (f.voiceover ?? '').replace(pattern, to)).join(' ');
+      const narration = written.frames
+        .slice(l.from_frame - 1, l.to_frame)
+        .map((f) => (f.voiceover ?? '').replace(pattern, to))
+        .join(' ');
       return { ...l, title: l.title.replace(pattern, to), values: swap(l.values, narration) as Record<string, unknown> };
     }),
   };
@@ -142,31 +164,58 @@ const line = (text: string) => text.replace(/\s+/g, ' ').trim();
 /** HyperFrames' STORYBOARD.md for a written storyboard. */
 export function toMarkdown(written: WrittenStoryboard, globals: { format: string }): string {
   const head = ['---', `format: ${globals.format}`, ...(written.subject ? [`subject: ${line(written.subject)}`] : []), ...(written.message ? [`message: ${line(written.message)}`] : []), '---', ''];
-  const frames = written.frames.map((frame, i) => [
-    `## Frame ${i + 1} — ${line(frame.title)}`,
-    ...(frame.voiceover?.trim() ? [`- voiceover: ${quoted(frame.voiceover)}`] : []),
-    ...(!frame.voiceover?.trim() && frame.duration_seconds ? [`- duration: ${frame.duration_seconds}s`] : []),
-    `- transition_in: ${frame.transition_in}`,
-    `- block: ${frame.block}`,
-    '',
-    '```json',
-    JSON.stringify(frame.values, null, 2),
-    '```',
-    '',
-    // The components over the block: a second json block, in the storyboard's own mount shape.
-    ...((frame.mounts ?? []).length ? ['```json', JSON.stringify((frame.mounts ?? []).map((m) => ({ component: m.component, box: m.slot, ...(m.at?.trim() ? { at: m.at.trim() } : {}), ...(m.until?.trim() ? { until: m.until.trim() } : {}), values: m.values })), null, 2), '```', ''] : []),
-  ].join('\n'));
-  const layers = (written.layers ?? []).length ? ['## Layers', '', ...(written.layers ?? []).map((layer, i) => [
-    `### Layer ${i + 1} — ${line(layer.title)}`,
-    `- block: ${layer.block}`,
-    `- frames: ${layer.from_frame}-${layer.to_frame}`,
-    ...(layer.start?.trim() ? [`- start: ${line(layer.start)}`] : []),
-    ...(layer.end?.trim() ? [`- end: ${line(layer.end)}`] : []),
-    '',
-    '```json',
-    JSON.stringify(layer.values, null, 2),
-    '```',
-    '',
-  ].join('\n'))] : [];
+  const frames = written.frames.map((frame, i) =>
+    [
+      `## Frame ${i + 1} — ${line(frame.title)}`,
+      ...(frame.voiceover?.trim() ? [`- voiceover: ${quoted(frame.voiceover)}`] : []),
+      ...(!frame.voiceover?.trim() && frame.duration_seconds ? [`- duration: ${frame.duration_seconds}s`] : []),
+      `- transition_in: ${frame.transition_in}`,
+      `- block: ${frame.block}`,
+      '',
+      '```json',
+      JSON.stringify(frame.values, null, 2),
+      '```',
+      '',
+      // The components over the block: a second json block, in the storyboard's own mount shape.
+      ...((frame.mounts ?? []).length
+        ? [
+            '```json',
+            JSON.stringify(
+              (frame.mounts ?? []).map((m) => ({
+                component: m.component,
+                box: m.slot,
+                ...(m.at?.trim() ? { at: m.at.trim() } : {}),
+                ...(m.until?.trim() ? { until: m.until.trim() } : {}),
+                values: m.values,
+              })),
+              null,
+              2,
+            ),
+            '```',
+            '',
+          ]
+        : []),
+    ].join('\n'),
+  );
+  const layers = (written.layers ?? []).length
+    ? [
+        '## Layers',
+        '',
+        ...(written.layers ?? []).map((layer, i) =>
+          [
+            `### Layer ${i + 1} — ${line(layer.title)}`,
+            `- block: ${layer.block}`,
+            `- frames: ${layer.from_frame}-${layer.to_frame}`,
+            ...(layer.start?.trim() ? [`- start: ${line(layer.start)}`] : []),
+            ...(layer.end?.trim() ? [`- end: ${line(layer.end)}`] : []),
+            '',
+            '```json',
+            JSON.stringify(layer.values, null, 2),
+            '```',
+            '',
+          ].join('\n'),
+        ),
+      ]
+    : [];
   return [...head, ...frames, ...layers].join('\n');
 }

@@ -26,7 +26,7 @@ export interface StoryboardGuide {
   body: string;
 }
 
-const asRole = (value: string | undefined): BlockRole | undefined => ((BLOCK_ROLES as readonly string[]).includes(value ?? '') ? value as BlockRole : undefined);
+const asRole = (value: string | undefined): BlockRole | undefined => ((BLOCK_ROLES as readonly string[]).includes(value ?? '') ? (value as BlockRole) : undefined);
 
 export function readGuide(text: string | undefined): StoryboardGuide {
   const source = text ?? '';
@@ -39,4 +39,3 @@ export function readGuide(text: string | undefined): StoryboardGuide {
   const repeat = Number(fields.repeat);
   return { first: asRole(fields.first), last: asRole(fields.last), repeat: Number.isInteger(repeat) && repeat >= 1 ? repeat : undefined, body: header ? source.slice(header[0].length) : source };
 }
-

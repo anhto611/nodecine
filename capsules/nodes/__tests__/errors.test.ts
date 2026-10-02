@@ -20,7 +20,7 @@ describe('error codes a capsule owns', () => {
     for (const [nodeId, codes] of Object.entries(NODE_ERROR_CODES)) {
       for (const code of codes) {
         for (const [locale, dict] of Object.entries(LOCALES)) {
-          if (!(`error.${code}` as string in dict)) missing.push(`${nodeId} · ${locale} · error.${code}`);
+          if (!((`error.${code}` as string) in dict)) missing.push(`${nodeId} · ${locale} · error.${code}`);
         }
       }
     }
@@ -49,7 +49,7 @@ describe('the core error table', () => {
     const missing: string[] = [];
     for (const code of Object.values(ErrorCode)) {
       for (const [locale, dict] of Object.entries(LOCALES)) {
-        if (!(`error.${code}` as string in dict)) missing.push(`${locale} · error.${code}`);
+        if (!((`error.${code}` as string) in dict)) missing.push(`${locale} · error.${code}`);
       }
     }
     expect(missing).toEqual([]);

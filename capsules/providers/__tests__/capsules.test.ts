@@ -41,7 +41,10 @@ describe('the providers this build ships', () => {
     for (const p of PROVIDERS) {
       expect(p.fields, `${p.id}`).toEqual(schemaFields(p.settingsSchema));
       for (const name of Object.keys(p.widgets)) {
-        expect(p.fields.some((f) => f.name === name), `${p.id} styles a field "${name}" its schema does not have`).toBe(true);
+        expect(
+          p.fields.some((f) => f.name === name),
+          `${p.id} styles a field "${name}" its schema does not have`,
+        ).toBe(true);
       }
     }
   });

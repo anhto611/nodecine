@@ -42,7 +42,16 @@ describe('layoutGraph', () => {
   });
 
   it('copes with nodes that have no wires and no measured size', () => {
-    const pos = layoutGraph({ nodes: [{ id: 'a', type: 'tts', params: {}, bypassed: false, position: { x: 0, y: 0 } }, { id: 'b', type: 'tts', params: {}, bypassed: false, position: { x: 0, y: 0 } }], edges: [] }, {});
+    const pos = layoutGraph(
+      {
+        nodes: [
+          { id: 'a', type: 'tts', params: {}, bypassed: false, position: { x: 0, y: 0 } },
+          { id: 'b', type: 'tts', params: {}, bypassed: false, position: { x: 0, y: 0 } },
+        ],
+        edges: [],
+      },
+      {},
+    );
     expect(pos.a!.y).not.toBe(pos.b!.y);
   });
 });

@@ -18,8 +18,12 @@ export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
     return (
       <>
         <Kv k={p.quality} v={rt.progress?.message ?? '…'} />
-        <div className="nc-bar"><div style={{ width: `${Math.round((rt.progress?.fraction ?? 0) * 100)}%` }} /></div>
-        <Btn small danger className={stopFlow} onClick={cancel} style={{ alignSelf: 'flex-end', marginTop: 4 }}>{t('node.cancel')}</Btn>
+        <div className="nc-bar">
+          <div style={{ width: `${Math.round((rt.progress?.fraction ?? 0) * 100)}%` }} />
+        </div>
+        <Btn small danger className={stopFlow} onClick={cancel} style={{ alignSelf: 'flex-end', marginTop: 4 }}>
+          {t('node.cancel')}
+        </Btn>
       </>
     );
   }
@@ -33,7 +37,15 @@ export const ExportBody: React.FC<BodyProps> = ({ nodeId }) => {
         </a>
       )}
       <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-        <Btn small primary className={stopFlow} disabled={!canRender} onClick={() => void runNode(nodeId)} style={{ flex: 1, justifyContent: 'center' }} title={!composition ? t('node.waiting', { port: t('port.composition') }) : undefined}>
+        <Btn
+          small
+          primary
+          className={stopFlow}
+          disabled={!canRender}
+          onClick={() => void runNode(nodeId)}
+          style={{ flex: 1, justifyContent: 'center' }}
+          title={!composition ? t('node.waiting', { port: t('port.composition') }) : undefined}
+        >
           <Icon.play size={9} /> {t('node.render')}
         </Btn>
       </div>

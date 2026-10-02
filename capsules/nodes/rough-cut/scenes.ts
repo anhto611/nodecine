@@ -56,7 +56,11 @@ export function cutIntoScenes(words: Word[], durationSeconds: number, settings: 
     scenes.push({
       start: round(from),
       durationSeconds: round(Math.max(0.4, to - from)),
-      said: mine.map((w) => w.text).join(' ').replace(/\s+/g, ' ').trim(),
+      said: mine
+        .map((w) => w.text)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
       words: mine,
     });
     from = to;

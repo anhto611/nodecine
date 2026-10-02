@@ -1,1 +1,13 @@
-{"id": "composition", "definition": "composition", "body": "CompositionBody", "overlay": "PartsDialog", "icon": "layers", "group": "visual", "layout": "wide", "translations": "compositionTranslations", "services": "compositionServices", "actions": "compositionActions", "errors": "CompositionErrorCode"}
+{
+  "id": "composition",
+  "definition": "composition",
+  "body": "CompositionBody",
+  "overlay": "PartsDialog",
+  "icon": "layers",
+  "group": "visual",
+  "layout": "wide",
+  "translations": "compositionTranslations",
+  "services": "compositionServices",
+  "actions": "compositionActions",
+  "errors": "CompositionErrorCode"
+}

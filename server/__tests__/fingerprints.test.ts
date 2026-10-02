@@ -28,7 +28,7 @@ beforeEach(async () => {
   await write(path.join(capsule, 'node.ts'), "import { helper } from '../../shared/helper';\nimport { z } from 'zod';\nexport const node = helper(z);\n");
   await write(path.join(capsule, 'script.py'), 'print("align")\n');
   await write(path.join(capsule, 'body.tsx'), 'export const Body = () => null;\n');
-  await write(path.join(capsule, 'locales.ts'), "export const t = { en: {} };\n");
+  await write(path.join(capsule, 'locales.ts'), 'export const t = { en: {} };\n');
   await write(path.join(capsule, '__tests__', 'node.test.ts'), "it('x', () => {});\n");
   await write(path.join(shared, 'helper.ts'), 'export const helper = (x: unknown) => x;\n');
 });
@@ -36,7 +36,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe('a node\'s code fingerprint', () => {
+describe("a node's code fingerprint", () => {
   it('changes when a file the node imports changes, however far away', async () => {
     const before = fingerprintOfFolder(capsule);
     await write(path.join(shared, 'helper.ts'), 'export const helper = (x: unknown) => [x];\n');
@@ -49,7 +49,7 @@ describe('a node\'s code fingerprint', () => {
     expect(fingerprintOfFolder(capsule)).not.toBe(before);
   });
 
-  it('stays put when only the node\'s face, its strings or its tests change', async () => {
+  it("stays put when only the node's face, its strings or its tests change", async () => {
     const before = fingerprintOfFolder(capsule);
     await write(path.join(capsule, 'body.tsx'), 'export const Body = () => "new look";\n');
     await write(path.join(capsule, 'locales.ts'), "export const t = { en: { a: 'b' } };\n");

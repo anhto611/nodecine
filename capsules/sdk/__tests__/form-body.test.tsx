@@ -30,8 +30,13 @@ const graphWith = (params: Record<string, unknown>): Graph => ({
 beforeEach(() => {
   _resetNodeRegistry();
   registerNodeType({
-    type: 'test/form', version: 1, kind: 'source', inputs: [], outputs: [],
-    paramsSchema: Params, defaultParams: { quality: 'high', title: 'Untitled', fps: 30, burn: false },
+    type: 'test/form',
+    version: 1,
+    kind: 'source',
+    inputs: [],
+    outputs: [],
+    paramsSchema: Params,
+    defaultParams: { quality: 'high', title: 'Untitled', fps: 30, burn: false },
     run: async () => ({}),
   } as unknown as AnyNodeDefinition);
   useStudio.setState({ graph: graphWith({ quality: 'high', title: 'Untitled', fps: 30, burn: false }), tabs: [], activeTab: 'form-test', executor: null, locale: 'en' });

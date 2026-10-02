@@ -2,16 +2,7 @@ import type { Packet } from '../types/packet';
 import type { BlockReason } from '../nodes/definition';
 
 /** The nine node states. */
-export type NodeState =
-  | 'idle'
-  | 'queued'
-  | 'running'
-  | 'success'
-  | 'stale'
-  | 'error'
-  | 'blocked'
-  | 'cancelled'
-  | 'bypassed';
+export type NodeState = 'idle' | 'queued' | 'running' | 'success' | 'stale' | 'error' | 'blocked' | 'cancelled' | 'bypassed';
 
 export interface NodeRuntime {
   state: NodeState;
