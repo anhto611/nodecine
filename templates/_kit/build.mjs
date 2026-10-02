@@ -1,6 +1,14 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 /**
+ * A variable declaration as an attribute value. The JSON goes in with its double quotes escaped: a
+ * label may hold an apostrophe ("The film's name"), and an attribute wrapped in single quotes ends at
+ * the first one — which silently cuts the declaration a reader parses in half. `&quot;` is exactly what
+ * `declaredVariables` in `contracts/storyboard/blocks.ts` unescapes on the way back in.
+ */
+const declare = (variables) => JSON.stringify(variables).replace(/"/g, '&quot;');
+
+/**
  * What every template's build script would otherwise repeat: finding the composition inside the
  * workflow beside it, and turning one scene into a HyperFrames block.
  *
@@ -78,5 +86,98 @@ export function sceneBlock({
   const defaults = Object.fromEntries(variables.map((variable) => [variable.id, variable.default]));
   const fill = textKeys.map((key) => `'${key}'`).join(',');
   const setup = `var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});${extraScript ? `\n  ${extraScript}` : ''}`;
-  return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables='${JSON.stringify(variables)}'>\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body>${template ? '<template>' : ''}${loadGsap ? '<script src="gsap.min.js"></script>' : ''}\n<style>${css}</style>\n<div id="root" data-composition-id="${id}" data-duration="${seconds}" data-width="${width}" data-height="${height}"><div class="nc-backdrop"></div>${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${setup}\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||${seconds});\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${id}']=tl;\n})();</script>\n${template ? '</template>' : ''}</body></html>`;
+  return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables="${declare(variables)}">\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body>${template ? '<template>' : ''}${loadGsap ? '<script src="gsap.min.js"></script>' : ''}\n<style>${css}</style>\n<div id="root" data-composition-id="${id}" data-duration="${seconds}" data-width="${width}" data-height="${height}"><div class="nc-backdrop"></div>${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${setup}\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||${seconds});\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${id}']=tl;\n})();</script>\n${template ? '</template>' : ''}</body></html>`;
+}
+
+/**
+ * One component: a piece of a scene rather than a scene. It is a sub-composition like a block — kept in
+ * `<template>`, with its own registered timeline — but it fills the box its host gives it instead of
+ * naming dimensions of its own, and `<html data-role>` says what it is for: `piece`, `effect`, `ui` or
+ * `overlay` (`COMPONENT_ROLES` in `contracts/storyboard/blocks.ts`). The storyboard writer reads every
+ * component a kit holds and may mount one into a frame.
+ */
+export function component({ name, role, description, css, markup, motion = '', variables = [], textKeys = [], extraScript = '', seconds = 8 }) {
+  const defaults = Object.fromEntries(variables.map((variable) => [variable.id, variable.default]));
+  const fill = textKeys.map((key) => `'${key}'`).join(',');
+  return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables="${declare(variables)}">\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body><template>\n<style>#root{position:absolute;inset:0;box-sizing:border-box}#root *{box-sizing:border-box}${css}</style>\n<div id="root" data-composition-id="${name}" data-duration="${seconds}">${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${extraScript}\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},${seconds});\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${name}']=tl;\n})();</script>\n</template></body></html>`;
+}
+
+/**
+ * The same part as a snippet, to paste into a scene.
+ *
+ * A scene cannot *host* a component: a host is a mount for the runtime or for the hoist that flattens
+ * nested compositions for a preview, and the hoist walks the entry once — a mount written inside a
+ * block that is itself mounted as a frame is never reached, and a render writes the project as it
+ * stands. Measured: a block hosting three components rendered none of them and took 166s against 65s,
+ * the capture waiting on hosts that never resolved.
+ *
+ * What the app does support is what the registry describes: a component is published as a file the
+ * writer may mount, and *pasted* into a scene that wants it now. Both come from the same definition
+ * here, so a scene's still and a writer's mount cannot drift apart. The parts keep their markup in one
+ * element of their own and every class prefixed, so pasting two of them into a scene is safe.
+ */
+export function paste(part) {
+  return { css: part.css, markup: part.markup, before: part.extraScript ?? '', motion: part.motion ?? '' };
+}
+
+/**
+ * The parts every template's scenes can share. Each returns what `component()` takes, so a kit writes
+ * `component(brandCorner({ accent: '#5ee6a8' }))` and gets one file it owns — kits stay self-contained,
+ * while the definition lives here once and the design moves together.
+ */
+
+/** The mark and the film's name, for the corner of a scene. Static: a brand does not change per scene. */
+export function brandCorner({ label = 'NODECINE', accent = '#7fe0c0', ink = '#04211a', color = '#c9d6de' } = {}) {
+  return {
+    name: 'brand-corner',
+    role: 'ui',
+    description: "The mark and the film's name, in the corner of a scene.",
+    css: `.bc{position:absolute;inset:0;display:flex;align-items:center;gap:16px}.bc-label{color:${color};font-size:22px;font-weight:850;letter-spacing:.14em}.bc-bug{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:14px;background:${accent};color:${ink};font-size:31px;font-weight:1000;letter-spacing:-.1em}.bc-bug i{width:7px;height:7px;border-radius:50%;background:${ink};margin-top:18px}`,
+    markup: `<span class="bc"><span class="bc-bug">N<i></i></span><span class="bc-label">${label}</span></span>`,
+    motion: `tl.fromTo(q('.bc'),{opacity:0,y:-12},{opacity:1,y:0,duration:.5,ease:'power2.out'},0);`,
+  };
+}
+
+/** What the film is about to show, as a numbered index: a scene's own table of contents. */
+export function tickerIndex({ count = 3, accent = '#7fe0c0', track = '#22303a' } = {}) {
+  const rows = Array.from({ length: count }, (_, index) => `<span class="ti-row"><span class="ti-no">${String(index + 1).padStart(2, '0')}</span><span class="ti-bar"></span></span>`).join('');
+  return {
+    name: 'ticker-index',
+    role: 'ui',
+    description: 'A numbered index of the items the film is about to show.',
+    css: `.ti{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:18px}.ti-row{display:flex;align-items:center;gap:18px}.ti-no{color:${accent};font-size:24px;font-weight:850;letter-spacing:.1em}.ti-bar{flex:1;height:10px;border-radius:5px;background:${track}}.ti-row:first-child .ti-bar{background:${accent}66}.ti-row:last-child .ti-bar{width:60%}`,
+    markup: `<span class="ti">${rows}</span>`,
+    motion: `tl.fromTo(q('.ti-row'),{opacity:0,x:24,stagger:.09},{opacity:1,x:0,duration:.5,ease:'power2.out'},.3);`,
+  };
+}
+
+/** Where the thing on screen came from. Fills itself from the scene's own `source`. */
+export function sourceChip({ accent = '#7fe0c0', color = '#e8f0f6', track = '#26343f', background = '#0b131acc' } = {}) {
+  return {
+    name: 'source-chip',
+    role: 'piece',
+    description: "Where the item on screen came from, read from the scene's own source.",
+    css: `.sc{position:absolute;inset:0;display:flex;align-items:center;gap:18px;padding:16px 24px;border:1px solid ${track};border-radius:14px;background:${background}}.sc-tag{color:${accent};font-size:17px;font-weight:800;letter-spacing:.14em}.sc-source{flex:1;text-align:right;font-size:25px;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
+    markup: `<span class="sc"><span class="sc-tag">SOURCE</span><span class="sc-source"></span></span>`,
+    variables: [{ id: 'source', type: 'string', label: 'The source of this item', default: 'example.com', sample: 'example.com', maxLength: 40, required: true }],
+    extraScript: `var chipEl=root.querySelector('.sc-source');if(chipEl)chipEl.textContent=String(v.source==null?'example.com':v.source);`,
+    motion: `tl.fromTo(q('.sc'),{y:14,opacity:0},{y:0,opacity:1,duration:.5,ease:'power2.out'},.8);`,
+  };
+}
+
+/** How far through the film a scene is. Fills itself from the scene's own `step` and `total`. */
+export function progressRail({ accent = '#7fe0c0', track = '#22303a', color = '#8fa3b0' } = {}) {
+  return {
+    name: 'progress-rail',
+    role: 'ui',
+    description: "A running bar and count: which scene this is, of how many, from the scene's step and total.",
+    css: `.pr{position:absolute;inset:0;display:flex;align-items:center;gap:20px}.pr-rail{flex:1;height:8px;border-radius:4px;background:${track};overflow:hidden}.pr-fill{display:block;height:100%;width:0;border-radius:4px;background:${accent}}.pr-count{color:${color};font-size:19px;font-weight:850;letter-spacing:.14em}`,
+    markup: `<span class="pr"><span class="pr-rail"><span class="pr-fill"></span></span><span class="pr-count"></span></span>`,
+    variables: [
+      { id: 'step', type: 'number', label: 'Which scene this is', default: 1, required: true },
+      { id: 'total', type: 'number', label: 'How many scenes the film has', default: 3, required: true },
+    ],
+    extraScript: `var railEl=root.querySelector('.pr-fill');var stepN=Number(v.step)||1;var totalN=Math.max(1,Number(v.total)||1);if(railEl)railEl.style.width=Math.min(100,Math.round((stepN/totalN)*100))+'%';var countEl=root.querySelector('.pr-count');if(countEl)countEl.textContent=String(stepN).padStart(2,'0')+' / '+String(totalN).padStart(2,'0');`,
+    motion: `tl.fromTo(q('.pr-fill'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.7,ease:'power2.out'},.2);`,
+  };
 }
