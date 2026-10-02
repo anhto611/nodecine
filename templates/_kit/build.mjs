@@ -304,3 +304,28 @@ export function signature({ label = 'SAID BY', accent = '#e0a45c', color = '#e8d
     motion: `tl.fromTo(q('.sg'),{opacity:0,y:-24},{opacity:1,y:0,duration:.7,ease:'power2.out'},.5);`,
   };
 }
+
+/** The title bar of a window, over the screen a recording plays on. */
+export function windowChrome({ plate = 'RECORDING', dot = '#c3ccd4', bar = '#e4e9ee', ink = '#54606c', field = '#f7f9fb' } = {}) {
+  return {
+    name: 'window-chrome',
+    role: 'ui',
+    description: 'The title bar of a window, for a scene that shows a screen.',
+    css: `.wc{position:absolute;inset:0;display:flex;align-items:center;gap:12px;padding:0 26px;background:${bar}}.wc i{display:block;width:14px;height:14px;border-radius:50%;background:${dot}}.wc-plate{margin-left:16px;flex:1;height:34px;border-radius:17px;background:${field};color:${ink};font-size:19px;letter-spacing:.1em;display:flex;align-items:center;padding:0 18px}`,
+    markup: `<span class="wc"><i></i><i></i><i></i><span class="wc-plate">${plate}</span></span>`,
+    motion: `tl.fromTo(q('.wc'),{opacity:0,y:-8},{opacity:1,y:0,duration:.5,ease:'power2.out'},.1);`,
+  };
+}
+
+/** The words being said, around the playhead, read from the run's own voice-over timings. */
+export function captionBand({ accent = '#7fe0c0', color = '#eaf2f5', background = '#05080acc', empty = 'CAPTIONS APPEAR WHEN A RUN HAS A VOICE' } = {}) {
+  return {
+    name: 'caption-band',
+    role: 'piece',
+    description: "The words being said around the playhead, read from the run's voice-over timings.",
+    css: `.cb{position:absolute;inset:0;display:flex;align-items:flex-end;padding-bottom:16px}.cb-line{width:100%;text-align:center;background:${background};color:${color};font-size:34px;line-height:1.3;font-weight:750;padding:16px 28px;border-radius:10px}.cb-line b{color:${accent}}.cb-empty{opacity:.5}`,
+    markup: `<span class="cb"><span class="cb-line">${empty}</span></span>`,
+    extraScript: `var cbLine=root.querySelector('.cb-line');var cbBox=root.querySelector('.cb');var cbFrom=Number(v.from)||0;fetch('voiceover.json').then(function(r){return r.ok?r.json():null}).then(function(data){var cbWords=data&&data.words?data.words:[];if(!cbWords.length){if(cbBox)cbBox.classList.add('cb-empty');return;}var paint=function(){var t=cbFrom+(tl.time?tl.time():0);var last=-1;for(var i=0;i<cbWords.length;i++){if(cbWords[i].start<=t+0.001)last=i;else break;}if(last<0)return;var slice=cbWords.slice(Math.max(0,last-11),last+1);cbLine.innerHTML=slice.map(function(w,i){var text=String(w.text).replace(/</g,'&lt;');return i===slice.length-1?'<b>'+text+'</b>':text;}).join(' ');};paint();tl.eventCallback('onUpdate',paint);}).catch(function(){if(cbBox)cbBox.classList.add('cb-empty');});`,
+    motion: `tl.fromTo(q('.cb'),{opacity:0,y:12},{opacity:1,y:0,duration:.5,ease:'power2.out'},.7);`,
+  };
+}
