@@ -65,10 +65,15 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
         // off, and GSAP is loaded where the entry did not already load it itself.
         const unwrapped = entry.replace(/<template>([\s\S]*?)<\/template>/i, '$1');
         const page = unwrapped.includes('gsap.min.js') ? unwrapped : unwrapped.replace(/<head([^>]*)>/i, '<head$1><script src="gsap.min.js"></script>');
+        // A card is the scene's own shape: a screen recording is landscape, everything else here is
+        // portrait. The size is declared on the scene's root, so the card follows the template.
+        const size = /data-width="(\d+)" data-height="(\d+)"/.exec(entry);
+        const width = Number(size?.[1] ?? WIDTH);
+        const height = Number(size?.[2] ?? HEIGHT);
         const composition: Composition = {
           engine: 'hyperframes',
-          width: WIDTH,
-          height: HEIGHT,
+          width,
+          height,
           fps: 30,
           files: { 'index.html': page },
           media: {},
@@ -85,7 +90,7 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
           // render sets, so the card shows the sample copy rather than the declared defaults.
           preHeadScripts: [`window.__hfVariables = ${JSON.stringify(values).replace(/</g, '\\u003c')};`],
         });
-        const session = await createCaptureSession(server.url, framesDir, { width: WIDTH, height: HEIGHT, fps: FPS, format: 'png', deviceScaleFactor: SCALE });
+        const session = await createCaptureSession(server.url, framesDir, { width, height, fps: FPS, format: 'png', deviceScaleFactor: SCALE });
         try {
           await initializeSession(session);
           const at = Math.max(0.2, seconds * AT);
@@ -93,7 +98,7 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
           const output = path.join(templatesDir, folder, 'thumbnail.png');
           await writeFile(output, buffer);
           const bytes = (await stat(output)).size;
-          console.log(`THUMBNAIL templates/${folder}/thumbnail.png · scene=${scene.name} · at=${at.toFixed(2)}s · ${bytes} bytes · warnings=${session.warnings.length}`);
+          console.log(`THUMBNAIL templates/${folder}/thumbnail.png · scene=${scene.name} · ${width}x${height} · at=${at.toFixed(2)}s · ${bytes} bytes · warnings=${session.warnings.length}`);
           expect(bytes).toBeGreaterThan(4_000);
         } finally {
           await closeCaptureSession(session);
