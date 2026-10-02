@@ -181,3 +181,29 @@ export function progressRail({ accent = '#7fe0c0', track = '#22303a', color = '#
     motion: `tl.fromTo(q('.pr-fill'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.7,ease:'power2.out'},.2);`,
   };
 }
+
+/** The standing head of a column: what this scene is, over a pair of rules. Static. */
+export function sectionRule({ label = 'SUMMARY', accent = '#64d2ff', color = '#8fa8bd' } = {}) {
+  return {
+    name: 'section-rule',
+    role: 'ui',
+    description: 'The standing head of a column: a label over a pair of rules.',
+    css: `.sr{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:10px}.sr-label{color:${accent};font-size:20px;font-weight:850;letter-spacing:.22em}.sr-line{height:2px;background:${color}55}.sr-line+.sr-line{height:1px;background:${color}2e}`,
+    markup: `<span class="sr"><span class="sr-label">${label}</span><span class="sr-line"></span><span class="sr-line"></span></span>`,
+    motion: `tl.fromTo(q('.sr'),{opacity:0,y:-10},{opacity:1,y:0,duration:.5,ease:'power2.out'},0);`,
+  };
+}
+
+/** The margin of a column: a hairline, a label on its side, and where the piece came from. */
+export function marginNote({ label = 'SOURCE', accent = '#64d2ff', color = '#c3d3e8', line = '#2b4468' } = {}) {
+  return {
+    name: 'margin-note',
+    role: 'piece',
+    description: "What the column came from, set in the margin: reads the scene's own source.",
+    css: `.mn{position:absolute;inset:0;display:flex;gap:16px}.mn-line{width:1px;background:${line}}.mn-body{display:flex;gap:12px}.mn-label{color:${accent};font-size:15px;font-weight:850;letter-spacing:.18em;writing-mode:vertical-rl}.mn-source{color:${color};font-size:21px;line-height:1.32;overflow:hidden}`,
+    markup: `<span class="mn"><span class="mn-line"></span><span class="mn-body"><span class="mn-label">${label}</span><span class="mn-source"></span></span></span>`,
+    variables: [{ id: 'source', type: 'string', label: 'Where the article came from', default: 'the article', sample: 'theguardian.com', maxLength: 48, required: true }],
+    extraScript: `var noteEl=root.querySelector('.mn-source');if(noteEl)noteEl.textContent=String(v.source==null?'the article':v.source);`,
+    motion: `tl.fromTo(q('.mn'),{opacity:0,x:16},{opacity:1,x:0,duration:.6,ease:'power2.out'},.7);`,
+  };
+}
