@@ -207,3 +207,29 @@ export function marginNote({ label = 'SOURCE', accent = '#64d2ff', color = '#c3d
     motion: `tl.fromTo(q('.mn'),{opacity:0,x:16},{opacity:1,x:0,duration:.6,ease:'power2.out'},.7);`,
   };
 }
+
+/** A book's page head: whose book this is, over a rule. Static, repeated on every page. */
+export function runningHead({ title = 'THE BOOK', color = '#5d6b62', rule = '#cbbfa6' } = {}) {
+  return {
+    name: 'running-head',
+    role: 'ui',
+    description: "The book's own name, set as a running head over a rule.",
+    css: `.rh{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px}.rh-title{color:${color};font-size:19px;font-weight:850;letter-spacing:.2em}.rh-rule{height:2px;background:${rule}}`,
+    markup: `<span class="rh"><span class="rh-title">${title}</span><span class="rh-rule"></span></span>`,
+    motion: `tl.fromTo(q('.rh'),{opacity:0,y:-8},{opacity:1,y:0,duration:.5,ease:'power2.out'},0);`,
+  };
+}
+
+/** A bookmark hanging over the page, with where the passage sits set down its length. */
+export function ribbon({ label = 'IN THE BOOK', accent = '#b98c3f', ink = '#2a1d08' } = {}) {
+  return {
+    name: 'ribbon',
+    role: 'piece',
+    description: "A bookmark over the page, carrying where the passage sits: reads the scene's own source.",
+    css: `.rb{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center}.rb-body{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:18px;padding:26px 0 0;background:${accent};box-shadow:0 18px 40px #00000055}.rb-tail{width:100%;height:34px;background:${accent};clip-path:polygon(0 0,100% 0,100% 100%,50% 62%,0 100%);margin-top:-1px}.rb-label{color:${ink};font-size:14px;font-weight:850;letter-spacing:.18em;writing-mode:vertical-rl}.rb-source{color:${ink};font-size:17px;font-weight:700;line-height:1.3;writing-mode:vertical-rl;max-height:420px;overflow:hidden}`,
+    markup: `<span class="rb"><span class="rb-body"><span class="rb-label">${label}</span><span class="rb-source"></span></span><span class="rb-tail"></span></span>`,
+    variables: [{ id: 'source', type: 'string', label: 'Where the passage sits in the book', default: 'Chapter one', sample: 'Part 2 � Chapter 4', maxLength: 48, required: true }],
+    extraScript: `var ribEl=root.querySelector('.rb-source');if(ribEl)ribEl.textContent=String(v.source==null?'Chapter one':v.source);`,
+    motion: `tl.fromTo(q('.rb'),{y:-60,opacity:0},{y:0,opacity:1,duration:.7,ease:'power3.out'},.3);`,
+  };
+}
