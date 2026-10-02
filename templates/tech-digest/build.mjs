@@ -29,6 +29,7 @@ const scenes = {
     heading: 'Three things worth knowing today',
     css:
       commonCss +
+      '.open{position:absolute;inset:0}' +
       '.open-kicker{position:absolute;left:96px;top:430px;display:inline-flex;align-items:center;gap:16px;padding:14px 24px;border:1px solid #5ee6a8;border-radius:999px;color:#5ee6a8;font-size:22px;font-weight:850;letter-spacing:.12em}' +
       '.open .title{position:absolute;left:96px;right:96px;top:560px;margin:0;font-size:96px;line-height:1.06;letter-spacing:-.03em;font-weight:850;max-height:640px;overflow:hidden}' +
       '.open .rule{position:absolute;left:96px;top:1250px;width:170px;height:9px;border-radius:9px;background:#5ee6a8}' +
@@ -37,11 +38,7 @@ const scenes = {
       '.count-row b{display:block;width:46px;height:6px;border-radius:6px;background:#5ee6a8}',
     markup: `<div class="grid"></div>
       <div class="mast"><span class="brand-mark">N<span></span></span><span>TECH DIGEST</span><span class="edition">01 / TODAY</span></div>
-      <span class="open-kicker">TODAY</span>
-      <h1 class="title"></h1>
-      <div class="rule"></div>
-      <p class="detail"></p>
-      <div class="count-row"><b></b><b></b><b></b><span>THREE ITEMS</span></div>
+      <div class="open"><span class="open-kicker">TODAY</span><h1 class="title"></h1><div class="rule"></div><p class="detail"></p><div class="count-row"><b></b><b></b><b></b><span>THREE ITEMS</span></div></div>
       <div class="foot"><span>NODECINE / TECH DIGEST</span><span class="foot-bars"><b></b><b></b><b></b><b></b><b></b></span></div>`,
     motion: `tl.fromTo(q('.grid'),{opacity:0},{opacity:1,duration:1.1,ease:'sine.out'},0)
       .fromTo(q('.open-kicker'),{y:26,opacity:0},{y:0,opacity:1,duration:.5,ease:'power2.out'},.1)
@@ -134,16 +131,14 @@ const scenes = {
     heading: 'What to watch next',
     css:
       commonCss +
+      '.close{position:absolute;inset:0}' +
       '.close .title{position:absolute;left:96px;right:96px;top:620px;margin:0;font-size:100px;line-height:1.08;letter-spacing:-.03em;font-weight:850;max-height:520px;overflow:hidden}' +
       '.close .rule{position:absolute;left:96px;top:1230px;width:150px;height:9px;border-radius:9px;background:#5ee6a8}' +
       '.close .detail{position:absolute;left:96px;right:130px;top:1310px;margin:0;font-size:40px;line-height:1.34;color:#c3d3e8;max-height:240px;overflow:hidden}' +
       '.close-mark{position:absolute;right:96px;top:560px;font-size:150px;line-height:1;color:#1d3355;font-weight:900}',
     markup: `<div class="grid"></div>
       <div class="mast"><span class="brand-mark">N<span></span></span><span>TECH DIGEST</span><span class="edition">03 / NEXT</span></div>
-      <div class="close-mark">✳</div>
-      <h1 class="title"></h1>
-      <div class="rule"></div>
-      <p class="detail"></p>
+      <div class="close"><div class="close-mark">✳</div><h1 class="title"></h1><div class="rule"></div><p class="detail"></p></div>
       <div class="foot"><span>NODECINE / TECH DIGEST</span><span class="foot-bars"><b></b><b></b><b></b><b></b><b></b></span></div>`,
     motion: `tl.fromTo(q('.grid'),{opacity:0},{opacity:1,duration:1,ease:'sine.out'},0)
       .fromTo(q('.close-mark'),{scale:.6,rotation:-40,opacity:0},{scale:1,rotation:0,opacity:1,duration:.8,ease:'back.out(1.4)'},.1)
