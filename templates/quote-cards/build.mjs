@@ -70,4 +70,8 @@ await editComposition(new URL('./workflow.json', import.meta.url), (files) => {
   files['index.html'] = sceneBlock({ ...scene, id: 'quote-film', variables, seconds: 12, loadGsap: true, template: false });
   // The same scene as a block, for the composition's parts and for any later storyboard.
   files['compositions/quote-card.html'] = sceneBlock({ ...scene, id: 'quote-card', variables, seconds: 12 });
+  // This film is one scene, so nothing writes a storyboard for it — but a guide says what the shape is,
+  // for whoever adds a writer to this template to make a series of cards.
+  files['storyboard-guide.md'] =
+    `---\nfirst: quote-card\nlast: quote-card\nrepeat: 0\n---\nA quote card is one scene: the quote, who said it and where it came from, over the card's own animation. There is no storyboard to write.\nShould a writer be added to make a series of cards, use one card per quote, in the order the person gave them, and keep each of the three lines to what they wrote.\nNever invent an author, a source or a wording the person did not give.`;
 });
