@@ -33,7 +33,20 @@ export async function editComposition(workflowUrl, edit) {
   const composition = workflow.graph.nodes.find((node) => node.params && 'files' in node.params);
   if (!composition) throw new Error('No node in this template carries a files map; a node id may have changed.');
   edit(composition.params.files);
+  // Every kit carries an entry file, even an empty one: the Studio's inspector opens `index.html`, and
+  // a template that Assembles its frames simply has Assemble overwrite it at run time.
+  if (composition.params.files['index.html'] === undefined) composition.params.files['index.html'] = '';
   await writeFile(workflowUrl, `${JSON.stringify(workflow, null, 2)}\n`);
+}
+
+/**
+ * The entry a kit ships before anything is assembled: a shell page holding the marker Assemble
+ * replaces with the film's frames (`FRAMES_MARKER` in `capsules/nodes/assemble/assemble.ts`). It is
+ * what the Studio previews and what the inspector lints until a run writes the real entry, so every
+ * kit whose frames are assembled carries one.
+ */
+export function filmShell({ id, width = 1080, height = 1920, background = '#0b1020' }) {
+  return `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=${width}, height=${height}" />\n  <script src="gsap.min.js"></script>\n  <style>\n    html, body { margin: 0; width: ${width}px; height: ${height}px; overflow: hidden; background: ${background}; }\n    #${id} { position: relative; width: ${width}px; height: ${height}px; overflow: hidden; }\n  </style>\n</head>\n<body>\n  <div id="${id}" data-composition-id="${id}" data-start="0" data-width="${width}" data-height="${height}">\n    <!-- nodecine:frames -->\n    <script>\n      const tl = gsap.timeline({ paused: true });\n      tl.set({}, {}, 1);\n      window.__timelines['${id}'] = tl;\n    </script>\n  </div>\n</body>\n</html>`;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { editComposition, sceneBlock } from '../_kit/build.mjs';
+import { editComposition, filmShell, sceneBlock } from '../_kit/build.mjs';
 
 /** The three scenes of the article summary: an opening, one point, and what to remember. */
 const scenes = {
@@ -124,6 +124,8 @@ function block(kind, scene) {
 
 // Keep the self-contained workflow JSON in sync with those three designs.
 await editComposition(new URL('./workflow.json', import.meta.url), (files) => {
+  // The shell the Studio previews and the inspector lints, until a run has Assemble write the entry.
+  files['index.html'] = filmShell({ id: 'summary-shell', background: '#0b1020' });
   for (const [kind, scene] of Object.entries(scenes)) files[`compositions/summary-${kind}.html`] = block(kind, scene);
   files['storyboard-guide.md'] =
     `---\nfirst: hook\nlast: outro\nrepeat: 2\n---\nMake a summary of an article in English, vertical 9:16, about 30–45 seconds.\nUse only what is in Research and the URLs the person gave. Never invent a number, a quote or a conclusion.\nOpen with the most important point; each following scene makes one point; close with what the viewer should remember.\nEvery scene carries a title of at most 40 characters, a detail that is one short sentence adding meaning (not repeating the title), and a source of at most 48 characters: the name or domain of the article. Leave the source label out when the article is unknown.\nThe narration explains briefly, in plain English, and keeps the tone of the original. Drop a point when the source has no evidence for it. Do not call an article a scientific study when it is not.`;

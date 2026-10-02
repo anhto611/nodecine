@@ -48,15 +48,14 @@ describe.skipIf(!enabled)('a template thumbnail, from the template itself', () =
         const files = workflow.graph.nodes.find((node) => node.params?.files)?.params?.files;
         if (!files) throw new Error(`templates/${folder}/workflow.json: no node carries a files map`);
 
-        // A template whose own `index.html` is the film is shown as it is; one that waits for Assemble
-        // (its entry is empty) is shown through its first block instead.
+        // A card shows one scene, and a kit's blocks are scenes. Only a kit with no blocks at all — a
+        // single-scene film that is its own entry — falls back to that entry; a shell page is not a
+        // scene, and a still of it would show nothing.
         const blocks = readBlockCatalog(files);
         const block = blocks.find((candidate) => candidate.role === 'hook') ?? blocks[0];
-        const film = (files['index.html'] ?? '').trim();
-        if (!film && !block) throw new Error(`templates/${folder}: the composition has no blocks`);
-        const scene = film ? readBlock('film', film) : block!;
-        const entry = film || files[`compositions/${scene.name}.html`];
-        if (!entry) throw new Error(`templates/${folder}: no file for block "${scene.name}"`);
+        const entry = block ? files[`compositions/${block.name}.html`] : (files['index.html'] ?? '');
+        if (!entry) throw new Error(`templates/${folder}: no scene to draw a card from`);
+        const scene = block ?? readBlock('film', entry);
 
         const seconds = Number(scene.variables.find((variable) => variable.id === 'seconds')?.default ?? 4);
         // What the card shows: the sample the author wrote, and the default wherever there is none.

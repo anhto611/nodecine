@@ -1,0 +1,9 @@
+{
+  "id": "tech-digest",
+  "group": "link",
+  "tagline": {
+    "en": "Paste up to three links; get a short daily digest with a source on every item.",
+    "vi": "Dán tối đa ba đường link; nhận bản tin ngắn, mỗi tin có nhãn nguồn."
+  },
+  "tags": ["9:16", "~60s", { "en": "Needs a model and a voice", "vi": "Cần model và giọng đọc" }]
+}

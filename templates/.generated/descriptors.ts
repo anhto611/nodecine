@@ -23,4 +23,5 @@ export type TemplateDescriptor = {
 export const TEMPLATES: TemplateDescriptor[] = [
   { id: 'article-summary', group: 'link', tagline: {"en":"Turn an article link into a narrated summary video grounded in the source.","vi":"Biến một đường link thành video tóm tắt có giọng đọc, bám sát nguồn."}, tags: ["9:16","30–45s",{"en":"English narration","vi":"Giọng đọc tiếng Anh"}], workflow: 'workflow.json', thumbnail: 'thumbnail.png' },
   { id: 'quote-cards', group: 'idea', tagline: {"en":"Type a quote and who said it; the card animates itself. No model, no voice.","vi":"Gõ câu trích dẫn và người nói; tấm thẻ tự dựng động. Không cần model, không cần giọng đọc."}, tags: ["9:16","~12s",{"en":"No model needed","vi":"Không cần model"}], workflow: 'workflow.json', thumbnail: 'thumbnail.png' },
+  { id: 'tech-digest', group: 'link', tagline: {"en":"Paste up to three links; get a short daily digest with a source on every item.","vi":"Dán tối đa ba đường link; nhận bản tin ngắn, mỗi tin có nhãn nguồn."}, tags: ["9:16","~60s",{"en":"Needs a model and a voice","vi":"Cần model và giọng đọc"}], workflow: 'workflow.json', thumbnail: 'thumbnail.png' },
 ];
