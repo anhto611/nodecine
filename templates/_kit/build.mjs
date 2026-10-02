@@ -233,3 +233,47 @@ export function ribbon({ label = 'IN THE BOOK', accent = '#b98c3f', ink = '#2a1d
     motion: `tl.fromTo(q('.rb'),{y:-60,opacity:0},{y:0,opacity:1,duration:.7,ease:'power3.out'},.3);`,
   };
 }
+
+/** The figure a story turns on, set at poster size so it runs off the edge of the frame. */
+export function statPoster({ accent = '#ff8f7a' } = {}) {
+  return {
+    name: 'stat-poster',
+    role: 'piece',
+    description: "The figure the scene turns on, set at poster size: reads the scene's own figure.",
+    css: `.sp{position:absolute;inset:0;display:flex;align-items:flex-start}.sp-figure{margin:0;font-size:420px;line-height:.86;font-weight:900;letter-spacing:-.06em;color:${accent};white-space:nowrap}`,
+    markup: `<span class="sp"><span class="sp-figure"></span></span>`,
+    variables: [{ id: 'figure', type: 'string', label: 'The figure, as the source prints it', default: '62%', sample: '62%', maxLength: 12, required: true }],
+    extraScript: `var figEl=root.querySelector('.sp-figure');if(figEl)figEl.textContent=String(v.figure==null?'62%':v.figure);`,
+    motion: `tl.fromTo(q('.sp-figure'),{x:-70,opacity:0},{x:0,opacity:1,duration:.85,ease:'power3.out'},0);`,
+  };
+}
+
+/** A scale under a figure: ticks with their labels, and a marker at the scene's own share. */
+export function axisScale({ accent = '#ff8f7a', color = '#8b93b8', track = '#2b2650' } = {}) {
+  const ticks = [0, 25, 50, 75, 100].map((value) => `<span class="ax-tick" style="left:${value}%"><i></i><b>${value}</b></span>`).join('');
+  return {
+    name: 'axis-scale',
+    role: 'ui',
+    description: "A scale under the figure: ticks and labels, with a marker where the scene's share falls.",
+    css: `.ax{position:absolute;inset:0}.ax-line{position:absolute;left:0;right:0;top:36px;height:2px;background:${track}}.ax-tick{position:absolute;top:36px}.ax-tick i{position:absolute;left:0;top:0;width:2px;height:18px;background:${track}}.ax-tick b{position:absolute;left:0;top:26px;transform:translateX(-50%);color:${color};font-size:17px;font-weight:750;letter-spacing:.08em}.ax-mark{position:absolute;left:0;top:8px;width:6px;height:58px;border-radius:3px;background:${accent};transform:translateX(-50%)}`,
+    markup: `<span class="ax"><span class="ax-line"></span>${ticks}<span class="ax-mark"></span></span>`,
+    variables: [{ id: 'share', type: 'number', label: 'How much of the whole it is, from 0 to 1', default: 0.62, sample: 0.62 }],
+    extraScript: `var markEl=root.querySelector('.ax-mark');var shareN=Math.max(0,Math.min(1,Number(v.share)||0));if(markEl)markEl.style.left=(shareN*100)+'%';`,
+    motion: `tl.fromTo(q('.ax'),{opacity:0},{opacity:1,duration:.5,ease:'sine.out'},.5)
+      .fromTo(q('.ax-mark'),{scaleY:0,transformOrigin:'bottom center'},{scaleY:1,duration:.5,ease:'power2.out'},.72);`,
+  };
+}
+
+/** Where a figure came from, set as a fine line along the foot of the poster. */
+export function sourceLine({ accent = '#ff8f7a', color = '#8b93b8', track = '#2b2650', label = 'WHERE IT COMES FROM' } = {}) {
+  return {
+    name: 'source-line',
+    role: 'piece',
+    description: "Where the figure came from, set as a fine line: reads the scene's own source.",
+    css: `.sl{position:absolute;inset:0;display:flex;align-items:center;gap:22px}.sl-line{flex:none;width:120px;height:1px;background:${track}}.sl-label{color:${accent};font-size:16px;font-weight:850;letter-spacing:.18em}.sl-source{flex:1;text-align:right;color:${color};font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
+    markup: `<span class="sl"><span class="sl-line"></span><span class="sl-label">${label}</span><span class="sl-source"></span></span>`,
+    variables: [{ id: 'source', type: 'string', label: 'Where the figure came from', default: 'the report', sample: 'Office for Budget Responsibility, 2024', maxLength: 48, required: true }],
+    extraScript: `var srcEl=root.querySelector('.sl-source');if(srcEl)srcEl.textContent=String(v.source==null?'the report':v.source);`,
+    motion: `tl.fromTo(q('.sl'),{opacity:0,y:10},{opacity:1,y:0,duration:.5,ease:'power2.out'},1.05);`,
+  };
+}

@@ -1,53 +1,70 @@
-import { editComposition, filmShell, sceneBlock } from '../_kit/build.mjs';
+import { axisScale, component, editComposition, filmShell, paste, sceneBlock, sourceLine, statPoster } from '../_kit/build.mjs';
 
 /**
- * Data story: one claim per scene, each with its number and where it came from.
+ * The data story as a poster.
  *
- * The writer makes the scenes and Assemble lays them on the clock, so this is a scene per role — an
- * opening, one claim (repeated by the guide), a close — and the film's entry is the shell this kit
- * ships for Assemble to replace.
+ * One grammar for all three scenes: a figure or a mark set so large it runs off the left edge of the
+ * frame, a scale under it with a marker where the figure falls, the claim across the lower third, and a
+ * fine line along the foot saying where the number came from. There is no masthead band and no centred
+ * card — a poster is read from the number down.
+ *
+ * The figure, the scale and the source line are components this kit publishes, pasted from the same
+ * definitions so a scene's own still and a writer's mount cannot drift apart.
  */
+
+const CORAL = '#ff8f7a';
+const MUTED = '#8b93b8';
+const TRACK = '#2b2650';
+
+const poster = paste(statPoster({ accent: CORAL }));
+const scale = paste(axisScale({ accent: CORAL, color: MUTED, track: TRACK }));
+const source = paste(sourceLine({ accent: CORAL, color: MUTED, track: TRACK }));
+
+/** Where a pasted part sits, and the thin stamp that stands in for a masthead here. */
+const posterSlots =
+  '.slot-poster{position:absolute;left:-40px;right:80px;top:196px;height:404px}' +
+  '.slot-axis{position:absolute;left:150px;right:150px;top:704px;height:92px}' +
+  '.slot-source{position:absolute;left:110px;right:110px;bottom:118px;height:56px}' +
+  '.stamp{position:absolute;z-index:3;left:110px;top:108px;color:' +
+  MUTED +
+  ';font-size:17px;font-weight:800;letter-spacing:.2em}' +
+  '.body{position:absolute;left:110px;right:130px}' +
+  '.body .hair{position:absolute;left:0;right:0;height:1px;background:' +
+  TRACK +
+  '}' +
+  '.mark{position:absolute;left:-60px;font-size:560px;line-height:1;font-weight:900;color:#241f4a}';
 
 const commonCss =
   'html,body{margin:0;background:#0a0a10}*{box-sizing:border-box}' +
   '#root{position:absolute;inset:0;width:1080px;height:1920px;overflow:hidden;color:#f2f2f7;background:#0a0a10;font-family:var(--font-body,Inter,Arial,sans-serif)}' +
-  '.nc-backdrop{position:absolute;inset:0;background:radial-gradient(circle at 78% 8%,#241f4a 0,#12101f 52%,#08080e 100%)}' +
-  '.dots{position:absolute;inset:0;background-image:radial-gradient(#ffffff14 1.5px,transparent 1.5px);background-size:44px 44px}' +
-  '.mast{position:absolute;top:91px;left:86px;right:86px;display:flex;align-items:center;gap:20px;color:#b7b2d8;font-size:19px;font-weight:850;letter-spacing:.14em;z-index:5}' +
-  '.brand-mark{display:flex;align-items:center;justify-content:center;width:63px;height:63px;border-radius:17px;background:#8b7cf6;color:#12102a;font-size:37px;font-weight:1000;letter-spacing:-.1em}' +
-  '.brand-mark span{width:7px;height:7px;border-radius:50%;background:#12102a;margin-top:22px}' +
-  '.edition{margin-left:auto;color:#7c76a0;font-size:17px}' +
-  '.foot{position:absolute;bottom:84px;left:86px;right:86px;display:flex;align-items:center;justify-content:space-between;padding-top:23px;border-top:1px solid #2f2a52;color:#a49ec6;font-size:20px;font-weight:800;letter-spacing:.1em;z-index:5}' +
-  '.foot-bars{display:flex;align-items:end;gap:6px;height:28px}' +
-  '.foot-bars b{display:block;width:6px;background:#ff8f7a;border-radius:3px}' +
-  '.foot-bars b:nth-child(1){height:12px}.foot-bars b:nth-child(2){height:24px}.foot-bars b:nth-child(3){height:17px}.foot-bars b:nth-child(4){height:28px}.foot-bars b:nth-child(5){height:15px}';
+  '.nc-backdrop{position:absolute;inset:0;background:radial-gradient(circle at 80% 6%,#241f4a 0,#12101f 54%,#08080e 100%)}' +
+  '.dots{position:absolute;inset:0;background-image:radial-gradient(#ffffff12 1.5px,transparent 1.5px);background-size:44px 44px}' +
+  posterSlots;
 
 const scenes = {
   open: {
     role: 'hook',
-    description: 'Opening: the question the numbers answer, and why it is worth a minute.',
-    heading: 'The question',
+    description: 'Opening: the question the numbers answer, under a mark that runs off the edge.',
+    heading: 'What the numbers say',
     css:
       commonCss +
-      '.open{position:absolute;inset:0}' +
-      '.chip{position:absolute;left:96px;top:376px;display:inline-flex;align-items:center;gap:14px;padding:14px 24px;border:1px solid #8b7cf6;border-radius:999px;color:#c3bcff;font-size:22px;font-weight:850;letter-spacing:.14em}' +
-      '.open .title{position:absolute;left:96px;right:96px;top:520px;margin:0;font-size:96px;line-height:1.07;letter-spacing:-.03em;font-weight:850;max-height:660px;overflow:hidden}' +
-      '.open .rule{position:absolute;left:96px;top:1240px;width:170px;height:9px;border-radius:9px;background:#8b7cf6}' +
-      '.open .detail{position:absolute;left:96px;right:140px;top:1310px;margin:0;font-size:38px;line-height:1.34;color:#c9c4e4;max-height:230px;overflow:hidden}' +
-      '.axis{position:absolute;left:96px;right:96px;bottom:300px;display:flex;align-items:center;gap:12px}' +
-      '.axis b{display:block;flex:1;height:6px;border-radius:6px;background:#2b2650}' +
-      '.axis b:first-child{background:#8b7cf6}',
+      source.css +
+      '.open .mark{top:120px}' +
+      '.open .title{position:absolute;left:0;right:0;top:716px;margin:0;font-size:96px;line-height:1.06;letter-spacing:-.035em;font-weight:850;max-height:560px;overflow:hidden}' +
+      '.open .hair{top:1330px}' +
+      '.open .detail{position:absolute;left:0;right:0;top:1392px;margin:0;font-size:38px;line-height:1.36;color:#c9c4e4;max-height:260px;overflow:hidden}',
     markup: `<div class="dots"></div>
-      <div class="mast"><span class="brand-mark">N<span></span></span><span>DATA STORY</span><span class="edition">01 / THE QUESTION</span></div>
-      <div class="open"><span class="chip">THE NUMBERS</span><h1 class="title"></h1><div class="rule"></div><p class="detail"></p></div>
-      <div class="axis"><b></b><b></b><b></b><b></b><b></b></div>
-      <div class="foot"><span>NODECINE / DATA STORY</span><span class="foot-bars"><b></b><b></b><b></b><b></b><b></b></span></div>`,
+      <span class="stamp">DATA STORY / 01</span>
+      <div class="mark">?</div>
+      <div class="body open"><h1 class="title"></h1><div class="hair"></div><p class="detail"></p></div>
+      <span class="slot slot-source">${source.markup}</span>`,
     motion: `tl.fromTo(q('.dots'),{opacity:0},{opacity:1,duration:1,ease:'sine.out'},0)
-      .fromTo(q('.chip'),{y:26,opacity:0},{y:0,opacity:1,duration:.5,ease:'power2.out'},.12)
-      .fromTo(q('.open .title'),{y:70,opacity:0},{y:0,opacity:1,duration:.85,ease:'power3.out'},.26)
-      .fromTo(q('.open .rule'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.55,ease:'power2.out'},.72)
-      .fromTo(q('.open .detail'),{y:32,opacity:0},{y:0,opacity:1,duration:.6,ease:'power2.out'},.84)
-      .fromTo(q('.axis b'),{scaleX:0,transformOrigin:'left center',stagger:.08},{scaleX:1,duration:.45,ease:'power2.out'},1.02);`,
+      .fromTo(q('.mark'),{x:-80,opacity:0},{x:0,opacity:1,duration:.9,ease:'power3.out'},.06)
+      .fromTo(q('.open .title'),{y:54,opacity:0},{y:0,opacity:1,duration:.8,ease:'power3.out'},.34)
+      .fromTo(q('.open .hair'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.6,ease:'power2.out'},.78)
+      .fromTo(q('.open .detail'),{y:26,opacity:0},{y:0,opacity:1,duration:.6,ease:'power2.out'},.9)
+      ${source.motion}`,
+    extraScript: source.before,
     variables: [
       {
         id: 'title',
@@ -69,43 +86,48 @@ const scenes = {
         maxLength: 150,
         required: true,
       },
+      {
+        id: 'source',
+        type: 'string',
+        label: 'Where the figures come from',
+        labels: { vi: 'Nguồn của các con số' },
+        default: 'the report',
+        sample: 'Office for Budget Responsibility, 2024',
+        maxLength: 48,
+        required: true,
+      },
       { id: 'seconds', type: 'number', label: 'Length in seconds (the Assemble node gives it)', default: 4 },
     ],
   },
   chart: {
     role: 'feature',
-    description: 'One claim, its figure, how much of the whole that figure is, and where it came from.',
+    description: 'One claim: the figure running off the edge, a scale under it, and where it came from.',
     heading: 'One claim',
     css:
       commonCss +
-      '.chart{position:absolute;left:96px;right:96px;top:296px}' +
-      '.figure{margin:0;font-size:270px;line-height:.94;font-weight:900;letter-spacing:-.055em;color:#ff8f7a;max-height:300px;overflow:hidden}' +
-      '.track{position:absolute;left:96px;right:96px;top:690px;height:26px;border-radius:13px;background:#1b1834;overflow:hidden}' +
-      '.fill{height:100%;width:0;border-radius:13px;background:linear-gradient(90deg,#8b7cf6,#ff8f7a)}' +
-      '.claim{position:absolute;left:96px;right:96px;top:812px;margin:0;font-size:76px;line-height:1.12;letter-spacing:-.03em;font-weight:850;max-height:420px;overflow:hidden}' +
-      '.detail{position:absolute;left:96px;right:150px;top:1290px;margin:0;font-size:36px;line-height:1.36;color:#c9c4e4;max-height:250px;overflow:hidden}' +
-      '.src{position:absolute;left:96px;right:96px;top:1600px;display:flex;align-items:center;gap:20px;padding:26px 30px;border:1px solid #2f2a52;border-radius:16px;background:#12101f}' +
-      '.src span:first-child{color:#8b7cf6;font-size:18px;letter-spacing:.14em;font-weight:800}' +
-      '.src .source{flex:1;text-align:right;font-size:26px;color:#e8e5f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      poster.css +
+      scale.css +
+      source.css +
+      '.chart .title{position:absolute;left:0;right:0;top:996px;margin:0;font-size:84px;line-height:1.08;letter-spacing:-.03em;font-weight:850;max-height:420px;overflow:hidden}' +
+      '.chart .hair{top:1476px}' +
+      '.chart .detail{position:absolute;left:0;right:0;top:1538px;margin:0;font-size:36px;line-height:1.36;color:#c9c4e4;max-height:240px;overflow:hidden}',
     markup: `<div class="dots"></div>
-      <div class="mast"><span class="brand-mark">N<span></span></span><span>DATA STORY</span><span class="edition">02 / THE FIGURES</span></div>
-      <div class="chart"><p class="figure"></p></div>
-      <div class="track"><div class="fill"></div></div>
-      <h1 class="claim title"></h1>
-      <p class="detail"></p>
-      <div class="src"><span>WHERE IT COMES FROM</span><span class="source"></span></div>
-      <div class="foot"><span>NODECINE / DATA STORY</span><span class="foot-bars"><b></b><b></b><b></b><b></b><b></b></span></div>`,
-    motion: `tl.fromTo(q('.figure'),{y:60,opacity:0},{y:0,opacity:1,duration:.8,ease:'power3.out'},0)
-      .fromTo(q('.track'),{opacity:0},{opacity:1,duration:.4,ease:'sine.out'},.42)
-      .fromTo(q('.fill'),{width:'0%'},{width:(Math.max(0,Math.min(1,Number(v.share)||0))*100)+'%',duration:.9,ease:'power2.out'},.5)
-      .fromTo(q('.claim'),{y:44,opacity:0},{y:0,opacity:1,duration:.65,ease:'power3.out'},.6)
-      .fromTo(q('.detail'),{y:30,opacity:0},{y:0,opacity:1,duration:.55,ease:'power2.out'},.9)
-      .fromTo(q('.src'),{y:36,opacity:0},{y:0,opacity:1,duration:.55,ease:'power2.out'},1.05);`,
-    // The bar is drawn from the share the writer kept: the figure says how big, the bar says how much.
-    extraScript: `var fillBar=root.querySelector('.fill');if(fillBar)fillBar.style.width=(Math.max(0,Math.min(1,Number(v.share)||0))*100)+'%';`,
+      <span class="stamp">DATA STORY / 02</span>
+      <span class="slot slot-poster">${poster.markup}</span>
+      <span class="slot slot-axis">${scale.markup}</span>
+      <div class="body chart"><h1 class="title"></h1><div class="hair"></div><p class="detail"></p></div>
+      <span class="slot slot-source">${source.markup}</span>`,
+    motion: `tl.fromTo(q('.dots'),{opacity:0},{opacity:1,duration:1,ease:'sine.out'},0)
+      .fromTo(q('.chart .title'),{y:48,opacity:0},{y:0,opacity:1,duration:.75,ease:'power3.out'},.55)
+      .fromTo(q('.chart .hair'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.6,ease:'power2.out'},.9)
+      .fromTo(q('.chart .detail'),{y:26,opacity:0},{y:0,opacity:1,duration:.6,ease:'power2.out'},1)
+      ${poster.motion}
+      ${scale.motion}
+      ${source.motion}`,
+    extraScript: `${poster.before}\n  ${scale.before}\n  ${source.before}`,
     variables: [
       { id: 'figure', type: 'string', label: 'The figure, as the source prints it', labels: { vi: 'Con số, đúng như nguồn in' }, default: '62%', sample: '62%', maxLength: 12, required: true },
-      { id: 'share', type: 'number', label: 'How much of the whole it is, from 0 to 1', labels: { vi: 'Nó chiếm bao nhiêu phần trăm của tổng, từ 0 đến 1' }, default: 0.62, sample: 0.62 },
+      { id: 'share', type: 'number', label: 'How much of the whole it is, from 0 to 1', labels: { vi: 'Nó chiếm bao nhiêu phần của tổng, từ 0 đến 1' }, default: 0.62, sample: 0.62 },
       {
         id: 'title',
         type: 'string',
@@ -141,24 +163,27 @@ const scenes = {
   },
   close: {
     role: 'outro',
-    description: 'Closing: what the figures mean together, without inventing a conclusion.',
+    description: 'Closing: what the figures mean together, under a sum that runs off the edge.',
     heading: 'What it means',
     css:
       commonCss +
-      '.close{position:absolute;inset:0}' +
-      '.close .title{position:absolute;left:96px;right:96px;top:620px;margin:0;font-size:100px;line-height:1.08;letter-spacing:-.03em;font-weight:850;max-height:520px;overflow:hidden}' +
-      '.close .rule{position:absolute;left:96px;top:1240px;width:150px;height:9px;border-radius:9px;background:#ff8f7a}' +
-      '.close .detail{position:absolute;left:96px;right:130px;top:1320px;margin:0;font-size:40px;line-height:1.36;color:#c9c4e4;max-height:250px;overflow:hidden}' +
-      '.close-mark{position:absolute;right:96px;top:556px;font-size:150px;line-height:1;color:#2b2650;font-weight:900}',
+      source.css +
+      '.close .mark{top:120px}' +
+      '.close .title{position:absolute;left:0;right:0;top:716px;margin:0;font-size:100px;line-height:1.06;letter-spacing:-.035em;font-weight:850;max-height:560px;overflow:hidden}' +
+      '.close .hair{top:1330px}' +
+      '.close .detail{position:absolute;left:0;right:0;top:1392px;margin:0;font-size:40px;line-height:1.36;color:#c9c4e4;max-height:260px;overflow:hidden}',
     markup: `<div class="dots"></div>
-      <div class="mast"><span class="brand-mark">N<span></span></span><span>DATA STORY</span><span class="edition">03 / WHAT IT MEANS</span></div>
-      <div class="close"><div class="close-mark">∑</div><h1 class="title"></h1><div class="rule"></div><p class="detail"></p></div>
-      <div class="foot"><span>NODECINE / DATA STORY</span><span class="foot-bars"><b></b><b></b><b></b><b></b><b></b></span></div>`,
+      <span class="stamp">DATA STORY / 03</span>
+      <div class="mark">∑</div>
+      <div class="body close"><h1 class="title"></h1><div class="hair"></div><p class="detail"></p></div>
+      <span class="slot slot-source">${source.markup}</span>`,
     motion: `tl.fromTo(q('.dots'),{opacity:0},{opacity:1,duration:1,ease:'sine.out'},0)
-      .fromTo(q('.close-mark'),{scale:.6,opacity:0},{scale:1,opacity:1,duration:.8,ease:'back.out(1.4)'},.1)
-      .fromTo(q('.close .title'),{y:60,opacity:0},{y:0,opacity:1,duration:.8,ease:'power3.out'},.3)
-      .fromTo(q('.close .rule'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.55,ease:'power2.out'},.8)
-      .fromTo(q('.close .detail'),{y:34,opacity:0},{y:0,opacity:1,duration:.6,ease:'power2.out'},.92);`,
+      .fromTo(q('.mark'),{x:-80,opacity:0},{x:0,opacity:1,duration:.9,ease:'power3.out'},.06)
+      .fromTo(q('.close .title'),{y:54,opacity:0},{y:0,opacity:1,duration:.8,ease:'power3.out'},.32)
+      .fromTo(q('.close .hair'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.6,ease:'power2.out'},.76)
+      .fromTo(q('.close .detail'),{y:26,opacity:0},{y:0,opacity:1,duration:.6,ease:'power2.out'},.88)
+      ${source.motion}`,
+    extraScript: source.before,
     variables: [
       {
         id: 'title',
@@ -180,19 +205,30 @@ const scenes = {
         maxLength: 160,
         required: true,
       },
+      {
+        id: 'source',
+        type: 'string',
+        label: 'Where the figures come from',
+        labels: { vi: 'Nguồn của các con số' },
+        default: 'the report',
+        sample: 'Office for Budget Responsibility, 2024',
+        maxLength: 48,
+        required: true,
+      },
       { id: 'seconds', type: 'number', label: 'Length in seconds (the Assemble node gives it)', default: 4 },
     ],
   },
 };
 
-// Keep the workflow JSON in sync with the three scene designs and the guide the writer reads.
+// Keep the workflow JSON in sync with the three scenes, the components this kit publishes, and the guide.
 await editComposition(new URL('./workflow.json', import.meta.url), (files) => {
   // The shell the Studio previews and the inspector lints, until a run has Assemble write the entry.
   files['index.html'] = filmShell({ id: 'data-shell', background: '#0a0a10' });
-  files['compositions/data-open.html'] = sceneBlock({ ...scenes.open, id: 'data-open', seconds: 4 });
-  // The claim scene fills its figure as well as its words, so its text keys carry `figure` too.
-  files['compositions/data-chart.html'] = sceneBlock({ ...scenes.chart, id: 'data-chart', seconds: 4, textKeys: ['figure', 'title', 'detail', 'source'] });
-  files['compositions/data-close.html'] = sceneBlock({ ...scenes.close, id: 'data-close', seconds: 4 });
+  for (const [kind, scene] of Object.entries(scenes)) files[`compositions/data-${kind}.html`] = sceneBlock({ ...scene, id: `data-${kind}`, seconds: 4 });
+  // Published, not pasted: a writer may mount these into a frame of its own.
+  files['compositions/components/stat-poster.html'] = component(statPoster({ accent: CORAL }));
+  files['compositions/components/axis-scale.html'] = component(axisScale({ accent: CORAL, color: MUTED, track: TRACK }));
+  files['compositions/components/source-line.html'] = component(sourceLine({ accent: CORAL, color: MUTED, track: TRACK }));
   files['storyboard-guide.md'] =
-    `---\nfirst: hook\nlast: outro\nrepeat: 3\n---\nMake a story told with numbers in English, vertical 9:16, about 65–85 seconds.\nUse only the figures Research kept, each with the source's own wording, unit and year. Never invent, extrapolate or round a figure in a way that changes what it says.\nOpen with the question the story answers; one claim per scene; close with what the figures mean together.\nEvery claim scene carries the figure as the source prints it (at most 12 characters including its unit), the share of the whole it represents as a number between 0 and 1 when the source gives one (use 0 when it does not), the claim in at most 56 characters, one sentence that explains it, and where the figure came from (at most 48 characters).\nSay what a figure measures, not only how big it is: "62% of adults" is a claim, "62%" is not.`;
+    `---\nfirst: hook\nlast: outro\nrepeat: 3\n---\nMake a story told with numbers in English, vertical 9:16, about 65–85 seconds, set as a poster: the figure runs off the left edge, a scale sits under it with a marker where the figure falls, the claim runs across the lower third, and a fine line at the foot says where the number came from.\nUse only the figures Research kept, each with the source's own wording, unit and year. Never invent, extrapolate or round a figure in a way that changes what it says.\nOpen with the question the story answers; one claim per scene; close with what the figures mean together.\nEvery claim scene carries the figure as the source prints it (at most 12 characters including its unit), the share of the whole it represents as a number between 0 and 1 when the source gives one (use 0 when it does not), the claim in at most 56 characters, one sentence that explains it, and where the figure came from (at most 48 characters).\nEvery scene carries a source: the report, table or page the figures come from, at most 48 characters.\nSay what a figure measures, not only how big it is: "62% of adults" is a claim, "62%" is not.`;
 });
