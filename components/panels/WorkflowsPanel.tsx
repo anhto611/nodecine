@@ -23,9 +23,9 @@ export const WorkflowsPanel: React.FC = () => {
   const remove = useStudio((s) => s.deleteWorkflow);
   const importWorkflow = useStudio((s) => s.importWorkflow);
   const importVideo = useStudio((s) => s.importWorkflowVideo);
-  // One line for whatever the last action could not do: import, open, download. A file that will
+  // One line for whatever the last action could not do: import, open, download, delete. A file that will
   // not open used to do nothing at all when clicked, which reads as the app ignoring the click.
-  const [notice, setNotice] = React.useState<{ what: 'import' | 'open' | 'download' | 'migrated'; why: string } | null>(null);
+  const [notice, setNotice] = React.useState<{ what: 'import' | 'open' | 'download' | 'delete' | 'migrated'; why: string } | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const [files, setFiles] = React.useState<WorkflowSummary[] | null>(null);
   const [renaming, setRenaming] = React.useState<{ id: string; name: string } | null>(null);
@@ -103,7 +103,10 @@ export const WorkflowsPanel: React.FC = () => {
                 ) : confirm === f.id ? (
                   <div className="nc-wf-actions" onClick={(e) => e.stopPropagation()}>
                     <span style={{ color: 'var(--err)' }}>{t('workflows.deleteAsk')}</span>
-                    <button className="nc-chip on" onClick={() => { void remove(f.id); setConfirm(null); }}>{t('workflows.delete')}</button>
+                    <button className="nc-chip on" onClick={() => {
+                      void remove(f.id).then(() => setNotice(null)).catch((e) => setNotice({ what: 'delete', why: e instanceof Error ? e.message : String(e) }));
+                      setConfirm(null);
+                    }}>{t('workflows.delete')}</button>
                     <button className="nc-chip" onClick={() => setConfirm(null)}>{t('tabs.keep')}</button>
                   </div>
                 ) : (

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { writeFile, rename } from 'node:fs/promises';
+import { writeFile, rename, unlink } from 'node:fs/promises';
 import { z } from 'zod';
 import { ASSET_TYPES, assetUrl, ensureAssetsDir } from '@/server/paths';
 
@@ -55,8 +55,12 @@ async function save(bytes: Buffer, ext: string) {
   const name = `${createHash('sha1').update(bytes).digest('hex')}.${ext}`;
   const dir = await ensureAssetsDir();
   const target = path.join(dir, name);
-  const tmp = `${target}.${process.pid}.part`;
-  await writeFile(tmp, bytes);
-  await rename(tmp, target);
+  const tmp = `${target}.${randomUUID()}.part`;
+  try {
+    await writeFile(tmp, bytes);
+    await rename(tmp, target);
+  } finally {
+    await unlink(tmp).catch(() => undefined);
+  }
   return NextResponse.json({ url: assetUrl(name), bytes: bytes.length });
 }

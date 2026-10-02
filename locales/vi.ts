@@ -25,6 +25,7 @@ export const vi: Record<DictKey, string> = {
   'workflows.openBad': 'Không mở được workflow này: {why}',
   'workflows.migratedBad': 'Mở được, nhưng đã nâng từ bản cũ: {why}. Lưu lại để giữ.',
   'workflows.downloadBad': 'Không đọc được tệp này: {why}',
+  'workflows.deleteBad': 'Không xóa được workflow này: {why}',
   'workflows.download': 'Tải JSON',
   'workflows.delete': 'Xóa',
   'workflows.rename': 'Đổi tên',

@@ -72,6 +72,29 @@ describe('JobHub', () => {
     expect(hub.cancel(a.id)).toBe('terminal');
   });
 
+  it('runs each queued job with its own graph, even when another job is submitted for the same key', async () => {
+    const seen: string[] = [];
+    const hub = new JobHub(() => {
+      const services = testServices();
+      const invoke = services.invoke.bind(services);
+      services.invoke = async (id, args) => {
+        if (id === 'voice') seen.push(String(args[0]));
+        return invoke(id, args);
+      };
+      return services;
+    }, { cache: new MemoryResultCache() });
+    const first = graph();
+    first.nodes.find((node) => node.id === 'source')!.params.value = 'first';
+    const second = graph();
+    second.nodes.find((node) => node.id === 'source')!.params.value = 'second';
+    const a = hub.submit({ key: 'same-key', kind: 'run', graph: first });
+    const b = hub.submit({ key: 'same-key', kind: 'run', graph: second });
+    first.nodes.find((node) => node.id === 'source')!.params.value = 'changed after submit';
+    await until(() => hub.get(b.id)?.status === 'done');
+    expect(hub.get(a.id)?.status).toBe('done');
+    expect(seen).toEqual(['first', 'second']);
+  });
+
   it('runs different workflows side by side, never more at once than it is allowed', async () => {
     // Each voice takes a while, so jobs that run together overlap and jobs that queue do not.
     const slow = () => { const s = testServices(); s.delay('voice', 40); return s; };

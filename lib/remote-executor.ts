@@ -146,6 +146,7 @@ export class RemoteExecutor {
 
   /** Follow another tab: new key, new graph, new stream, state read back from the server. */
   async switchTo(key: string, graph: Graph, name: string): Promise<void> {
+    if (this.pushGraph) { clearTimeout(this.pushGraph); this.pushGraph = null; }
     this.key = key;
     this.graph = graph;
     this.name = name;
@@ -193,7 +194,8 @@ export class RemoteExecutor {
   private async submit(kind: 'run' | 'node', extra: { nodeId?: string; force?: boolean }, graph?: Graph): Promise<Job> {
     if (this.pushGraph) { clearTimeout(this.pushGraph); this.pushGraph = null; }
     const requestId = newRequestId();
-    const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', { key: this.key, kind, graph: graph ?? this.graph, name: this.name, ...extra }, requestId));
+    const submission = { key: this.key, kind, graph: structuredClone(graph ?? this.graph), name: this.name, ...extra };
+    const { job } = await this.inOrder(() => postJson<{ job: Job }>('/api/jobs', submission, requestId));
     const early = this.finished.get(job.id);
     if (early) { this.finished.delete(job.id); return early; }
     if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return job;
@@ -211,8 +213,9 @@ export class RemoteExecutor {
   }
 
   private async send(body: unknown, quiet: boolean): Promise<void> {
+    const key = this.key;
     try {
-      await this.inOrder(() => postJson(`/api/executors/${encodeURIComponent(this.key)}`, body));
+      await this.inOrder(() => postJson(`/api/executors/${encodeURIComponent(key)}`, body));
     } catch (e) {
       if (!quiet) this.logs.push({ ts: Date.now(), nodeId: 'server', level: 'warn', message: `could not reach the executor: ${e instanceof Error ? e.message : String(e)}` });
     }

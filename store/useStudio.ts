@@ -33,6 +33,12 @@ export interface WorkflowTab {
 /** What "unsaved" compares against: the name and the graph, the two things a file holds. */
 export const savedHashOf = (name: string, graph: Graph): string => contentHash({ name, graph });
 const dirtyOf = (tab: WorkflowTab, name: string, graph: Graph): boolean => (tab.savedHash ? savedHashOf(name, graph) !== tab.savedHash : true);
+let importSequence = 0;
+function importedId(id: string | undefined): string {
+  const base = (id ?? 'workflow').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'workflow';
+  const suffix = `-${Date.now().toString(36)}-${(importSequence++).toString(36)}`;
+  return `${base.slice(0, 64 - suffix.length)}${suffix}`;
+}
 
 export interface StudioState {
   ready: boolean;
@@ -289,8 +295,11 @@ export const useStudio = create<StudioState>((set, get) => {
       void (async () => {
         const leftovers = loadUserTemplates();
         if (!leftovers.length) return;
-        for (const t of leftovers) await workflowsApi.save(t as WorkflowDocument).catch(() => undefined);
-        saveUserTemplates([]);
+        const failed: typeof leftovers = [];
+        for (const t of leftovers) {
+          try { await workflowsApi.save(t as WorkflowDocument); } catch { failed.push(t); }
+        }
+        saveUserTemplates(failed);
         set({ workflowsTick: get().workflowsTick + 1 });
       })();
     },
@@ -339,9 +348,12 @@ export const useStudio = create<StudioState>((set, get) => {
       const tab = get().tabs.find((t) => t.key === get().activeTab);
       if (!tab) return 'saved';
       if (!tab.fileId) return 'needs-name';
+      const name = tab.name;
+      const graph = structuredClone(tab.graph);
+      const savedHash = savedHashOf(name, graph);
       const existing = await workflowsApi.read(tab.fileId).catch(() => null);
-      await workflowsApi.replace(tab.fileId, { name: tab.name, ...(existing?.description ? { description: existing.description } : {}), graph: tab.graph });
-      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, dirty: false, savedHash: savedHashOf(t.name, t.graph) } : t)), workflowsTick: get().workflowsTick + 1 });
+      await workflowsApi.replace(tab.fileId, { name, ...(existing?.description ? { description: existing.description } : {}), graph });
+      set({ tabs: get().tabs.map((t) => (t.key === tab.key && t.fileId === tab.fileId ? { ...t, dirty: savedHashOf(t.name, t.graph) !== savedHash, savedHash } : t)), workflowsTick: get().workflowsTick + 1 });
       persist();
       return 'saved';
     },
@@ -351,8 +363,13 @@ export const useStudio = create<StudioState>((set, get) => {
       if (!tab || !name.trim()) return;
       const base = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workflow';
       const id = `${base}-${Date.now().toString(36)}`;
-      await workflowsApi.save({ id, name: name.trim(), graph: structuredClone(tab.graph) });
-      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, fileId: id, name: name.trim(), dirty: false, savedHash: savedHashOf(name.trim(), t.graph) } : t)), projectName: name.trim(), workflowsTick: get().workflowsTick + 1 });
+      const savedName = name.trim();
+      const graph = structuredClone(tab.graph);
+      const savedHash = savedHashOf(savedName, graph);
+      await workflowsApi.save({ id, name: savedName, graph });
+      const current = get().tabs.find((t) => t.key === tab.key);
+      const currentName = current?.name === tab.name ? savedName : current?.name ?? savedName;
+      set({ tabs: get().tabs.map((t) => (t.key === tab.key ? { ...t, fileId: id, name: currentName, dirty: savedHashOf(currentName, t.graph) !== savedHash, savedHash } : t)), ...(get().activeTab === tab.key ? { projectName: currentName } : {}), workflowsTick: get().workflowsTick + 1 });
       persist();
     },
 
@@ -509,7 +526,7 @@ export const useStudio = create<StudioState>((set, get) => {
     },
 
     async deleteWorkflow(id) {
-      await workflowsApi.remove(id).catch(() => undefined);
+      await workflowsApi.remove(id);
       // A tab that was this file goes on as a draft; nothing on the canvas is lost.
       set({ tabs: get().tabs.map((t) => (t.fileId === id ? { ...t, fileId: null, dirty: true, savedHash: undefined } : t)), workflowsTick: get().workflowsTick + 1 });
       persist();
@@ -524,7 +541,7 @@ export const useStudio = create<StudioState>((set, get) => {
       }
       try {
         const def = parsed as WorkflowDocument;
-        const saved = await workflowsApi.save({ ...def, id: `${def.id ?? 'workflow'}-${Date.now().toString(36)}`.slice(0, 64), category: 'mine' });
+        const saved = await workflowsApi.save({ ...def, id: importedId(def.id), category: 'mine' });
         set({ workflowsTick: get().workflowsTick + 1 });
         // Saving brought it forward already, so anything left here is a refusal.
         const outcome = await get().openWorkflow(saved.id);
@@ -537,7 +554,7 @@ export const useStudio = create<StudioState>((set, get) => {
     async importWorkflowVideo(file) {
       try {
         const fromVideo = await workflowsApi.fromVideo(file);
-        const saved = await workflowsApi.save({ ...fromVideo, id: `${fromVideo.id}-${Date.now().toString(36)}`.slice(0, 64), category: 'mine' });
+        const saved = await workflowsApi.save({ ...fromVideo, id: importedId(fromVideo.id), category: 'mine' });
         set({ workflowsTick: get().workflowsTick + 1 });
         const outcome = await get().openWorkflow(saved.id);
         return outcome?.kind === 'failed' ? outcome.why : null;

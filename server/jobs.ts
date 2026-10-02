@@ -136,6 +136,8 @@ export class JobHub {
   private lastRun = new Map<string, string>();
   /** Submissions already accepted, by the browser's request id: a retry must not queue a second job. */
   private byRequest = new Map<string, string>();
+  /** A queued job owns the graph it was submitted with, independent of later edits or submissions. */
+  private submissions = new Map<string, { graph: Graph; name: string }>();
 
   constructor(
     /** The services a workflow's nodes are given; `slot` is that workflow, read when a service needs it. */
@@ -275,8 +277,9 @@ export class JobHub {
     if (input.kind === 'node' && !input.nodeId) throw Object.assign(new Error('nodeId is required'), { code: 'JOB_INVALID' });
     const seen = input.requestId ? this.jobs.get(this.byRequest.get(input.requestId) ?? '') : undefined;
     if (seen) return seen;
-    this.slot(input.key, input.graph, input.name);
+    this.slot(input.key);
     const job: Job = { id: `job-${Date.now().toString(36)}-${(this.seq++).toString(36)}`, key: input.key, kind: input.kind, nodeId: input.nodeId, force: input.force, status: 'pending', createdAt: Date.now() };
+    this.submissions.set(job.id, { graph: structuredClone(input.graph), name: input.name ?? input.key });
     this.jobs.set(job.id, job);
     if (input.requestId) this.byRequest.set(input.requestId, job.id);
     this.queue.push(job);
@@ -302,6 +305,7 @@ export class JobHub {
     if (!job) return 'unknown';
     if (job.status === 'pending') {
       this.queue = this.queue.filter((j) => j.id !== id);
+      this.submissions.delete(id);
       job.status = 'cancelled';
       job.finishedAt = Date.now();
       this.write(job);
@@ -350,6 +354,9 @@ export class JobHub {
 
   private async execute(job: Job): Promise<void> {
     const slot = this.slots.get(job.key)!;
+    const submission = this.submissions.get(job.id)!;
+    slot.executor.setGraph(submission.graph);
+    slot.name = submission.name;
     job.status = 'running';
     job.startedAt = Date.now();
     slot.running = true;
@@ -372,6 +379,7 @@ export class JobHub {
       job.ok = false;
       job.error = { code: err.code ?? 'JOB_FAILED', message: err.message ?? String(e), ...(err.issues ? { issues: err.issues } : {}) };
     } finally {
+      this.submissions.delete(job.id);
       slot.running = false;
       job.finishedAt = Date.now();
       this.write(job);

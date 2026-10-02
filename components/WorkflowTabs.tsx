@@ -45,7 +45,7 @@ export const WorkflowTabs: React.FC = () => {
     }
   };
 
-  // Ctrl/Cmd+S saves the active tab, Shift for Save as; Ctrl/Cmd+B bypasses the selected node.
+  // Ctrl/Cmd+S saves the active tab, Shift for Save as.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // A dialog owns Ctrl+S / Ctrl+Z while it is open; saving the workflow from inside one was a surprise.
@@ -63,14 +63,6 @@ export const WorkflowTabs: React.FC = () => {
         e.preventDefault();
         const { undo, redo } = useStudio.getState();
         if (e.key.toLowerCase() === 'y' || e.shiftKey) redo(); else undo();
-      }
-      // Ctrl/Cmd+B bypasses the selected node, like ComfyUI.
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
-        const { selectedNodeId, toggleBypass } = useStudio.getState();
-        if (selectedNodeId) {
-          e.preventDefault();
-          toggleBypass(selectedNodeId);
-        }
       }
     };
     window.addEventListener('keydown', onKey);

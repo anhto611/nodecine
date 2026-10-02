@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { pagePictures, pageText } from '../web';
 
 describe('a page, read', () => {
+  it('excludes mapped IPv6 loopback pictures before trying to fetch them', () => {
+    expect(pagePictures('<img src="http://[::ffff:127.0.0.1]/secret.png">', 'https://example.com/')).toEqual([]);
+  });
   it('keeps the title, the descriptions and the visible words, not the scripts', () => {
     const html = `<html><head><title>Pig Money – App Store</title><meta name="description" content="Sổ chi tiêu &amp; chia tiền">
       <script type="application/ld+json">{"@type":"SoftwareApplication","description":"Ghi chi tiêu bằng một câu chat."}</script>

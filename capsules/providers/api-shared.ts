@@ -29,8 +29,13 @@ export function envFirst(...names: string[]): string | undefined {
 export function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(new Error('timeout')), ms);
-  signal?.addEventListener('abort', () => ctrl.abort(signal.reason), { once: true });
-  ctrl.signal.addEventListener('abort', () => clearTimeout(t), { once: true });
+  const onAbort = () => ctrl.abort(signal?.reason);
+  ctrl.signal.addEventListener('abort', () => {
+    clearTimeout(t);
+    signal?.removeEventListener('abort', onAbort);
+  }, { once: true });
+  if (signal?.aborted) ctrl.abort(signal.reason);
+  else signal?.addEventListener('abort', onAbort, { once: true });
   return ctrl.signal;
 }
 

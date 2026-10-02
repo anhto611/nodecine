@@ -68,3 +68,31 @@ describe('opening a saved workflow', () => {
     expect(useStudio.getState().tabs[0]!.graph.nodes[0]!.params.about).toBe('my unsaved edit');
   });
 });
+
+describe('saving a workflow', () => {
+  it('keeps the tab dirty when the graph changes while its save request is in flight', async () => {
+    vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } });
+    let finish!: () => void;
+    const replace = vi.spyOn(workflowsApi, 'replace').mockImplementation(async () => {
+      await new Promise<void>((resolve) => { finish = resolve; });
+      return { id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } };
+    });
+    await useStudio.getState().openWorkflow('mine');
+    const pending = useStudio.getState().saveWorkflow();
+    await vi.waitFor(() => expect(replace).toHaveBeenCalled());
+    const tab = useStudio.getState().tabs[0]!;
+    useStudio.setState({ tabs: [{ ...tab, name: 'New name', dirty: true }] });
+    finish();
+    await pending;
+    expect(useStudio.getState().tabs[0]).toMatchObject({ name: 'New name', dirty: true });
+    expect(replace.mock.calls[0]![1].name).toBe('Mine');
+  });
+
+  it('keeps a deleted file attached when deletion fails', async () => {
+    vi.spyOn(workflowsApi, 'read').mockResolvedValue({ id: 'mine', name: 'Mine', category: 'mine', graph: { nodes: [], edges: [] } });
+    vi.spyOn(workflowsApi, 'remove').mockRejectedValue(new Error('disk unavailable'));
+    await useStudio.getState().openWorkflow('mine');
+    await expect(useStudio.getState().deleteWorkflow('mine')).rejects.toThrow('disk unavailable');
+    expect(useStudio.getState().tabs[0]!.fileId).toBe('mine');
+  });
+});

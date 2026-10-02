@@ -23,6 +23,7 @@ export const en = {
   'workflows.openBad': 'Could not open this workflow: {why}',
   'workflows.migratedBad': 'Opened, but brought forward from an older version: {why}. Save to keep it.',
   'workflows.downloadBad': 'Could not read this file: {why}',
+  'workflows.deleteBad': 'Could not delete this workflow: {why}',
   'workflows.download': 'Download JSON',
   'workflows.delete': 'Delete',
   'workflows.rename': 'Rename',

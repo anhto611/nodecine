@@ -9,6 +9,7 @@ import { ErrorCode } from '@/contracts/errors';
 import type { Capability, LLMRef } from '@/contracts/types/payloads';
 import { extractJson } from '@/contracts/ai/structured-completion';
 import { base64Of, fittedImages } from '../llm-images';
+import { withTimeout } from '../api-shared';
 
 /**
  * Ollama provider: a local model server, offline and without a key.
@@ -52,14 +53,6 @@ export interface OllamaDeps {
 }
 
 const defaultDeps = (): OllamaDeps => ({ fetch: globalThis.fetch, timeoutMs: 4000 });
-
-function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(new Error('timeout')), ms);
-  signal?.addEventListener('abort', () => ctrl.abort(signal.reason), { once: true });
-  ctrl.signal.addEventListener('abort', () => clearTimeout(t), { once: true });
-  return ctrl.signal;
-}
 
 export function createOllamaProvider(settings: Record<string, unknown>, deps: OllamaDeps = defaultDeps()): LLMProvider {
   const model = ((settings.model as string | undefined) || OLLAMA_DEFAULT_MODEL).trim();

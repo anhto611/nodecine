@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import { access } from 'node:fs/promises';
+import path from 'node:path';
 
 /**
  * Subprocess helper enforcing the rules every child process follows: argument arrays (never a shell string),
@@ -40,6 +42,7 @@ export function scrub(text: string): string {
 }
 
 export function exec(bin: string, opts: ExecOptions = {}): Promise<ExecResult> {
+  if (opts.signal?.aborted) return Promise.reject(opts.signal.reason ?? new DOMException('Aborted', 'AbortError'));
   const max = opts.maxOutput ?? 8 * 1024;
   return new Promise((resolve, reject) => {
     const child = spawn(bin, opts.args ?? [], {
@@ -80,7 +83,18 @@ export function exec(bin: string, opts: ExecOptions = {}): Promise<ExecResult> {
 export async function findBinary(name: string, overrideEnv?: string): Promise<string | null> {
   const override = overrideEnv ? process.env[overrideEnv] : undefined;
   if (override) return override;
-  const r = await exec(process.platform === 'win32' ? 'where.exe' : '/usr/bin/which', { args: [name], timeoutMs: 3000 }).catch(() => null);
+  if (process.platform === 'win32') {
+    const dirs = (process.env.PATH ?? process.env.Path ?? '').split(path.delimiter).filter(Boolean);
+    const extensions = (process.env.PATHEXT ?? '.EXE;.CMD;.BAT').split(';');
+    for (const dir of dirs) {
+      for (const ext of extensions) {
+        const candidate = path.join(dir.replace(/^"|"$/g, ''), name + ext.toLowerCase());
+        if (await access(candidate).then(() => true, () => false)) return candidate;
+      }
+    }
+    return null;
+  }
+  const r = await exec('/usr/bin/which', { args: [name], timeoutMs: 3000 }).catch(() => null);
   if (!r || r.code !== 0) return null;
   const p = r.stdout.trim().split(/\r?\n/)[0];
   return p || null;
