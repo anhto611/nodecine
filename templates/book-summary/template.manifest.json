@@ -1,0 +1,9 @@
+{
+  "id": "book-summary",
+  "group": "link",
+  "tagline": {
+    "en": "Paste a book link or your own notes; get a chapter-by-chapter summary that keeps its place in the book.",
+    "vi": "Dán link cuốn sách hoặc ghi chú của bạn; nhận bản tóm tắt theo chương, giữ đúng vị trí trong sách."
+  },
+  "tags": ["9:16", "~90s", { "en": "Needs a model and a voice", "vi": "Cần model và giọng đọc" }]
+}

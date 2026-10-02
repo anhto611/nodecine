@@ -1,0 +1,252 @@
+{
+  "id": "book-summary",
+  "name": {
+    "en": "Book summary",
+    "vi": "Tóm tắt sách"
+  },
+  "description": {
+    "en": "Paste a book's page or your own notes into Brief. Research gathers the ideas in the book's own order, the writer makes one chapter scene per idea, a voice narrates it, and the studio cuts a vertical summary.",
+    "vi": "Dán trang sách hoặc ghi chú của bạn vào Brief. Research gom các ý theo đúng thứ tự trong sách, tác nhân viết mỗi ý thành một cảnh chương, giọng đọc lồng tiếng, studio dựng thành bản tóm tắt dọc."
+  },
+  "category": "template",
+  "graph": {
+    "nodes": [
+      {
+        "id": "brief",
+        "type": "brief",
+        "params": {
+          "about": "",
+          "hint": {
+            "en": "Name the book and its author, and paste a link (publisher page, review, notes) or your own outline. Add who this is for.",
+            "vi": "Ghi tên sách và tác giả, dán link (trang nhà xuất bản, bài review, ghi chú) hoặc dàn ý của bạn. Thêm đối tượng người xem."
+          }
+        },
+        "bypassed": false,
+        "position": {
+          "x": 0,
+          "y": 120
+        },
+        "version": 1
+      },
+      {
+        "id": "research",
+        "type": "research",
+        "params": {
+          "search": "sources",
+          "guide": "Read the URLs in the Brief and the notes the person wrote. Keep the book's main ideas in the book's own order, with where each one sits (chapter, part or section). Say plainly what could not be read; never invent a quote, a page number or a figure.",
+          "llmProvider": "",
+          "llmSettings": {},
+          "attempt": 0,
+          "edits": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 330,
+          "y": 120
+        },
+        "version": 1
+      },
+      {
+        "id": "assets",
+        "type": "assets",
+        "params": {
+          "llmProvider": "",
+          "llmSettings": {},
+          "attempt": 0
+        },
+        "bypassed": false,
+        "position": {
+          "x": 330,
+          "y": 430
+        },
+        "version": 1
+      },
+      {
+        "id": "composition",
+        "type": "composition",
+        "params": {
+          "files": {
+            "index.html": "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=1080, height=1920\" />\n  <script src=\"gsap.min.js\"></script>\n  <style>\n    html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #050807; }\n    #book-shell { position: relative; width: 1080px; height: 1920px; overflow: hidden; }\n  </style>\n</head>\n<body>\n  <div id=\"book-shell\" data-composition-id=\"book-shell\" data-start=\"0\" data-width=\"1080\" data-height=\"1920\">\n    <!-- nodecine:frames -->\n    <script>\n      const tl = gsap.timeline({ paused: true });\n      tl.set({}, {}, 1);\n      window.__timelines['book-shell'] = tl;\n    </script>\n  </div>\n</body>\n</html>",
+            "compositions/book-open.html": "<!doctype html>\n<html lang=\"en\" data-composition-duration=\"4\" data-role=\"hook\" data-composition-variables='[{\"id\":\"title\",\"type\":\"string\",\"label\":\"What the book gives a reader\",\"labels\":{\"vi\":\"Cuốn sách cho người đọc điều gì\"},\"default\":\"What this book gives you\",\"sample\":\"A way to think about attention\",\"maxLength\":56,\"required\":true},{\"id\":\"detail\",\"type\":\"string\",\"label\":\"One sentence on what it is for\",\"labels\":{\"vi\":\"Một câu về mục đích cuốn sách\"},\"default\":\"What the book is for, in one sentence.\",\"sample\":\"It argues that attention is the scarce resource, and that most of our habits spend it badly.\",\"maxLength\":160,\"required\":true},{\"id\":\"source\",\"type\":\"string\",\"label\":\"The book and its author\",\"labels\":{\"vi\":\"Tên sách và tác giả\"},\"default\":\"The book · its author\",\"sample\":\"Stolen Focus · Johann Hari\",\"maxLength\":60,\"required\":true},{\"id\":\"seconds\",\"type\":\"number\",\"label\":\"Length in seconds (the Assemble node gives it)\",\"default\":4}]'>\n<head><meta charset=\"UTF-8\" /><meta name=\"description\" content=\"Opening: what this book gives a reader, and which book it is.\" /></head>\n<body><template>\n<style>html,body{margin:0;background:#050807}*{box-sizing:border-box}#root{position:absolute;inset:0;width:1080px;height:1920px;overflow:hidden;color:#f0ece2;background:#050807;font-family:var(--font-body,Inter,Arial,sans-serif)}.nc-backdrop{position:absolute;inset:0;background:radial-gradient(circle at 20% 6%,#14342a 0,#0a1512 52%,#040706 100%)}.mast{position:absolute;top:91px;left:86px;right:86px;display:flex;align-items:center;gap:20px;color:#a9c4b6;font-size:19px;font-weight:850;letter-spacing:.14em;z-index:5}.brand-mark{display:flex;align-items:center;justify-content:center;width:63px;height:63px;border-radius:17px;background:#d8b26a;color:#241a08;font-size:37px;font-weight:1000;letter-spacing:-.1em}.brand-mark span{width:7px;height:7px;border-radius:50%;background:#241a08;margin-top:22px}.edition{margin-left:auto;color:#7d9a8b;font-size:17px}.foot{position:absolute;bottom:84px;left:86px;right:86px;display:flex;align-items:center;justify-content:space-between;padding-top:23px;border-top:1px solid #2b4a3d;color:#9db8aa;font-size:20px;font-weight:800;letter-spacing:.1em;z-index:5}.foot-bars{display:flex;align-items:end;gap:6px;height:28px}.foot-bars b{display:block;width:6px;background:#d8b26a;border-radius:3px}.foot-bars b:nth-child(1){height:12px}.foot-bars b:nth-child(2){height:24px}.foot-bars b:nth-child(3){height:17px}.foot-bars b:nth-child(4){height:28px}.foot-bars b:nth-child(5){height:15px}.paper{position:absolute;left:86px;right:86px;top:320px;min-height:980px;padding:70px 66px;background:#f2ece0;color:#1b2320;border-radius:26px;box-shadow:0 50px 120px #02050499}.paper-top{display:flex;justify-content:space-between;color:#5d6b62;font-size:20px;font-weight:850;letter-spacing:.14em}.paper .title{margin:64px 0 0;font-size:88px;line-height:1.08;letter-spacing:-.03em;font-weight:850;max-height:520px;overflow:hidden}.paper .rule{width:150px;height:8px;border-radius:8px;background:#b98c3f;margin:44px 0}.paper .detail{margin:0;font-size:38px;line-height:1.4;color:#3c4a42;max-height:280px;overflow:hidden}.book-line{position:absolute;left:96px;right:96px;bottom:300px;display:flex;align-items:center;gap:18px;color:#d8b26a;font-size:23px;font-weight:800;letter-spacing:.08em}.book-line .source{flex:1;text-align:right;color:#e6ddc9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}</style>\n<div id=\"root\" data-composition-id=\"book-open\" data-duration=\"4\" data-width=\"1080\" data-height=\"1920\"><div class=\"nc-backdrop\"></div><div class=\"mast\"><span class=\"brand-mark\">N<span></span></span><span>BOOK SUMMARY</span><span class=\"edition\">01 / OPENING</span></div>\n      <div class=\"paper\"><div class=\"paper-top\"><span>BOOK SUMMARY</span><span>01 / OPENING</span></div><h1 class=\"title\"></h1><div class=\"rule\"></div><p class=\"detail\"></p></div>\n      <div class=\"book-line\"><span>THE BOOK</span><span class=\"source\"></span></div>\n      <div class=\"foot\"><span>NODECINE / BOOK SUMMARY</span><span class=\"foot-bars\"><b></b><b></b><b></b><b></b><b></b></span></div></div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  ['title','detail','source'].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?{\"title\":\"What this book gives you\",\"detail\":\"What the book is for, in one sentence.\",\"source\":\"The book · its author\",\"seconds\":4}[key]:v[key])})});\n  var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||4);\n  var tl=gsap.timeline({paused:true});\n  tl.fromTo(q('.paper'),{y:110,opacity:0},{y:0,opacity:1,duration:.9,ease:'power3.out'},0)\n      .fromTo(q('.paper-top'),{opacity:0},{opacity:1,duration:.5,ease:'sine.out'},.3)\n      .fromTo(q('.paper .title'),{y:70,opacity:0},{y:0,opacity:1,duration:.85,ease:'power3.out'},.42)\n      .fromTo(q('.paper .rule'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.55,ease:'power2.out'},.86)\n      .fromTo(q('.paper .detail'),{y:34,opacity:0},{y:0,opacity:1,duration:.6,ease:'power2.out'},.98)\n      .fromTo(q('.book-line'),{y:30,opacity:0},{y:0,opacity:1,duration:.6,ease:'power2.out'},1.15);\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['book-open']=tl;\n})();</script>\n</template></body></html>",
+            "compositions/book-chapter.html": "<!doctype html>\n<html lang=\"en\" data-composition-duration=\"4\" data-role=\"feature\" data-composition-variables='[{\"id\":\"number\",\"type\":\"string\",\"label\":\"Chapter number, two digits\",\"labels\":{\"vi\":\"Số thứ tự chương, hai chữ số\"},\"default\":\"01\",\"sample\":\"01\",\"maxLength\":2,\"required\":true},{\"id\":\"title\",\"type\":\"string\",\"label\":\"The idea\",\"labels\":{\"vi\":\"Ý của chương\"},\"default\":\"One idea\",\"sample\":\"Attention is spent, not lost\",\"maxLength\":56,\"required\":true},{\"id\":\"detail\",\"type\":\"string\",\"label\":\"One sentence that explains it\",\"labels\":{\"vi\":\"Một câu giải thích\"},\"default\":\"What the idea means, in one sentence.\",\"sample\":\"Every interruption costs more than the minute it takes, because the thread has to be rebuilt.\",\"maxLength\":170,\"required\":true},{\"id\":\"source\",\"type\":\"string\",\"label\":\"Where it sits in the book\",\"labels\":{\"vi\":\"Vị trí trong sách\"},\"default\":\"Chapter one\",\"sample\":\"Part 2 — Chapter 4\",\"maxLength\":48,\"required\":true},{\"id\":\"seconds\",\"type\":\"number\",\"label\":\"Length in seconds (the Assemble node gives it)\",\"default\":4}]'>\n<head><meta charset=\"UTF-8\" /><meta name=\"description\" content=\"One idea from the book, and where in the book it sits.\" /></head>\n<body><template>\n<style>html,body{margin:0;background:#050807}*{box-sizing:border-box}#root{position:absolute;inset:0;width:1080px;height:1920px;overflow:hidden;color:#f0ece2;background:#050807;font-family:var(--font-body,Inter,Arial,sans-serif)}.nc-backdrop{position:absolute;inset:0;background:radial-gradient(circle at 20% 6%,#14342a 0,#0a1512 52%,#040706 100%)}.mast{position:absolute;top:91px;left:86px;right:86px;display:flex;align-items:center;gap:20px;color:#a9c4b6;font-size:19px;font-weight:850;letter-spacing:.14em;z-index:5}.brand-mark{display:flex;align-items:center;justify-content:center;width:63px;height:63px;border-radius:17px;background:#d8b26a;color:#241a08;font-size:37px;font-weight:1000;letter-spacing:-.1em}.brand-mark span{width:7px;height:7px;border-radius:50%;background:#241a08;margin-top:22px}.edition{margin-left:auto;color:#7d9a8b;font-size:17px}.foot{position:absolute;bottom:84px;left:86px;right:86px;display:flex;align-items:center;justify-content:space-between;padding-top:23px;border-top:1px solid #2b4a3d;color:#9db8aa;font-size:20px;font-weight:800;letter-spacing:.1em;z-index:5}.foot-bars{display:flex;align-items:end;gap:6px;height:28px}.foot-bars b{display:block;width:6px;background:#d8b26a;border-radius:3px}.foot-bars b:nth-child(1){height:12px}.foot-bars b:nth-child(2){height:24px}.foot-bars b:nth-child(3){height:17px}.foot-bars b:nth-child(4){height:28px}.foot-bars b:nth-child(5){height:15px}.chapter-no{position:absolute;right:64px;top:286px;font-size:290px;line-height:1;font-weight:900;letter-spacing:-.08em;color:#12291f}.chapter-chip{position:absolute;left:96px;top:344px;color:#d8b26a;font-size:22px;font-weight:850;letter-spacing:.16em}.card{position:absolute;left:76px;right:76px;top:620px;min-height:800px;padding:62px 60px 70px;background:#f2ece0;color:#1b2320;border-radius:26px;box-shadow:0 50px 110px #02050499}.card .title{margin:0;font-size:80px;line-height:1.1;letter-spacing:-.03em;font-weight:850;max-height:400px;overflow:hidden}.card .rule{width:100%;height:3px;background:#cbbfa6;margin:44px 0 36px}.card .detail{margin:0;font-size:38px;line-height:1.38;color:#3c4a42;max-height:250px;overflow:hidden}.note{position:absolute;left:96px;right:96px;top:1560px;display:flex;align-items:center;gap:20px;color:#bcd3c6;font-size:23px;letter-spacing:.04em}.note span:first-child{color:#d8b26a;font-size:19px;letter-spacing:.16em;font-weight:800}.note .source{flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}</style>\n<div id=\"root\" data-composition-id=\"book-chapter\" data-duration=\"4\" data-width=\"1080\" data-height=\"1920\"><div class=\"nc-backdrop\"></div><div class=\"mast\"><span class=\"brand-mark\">N<span></span></span><span>BOOK SUMMARY</span><span class=\"edition\">02 / CHAPTERS</span></div>\n      <div class=\"chapter-no number-value\">01</div>\n      <span class=\"chapter-chip\">CHAPTER</span>\n      <div class=\"card\"><h1 class=\"title\"></h1><div class=\"rule\"></div><p class=\"detail\"></p></div>\n      <div class=\"note\"><span>WHERE IT SITS</span><span class=\"source\"></span></div>\n      <div class=\"foot\"><span>NODECINE / BOOK SUMMARY</span><span class=\"foot-bars\"><b></b><b></b><b></b><b></b><b></b></span></div></div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  ['title','detail','source'].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?{\"number\":\"01\",\"title\":\"One idea\",\"detail\":\"What the idea means, in one sentence.\",\"source\":\"Chapter one\",\"seconds\":4}[key]:v[key])})});\n  var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||4);\n  var tl=gsap.timeline({paused:true});\n  tl.fromTo(q('.chapter-no'),{y:60,opacity:0},{y:0,opacity:1,duration:.7,ease:'power3.out'},0)\n      .fromTo(q('.chapter-chip'),{x:-24,opacity:0},{x:0,opacity:1,duration:.5,ease:'power2.out'},.16)\n      .fromTo(q('.card'),{y:110,opacity:0},{y:0,opacity:1,duration:.8,ease:'power3.out'},.26)\n      .fromTo(q('.card .title'),{y:40,opacity:0},{y:0,opacity:1,duration:.65,ease:'power3.out'},.5)\n      .fromTo(q('.card .rule'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.6,ease:'power2.out'},.72)\n      .fromTo(q('.card .detail'),{y:30,opacity:0},{y:0,opacity:1,duration:.55,ease:'power2.out'},.9)\n      .fromTo(q('.note'),{y:36,opacity:0},{y:0,opacity:1,duration:.55,ease:'power2.out'},1.05);\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['book-chapter']=tl;\n})();</script>\n</template></body></html>",
+            "compositions/book-close.html": "<!doctype html>\n<html lang=\"en\" data-composition-duration=\"4\" data-role=\"outro\" data-composition-variables='[{\"id\":\"title\",\"type\":\"string\",\"label\":\"What to keep\",\"labels\":{\"vi\":\"Điều nên giữ lại\"},\"default\":\"What to keep\",\"sample\":\"Keep the argument, not the anecdote\",\"maxLength\":56,\"required\":true},{\"id\":\"detail\",\"type\":\"string\",\"label\":\"One sentence to close on\",\"labels\":{\"vi\":\"Một câu kết\"},\"default\":\"The one thing worth carrying out of this book.\",\"sample\":\"The book is at its best where it counts interruptions; its own stories prove less.\",\"maxLength\":160,\"required\":true},{\"id\":\"seconds\",\"type\":\"number\",\"label\":\"Length in seconds (the Assemble node gives it)\",\"default\":4}]'>\n<head><meta charset=\"UTF-8\" /><meta name=\"description\" content=\"Closing: what to keep from the book, without an invented call to action.\" /></head>\n<body><template>\n<style>html,body{margin:0;background:#050807}*{box-sizing:border-box}#root{position:absolute;inset:0;width:1080px;height:1920px;overflow:hidden;color:#f0ece2;background:#050807;font-family:var(--font-body,Inter,Arial,sans-serif)}.nc-backdrop{position:absolute;inset:0;background:radial-gradient(circle at 20% 6%,#14342a 0,#0a1512 52%,#040706 100%)}.mast{position:absolute;top:91px;left:86px;right:86px;display:flex;align-items:center;gap:20px;color:#a9c4b6;font-size:19px;font-weight:850;letter-spacing:.14em;z-index:5}.brand-mark{display:flex;align-items:center;justify-content:center;width:63px;height:63px;border-radius:17px;background:#d8b26a;color:#241a08;font-size:37px;font-weight:1000;letter-spacing:-.1em}.brand-mark span{width:7px;height:7px;border-radius:50%;background:#241a08;margin-top:22px}.edition{margin-left:auto;color:#7d9a8b;font-size:17px}.foot{position:absolute;bottom:84px;left:86px;right:86px;display:flex;align-items:center;justify-content:space-between;padding-top:23px;border-top:1px solid #2b4a3d;color:#9db8aa;font-size:20px;font-weight:800;letter-spacing:.1em;z-index:5}.foot-bars{display:flex;align-items:end;gap:6px;height:28px}.foot-bars b{display:block;width:6px;background:#d8b26a;border-radius:3px}.foot-bars b:nth-child(1){height:12px}.foot-bars b:nth-child(2){height:24px}.foot-bars b:nth-child(3){height:17px}.foot-bars b:nth-child(4){height:28px}.foot-bars b:nth-child(5){height:15px}.close{position:absolute;inset:0}.close .title{position:absolute;left:96px;right:96px;top:620px;margin:0;font-size:100px;line-height:1.08;letter-spacing:-.03em;font-weight:850;max-height:520px;overflow:hidden}.close .rule{position:absolute;left:96px;top:1240px;width:150px;height:9px;border-radius:9px;background:#d8b26a}.close .detail{position:absolute;left:96px;right:130px;top:1320px;margin:0;font-size:40px;line-height:1.36;color:#c9d8ce;max-height:250px;overflow:hidden}.close-mark{position:absolute;right:96px;top:548px;font-size:150px;line-height:1;color:#12291f;font-weight:900}</style>\n<div id=\"root\" data-composition-id=\"book-close\" data-duration=\"4\" data-width=\"1080\" data-height=\"1920\"><div class=\"nc-backdrop\"></div><div class=\"mast\"><span class=\"brand-mark\">N<span></span></span><span>BOOK SUMMARY</span><span class=\"edition\">03 / KEEP</span></div>\n      <div class=\"close\"><div class=\"close-mark\">§</div><h1 class=\"title\"></h1><div class=\"rule\"></div><p class=\"detail\"></p></div>\n      <div class=\"foot\"><span>NODECINE / BOOK SUMMARY</span><span class=\"foot-bars\"><b></b><b></b><b></b><b></b><b></b></span></div></div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  ['title','detail','source'].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?{\"title\":\"What to keep\",\"detail\":\"The one thing worth carrying out of this book.\",\"seconds\":4}[key]:v[key])})});\n  var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||4);\n  var tl=gsap.timeline({paused:true});\n  tl.fromTo(q('.close-mark'),{scale:.6,rotation:-30,opacity:0},{scale:1,rotation:0,opacity:1,duration:.8,ease:'back.out(1.4)'},0)\n      .fromTo(q('.close .title'),{y:60,opacity:0},{y:0,opacity:1,duration:.8,ease:'power3.out'},.26)\n      .fromTo(q('.close .rule'),{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.55,ease:'power2.out'},.76)\n      .fromTo(q('.close .detail'),{y:34,opacity:0},{y:0,opacity:1,duration:.6,ease:'power2.out'},.88);\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['book-close']=tl;\n})();</script>\n</template></body></html>",
+            "storyboard-guide.md": "---\nfirst: hook\nlast: outro\nrepeat: 3\n---\nMake a summary of a book in English, vertical 9:16, about 80–100 seconds.\nUse only what is in Research, the notes the person wrote and the URLs they gave. Never invent a quote, a page number or a figure.\nOpen with what the book gives a reader; one idea per chapter scene, in the book's own order; close with what to keep.\nEvery chapter scene carries a two-digit number in order (01, 02, 03), the idea in at most 56 characters, one sentence that explains it, and where it sits in the book (part, chapter or section, at most 48 characters).\nName the book and its author once, on the opening scene, in the source line. Drop an idea when Research has no support for it, and never present a summary of a summary as the book's own claim."
+          },
+          "media": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 0,
+          "y": 430
+        },
+        "version": 1
+      },
+      {
+        "id": "writer",
+        "type": "storyboard-writer",
+        "params": {
+          "durationSeconds": 90,
+          "language": "en",
+          "tone": "trustworthy",
+          "notes": "One idea per chapter scene, in the book's own order. Name the book and its author once, on the opening scene. Never claim more than the sources support, and never invent a quote, a page number or a figure.",
+          "subject": "",
+          "llmProvider": "",
+          "llmSettings": {},
+          "attempt": 0,
+          "rewrites": {},
+          "edits": {}
+        },
+        "bypassed": false,
+        "position": {
+          "x": 650,
+          "y": 220
+        },
+        "version": 1
+      },
+      {
+        "id": "tts",
+        "type": "tts",
+        "params": {
+          "ttsProvider": "",
+          "ttsSettings": {},
+          "speed": 1
+        },
+        "bypassed": false,
+        "position": {
+          "x": 980,
+          "y": 90
+        },
+        "version": 1
+      },
+      {
+        "id": "assemble",
+        "type": "assemble",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 1280,
+          "y": 300
+        },
+        "version": 1
+      },
+      {
+        "id": "preview",
+        "type": "video-output",
+        "params": {},
+        "bypassed": false,
+        "position": {
+          "x": 1600,
+          "y": 170
+        },
+        "version": 2
+      },
+      {
+        "id": "export",
+        "type": "mp4-export",
+        "params": {
+          "quality": "medium",
+          "fileName": "book-summary.mp4"
+        },
+        "bypassed": false,
+        "position": {
+          "x": 1600,
+          "y": 540
+        },
+        "version": 2
+      }
+    ],
+    "edges": [
+      {
+        "id": "brief-to-research",
+        "source": "brief",
+        "sourcePort": "brief",
+        "target": "research",
+        "targetPort": "brief"
+      },
+      {
+        "id": "brief-to-assets",
+        "source": "brief",
+        "sourcePort": "brief",
+        "target": "assets",
+        "targetPort": "brief"
+      },
+      {
+        "id": "brief-to-writer",
+        "source": "brief",
+        "sourcePort": "brief",
+        "target": "writer",
+        "targetPort": "brief"
+      },
+      {
+        "id": "research-to-writer",
+        "source": "research",
+        "sourcePort": "research",
+        "target": "writer",
+        "targetPort": "research"
+      },
+      {
+        "id": "assets-to-writer",
+        "source": "assets",
+        "sourcePort": "assets",
+        "target": "writer",
+        "targetPort": "assets"
+      },
+      {
+        "id": "kit-to-writer",
+        "source": "composition",
+        "sourcePort": "composition",
+        "target": "writer",
+        "targetPort": "composition"
+      },
+      {
+        "id": "kit-to-assemble",
+        "source": "composition",
+        "sourcePort": "composition",
+        "target": "assemble",
+        "targetPort": "composition"
+      },
+      {
+        "id": "assets-to-assemble",
+        "source": "assets",
+        "sourcePort": "assets",
+        "target": "assemble",
+        "targetPort": "assets"
+      },
+      {
+        "id": "writer-to-assemble",
+        "source": "writer",
+        "sourcePort": "storyboard",
+        "target": "assemble",
+        "targetPort": "storyboard"
+      },
+      {
+        "id": "writer-to-tts",
+        "source": "writer",
+        "sourcePort": "script",
+        "target": "tts",
+        "targetPort": "script"
+      },
+      {
+        "id": "tts-to-assemble",
+        "source": "tts",
+        "sourcePort": "voiceover",
+        "target": "assemble",
+        "targetPort": "voiceover"
+      },
+      {
+        "id": "assemble-to-preview",
+        "source": "assemble",
+        "sourcePort": "composition",
+        "target": "preview",
+        "targetPort": "composition"
+      },
+      {
+        "id": "assemble-to-export",
+        "source": "assemble",
+        "sourcePort": "composition",
+        "target": "export",
+        "targetPort": "composition"
+      }
+    ]
+  }
+}
