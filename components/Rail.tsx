@@ -4,6 +4,9 @@ import { useStudio } from '@/store/useStudio';
 import { Icon } from '@/capsules/sdk/icons';
 import { useT } from '@/capsules/sdk/ui';
 
+/** Where the source lives. The rail is the only place in the Studio that links out of the app. */
+const REPO_URL = 'https://github.com/anhto611/nodecine';
+
 /** Left rail, ComfyUI-style: Workflows, Library, History … Settings pinned at the bottom. Logs toggle from the strip under the canvas. */
 export const Rail: React.FC = () => {
   const t = useT();
@@ -21,6 +24,7 @@ export const Rail: React.FC = () => {
       <button className={`nc-rt ${panel === 'history' ? 'on' : ''}`} title={`${t('rail.history')} (H)`} onClick={() => setPanel('history')}><Icon.hist /><span className="nc-rt-l">{t('rail.history')}</span></button>
       <div style={{ flex: 1 }} />
       <button className={`nc-rt ${settingsOpen ? 'on' : ''}`} title={`${t('rail.settings')} (Ctrl+,)`} onClick={() => setSettingsOpen(true)}><Icon.gear /><span className="nc-rt-l">{t('rail.settings')}</span></button>
+      <a className="nc-rt" href={REPO_URL} target="_blank" rel="noreferrer" title={t('rail.githubTitle')}><Icon.github /><span className="nc-rt-l">{t('rail.github')}</span></a>
     </nav>
   );
 };

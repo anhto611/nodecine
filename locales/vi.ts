@@ -52,6 +52,8 @@ export const vi: Record<DictKey, string> = {
   'rail.history': 'Lịch sử',
   'rail.logs': 'Nhật ký',
   'rail.settings': 'Cài đặt',
+  'rail.github': 'GitHub',
+  'rail.githubTitle': 'Mã nguồn trên GitHub',
   'library.search': 'Tìm node…',
   'library.hint': 'Kéo thả lên canvas, hoặc nhấp đúp để thả vào giữa.',
   'library.group.source': 'Nguồn',

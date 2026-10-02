@@ -50,6 +50,8 @@ export const en = {
   'rail.history': 'History',
   'rail.logs': 'Logs',
   'rail.settings': 'Settings',
+  'rail.github': 'GitHub',
+  'rail.githubTitle': 'Source code on GitHub',
   'library.search': 'Search nodes…',
   'library.hint': 'Drag onto the canvas, or double-click to drop at the center.',
   'library.group.source': 'Sources',
