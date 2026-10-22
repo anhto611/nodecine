@@ -53,8 +53,20 @@ export async function editComposition(workflowUrl, edit) {
  * what the Studio previews and what the inspector lints until a run writes the real entry, so every
  * kit whose frames are assembled carries one.
  */
-export function filmShell({ id, width = 1080, height = 1920, background = '#0b1020' }) {
-  return `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=${width}, height=${height}" />\n  <script src="gsap.min.js"></script>\n  <style>\n    html, body { margin: 0; width: ${width}px; height: ${height}px; overflow: hidden; background: ${background}; }\n    #${id} { position: relative; width: ${width}px; height: ${height}px; overflow: hidden; }\n  </style>\n</head>\n<body>\n  <div id="${id}" data-composition-id="${id}" data-start="0" data-width="${width}" data-height="${height}">\n    <!-- nodecine:frames -->\n    <script>\n      const tl = gsap.timeline({ paused: true });\n      tl.set({}, {}, 1);\n      window.__timelines['${id}'] = tl;\n    </script>\n  </div>\n</body>\n</html>`;
+/**
+ * `theme` sets the film's theme tokens on the shell's root, where every frame, block and mounted
+ * component inherits them: `bg`, `fg`, `brand`, `fontDisplay`, `fontBody` become `--bg`, `--fg`,
+ * `--brand`, `--font-display`, `--font-body`. A component kept on a library shelf paints with these, so
+ * the same piece wears whichever film it is mounted in.
+ */
+const themeTokens = (theme = {}) =>
+  Object.entries({ bg: '--bg', fg: '--fg', brand: '--brand', fontDisplay: '--font-display', fontBody: '--font-body' })
+    .filter(([key]) => theme[key])
+    .map(([key, token]) => ` ${token}: ${theme[key]};`)
+    .join('');
+
+export function filmShell({ id, width = 1080, height = 1920, background = '#0b1020', theme }) {
+  return `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=${width}, height=${height}" />\n  <script src="gsap.min.js"></script>\n  <style>\n    html, body { margin: 0; width: ${width}px; height: ${height}px; overflow: hidden; background: ${background}; }\n    #${id} { position: relative; width: ${width}px; height: ${height}px; overflow: hidden;${themeTokens(theme)} }\n  </style>\n</head>\n<body>\n  <div id="${id}" data-composition-id="${id}" data-start="0" data-width="${width}" data-height="${height}">\n    <!-- nodecine:frames -->\n    <script>\n      const tl = gsap.timeline({ paused: true });\n      tl.set({}, {}, 1);\n      window.__timelines['${id}'] = tl;\n    </script>\n  </div>\n</body>\n</html>`;
 }
 
 /**
@@ -67,6 +79,14 @@ export function filmShell({ id, width = 1080, height = 1920, background = '#0b10
  * says whether the scene is wrapped in `<template>`, which is what a *sub-composition* is: the film's
  * own entry is a page, and a page inside `<template>` never runs.
  */
+/**
+ * Room over a scene's title and under it. A title sits in a box that clips (the shrink below measures it
+ * that way), and set tight — line-height 1.06 to 1.16 — the foot of a g or a y and the top of a stacked
+ * Vietnamese accent (ẫ, ổ) fall outside the box and are cut: "Nguyên Mông" lost its g. After the scene's
+ * own styles, so it holds whatever line-height the design chose.
+ */
+const TITLE_ROOM = '#root .title{padding-top:.1em;padding-bottom:.2em}';
+
 export function sceneBlock({
   id,
   role,
@@ -82,11 +102,12 @@ export function sceneBlock({
   seconds = 4,
   loadGsap = false,
   template = true,
+  fonts = '',
 }) {
   const defaults = Object.fromEntries(variables.map((variable) => [variable.id, variable.default]));
   const fill = textKeys.map((key) => `'${key}'`).join(',');
   const setup = `var number=root.querySelector('.number-value');if(number)number.textContent=String(v.number==null?'01':v.number).padStart(2,'0');\n  root.querySelectorAll('.title,.detail').forEach(function(el){var floor=el.classList.contains('title')?62:29;while(el.scrollHeight>el.clientHeight+2&&parseFloat(getComputedStyle(el).fontSize)>floor){el.style.fontSize=(parseFloat(getComputedStyle(el).fontSize)-2)+'px'}});${extraScript ? `\n  ${extraScript}` : ''}`;
-  return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables="${declare(variables)}">\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body>${template ? '<template>' : ''}${loadGsap ? '<script src="gsap.min.js"></script>' : ''}\n<style>${css}</style>\n<div id="root" data-composition-id="${id}" data-duration="${seconds}" data-width="${width}" data-height="${height}"><div class="nc-backdrop"></div>${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${setup}\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||${seconds});\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${id}']=tl;\n})();</script>\n${template ? '</template>' : ''}</body></html>`;
+  return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables="${declare(variables)}">\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body>${template ? '<template>' : ''}${loadGsap ? '<script src="gsap.min.js"></script>' : ''}${fonts ? `<link rel="stylesheet" href="${fonts}" />` : ''}\n<style>${css}${TITLE_ROOM}</style>\n<div id="root" data-composition-id="${id}" data-duration="${seconds}" data-width="${width}" data-height="${height}"><div class="nc-backdrop"></div>${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${setup}\n  var duration=Math.max(2,Number(v.seconds)||Number(root.dataset.duration)||${seconds});\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},duration);\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${id}']=tl;\n})();</script>\n${template ? '</template>' : ''}</body></html>`;
 }
 
 /**
@@ -96,10 +117,10 @@ export function sceneBlock({
  * `overlay` (`COMPONENT_ROLES` in `contracts/storyboard/blocks.ts`). The storyboard writer reads every
  * component a kit holds and may mount one into a frame.
  */
-export function component({ name, role, description, css, markup, motion = '', variables = [], textKeys = [], extraScript = '', seconds = 8 }) {
+export function component({ name, role, description, css, markup, motion = '', variables = [], textKeys = [], extraScript = '', seconds = 8, fonts = '' }) {
   const defaults = Object.fromEntries(variables.map((variable) => [variable.id, variable.default]));
   const fill = textKeys.map((key) => `'${key}'`).join(',');
-  return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables="${declare(variables)}">\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body><template>\n<style>#root{position:absolute;inset:0;box-sizing:border-box}#root *{box-sizing:border-box}${css}</style>\n<div id="root" data-composition-id="${name}" data-duration="${seconds}">${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${extraScript}\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},${seconds});\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${name}']=tl;\n})();</script>\n</template></body></html>`;
+  return `<!doctype html>\n<html lang="en" data-composition-duration="${seconds}" data-role="${role}" data-composition-variables="${declare(variables)}">\n<head><meta charset="UTF-8" /><meta name="description" content="${description}" /></head>\n<body><template>${fonts ? `<link rel="stylesheet" href="${fonts}" />` : ''}\n<style>#root{position:absolute;inset:0;box-sizing:border-box}#root *{box-sizing:border-box}${css}</style>\n<div id="root" data-composition-id="${name}" data-duration="${seconds}">${markup}</div>\n<script>(function(){\n  var root=document.getElementById('root');\n  var q=function(s){return root.querySelector(s)};\n  var v=window.__hyperframes&&window.__hyperframes.getVariables?window.__hyperframes.getVariables():{};\n  [${fill}].forEach(function(key){root.querySelectorAll('.'+key).forEach(function(el){el.textContent=String(v[key]==null?${JSON.stringify(defaults)}[key]:v[key])})});\n  ${extraScript}\n  var tl=gsap.timeline({paused:true});\n  ${motion}\n  tl.set({},{},${seconds});\n  tl.seek(0);\n  window.__timelines=window.__timelines||{};window.__timelines['${name}']=tl;\n})();</script>\n</template></body></html>`;
 }
 
 /**
@@ -157,7 +178,7 @@ export function sourceChip({ accent = '#7fe0c0', color = '#e8f0f6', track = '#26
     name: 'source-chip',
     role: 'piece',
     description: "Where the item on screen came from, read from the scene's own source.",
-    css: `.sc{position:absolute;inset:0;display:flex;align-items:center;gap:18px;padding:16px 24px;border:1px solid ${track};border-radius:14px;background:${background}}.sc-tag{color:${accent};font-size:17px;font-weight:800;letter-spacing:.14em}.sc-source{flex:1;text-align:right;font-size:25px;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
+    css: `.sc{position:absolute;inset:0;display:flex;align-items:center;gap:18px;padding:16px 24px;border:1px solid ${track};border-radius:14px;background:${background}}.sc-tag{color:${accent};font-size:17px;font-weight:800;letter-spacing:.14em}.sc-source{flex:1;text-align:right;font-size:25px;color:${color};padding:.08em 0 .2em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
     markup: `<span class="sc"><span class="sc-tag">SOURCE</span><span class="sc-source"></span></span>`,
     variables: [{ id: 'source', type: 'string', label: 'The source of this item', default: 'example.com', sample: 'example.com', maxLength: 40, required: true }],
     extraScript: `var chipEl=root.querySelector('.sc-source');if(chipEl)chipEl.textContent=String(v.source==null?'example.com':v.source);`,
@@ -270,7 +291,7 @@ export function sourceLine({ accent = '#ff8f7a', color = '#8b93b8', track = '#2b
     name: 'source-line',
     role: 'piece',
     description: "Where the figure came from, set as a fine line: reads the scene's own source.",
-    css: `.sl{position:absolute;inset:0;display:flex;align-items:center;gap:22px}.sl-line{flex:none;width:120px;height:1px;background:${track}}.sl-label{color:${accent};font-size:16px;font-weight:850;letter-spacing:.18em}.sl-source{flex:1;text-align:right;color:${color};font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
+    css: `.sl{position:absolute;inset:0;display:flex;align-items:center;gap:22px}.sl-line{flex:none;width:120px;height:1px;background:${track}}.sl-label{color:${accent};font-size:16px;font-weight:850;letter-spacing:.18em}.sl-source{flex:1;text-align:right;color:${color};padding:.08em 0 .2em;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
     markup: `<span class="sl"><span class="sl-line"></span><span class="sl-label">${label}</span><span class="sl-source"></span></span>`,
     variables: [{ id: 'source', type: 'string', label: 'Where the figure came from', default: 'the report', sample: 'Office for Budget Responsibility, 2024', maxLength: 48, required: true }],
     extraScript: `var srcEl=root.querySelector('.sl-source');if(srcEl)srcEl.textContent=String(v.source==null?'the report':v.source);`,
@@ -329,3 +350,157 @@ export function captionBand({ accent = '#7fe0c0', color = '#eaf2f5', background 
     motion: `tl.fromTo(q('.cb'),{opacity:0,y:12},{opacity:1,y:0,duration:.5,ease:'power2.out'},.7);`,
   };
 }
+
+/** A square seal in cinnabar, the way a scroll is signed: the film's own mark, stamped on a scene. Static. */
+export function sealStamp({ label = 'ĐẠO LÝ', cinnabar = '#b8322a', ink = '#f6e7c8' } = {}) {
+  const lines = label.split(/\s+/).join('\n');
+  return {
+    name: 'seal-stamp',
+    role: 'ui',
+    description: "A square seal in cinnabar carrying the film's own mark, stamped slightly askew.",
+    css: `.ss{position:absolute;inset:0}.ss-box{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:${cinnabar};border-radius:8px;box-shadow:0 14px 34px #00000066;transform:rotate(-4deg)}.ss-inner{position:absolute;inset:9px;border:2px solid ${ink}80;border-radius:4px}.ss-label{position:relative;color:${ink};font-size:28px;font-weight:900;letter-spacing:.1em;line-height:1.15;text-align:center;white-space:pre-line}`,
+    markup: `<span class="ss"><span class="ss-box"><span class="ss-inner"></span><span class="ss-label">${lines}</span></span></span>`,
+    motion: `tl.fromTo(q('.ss-box'),{scale:1.7,opacity:0,rotation:-14},{scale:1,opacity:1,rotation:-4,duration:.5,ease:'power4.out'},.55);`,
+  };
+}
+
+/**
+ * Pictures. The Assets node finds them, the writer names one in a scene's `picture` value
+ * (`assets/<name>.<ext>`), and Assemble puts the file into the project. These parts show one: the
+ * runtime fills each `<img data-var-src="picture">` from the value, and the part's script sets the
+ * `src` as well, for a page that is the scene itself (a still, a card). A part given no picture stays
+ * hidden, so a scene that holds one still stands when the writer found nothing to show; it marks the
+ * scene's root `has-picture` when it shows one, for the scene's own layout to follow.
+ */
+
+/** How a picture is graded into a film's look: one filter per look. */
+export const PICTURE_GRADES = {
+  natural: 'saturate(1.02) contrast(1.02)',
+  sepia: 'sepia(.55) saturate(.72) contrast(1.06) brightness(.88)',
+  mono: 'grayscale(1) contrast(1.12) brightness(.92)',
+  warm: 'sepia(.22) saturate(1.08) contrast(1.04) brightness(.96)',
+  cool: 'saturate(.85) hue-rotate(-8deg) contrast(1.05) brightness(.94)',
+  dim: 'sepia(.5) saturate(.7) contrast(1.05) brightness(.38)',
+};
+
+/** The script every picture part shares: read the value, show the part, fill the image. */
+const pictureFill = (part, img) =>
+  `var ${part}S=String(v.picture==null?'':v.picture).trim();var ${part}El=root.querySelector('.${part}');if(${part}S&&${part}El){${part}El.classList.add('${part}-on');root.classList.add('has-picture');var ${part}Img=root.querySelector('.${img}');if(${part}Img&&!${part}Img.getAttribute('src'))${part}Img.setAttribute('src',${part}S);}`;
+
+/** The variable a picture part reads. */
+const pictureVariable = (label, required = true) => ({
+  id: 'picture',
+  type: 'string',
+  label,
+  labels: { vi: 'Ảnh: một trong các đường dẫn ảnh được liệt kê' },
+  default: '',
+  sample: '',
+  maxLength: 120,
+  ...(required ? { required: true } : {}),
+});
+
+/** The scene's length where a part is pasted into a block, its own where it is mounted as a component. */
+const sceneLength = (seconds) => `(typeof duration!=='undefined'?duration:${seconds})`;
+
+/**
+ * A picture filling its box, graded to the film's look, with the slow move a documentary makes over a
+ * still: in, out, left or right, over the whole scene (the `move` value; in when empty). `focus` is the
+ * part of the picture kept when it is cropped to the box.
+ */
+export function pictureFrame({ grade = 'natural', tone = 'linear-gradient(180deg,#00000000,#00000055)', focus = '50% 40%', from = 1.04, to = 1.16, seconds = 8 } = {}) {
+  return {
+    name: 'picture-frame',
+    role: 'piece',
+    description: 'A picture filling its box, graded to the film, slowly zoomed or panned over the scene: reads the scene’s own picture and move.',
+    css: `.pf{position:absolute;inset:0;overflow:hidden;display:none}.pf.pf-on{display:block}.pf-kb{position:absolute;inset:-4%;transform-origin:50% 50%}.pf-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${focus};filter:${PICTURE_GRADES[grade] ?? grade}}.pf-tone{position:absolute;inset:0;background:${tone}}`,
+    markup: '<span class="pf"><span class="pf-kb"><img class="pf-img" data-var-src="picture" alt="" /></span><span class="pf-tone"></span></span>',
+    variables: [
+      pictureVariable('The picture: one of the listed picture paths'),
+      {
+        id: 'move',
+        type: 'string',
+        label: 'How the camera moves over it: "in", "out", "left" or "right"; empty for in',
+        labels: { vi: 'Máy quay di chuyển trên ảnh: "in", "out", "left" hay "right"; để trống là "in"' },
+        default: '',
+        sample: '',
+        maxLength: 6,
+      },
+    ],
+    extraScript: pictureFill('pf', 'pf-img'),
+    motion:
+      `var pfD=${sceneLength(seconds)};var pfM=String(v.move==null?'':v.move).trim().toLowerCase();` +
+      `var pfF={scale:${from},xPercent:0},pfT={scale:${to},xPercent:0};` +
+      `if(pfM==='out'){pfF={scale:${to},xPercent:0};pfT={scale:${from},xPercent:0}}else if(pfM==='left'){pfF={scale:1.14,xPercent:3};pfT={scale:1.14,xPercent:-3}}else if(pfM==='right'){pfF={scale:1.14,xPercent:-3};pfT={scale:1.14,xPercent:3}}` +
+      `if(root.querySelector('.pf.pf-on')){tl.fromTo(root.querySelector('.pf-kb'),pfF,Object.assign({duration:pfD,ease:'none'},pfT),0);tl.fromTo(root.querySelector('.pf'),{opacity:0},{opacity:1,duration:1,ease:'sine.out'},0);}`,
+  };
+}
+
+/** A picture as a round portrait in a ring: a person, a statue, a face on a coin. */
+export function portraitDisc({ grade = 'natural', ring = '#d9a556', glow = '#d9a55633', focus = '50% 22%', seconds = 8 } = {}) {
+  return {
+    name: 'portrait-disc',
+    role: 'piece',
+    description: 'A portrait in a round ring: a person, a statue or a face, cropped to a circle, with a slow push in. Reads the scene’s own picture.',
+    css: `.pd{position:absolute;inset:0;display:none;align-items:center;justify-content:center}.pd.pd-on{display:flex}.pd-ring{display:block;position:relative;height:100%;max-width:100%;aspect-ratio:1;border-radius:50%;padding:3%;background:conic-gradient(from 210deg,${ring},${ring}55,${ring});box-shadow:0 0 0 2px #00000055,0 30px 80px #000a,0 0 90px ${glow}}.pd-face{display:block;position:relative;width:100%;height:100%;border-radius:50%;overflow:hidden;box-shadow:inset 0 0 0 3px #00000066}.pd-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${focus};filter:${PICTURE_GRADES[grade] ?? grade}}`,
+    markup: '<span class="pd"><span class="pd-ring"><span class="pd-face"><img class="pd-img" data-var-src="picture" alt="" /></span></span></span>',
+    variables: [pictureVariable('The portrait: one of the listed picture paths')],
+    extraScript: pictureFill('pd', 'pd-img'),
+    motion: `if(root.querySelector('.pd.pd-on')){tl.fromTo(root.querySelector('.pd-ring'),{scale:.86,opacity:0},{scale:1,opacity:1,duration:1.1,ease:'power3.out'},.2);tl.fromTo(root.querySelector('.pd-img'),{scale:1.02},{scale:1.12,duration:${sceneLength(seconds)},ease:'none'},0);}`,
+  };
+}
+
+/**
+ * A picture on a mount, as a museum shows one: the picture, a line on what it shows, and where it is
+ * held. For a scene that tells something in words and wants the thing itself beside it.
+ */
+export function pictureCard({ grade = 'natural', paper = '#f3ead8', ink = '#2b2118', accent = '#b0803a', label = 'ẢNH', seconds = 8 } = {}) {
+  return {
+    name: 'picture-card',
+    role: 'piece',
+    description: 'A picture on a mount with a caption and its credit, as a museum hangs one: reads the scene’s own picture, caption and credit.',
+    css: `.pc{position:absolute;inset:0;display:none;flex-direction:column;padding:14px 14px 0;background:${paper};box-shadow:0 30px 70px #000b;transform:rotate(-1.2deg)}.pc.pc-on{display:flex}.pc-win{position:relative;flex:1;overflow:hidden}.pc-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${PICTURE_GRADES[grade] ?? grade}}.pc-cap{flex:none;padding:14px 4px 16px;display:flex;flex-direction:column;gap:6px}.pc-text{color:${ink};font-size:24px;line-height:1.3;font-weight:700;overflow:hidden;max-height:72px;padding:.06em 0 .2em}.pc-credit{color:${accent};font-size:14px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
+    markup: '<span class="pc"><span class="pc-win"><img class="pc-img" data-var-src="picture" alt="" /></span><span class="pc-cap"><span class="pc-text"></span><span class="pc-credit"></span></span></span>',
+    variables: [
+      pictureVariable('The picture: one of the listed picture paths'),
+      { id: 'caption', type: 'string', label: 'What the picture shows, in a few words', labels: { vi: 'Ảnh cho thấy gì, trong vài chữ' }, default: '', sample: 'Cọc gỗ khai quật ở Yên Giang', maxLength: 48 },
+      { id: 'credit', type: 'string', label: 'Where the picture is held: a museum, an archive or a site', labels: { vi: 'Ảnh lưu ở đâu: bảo tàng, kho lưu trữ hay trang web' }, default: '', sample: 'Wikimedia Commons', maxLength: 48, required: true },
+    ],
+    extraScript:
+      pictureFill('pc', 'pc-img') +
+      `var pcT=root.querySelector('.pc-text');if(pcT){var pcC=String(v.caption==null?'':v.caption).trim();pcT.textContent=pcC;if(!pcC)pcT.style.display='none';}var pcR=root.querySelector('.pc-credit');if(pcR)pcR.textContent=${JSON.stringify(label)}+' · '+String(v.credit==null?'':v.credit).trim();`,
+    motion: `if(root.querySelector('.pc.pc-on')){tl.fromTo(root.querySelector('.pc'),{y:40,opacity:0,rotation:2},{y:0,opacity:1,rotation:-1.2,duration:.9,ease:'power3.out'},.3);tl.fromTo(root.querySelector('.pc-img'),{scale:1.02},{scale:1.1,duration:${sceneLength(seconds)},ease:'none'},0);}`,
+  };
+}
+
+/** Where a picture is held, set small in a corner: the credit every shown picture owes. */
+export function pictureCredit({ label = 'ẢNH', accent = 'var(--brand, #d9a556)', color = '#b39c74' } = {}) {
+  return {
+    name: 'picture-credit',
+    role: 'ui',
+    description: 'The credit of the picture on screen, small in a corner: reads the scene’s own credit.',
+    css: `.pcr{position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;gap:10px;font-size:17px;font-weight:600;letter-spacing:.06em;line-height:1.4;color:${color};text-align:right}.pcr b{color:${accent};font-weight:800;letter-spacing:.2em}.pcr-text{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}`,
+    markup: `<span class="pcr"><b>${label}</b><span class="pcr-text"></span></span>`,
+    variables: [
+      {
+        id: 'credit',
+        type: 'string',
+        label: 'Where the picture is held: a museum, an archive or a site',
+        labels: { vi: 'Ảnh lưu ở đâu: bảo tàng, kho lưu trữ hay trang web' },
+        default: '',
+        sample: 'Wikimedia Commons',
+        maxLength: 60,
+        required: true,
+      },
+    ],
+    extraScript: `var pcrEl=root.querySelector('.pcr');var pcrS=String(v.credit==null?'':v.credit).trim();if(pcrEl){if(pcrS)root.querySelector('.pcr-text').textContent=pcrS;else pcrEl.style.display='none';}`,
+    motion: `tl.fromTo(root.querySelector('.pcr'),{opacity:0},{opacity:1,duration:.8,ease:'sine.out'},1.2);`,
+  };
+}
+
+/**
+ * Illustrations. Where no picture shows the moment — a battle, a journey, a scene from a chronicle — a
+ * diorama draws one: a shadow-puppet scene cut from silhouettes, composed in the page from the scene's
+ * own keywords (`setting`, `time`, `cast`, `props`, `action`) and moving over the scene. It lives in its
+ * own file because its runtime is long; `diorama.mjs` says how it is drawn.
+ */
+export { diorama, dioramaBackdrop, dioramaCast, dioramaProps, dioramaFx, dioramaVariables, DIORAMA_DEFAULTS, DIORAMA_SAMPLE, DIORAMA_WORDS } from './diorama.mjs';

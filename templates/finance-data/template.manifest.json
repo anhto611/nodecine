@@ -1,0 +1,20 @@
+{
+  "id": "finance-data",
+  "group": "idea",
+  "tagline": {
+    "en": "Ask a money question; get a calm financial-terminal film with animated charts, every figure carrying its unit, year and source.",
+    "vi": "Đặt một câu hỏi về tiền; nhận phim kiểu màn hình tài chính với biểu đồ chuyển động, mỗi con số đều ghi đơn vị, năm và nguồn."
+  },
+  "tags": [
+    "9:16",
+    "~90s",
+    {
+      "en": "Vietnamese narration",
+      "vi": "Giọng đọc tiếng Việt"
+    },
+    {
+      "en": "Needs a model and a voice",
+      "vi": "Cần model và giọng đọc"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "story-tales",
+  "group": "idea",
+  "tagline": {
+    "en": "Name a folk tale, a fable or a true story; get a living storybook: a paper-cut landscape that drifts and breathes, characters as puppets, and the moral at the end.",
+    "vi": "Ghi tên một truyện cổ tích, ngụ ngôn hay chuyện có thật; nhận một cuốn truyện sống động: phong cảnh cắt giấy trôi chậm, nhân vật như con rối, và bài học ở cuối."
+  },
+  "tags": [
+    "16:9",
+    "~120s",
+    {
+      "en": "Vietnamese narration",
+      "vi": "Giọng đọc tiếng Việt"
+    },
+    {
+      "en": "Needs a model and a voice",
+      "vi": "Cần model và giọng đọc"
+    }
+  ]
+}

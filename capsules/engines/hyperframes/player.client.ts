@@ -3,6 +3,49 @@ import type { PlayerHandle, PlayerOptions } from '@/contracts/adapters/types';
 
 type PlayerElement = HTMLElement & { play(): void; pause(): void; seek(seconds: number): void; currentTime: number; paused: boolean };
 
+/** How far the sound may wander from the film before it is sought back, and for how many samples running. */
+export const SOUND_DRIFT_SECONDS = 0.25;
+const SOUND_DRIFT_SAMPLES = 3;
+
+/** The player's own media steering, as far as it is reached here (@hyperframes/player 0.8.40; not public API). */
+type MediaEntry = { el: HTMLMediaElement; start: number; driftSamples: number };
+type LooseMedia = {
+  _media?: {
+    _entries?: MediaEntry[];
+    mirrorTime?: (time: number, opts?: { force?: boolean }) => void;
+    _refreshEntryBounds?: (entry: MediaEntry) => void;
+    _gateEntryPlayback?: (entry: MediaEntry, at: number) => boolean;
+  };
+};
+
+/**
+ * The player's `mirrorTime`, with a tolerance a listener cannot hear instead of one a seek makes heard.
+ * It keeps everything else the player does there — the bounds, starting and stopping each sound at its
+ * clip's edges, a forced seek — and leaves the player untouched when its insides are not what this
+ * version knew.
+ */
+export function loosenSoundSync(player: LooseMedia): boolean {
+  const media = player._media;
+  if (!media?.mirrorTime || !media._refreshEntryBounds || !media._gateEntryPlayback || !Array.isArray(media._entries)) return false;
+  media.mirrorTime = function (this: NonNullable<LooseMedia['_media']>, time: number, opts?: { force?: boolean }) {
+    for (const entry of this._entries ?? []) {
+      this._refreshEntryBounds!(entry);
+      const at = time - entry.start;
+      if (!this._gateEntryPlayback!(entry, at)) continue;
+      if (Math.abs(entry.el.currentTime - at) <= SOUND_DRIFT_SECONDS) {
+        entry.driftSamples = 0;
+        continue;
+      }
+      entry.driftSamples = (entry.driftSamples ?? 0) + 1;
+      if (opts?.force || entry.driftSamples >= SOUND_DRIFT_SAMPLES) {
+        entry.el.currentTime = at;
+        entry.driftSamples = 0;
+      }
+    }
+  };
+  return true;
+}
+
 /**
  * `<hyperframes-player>` in a node's card. The page it loads was prepared on the server with the
  * composition's values. `sandbox-origin="opaque"` keeps the composition's scripts out of the Studio's
@@ -71,6 +114,12 @@ export function mountHyperframesPlayer(element: HTMLElement, preview: PlayerOpti
         });
       player.addEventListener('pause', settle);
       player.addEventListener('timeupdate', settle);
+      // The player keeps that sound on the film's clock by seeking it whenever the two drift 50 ms apart
+      // (two samples running). A heavy scene — a diorama, a grain, a picture panned at full size — draws
+      // late, its clock reaches the page in jerks, and the sound was sought several times a second: a
+      // crackle that stopped the moment the window was covered, when the frame stops drawing. Nobody
+      // hears a quarter of a second; everybody hears a seek. The same steering, with that tolerance.
+      loosenSoundSync(owned as unknown as LooseMedia);
       void fetch(audio, { method: 'HEAD' }).then(
         (res) => {
           if (!res.ok || !player.isConnected) return;

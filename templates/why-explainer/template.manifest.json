@@ -1,0 +1,14 @@
+{
+  "id": "why-explainer",
+  "group": "idea",
+  "tagline": {
+    "en": "Ask a “why” or a “what happens if”; get a bright, flat-illustration explainer that answers it step by step, each scene naming its source.",
+    "vi": "Đặt một câu “vì sao” hay “điều gì xảy ra khi”; nhận video giải thích phong cách minh hoạ phẳng, rực rỡ, trả lời từng bước, mỗi cảnh ghi rõ nguồn."
+  },
+  "tags": [
+    "16:9",
+    "~2 min",
+    { "en": "Vietnamese narration", "vi": "Giọng đọc tiếng Việt" },
+    { "en": "Needs a model and a voice", "vi": "Cần model và giọng đọc" }
+  ]
+}

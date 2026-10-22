@@ -1,0 +1,20 @@
+{
+  "id": "ranking-race",
+  "group": "idea",
+  "tagline": {
+    "en": "Name a ranking and a period; get a sports-broadcast countdown with a real bar chart race, a standing board and a spotlight, every figure with its source.",
+    "vi": "Ghi một bảng xếp hạng và giai đoạn; nhận video kiểu truyền hình thể thao với cuộc đua biểu đồ thanh thật, bảng chốt và cảnh tâm điểm, mỗi con số kèm nguồn."
+  },
+  "tags": [
+    "9:16",
+    "~60s",
+    {
+      "en": "Vietnamese narration",
+      "vi": "Giọng đọc tiếng Việt"
+    },
+    {
+      "en": "Needs a model and a voice",
+      "vi": "Cần model và giọng đọc"
+    }
+  ]
+}

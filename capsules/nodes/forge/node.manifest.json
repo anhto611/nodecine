@@ -1,0 +1,11 @@
+{
+  "id": "forge",
+  "definition": "forge",
+  "body": "ForgeBody",
+  "icon": "brush",
+  "group": "visual",
+  "layout": "wide",
+  "translations": "forgeTranslations",
+  "errors": "ForgeErrorCode",
+  "services": "forgeServices"
+}

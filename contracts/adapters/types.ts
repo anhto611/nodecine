@@ -56,6 +56,19 @@ export interface EngineAdapter {
   mountPlayer(element: HTMLElement, preview: PlayerOptions): PlayerHandle;
   /** Server-side: the composition, filled with its values, as a video file. */
   render(composition: Composition, settings: ExportSettings, onProgress: (p: RenderProgress) => void, signal: AbortSignal): Promise<RenderResult>;
+  /**
+   * Server-side, where the engine can: one frame of the composition at `seconds`, filled with its
+   * values, as a picture kept with the uploads (`/api/assets/…`), so a model that looks at pictures can be
+   * shown it.
+   */
+  still?(composition: Composition, seconds: number, signal: AbortSignal): Promise<StillResult>;
+}
+
+export interface StillResult {
+  /** `/api/assets/<sha1>.jpg`: named by its bytes. */
+  url: string;
+  width: number;
+  height: number;
 }
 
 export type EngineAdapterFactory = (settings: Record<string, unknown>) => EngineAdapter;

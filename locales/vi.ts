@@ -93,6 +93,7 @@ export const vi: Record<DictKey, string> = {
   'port.composition': 'Composition',
   'port.storyboard': 'Storyboard',
   'port.assets': 'Assets',
+  'port.library': 'Component',
   'port.brief': 'Brief',
   'port.research': 'Ghi chú research',
   'port.footage': 'Clip',

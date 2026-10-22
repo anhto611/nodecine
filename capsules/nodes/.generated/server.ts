@@ -3,6 +3,8 @@ import type { NodeService } from '@/core/engine/services';
 import { assetsServices } from '../assets/server';
 import { compositionServices, compositionActions } from '../composition/server';
 import { footageServices } from '../footage/server';
+import { forgeServices } from '../forge/server';
+import { libraryServices, libraryActions } from '../library/server';
 import { matteServices } from '../matte/server';
 import { researchServices } from '../research/server';
 import { transcribeServices } from '../transcribe/server';
@@ -12,6 +14,8 @@ export const NODE_SERVICE_EXTENSIONS: Record<string, NodeService>[] = [
   assetsServices,
   compositionServices,
   footageServices,
+  forgeServices,
+  libraryServices,
   matteServices,
   researchServices,
   transcribeServices,
@@ -24,6 +28,7 @@ export const NODE_SERVICE_EXTENSIONS: Record<string, NodeService>[] = [
  */
 export const NODE_ACTIONS: Record<string, NodeService>[] = [
   compositionActions,
+  libraryActions,
   ttsActions,
 ];
 
@@ -40,6 +45,8 @@ export const NODE_SOURCES: Record<string, string> = {
   "coverage": "capsules/nodes/coverage",
   "fill": "capsules/nodes/fill",
   "footage": "capsules/nodes/footage",
+  "forge": "capsules/nodes/forge",
+  "library": "capsules/nodes/library",
   "matte": "capsules/nodes/matte",
   "mp4-export": "capsules/nodes/mp4-export",
   "research": "capsules/nodes/research",

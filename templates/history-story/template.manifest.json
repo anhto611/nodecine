@@ -1,0 +1,20 @@
+{
+  "id": "history-story",
+  "group": "idea",
+  "tagline": {
+    "en": "Name a battle, a dynasty or a figure from history; get a documentary-style film told as a story, with dates on a timeline, the two sides facing off, and every fact marked as recorded history or legend.",
+    "vi": "Ghi một trận đánh, một triều đại hay một nhân vật lịch sử; nhận một phim kể chuyện kiểu phim tài liệu, có dòng thời gian, hai thế lực đối đầu, và mỗi chi tiết ghi rõ là chính sử hay truyền thuyết."
+  },
+  "tags": [
+    "16:9",
+    "~120s",
+    {
+      "en": "Vietnamese narration",
+      "vi": "Giọng đọc tiếng Việt"
+    },
+    {
+      "en": "Needs a model and a voice",
+      "vi": "Cần model và giọng đọc"
+    }
+  ]
+}

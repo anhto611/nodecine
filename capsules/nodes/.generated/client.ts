@@ -10,6 +10,8 @@ import { CompositionBody, PartsDialog } from '../composition/body';
 import { CoverageBody } from '../coverage/body';
 import { FillBody } from '../fill/body';
 import { FootageBody } from '../footage/body';
+import { ForgeBody } from '../forge/body';
+import { LibraryBody } from '../library/body';
 import { MatteBody } from '../matte/body';
 import { ExportBody } from '../mp4-export/body';
 import { ResearchBody } from '../research/body';
@@ -28,6 +30,8 @@ export const NODE_BODIES: Record<string, React.FC<BodyProps>> = {
   'coverage': CoverageBody,
   'fill': FillBody,
   'footage': FootageBody,
+  'forge': ForgeBody,
+  'library': LibraryBody,
   'matte': MatteBody,
   'mp4-export': ExportBody,
   'research': ResearchBody,
@@ -52,6 +56,8 @@ export const NODE_META: Record<string, NodeMeta> = {
   'coverage': { icon: 'layers', group: 'script' },
   'fill': { icon: 'layers', group: 'visual' },
   'footage': { icon: 'film', group: 'source', layout: 'wide' },
+  'forge': { icon: 'brush', group: 'visual', layout: 'wide' },
+  'library': { icon: 'layers', group: 'visual', layout: 'wide' },
   'matte': { icon: 'film', group: 'visual', layout: 'wide' },
   'mp4-export': { icon: 'down', group: 'output' },
   'research': { icon: 'search', group: 'script', layout: 'wide' },

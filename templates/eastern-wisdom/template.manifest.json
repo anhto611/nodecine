@@ -1,0 +1,20 @@
+{
+  "id": "eastern-wisdom",
+  "group": "idea",
+  "tagline": {
+    "en": "Name a zodiac sign, a match, a feng shui question or a teaching; get a lantern-lit poster with numbered panels, each saying where it comes from.",
+    "vi": "Ghi một con giáp, một cặp tuổi, một câu hỏi phong thuỷ hay một đạo lý; nhận poster đèn lồng với các bảng đánh số, mỗi bảng ghi rõ theo nguồn nào."
+  },
+  "tags": [
+    "9:16",
+    "~60s",
+    {
+      "en": "Vietnamese narration",
+      "vi": "Giọng đọc tiếng Việt"
+    },
+    {
+      "en": "Needs a model and a voice",
+      "vi": "Cần model và giọng đọc"
+    }
+  ]
+}

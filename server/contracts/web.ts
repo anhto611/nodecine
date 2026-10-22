@@ -89,7 +89,13 @@ async function requestPublic(url: URL, address: string, init: RequestInit, maxBy
         headers: { 'accept-encoding': 'identity', ...Object.fromEntries(new Headers(init.headers)) },
         agent: false,
         signal: init.signal ?? undefined,
-        lookup: (_host, _options, callback) => callback(null, address, isIP(address) as 4 | 6),
+        // Node 20+ connects with `autoSelectFamily`, which asks for every address (`all: true`) and reads
+        // an array back: answered with one string, every request failed with "Invalid IP address: undefined".
+        lookup: ((_host: string, options: { all?: boolean }, callback: (...args: unknown[]) => void) => {
+          const family = isIP(address) as 4 | 6;
+          if (options?.all) callback(null, [{ address, family }]);
+          else callback(null, address, family);
+        }) as unknown as http.RequestOptions['lookup'],
       },
       (incoming) => {
         const status = incoming.statusCode ?? 502;

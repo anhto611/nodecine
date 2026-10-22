@@ -105,6 +105,19 @@ describe('assembling scenes', () => {
     expect(timeline.words.find((w: { text: string }) => w.text === 'API').start).toBe(3.2);
   });
 
+  it('puts the voice into the project and names it where the audio clips look for it', () => {
+    const { composition } = assemble(kit, storyboard, voice);
+    // Without this, every audio clip bound to `voiceover` resolved to nothing: the preview and the export were silent.
+    expect(composition.media['voiceover.mp3']).toBe(voice.audioUrl);
+    expect(composition.values.voiceover).toBe('voiceover.mp3');
+    expect(composition.values.voiceoverSeconds).toBe(5);
+    expect(JSON.parse(composition.files['voiceover.json']!).words).toHaveLength(voice.words!.length);
+    // No voice: nothing is bound, and nothing claims there is a file.
+    const silent = assemble(kit, storyboard, undefined).composition;
+    expect(silent.values.voiceover).toBeUndefined();
+    expect(silent.media['voiceover.mp3']).toBeUndefined();
+  });
+
   it('cuts the voice only where a silent frame sits between spoken ones', () => {
     const withPause: Storyboard = { ...storyboard, frames: [storyboard.frames[0]!, { number: 9, title: 'Nghỉ', durationSeconds: 1.5, mounts: [], values: {}, extra: {} }, storyboard.frames[1]!] };
     const index = assemble(kit, withPause, voice).composition.files['index.html']!;

@@ -31,6 +31,8 @@ describe('a fresh install', () => {
       'coverage',
       'fill',
       'footage',
+      'forge',
+      'library',
       'matte',
       'mp4-export',
       'research',

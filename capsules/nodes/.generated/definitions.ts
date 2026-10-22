@@ -10,6 +10,8 @@ import { composition } from '../composition/node';
 import { coverage } from '../coverage/node';
 import { fill } from '../fill/node';
 import { footage } from '../footage/node';
+import { forge } from '../forge/node';
+import { library } from '../library/node';
 import { matte } from '../matte/node';
 import { mp4Export } from '../mp4-export/node';
 import { research } from '../research/node';
@@ -26,6 +28,8 @@ import { CompositionErrorCode } from '../composition/errors';
 import { CoverageErrorCode } from '../coverage/errors';
 import { FillErrorCode } from '../fill/errors';
 import { FootageErrorCode } from '../footage/errors';
+import { ForgeErrorCode } from '../forge/errors';
+import { LibraryErrorCode } from '../library/errors';
 import { MatteErrorCode } from '../matte/errors';
 import { Mp4ExportErrorCode } from '../mp4-export/errors';
 import { ResearchErrorCode } from '../research/errors';
@@ -43,6 +47,8 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   coverage,
   fill,
   footage,
+  forge,
+  library,
   matte,
   mp4Export,
   research,
@@ -53,7 +59,7 @@ export const ALL_NODES: AnyNodeDefinition[] = [
   videoOutput,
 ] as unknown as AnyNodeDefinition[];
 
-const expectedIds = ["assemble","assets","brief","caption-export","composition","coverage","fill","footage","matte","mp4-export","research","rough-cut","storyboard-writer","transcribe","tts","video-output"];
+const expectedIds = ["assemble","assets","brief","caption-export","composition","coverage","fill","footage","forge","library","matte","mp4-export","research","rough-cut","storyboard-writer","transcribe","tts","video-output"];
 ALL_NODES.forEach((definition, index) => {
   if (definition.type !== expectedIds[index]) throw new Error('node manifest id "' + expectedIds[index] + '" does not match definition type "' + definition.type + '"');
 });
@@ -68,6 +74,8 @@ export const NODE_FEATURES: Record<string, string[]> = {
   "coverage": [],
   "fill": [],
   "footage": [],
+  "forge": [],
+  "library": [],
   "matte": [],
   "mp4-export": [
     "history-file-export"
@@ -96,6 +104,8 @@ export const NODE_ERROR_CODES: Record<string, string[]> = {
   "coverage": [],
   "fill": [],
   "footage": [],
+  "forge": [],
+  "library": [],
   "matte": [],
   "mp4-export": [],
   "research": [],
@@ -112,6 +122,8 @@ NODE_ERROR_CODES['composition'] = Object.values(CompositionErrorCode);
 NODE_ERROR_CODES['coverage'] = Object.values(CoverageErrorCode);
 NODE_ERROR_CODES['fill'] = Object.values(FillErrorCode);
 NODE_ERROR_CODES['footage'] = Object.values(FootageErrorCode);
+NODE_ERROR_CODES['forge'] = Object.values(ForgeErrorCode);
+NODE_ERROR_CODES['library'] = Object.values(LibraryErrorCode);
 NODE_ERROR_CODES['matte'] = Object.values(MatteErrorCode);
 NODE_ERROR_CODES['mp4-export'] = Object.values(Mp4ExportErrorCode);
 NODE_ERROR_CODES['research'] = Object.values(ResearchErrorCode);

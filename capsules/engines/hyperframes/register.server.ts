@@ -12,6 +12,8 @@ import { HYPERFRAMES_ENGINE_ID } from './constants';
 import { writeProject } from './project.server';
 import { hoistNestedCompositions } from './hoist.server';
 import { withoutMixedAudio, writePreviewAudio } from './preview-audio.server';
+import { stylesheetLinks } from './preview-fonts.server';
+import { stillWithProducer } from './still.server';
 
 const QUALITY: Record<ExportSettings['quality'], 'high' | 'standard' | 'draft'> = { high: 'high', medium: 'standard', low: 'draft' };
 
@@ -28,8 +30,11 @@ export const previewWithBundler: ServerPreview = async (composition) => {
   const { bundleToSingleHtml, injectTagsAtHeadStart } = await import('@hyperframes/core/compiler');
   const { key, dir } = await writeProject(composition);
   const values = valuesOf(composition);
+  // The scenes' web fonts, which the bundle drops (see preview-fonts.server.ts).
+  const fonts = stylesheetLinks(composition.files);
   // `s` for a page whose sound is the file beside it: pages from before, which still play their own, are not reused.
-  const name = `preview-s-${contentHash(values)}.html`;
+  // The fonts are in the name too, so a page written before they were carried is not reused either.
+  const name = `preview-s-${contentHash(fonts ? { values, fonts } : values)}.html`;
   const target = projectFilePath(key, name);
   const exists = (file: string) =>
     stat(file).then(
@@ -51,7 +56,7 @@ export const previewWithBundler: ServerPreview = async (composition) => {
     const assignment = `<script>window.__hfVariables = ${JSON.stringify(values).replace(/</g, '\\u003c')};</script>`;
     // With the sound in its own file, the page keeps no audio of its own: two copies played at once.
     const page = (await exists(audio)) ? withoutMixedAudio(bundled) : bundled;
-    await writeFile(target, injectTagsAtHeadStart(page, assignment), 'utf8');
+    await writeFile(target, injectTagsAtHeadStart(page, assignment + fonts), 'utf8');
   }
   return { url: projectUrl(key, name) };
 };
@@ -105,5 +110,5 @@ export const renderWithProducer: ServerRender = async (composition, settings, on
 };
 
 export function registerHyperframesServer(): void {
-  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ preview: previewWithBundler, render: renderWithProducer }));
+  registerEngine(HYPERFRAMES_ENGINE_ID, () => createHyperframesAdapter({ preview: previewWithBundler, render: renderWithProducer, still: stillWithProducer }));
 }

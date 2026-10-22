@@ -1,0 +1,1 @@
+{ "id": "library", "definition": "library", "body": "LibraryBody", "icon": "layers", "group": "visual", "layout": "wide", "translations": "libraryTranslations", "errors": "LibraryErrorCode", "services": "libraryServices", "actions": "libraryActions" }

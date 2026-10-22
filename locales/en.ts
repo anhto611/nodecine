@@ -91,6 +91,7 @@ export const en = {
   'port.composition': 'Composition',
   'port.storyboard': 'Storyboard',
   'port.assets': 'Assets',
+  'port.library': 'Components',
   'port.brief': 'Brief',
   'port.research': 'Research notes',
   'port.footage': 'Clip',

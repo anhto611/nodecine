@@ -419,8 +419,24 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
   files[COMPOSITION_ENTRY] = shell.replace(FRAMES_MARKER, `${FRAMES_MARKER}\n${clips.join('\n')}`);
   files[TIMELINE_FILE] = JSON.stringify({ durationSeconds: total, frames: scenes, words: timeline });
 
+  // The voice itself. The audio clips above name it `voiceover`, and nothing else binds that name: the
+  // file goes into the project beside the frames, the value names it there, and its timings are written
+  // for a caption part to read — the same three things the Fill node does for a film it fills.
+  const values: Composition['values'] = { ...kit.values, [FILM_SECONDS]: total };
+  if (voice) {
+    const file = `voiceover.${voice.audioUrl.split('.').pop() ?? 'mp3'}`;
+    media[file] = voice.audioUrl;
+    values.voiceover = file;
+    values.voiceoverSeconds = voice.durationSeconds;
+    files['voiceover.json'] = JSON.stringify({
+      durationSeconds: voice.durationSeconds,
+      ...(voice.segments ? { segments: voice.segments } : {}),
+      ...(voice.words?.length ? { words: voice.words } : {}),
+    });
+  }
+
   return {
-    composition: { ...kit, files, media, values: { ...kit.values, [FILM_SECONDS]: total } },
+    composition: { ...kit, files, media, values },
     frames: placed,
     problems,
   };
