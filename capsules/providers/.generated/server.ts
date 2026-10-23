@@ -7,6 +7,7 @@ import { registerOllama } from '../ollama';
 import { registerPiper } from '../piper';
 import { registerSystemTts } from '../system-tts';
 import { registerVbee } from '../vbee';
+import { registerVieneu } from '../vieneu';
 
 /** Every provider factory, registered once. Each registration is a Map.set: setting it twice is setting it once. */
 export function installProviders(): void {
@@ -18,4 +19,5 @@ export function installProviders(): void {
   registerPiper();
   registerSystemTts();
   registerVbee();
+  registerVieneu();
 }

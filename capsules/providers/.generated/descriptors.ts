@@ -10,6 +10,7 @@ import { ollamaSettings, ollamaWidgets } from '../ollama/settings';
 import { piperSettings, piperWidgets } from '../piper/settings';
 import { systemTtsSettings, systemTtsWidgets } from '../system-tts/settings';
 import { vbeeSettings, vbeeWidgets } from '../vbee/settings';
+import { vieneuSettings, vieneuWidgets } from '../vieneu/settings';
 
 /**
  * Every provider this build ships, described from its own schema. The fields the node draws, the
@@ -25,4 +26,5 @@ export const PROVIDERS: ProviderDescriptor[] = [
   { id: 'piper', kind: 'tts', nameKey: 'provider.piper', noteKey: 'provider.piper.note', settingsSchema: piperSettings, defaultSettings: defaultSettingsOf(piperSettings), fields: schemaFields(piperSettings), widgets: piperWidgets },
   { id: 'system-tts', kind: 'tts', nameKey: 'provider.system-tts', noteKey: 'provider.system-tts.note', settingsSchema: systemTtsSettings, defaultSettings: defaultSettingsOf(systemTtsSettings), fields: schemaFields(systemTtsSettings), widgets: systemTtsWidgets },
   { id: 'vbee', kind: 'tts', nameKey: 'provider.vbee', noteKey: 'provider.vbee.note', settingsSchema: vbeeSettings, defaultSettings: defaultSettingsOf(vbeeSettings), fields: schemaFields(vbeeSettings), widgets: vbeeWidgets },
+  { id: 'vieneu', kind: 'tts', nameKey: 'provider.vieneu', noteKey: 'provider.vieneu.note', settingsSchema: vieneuSettings, defaultSettings: defaultSettingsOf(vieneuSettings), fields: schemaFields(vieneuSettings), widgets: vieneuWidgets },
 ];

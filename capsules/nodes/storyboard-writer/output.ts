@@ -47,7 +47,8 @@ export const WrittenStoryboardSchema = z.object({
   /** The product or subject, as the model understood it from the description, the page and the pictures. */
   subject: z.string().max(120).default(''),
   message: z.string().max(300).default(''),
-  frames: z.array(WrittenFrameSchema).min(2).max(16),
+  // Room for a two-minute film cut a sentence at a time (a scene every 3–4 s): a cap of 16 refused it.
+  frames: z.array(WrittenFrameSchema).min(2).max(40),
   layers: z.array(WrittenLayerSchema).max(6).default([]),
 });
 export type WrittenStoryboard = z.infer<typeof WrittenStoryboardSchema>;
