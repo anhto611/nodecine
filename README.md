@@ -2,6 +2,8 @@
 
 An open-source, node-based video studio. Build reusable workflows for research, scripts, voice-over, recorded footage and HTML compositions, then preview and export videos locally.
 
+![NodeCine editor running the Article / website summary workflow](docs/nodecine-screenshot.png)
+
 **Status: early alpha.** The app includes 16 nodes and a HyperFrames engine. Workflows and provider integrations are still evolving; keep backups of work you care about. The interface supports English and Vietnamese.
 
 ## Requirements
