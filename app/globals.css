@@ -1299,3 +1299,157 @@ body {
 .nc-status-meta {
   font-size: var(--fs-hint);
 }
+
+/* The workflow agent's column, right of the canvas. */
+.nc-panel.nc-agent {
+  width: 340px;
+  border-right: 0;
+  border-left: 1px solid var(--line);
+}
+.nc-agent-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-hint);
+  color: var(--tx-3);
+}
+.nc-agent-model .nc-select {
+  flex: 1;
+}
+.nc-agent-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: var(--fs-body);
+}
+.nc-agent-empty {
+  color: var(--tx-3);
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.nc-agent-empty p {
+  margin: 0 0 4px;
+}
+.nc-agent-empty .nc-chip {
+  text-align: left;
+}
+.nc-agent-msg {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+  padding: 8px 10px;
+  border-radius: 6px;
+  max-width: 92%;
+}
+.nc-agent-msg.user {
+  align-self: flex-end;
+  background: var(--accent-sunk);
+  border: 1px solid var(--accent);
+}
+.nc-agent-msg.assistant {
+  align-self: flex-start;
+  background: var(--bg-raise);
+  border: 1px solid var(--line-2);
+}
+.nc-agent-msg.error {
+  align-self: flex-start;
+  color: var(--err);
+  border: 1px solid var(--err);
+}
+.nc-agent-edits {
+  margin-top: 8px;
+  white-space: normal;
+}
+.nc-agent-edits .nc-chip.warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+.nc-agent-edits ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-hint);
+  color: var(--tx-2);
+}
+.nc-agent-edits li.bad {
+  color: var(--warn);
+}
+.nc-agent-event,
+.nc-agent-thinking,
+.nc-agent-notice {
+  align-self: center;
+  text-align: center;
+  font-size: var(--fs-hint);
+  color: var(--tx-3);
+}
+.nc-agent-notice {
+  color: var(--warn);
+}
+.nc-agent-input {
+  border-top: 1px solid var(--line);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.nc-agent-input textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 240px;
+  height: auto;
+  padding: 6px 8px;
+  line-height: 1.5;
+}
+.nc-btn.on {
+  border-color: var(--accent);
+  color: var(--accent-2);
+  background: var(--accent-sunk);
+}
+.nc-agent-focus {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-hint);
+  color: var(--accent-2);
+  min-width: 0;
+}
+.nc-agent-focus code {
+  color: var(--tx-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.nc-agent-about {
+  font-size: var(--fs-hint);
+  color: var(--accent-2);
+  margin-bottom: 2px;
+}
+.nc-agent-caps {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-hint);
+  color: var(--tx-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nc-agent-caps .warn {
+  color: var(--warn);
+}
+.nc-agent-caps code {
+  display: block;
+  color: var(--tx-2);
+  margin-top: 2px;
+}

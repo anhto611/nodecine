@@ -21,6 +21,8 @@ export const Header: React.FC = () => {
   // empty port is not held against the whole workflow any more — it says so on its own card.
   const graph = useStudio((s) => s.graph);
   const disabled = !canRun(graph);
+  const agentOpen = useStudio((s) => s.agentOpen);
+  const toggleAgent = useStudio((s) => s.toggleAgent);
 
   return (
     <header style={{ height: 56, flex: '0 0 56px', borderBottom: '1px solid var(--line)', background: 'var(--bg-panel)', display: 'flex', alignItems: 'center', gap: 14, padding: '0 12px' }}>
@@ -59,6 +61,9 @@ export const Header: React.FC = () => {
       {/* Shift skips the signature cache and runs every node again. The
             cache cannot see a reason to re-run that lives outside the graph — a model that would
             answer differently today, a file changed under a path — so a person needs a way to say so. */}
+      <Btn className={agentOpen ? 'on' : ''} onClick={toggleAgent} title={`${t('agent.toggle')} (Ctrl+I)`}>
+        <Icon.bot /> {t('agent.title')}
+      </Btn>
       {running ? (
         <Btn danger onClick={cancel}>
           <Icon.stop /> {t('header.stop')}

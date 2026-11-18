@@ -50,6 +50,7 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
   const running = useStudio((s) => s.running);
   const toggleBypass = useStudio((s) => s.toggleBypass);
   const togglePin = useStudio((s) => s.togglePin);
+  const askAgent = useStudio((s) => s.askAgent);
   // The ring means "this is the node the panel is showing", which is not what React Flow calls
   // selected: it selects a card the moment a drag presses on it, and a drag is not a choice.
   const selected = useStudio((s) => s.selectedNodeId === data.nodeId);
@@ -81,6 +82,16 @@ export const NodeCard: React.FC<NodeProps<NcNode>> = ({ data }) => {
           {t(`node.${node.type}`)}
         </span>
         {badge}
+        <button
+          className="nc-hdr-toggle nodrag nopan"
+          title={t('agent.askNode')}
+          onClick={(e) => {
+            e.stopPropagation();
+            askAgent(node.id);
+          }}
+        >
+          <Icon.bot size={10} />
+        </button>
         {(node.pinned || Object.keys(rt.outputs ?? {}).length > 0) && (
           <button
             className={`nc-hdr-toggle nodrag nopan ${node.pinned ? 'on' : ''}`}

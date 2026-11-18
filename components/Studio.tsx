@@ -13,6 +13,7 @@ import { LibraryPanel } from './panels/LibraryPanel';
 import { HistoryPanel } from './panels/HistoryPanel';
 import { LogsPanel } from './panels/LogsPanel';
 import { SettingsDialog } from './panels/SettingsDialog';
+import { AgentPanel } from './panels/AgentPanel';
 import { StudioNodeHost } from './node-host';
 
 /** Studio shell: header, rail, optional left panel, canvas, optional bottom logs, modals. */
@@ -24,6 +25,7 @@ export const Studio: React.FC = () => {
   const logsOpen = useStudio((s) => s.logsOpen);
   const settingsOpen = useStudio((s) => s.settingsOpen);
   const templatesOpen = useStudio((s) => s.templatesOpen);
+  const agentOpen = useStudio((s) => s.agentOpen);
 
   React.useEffect(() => {
     init();
@@ -49,6 +51,11 @@ export const Studio: React.FC = () => {
       if (mod && e.key.toLowerCase() === 'j') {
         e.preventDefault();
         s.toggleLogs();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        s.toggleAgent();
         return;
       }
       if (mod && e.key === ',') {
@@ -95,6 +102,7 @@ export const Studio: React.FC = () => {
             <StatusBar />
             {logsOpen && <LogsPanel />}
           </div>
+          {agentOpen && <AgentPanel />}
         </div>
         {overlay && NODE_OVERLAYS.map((Overlay, index) => <Overlay key={index} />)}
         {settingsOpen && <SettingsDialog />}

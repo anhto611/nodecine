@@ -12,7 +12,9 @@ import { bootstrapClient } from '@/lib/bootstrap.client';
 import { loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 import { workflowsApi } from '@/lib/workflows.client';
 import type { Locale } from '@/lib/i18n';
+import { agentIdFor } from '@/contracts/agent/chat';
 import { setWorkflowModel, type WorkflowModel } from '@/contracts/workflow-model';
+import { agentApi } from '@/lib/agent.client';
 
 export type Panel = 'workflows' | 'library' | 'history' | null;
 
@@ -63,6 +65,10 @@ export interface StudioState {
   panel: Panel;
   templatesOpen: boolean;
   logsOpen: boolean;
+  /** The workflow agent's chat column, on the right of the canvas. */
+  agentOpen: boolean;
+  /** Bumps each time a node card asks the agent about itself, so the panel puts the cursor in its box. */
+  agentAsk: number;
   /** Bumps whenever a workflow file changes, so lists re-read the directory. */
   workflowsTick: number;
   settingsOpen: boolean;
@@ -128,8 +134,16 @@ export interface StudioState {
   setProjectName(name: string): void;
   setPanel(panel: Panel): void;
   toggleLogs(): void;
+  toggleAgent(): void;
+  /** Open the agent on this node: it is selected, so what is typed next is about it. */
+  askAgent(nodeId: string): void;
   /** The model the whole workflow writes with: its agent, and every node that leaves its own empty. */
   setWorkflowModel(model: WorkflowModel): void;
+  /**
+   * A graph the workflow's agent made, onto the tab it was made for: one undo step, the changed nodes
+   * stale. A tab that is not on the canvas takes it too and shows it when it is opened.
+   */
+  applyAgentGraph(tabKey: string, graph: Graph, touched: string[]): boolean;
   setSettingsOpen(open: boolean): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
@@ -221,8 +235,8 @@ export const useStudio = create<StudioState>((set, get) => {
     return full;
   };
   const persistUi = () => {
-    const { locale, panel, logsOpen } = get();
-    saveUiPrefs({ locale, panel, logsOpen });
+    const { locale, panel, logsOpen, agentOpen } = get();
+    saveUiPrefs({ locale, panel, logsOpen, agentOpen });
   };
   // One undo history per open tab, in memory only: a reload starts with a clean slate, like ComfyUI.
   const undoStacks = new Map<string, UndoStack<Graph>>();
@@ -273,6 +287,8 @@ export const useStudio = create<StudioState>((set, get) => {
     panel: null,
     templatesOpen: false,
     logsOpen: false,
+    agentOpen: false,
+    agentAsk: 0,
     workflowsTick: 0,
     settingsOpen: false,
     overlay: null,
@@ -317,6 +333,7 @@ export const useStudio = create<StudioState>((set, get) => {
         locale: prefs.locale ?? 'en',
         panel: prefs.panel === 'workflows' || prefs.panel === 'library' || prefs.panel === 'history' ? prefs.panel : null,
         logsOpen: prefs.logsOpen ?? false,
+        agentOpen: prefs.agentOpen ?? false,
         issues: validateGraph(graph),
       });
       const runtimes: Record<string, NodeRuntime> = {};
@@ -423,6 +440,8 @@ export const useStudio = create<StudioState>((set, get) => {
       const graph = structuredClone(tab.graph);
       const savedHash = savedHashOf(savedName, graph);
       await workflowsApi.save({ id, name: savedName, graph });
+      // The conversation goes with the workflow: a draft's moves to its file, a saved one's is copied to the new file.
+      void agentApi.adopt(agentIdFor({ key: tab.key, fileId: id }), agentIdFor(tab), tab.fileId ? 'copy' : 'move').catch(() => undefined);
       const current = get().tabs.find((t) => t.key === tab.key);
       const currentName = current?.name === tab.name ? savedName : (current?.name ?? savedName);
       set({
@@ -658,11 +677,35 @@ export const useStudio = create<StudioState>((set, get) => {
       set((s) => ({ logsOpen: !s.logsOpen, unreadErrors: 0 }));
       persistUi();
     },
+    toggleAgent() {
+      set((s) => ({ agentOpen: !s.agentOpen }));
+      persistUi();
+    },
     setWorkflowModel(model) {
       const graph = get().graph;
       // The nodes that write with the workflow's model have a new model: their answers are stale.
       for (const n of graph.nodes) if (n.params.llmProvider === '') get().executor?.invalidate(n.id);
       refresh(setWorkflowModel(graph, model));
+    },
+    askAgent(nodeId) {
+      set((s) => ({ selectedNodeId: nodeId, agentOpen: true, agentAsk: s.agentAsk + 1 }));
+      persistUi();
+    },
+    applyAgentGraph(tabKey, graph, touched) {
+      if (tabKey === get().activeTab) {
+        // Only nodes the server already holds: a node the agent just added has no result to go stale,
+        // and the server, not yet sent the new graph, answers an unknown id with a 400.
+        const known = new Set(get().graph.nodes.map((n) => n.id));
+        for (const id of touched) if (known.has(id)) get().executor?.invalidate(id);
+        refresh(graph);
+        return true;
+      }
+      const tab = get().tabs.find((t) => t.key === tabKey);
+      if (!tab) return false;
+      stackFor(tabKey).record(tab.graph);
+      set({ tabs: get().tabs.map((t) => (t.key === tabKey ? { ...t, graph, dirty: dirtyOf(t, t.name, graph) } : t)) });
+      persist();
+      return true;
     },
     setOverlay(target) {
       set({ overlay: target });

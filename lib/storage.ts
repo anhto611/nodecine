@@ -22,6 +22,8 @@ export interface UiPrefs {
   locale: Locale;
   panel: 'workflows' | 'library' | 'history' | null;
   logsOpen: boolean;
+  /** The workflow agent's chat column on the right. */
+  agentOpen?: boolean;
 }
 
 function safeGet(key: string): string | null {
