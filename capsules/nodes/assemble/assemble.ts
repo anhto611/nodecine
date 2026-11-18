@@ -27,6 +27,22 @@ import { layerTrack, type Cue, type Mount, type Storyboard, type StoryboardFrame
  */
 
 export const FRAMES_MARKER = '<!-- nodecine:frames -->';
+
+/**
+ * The shell's own length, made the film's. A shell that states a `data-duration` on the root the frames
+ * go into would otherwise cut every film to it — a kit written with a placeholder ten seconds played
+ * ten seconds of an eighty-second film. A shell that states none is left to HyperFrames to measure.
+ */
+export function withFilmLength(shell: string, seconds: number): string {
+  const at = shell.indexOf(FRAMES_MARKER);
+  if (at < 0) return shell;
+  const before = shell.slice(0, at);
+  const tags = [...before.matchAll(/<[a-z][^>]*\bdata-composition-id\s*=[^>]*>/gi)];
+  const root = tags.at(-1);
+  if (!root || !/\bdata-duration\s*=/.test(root[0])) return shell;
+  const fixed = root[0].replace(/\bdata-duration\s*=\s*(["'])[^"']*\1/, `data-duration="${seconds}"`);
+  return before.slice(0, root.index) + fixed + before.slice(root.index! + root[0].length) + shell.slice(at);
+}
 export const ASSEMBLY_FILE = 'assemble.json';
 export const TIMELINE_FILE = 'timeline.json';
 const COMPONENTS_DIR = 'compositions/components/';
@@ -416,7 +432,7 @@ export function assemble(kit: Composition, storyboard: Storyboard, voice: Voiceo
     clips.push(clipTag(`overlay-${i + 1}`, { component: overlay.component, rect, values: { ...overlay.values, seconds: round(duration) }, start: 0, duration, track: overlay.track ?? 10 + i }));
   });
 
-  files[COMPOSITION_ENTRY] = shell.replace(FRAMES_MARKER, `${FRAMES_MARKER}\n${clips.join('\n')}`);
+  files[COMPOSITION_ENTRY] = withFilmLength(shell, total).replace(FRAMES_MARKER, `${FRAMES_MARKER}\n${clips.join('\n')}`);
   files[TIMELINE_FILE] = JSON.stringify({ durationSeconds: total, frames: scenes, words: timeline });
 
   // The voice itself. The audio clips above name it `voiceover`, and nothing else binds that name: the

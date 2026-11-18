@@ -241,3 +241,14 @@ describe('assembling scenes', () => {
     expect(outside.problems).toContain('layer 1, brand-corner: "Nokia" is not said in frame 3');
   });
 });
+
+describe("the shell's length", () => {
+  it('becomes the film length when the shell states one, and stays unstated otherwise', async () => {
+    const { withFilmLength } = await import('../assemble');
+    const stated = '<div id="s" data-composition-id="s" data-width="1080" data-height="1920" data-duration="10"><!-- nodecine:frames --></div>';
+    expect(withFilmLength(stated, 81)).toContain('data-duration="81"');
+    expect(withFilmLength(stated, 81)).not.toContain('data-duration="10"');
+    const unstated = '<div id="s" data-composition-id="s" data-width="1080" data-height="1920"><!-- nodecine:frames --></div>';
+    expect(withFilmLength(unstated, 81)).toBe(unstated);
+  });
+});
