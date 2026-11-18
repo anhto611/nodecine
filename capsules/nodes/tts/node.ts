@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { resolveTTS } from '@/contracts/resources';
+import { resolveAutoTTS, resolveTTS } from '@/contracts/resources';
 import { ErrorCode } from '@/contracts/errors';
 import { TtsErrorCode } from './errors';
 import type { AudioScript, TTSRef, Voice } from '@/contracts/types/payloads';
 import type { NodeDefinition } from '@/core/nodes/definition';
 
 const Params = z.object({
-  /** The voice this node speaks with: a provider id and its settings. */
+  /** The voice this node speaks with: a provider id and its settings. Empty: chosen for the script's language. */
   ttsProvider: z.string().max(60).default(''),
   ttsSettings: z.record(z.string(), z.unknown()).default({}),
   voice: z.string().optional(),
@@ -52,7 +52,8 @@ export const ttsEngine: NodeDefinition<typeof Params> = {
   defaultParams: { ttsProvider: '', ttsSettings: {}, speed: 1 },
   run: async ({ params, inputs, services, signal, log, progress }) => {
     const script = inputs.script!.payload as AudioScript;
-    const ref = await resolveTTS(services, params);
+    const ref = params.ttsProvider.trim() ? await resolveTTS(services, params) : await resolveAutoTTS(services, script.language);
+    if (!params.ttsProvider.trim()) log('info', `voice service chosen for "${script.language}": ${ref.displayName}`);
     const { voice, fallback } = pickVoice(ref, script.language, params.voice);
     if (fallback) {
       log('warn', `no voice for "${script.language}", using fallback "${voice.displayName}"`, TtsErrorCode.TTS_VOICE_LANGUAGE_MISMATCH);

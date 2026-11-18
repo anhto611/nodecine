@@ -1,11 +1,14 @@
 import type { TTSRef } from '@/contracts/types/payloads';
+import { resolveAutoTTS } from '@/contracts/resources';
 import { createServerServices } from '@/server/contracts/services.server';
 
 /**
  * The voices the chosen service offers, for the card's picker while a person edits the node. The same
  * probe a run makes, so the list is what the run will choose from.
  */
-export async function voices(providerId: unknown, settings: unknown): Promise<TTSRef> {
+export async function voices(providerId: unknown, settings: unknown, language?: unknown): Promise<TTSRef> {
+  // Left automatic: the service the run would choose for this language.
+  if (providerId === '' && typeof language === 'string' && language) return resolveAutoTTS(createServerServices(), language);
   if (typeof providerId !== 'string' || !providerId) throw Object.assign(new Error('no voice service chosen'), { code: 'PROVIDER_NOT_CONNECTED' });
   const given = settings && typeof settings === 'object' && !Array.isArray(settings) ? (settings as Record<string, unknown>) : {};
   return createServerServices().probeTTS(providerId, given);

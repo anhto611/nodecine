@@ -2,6 +2,7 @@ import { ErrorCode, NodeError } from '@/contracts/errors';
 import type { NodeServices } from '@/core/engine/services';
 import type { EngineRef, LLMRef, TTSRef } from './types/payloads';
 import { readCapability } from '@/core/nodes/definition';
+import { listTTSProviders } from './providers/registry';
 
 /**
  * A node's own model, voice or engine.
@@ -53,6 +54,32 @@ export async function resolveTTS(
   if (!params.ttsProvider.trim()) throw new NodeError(ErrorCode.INPUT_EMPTY, 'no voice chosen', false).withFix('choose a voice on this node');
   const ref = await services.probeTTS(params.ttsProvider, params.ttsSettings ?? {});
   need(ref, requires, 'voice');
+  return ref;
+}
+
+/**
+ * The voice for a node that leaves its service empty: the first service that may be chosen by itself
+ * (`autoRank`), is ready, and has a voice in the script's language — Kokoro for English, VieNeu for
+ * Vietnamese. When none speaks it, the first that is ready, and the node says its voice does not match.
+ */
+export async function resolveAutoTTS(services: Pick<NodeServices, 'probeTTS'>, language: string): Promise<TTSRef> {
+  const lang = language.toLowerCase();
+  const candidates = listTTSProviders()
+    .filter((p) => p.autoRank !== undefined)
+    .sort((a, b) => a.autoRank! - b.autoRank!);
+  let firstReady: TTSRef | null = null;
+  let firstSeen: TTSRef | null = null;
+  for (const p of candidates) {
+    const ref = await services.probeTTS(p.id, { ...p.defaultSettings }).catch(() => null);
+    if (!ref) continue;
+    firstSeen ??= ref;
+    if (!TTS_NEEDS.every((k) => readCapability(ref, k)?.status === 'ready')) continue;
+    firstReady ??= ref;
+    if (ref.voices.some((v) => v.language.toLowerCase() === lang || v.language.toLowerCase().startsWith(`${lang}-`))) return ref;
+  }
+  const ref = firstReady ?? firstSeen;
+  if (!ref) throw new NodeError(ErrorCode.INPUT_EMPTY, 'no voice can be chosen by itself on this machine', false).withFix('choose a voice service on this node');
+  need(ref, TTS_NEEDS, 'voice');
   return ref;
 }
 

@@ -1,0 +1,1 @@
+{ "id": "omnivoice", "kind": "tts", "register": "registerOmnivoice", "settings": "omnivoiceSettings", "widgets": "omnivoiceWidgets", "translations": "omnivoiceTranslations" }

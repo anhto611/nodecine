@@ -3,10 +3,11 @@ import { registerAgy } from '../agy';
 import { registerClaudeCode } from '../claude-code';
 import { registerCodex } from '../codex';
 import { registerElevenlabs } from '../elevenlabs';
+import { registerKokoro } from '../kokoro';
 import { registerOllama } from '../ollama';
-import { registerPiper } from '../piper';
-import { registerSystemTts } from '../system-tts';
+import { registerOmnivoice } from '../omnivoice';
 import { registerVbee } from '../vbee';
+import { registerVieneu } from '../vieneu';
 
 /** Every provider factory, registered once. Each registration is a Map.set: setting it twice is setting it once. */
 export function installProviders(): void {
@@ -14,8 +15,9 @@ export function installProviders(): void {
   registerClaudeCode();
   registerCodex();
   registerElevenlabs();
+  registerKokoro();
   registerOllama();
-  registerPiper();
-  registerSystemTts();
+  registerOmnivoice();
   registerVbee();
+  registerVieneu();
 }

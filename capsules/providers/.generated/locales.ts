@@ -3,14 +3,15 @@ import { agyTranslations } from '../agy/locales';
 import { claudeCodeTranslations } from '../claude-code/locales';
 import { codexTranslations } from '../codex/locales';
 import { elevenlabsTranslations } from '../elevenlabs/locales';
+import { kokoroTranslations } from '../kokoro/locales';
 import { ollamaTranslations } from '../ollama/locales';
-import { piperTranslations } from '../piper/locales';
-import { systemTtsTranslations } from '../system-tts/locales';
+import { omnivoiceTranslations } from '../omnivoice/locales';
 import { vbeeTranslations } from '../vbee/locales';
+import { vieneuTranslations } from '../vieneu/locales';
 
 /** Every string a provider shows: its name, the line under the picker, and its own value labels. */
 export const PROVIDER_TRANSLATIONS: Record<string, Record<string, string>> = { en: {}, vi: {} };
-for (const extension of [agyTranslations, claudeCodeTranslations, codexTranslations, elevenlabsTranslations, ollamaTranslations, piperTranslations, systemTtsTranslations, vbeeTranslations]) {
+for (const extension of [agyTranslations, claudeCodeTranslations, codexTranslations, elevenlabsTranslations, kokoroTranslations, ollamaTranslations, omnivoiceTranslations, vbeeTranslations, vieneuTranslations]) {
   Object.assign(PROVIDER_TRANSLATIONS.en!, extension.en);
   Object.assign(PROVIDER_TRANSLATIONS.vi!, extension.vi);
 }

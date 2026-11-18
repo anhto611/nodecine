@@ -30,15 +30,18 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
   const { action } = useHost();
   const [p, set] = useParams<{ voice?: string; ttsProvider?: string; ttsSettings?: Record<string, unknown> }>(nodeId);
   const script = useInputPayload<AudioScript>(nodeId, 'script');
+  const { lang, source } = useScriptLanguage(nodeId, script);
   // The chosen service's voices, asked of the server whenever the service or its settings change.
   const [ref, setRef] = React.useState<TTSRef | null>(null);
   const [voicesError, setVoicesError] = React.useState<string | null>(null);
   const settingsKey = JSON.stringify(p.ttsSettings ?? {});
+  // Left automatic, it is the service the run would choose for the script's language.
+  const service = p.ttsProvider ?? '';
   React.useEffect(() => {
-    if (!p.ttsProvider) return;
     let gone = false;
     setVoicesError(null);
-    action<TTSRef>('tts/voices', [p.ttsProvider, p.ttsSettings ?? {}]).then(
+    setRef(null);
+    action<TTSRef>('tts/voices', [service, p.ttsSettings ?? {}, lang]).then(
       (r) => {
         if (!gone) setRef(r);
       },
@@ -54,9 +57,8 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
     };
     // The settings are compared by content, not by the object that carries them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p.ttsProvider, settingsKey]);
+  }, [service, settingsKey, service ? '' : lang]);
   const vo = useOutputPayload<Voiceover>(nodeId, 'voiceover');
-  const { lang, source } = useScriptLanguage(nodeId, script);
   const all = ref?.voices ?? [];
   const matching = all.filter((v) => voiceSpeaks(v, lang));
   // Every other voice stays reachable, grouped by language, so a choice is never off the menu.
@@ -73,7 +75,7 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
     : null;
   return (
     <>
-      <ProviderPick nodeId={nodeId} kind="tts" />
+      <ProviderPick nodeId={nodeId} kind="tts" autoName={!service && ref ? ref.displayName : undefined} />
       <Kv
         k={t('node.voice')}
         v={
@@ -110,7 +112,7 @@ export const TtsBody: React.FC<BodyProps> = ({ nodeId }) => {
           {t('node.voicesUnavailable')}: {voicesError}
         </div>
       )}
-      {!ref && !voicesError && p.ttsProvider && <div className="nc-hint">{t('node.voicesLoading')}</div>}
+      {!ref && !voicesError && <div className="nc-hint">{t('node.voicesLoading')}</div>}
       <FormBody nodeId={nodeId} fields={['speed']} widgets={{ speed: { widget: 'range', step: 0.05, format: (v) => `${v.toFixed(2)}x` } }} />
       <div className="nc-hint">
         {t(source === 'script' ? 'node.matchesLanguage' : 'node.guessedLanguage', { lang })}

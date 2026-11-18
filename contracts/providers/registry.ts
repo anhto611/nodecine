@@ -21,6 +21,11 @@ export interface ProviderInstallation<F> {
    * its settings declares it here so the key handling has a single place to look.
    */
   secretSettings?: string[];
+  /**
+   * May be chosen by itself for a node that leaves its voice empty: it runs here and costs nothing, and
+   * it speaks with a stock voice, not a person's. Lower goes first. Absent: only ever chosen by name.
+   */
+  autoRank?: number;
 }
 
 /** What the registry holds: the installation plus the settings a fresh node starts with. */

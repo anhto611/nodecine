@@ -57,7 +57,8 @@ describe('a file from an older format', () => {
     ).not.toContain('voice');
     expect(doc.graph.edges, 'a wire to a node that is gone survived').toHaveLength(0);
     const speaker = doc.graph.nodes.find((n) => n.id === 'speaker')!;
-    expect(speaker.params).toMatchObject({ ttsProvider: 'system-tts', ttsSettings: { rate: 1.15 } });
+    // The OS voice it folded into is gone too (2026-11-18): Kokoro speaks instead, at the same rate.
+    expect(speaker.params).toMatchObject({ ttsProvider: 'kokoro', ttsSettings: { rate: 1.15 } });
     // One nobody was using goes too, quietly: there is nothing left for it to hand out.
     expect(doc.graph.nodes.map((n) => n.id)).not.toContain('brain');
   });

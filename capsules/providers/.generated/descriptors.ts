@@ -6,10 +6,11 @@ import { agySettings, agyWidgets } from '../agy/settings';
 import { claudeCodeSettings, claudeCodeWidgets } from '../claude-code/settings';
 import { codexSettings, codexWidgets } from '../codex/settings';
 import { elevenlabsSettings, elevenlabsWidgets } from '../elevenlabs/settings';
+import { kokoroSettings, kokoroWidgets } from '../kokoro/settings';
 import { ollamaSettings, ollamaWidgets } from '../ollama/settings';
-import { piperSettings, piperWidgets } from '../piper/settings';
-import { systemTtsSettings, systemTtsWidgets } from '../system-tts/settings';
+import { omnivoiceSettings, omnivoiceWidgets } from '../omnivoice/settings';
 import { vbeeSettings, vbeeWidgets } from '../vbee/settings';
+import { vieneuSettings, vieneuWidgets } from '../vieneu/settings';
 
 /**
  * Every provider this build ships, described from its own schema. The fields the node draws, the
@@ -21,8 +22,9 @@ export const PROVIDERS: ProviderDescriptor[] = [
   { id: 'claude-code', kind: 'llm', nameKey: 'provider.claude-code', noteKey: 'provider.claude-code.note', settingsSchema: claudeCodeSettings, defaultSettings: defaultSettingsOf(claudeCodeSettings), fields: schemaFields(claudeCodeSettings), widgets: claudeCodeWidgets },
   { id: 'codex', kind: 'llm', nameKey: 'provider.codex', noteKey: 'provider.codex.note', settingsSchema: codexSettings, defaultSettings: defaultSettingsOf(codexSettings), fields: schemaFields(codexSettings), widgets: codexWidgets },
   { id: 'elevenlabs', kind: 'tts', nameKey: 'provider.elevenlabs', noteKey: 'provider.elevenlabs.note', settingsSchema: elevenlabsSettings, defaultSettings: defaultSettingsOf(elevenlabsSettings), fields: schemaFields(elevenlabsSettings), widgets: elevenlabsWidgets },
+  { id: 'kokoro', kind: 'tts', nameKey: 'provider.kokoro', noteKey: 'provider.kokoro.note', settingsSchema: kokoroSettings, defaultSettings: defaultSettingsOf(kokoroSettings), fields: schemaFields(kokoroSettings), widgets: kokoroWidgets },
   { id: 'ollama', kind: 'llm', nameKey: 'provider.ollama', noteKey: 'provider.ollama.note', settingsSchema: ollamaSettings, defaultSettings: defaultSettingsOf(ollamaSettings), fields: schemaFields(ollamaSettings), widgets: ollamaWidgets },
-  { id: 'piper', kind: 'tts', nameKey: 'provider.piper', noteKey: 'provider.piper.note', settingsSchema: piperSettings, defaultSettings: defaultSettingsOf(piperSettings), fields: schemaFields(piperSettings), widgets: piperWidgets },
-  { id: 'system-tts', kind: 'tts', nameKey: 'provider.system-tts', noteKey: 'provider.system-tts.note', settingsSchema: systemTtsSettings, defaultSettings: defaultSettingsOf(systemTtsSettings), fields: schemaFields(systemTtsSettings), widgets: systemTtsWidgets },
+  { id: 'omnivoice', kind: 'tts', nameKey: 'provider.omnivoice', noteKey: 'provider.omnivoice.note', settingsSchema: omnivoiceSettings, defaultSettings: defaultSettingsOf(omnivoiceSettings), fields: schemaFields(omnivoiceSettings), widgets: omnivoiceWidgets },
   { id: 'vbee', kind: 'tts', nameKey: 'provider.vbee', noteKey: 'provider.vbee.note', settingsSchema: vbeeSettings, defaultSettings: defaultSettingsOf(vbeeSettings), fields: schemaFields(vbeeSettings), widgets: vbeeWidgets },
+  { id: 'vieneu', kind: 'tts', nameKey: 'provider.vieneu', noteKey: 'provider.vieneu.note', settingsSchema: vieneuSettings, defaultSettings: defaultSettingsOf(vieneuSettings), fields: schemaFields(vieneuSettings), widgets: vieneuWidgets },
 ];

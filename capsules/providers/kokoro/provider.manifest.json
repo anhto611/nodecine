@@ -1,0 +1,1 @@
+{ "id": "kokoro", "kind": "tts", "register": "registerKokoro", "settings": "kokoroSettings", "widgets": "kokoroWidgets", "translations": "kokoroTranslations" }

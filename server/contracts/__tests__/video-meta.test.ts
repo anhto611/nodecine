@@ -6,7 +6,7 @@ import { exec } from '@/server/exec';
 import { ffmpegBin } from '../audio';
 import { embedWorkflow, readWorkflowTag } from '../video-meta';
 
-/** Integration: needs ffmpeg and ffprobe on the machine, like the system-tts tests. */
+/** Integration: needs ffmpeg and ffprobe on the machine, like the local voice tests. */
 let dir = '';
 let ffmpeg: string | null = null;
 beforeAll(async () => {

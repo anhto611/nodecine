@@ -299,6 +299,38 @@ function modelOntoTheWorkflow(graph: Graph, notes: { nodeId?: string; code: stri
   };
 }
 
+/**
+ * Two voices left on 2026-11-18: Piper, the local voice, and System TTS, the OS synthesizer (macOS
+ * only). Kokoro took their place, and VieNeu reads Vietnamese, which Kokoro cannot. A node that spoke
+ * with either keeps speaking: a Vietnamese voice (Piper's `vi_VN-…`, macOS's Linh) moves to VieNeu, any
+ * other to Kokoro, and the voice itself goes back to automatic — neither has a voice by the old name,
+ * so the node picks the first that speaks the script's language.
+ */
+const RETIRED_VOICES: Record<string, string> = { piper: 'Piper', 'system-tts': 'System TTS' };
+
+function retiredVoicesToLocal(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
+  const gone = graph.nodes.filter((n) => typeof n.params.ttsProvider === 'string' && n.params.ttsProvider in RETIRED_VOICES);
+  if (!gone.length) return graph;
+  const ids = new Set(gone.map((n) => n.id));
+  return {
+    ...graph,
+    nodes: graph.nodes.map((n) => {
+      if (!ids.has(n.id)) return n;
+      const voice = typeof n.params.voice === 'string' ? n.params.voice : '';
+      const to = /^vi[_-]|^linh\b/i.test(voice) ? 'vieneu' : 'kokoro';
+      notes.push({
+        nodeId: n.id,
+        code: 'PARAMS_RESET',
+        message: `${RETIRED_VOICES[n.params.ttsProvider as string]} is gone: this voice now speaks with ${to === 'vieneu' ? 'VieNeu' : 'Kokoro'}, its voice chosen automatically`,
+      });
+      const { voice: _gone, ...params } = n.params;
+      // Kokoro takes a rate the way both old voices did, so a pace someone set carries over; VieNeu takes none.
+      const rate = (n.params.ttsSettings as { rate?: unknown } | undefined)?.rate;
+      return { ...n, params: { ...params, ttsProvider: to, ttsSettings: to === 'kokoro' && typeof rate === 'number' ? { rate } : {} } };
+    }),
+  };
+}
+
 export function registerDocMigrations(): void {
   registerResourceFolds();
   registerGraphStep(mergeCaptionsIntoTranscribe);
@@ -309,6 +341,7 @@ export function registerDocMigrations(): void {
   registerGraphStep(captionsOffDataMerge);
   registerGraphStep(writerChoicesOntoTheWriter);
   registerGraphStep(modelOntoTheWorkflow);
+  registerGraphStep(retiredVoicesToLocal);
   registerDocMigration(1, (doc: SavedDoc): SavedDoc => ({
     ...doc,
     graph: {
