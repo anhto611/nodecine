@@ -85,6 +85,23 @@ export const Studio: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [init]);
 
+  // The workflow on the canvas follows its file when someone else saved it: on coming back to the
+  // window, and every so often while it is in view.
+  React.useEffect(() => {
+    if (!ready) return;
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void useStudio.getState().refreshActiveFromFile();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const timer = setInterval(refresh, 15_000);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      clearInterval(timer);
+    };
+  }, [ready]);
+
   if (!ready) return null;
   // The whole shell, not only the canvas: the Studio draws with the same kit the node bodies do.
   return (

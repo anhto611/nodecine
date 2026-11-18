@@ -120,6 +120,11 @@ export interface StudioState {
    */
   openWorkflow(fileId: string): Promise<{ kind: 'failed' | 'migrated'; why: string } | null>;
   activateTab(key: string): void;
+  /**
+   * Take the file's version into the tab on the canvas when the file changed since and the tab holds
+   * nothing unsaved — an agent, a script or another window may have saved it while the person looked.
+   */
+  refreshActiveFromFile(): Promise<void>;
   closeTab(key: string): void;
   /** Saves the active tab to its file; a draft has no file and reports `needs-name`. */
   saveWorkflow(): Promise<'saved' | 'needs-name'>;
@@ -390,6 +395,13 @@ export const useStudio = create<StudioState>((set, get) => {
       void refreshFromFile(tab).then((fresh) => {
         if (fresh !== tab && get().activeTab === key) showTab(fresh);
       });
+    },
+
+    async refreshActiveFromFile() {
+      const tab = get().tabs.find((t) => t.key === get().activeTab);
+      if (!tab?.fileId || tab.dirty || get().running) return;
+      const fresh = await refreshFromFile(tab);
+      if (fresh !== tab && get().activeTab === tab.key) showTab(fresh);
     },
 
     closeTab(key) {
