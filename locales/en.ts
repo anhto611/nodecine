@@ -120,7 +120,6 @@ export const en = {
   'node.status': 'status',
   'node.probeEveryRun': 'probed on every run',
   'node.voices': 'voices',
-  'node.llmProvider': 'model',
   'node.ttsProvider': 'service',
   'node.engineId': 'engine',
   'node.provider': 'provider',

@@ -249,4 +249,15 @@ describe('JobHub on a cold process', () => {
     expect(job.status).toBe('pending');
     hub.cancel(job.id);
   });
+
+  it('runs the graph the host prepared, not the one the browser sent', async () => {
+    // The workflow's model is filled into the nodes that leave theirs empty this way (server/contracts/hub.ts).
+    const hub = new JobHub(() => testServices(), { cache: new MemoryResultCache(), prepare: registerTestKit, prepareGraph: (g) => ({ ...g, settings: { prepared: true } }) });
+    expect(hub.slot('prep-1', graph()).executor.getGraph().settings).toEqual({ prepared: true });
+    hub.slot('prep-1', graph());
+    expect(hub.slot('prep-1').executor.getGraph().settings).toEqual({ prepared: true });
+    const job = hub.submit({ key: 'prep-2', kind: 'run', graph: graph() });
+    await until(() => hub.get(job.id)?.status === 'done');
+    expect(hub.slot('prep-2').executor.getGraph().settings).toEqual({ prepared: true });
+  });
 });

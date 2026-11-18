@@ -3,7 +3,6 @@ import React from 'react';
 import { Btn, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useInputPayload, useOverlay, useParams, useRun, type BodyProps } from '@/capsules/sdk/host';
 import { FormBody } from '@/capsules/sdk/form-body';
-import { ProviderPick } from '@/capsules/sdk/pickers';
 import type { Brief } from '@/contracts/types/brief';
 import type { AssetsDialogData } from './dialog';
 import { AddPictures, PictureTile, usePictures } from './pictures';
@@ -39,7 +38,6 @@ export const AssetsBody: React.FC<BodyProps> = ({ nodeId }) => {
 
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <ProviderPick nodeId={nodeId} kind="llm" />
       <FormBody nodeId={nodeId} fields={['pictures']} widgets={{ pictures: { labelKey: 'node.assetsPictureCount', options: PICTURE_COUNTS.map((n) => ({ value: n, label: String(n) })) } }} />
       {!searchable && (p.pictures ?? 8) > 0 && (
         <div className="nc-hint" style={{ marginTop: 0 }}>

@@ -6,6 +6,8 @@ import { NODE_FEATURES } from '@/capsules/nodes';
 import { NODE_SOURCES } from '@/capsules/nodes/.generated/server';
 import { fingerprintFor } from '@/server/fingerprints';
 import { ensureServerRegistrations } from './register';
+import { withWorkflowModel } from '@/contracts/workflow-model';
+import { firstModel } from './workflow-model';
 import { createServerServices } from './services.server';
 
 /**
@@ -93,6 +95,7 @@ export function jobHub(): JobHub {
     g.__nodecineJobHub = new JobHub((workflow) => createServerServices({ workflow }), {
       recorder: filmRecorder,
       prepare: ensureServerRegistrations,
+      prepareGraph: (graph) => withWorkflowModel(graph, firstModel()),
       fingerprint: frozenFingerprints(NODE_SOURCES),
     });
   }

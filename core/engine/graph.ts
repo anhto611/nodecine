@@ -63,6 +63,11 @@ export interface Edge {
 export interface Graph {
   nodes: NodeInstance[];
   edges: Edge[];
+  /**
+   * Settings that belong to the workflow rather than to one node. The core keeps them and never reads
+   * them; what a key means is the contracts' to say (`contracts/workflow-model.ts`).
+   */
+  settings?: Record<string, unknown>;
 }
 
 export interface GraphIssue extends NodeIssue {

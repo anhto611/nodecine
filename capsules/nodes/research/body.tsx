@@ -3,7 +3,6 @@ import React from 'react';
 import { Btn, Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useOutputPayload, useParams, useRun, type BodyProps } from '@/capsules/sdk/host';
 import { FormBody } from '@/capsules/sdk/form-body';
-import { ProviderPick } from '@/capsules/sdk/pickers';
 import type { Research, ResearchPoint } from '@/contracts/types/research';
 import type { ResearchEdits } from './material';
 import { SEARCH } from './node';
@@ -43,7 +42,6 @@ export const ResearchBody: React.FC<BodyProps> = ({ nodeId }) => {
 
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <ProviderPick nodeId={nodeId} kind="llm" />
       <button className="nc-chip" style={{ alignSelf: 'flex-start' }} aria-expanded={settings} onClick={() => setSettings(!settings)}>
         {settings ? t('node.researchSettingsHide') : t('node.researchSettings')}
       </button>

@@ -3,7 +3,6 @@ import React from 'react';
 import { Btn, Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useGraph, useInputPayload, useLocale, useOutputPayload, useParams, useRun, useRuntime, type BodyProps } from '@/capsules/sdk/host';
 import { FormBody } from '@/capsules/sdk/form-body';
-import { ProviderPick } from '@/capsules/sdk/pickers';
 import { labelOf, readBlockCatalog, type BlockInfo, type BlockVariable } from '@/contracts/storyboard/blocks';
 import { cueWord } from '@/contracts/storyboard/validate';
 import { assetProjectPath, type Assets } from '@/contracts/types/assets';
@@ -253,7 +252,6 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
 
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <ProviderPick nodeId={nodeId} kind="llm" />
       <FormBody
         nodeId={nodeId}
         fields={['durationSeconds', 'language', 'tone', 'notes']}

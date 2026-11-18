@@ -122,7 +122,6 @@ export const vi: Record<DictKey, string> = {
   'node.status': 'trạng thái',
   'node.probeEveryRun': 'probe mỗi lần Chạy Luồng',
   'node.voices': 'giọng',
-  'node.llmProvider': 'mô hình',
   'node.ttsProvider': 'dịch vụ',
   'node.engineId': 'động cơ',
   'node.provider': 'nhà cung cấp',

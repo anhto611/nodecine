@@ -4,19 +4,20 @@ import { Kv, useT, stopFlow } from './ui';
 import { useHost, useParams } from './host';
 
 /**
- * The part a node needs, chosen on the node itself: a model or a voice.
+ * The voice a node speaks with, chosen on the node itself. A model is not chosen here: the workflow
+ * has one for all its nodes (`contracts/workflow-model.ts`).
  *
  * These were nodes of their own until 2026-09-12, wired in on a second kind of port, and the reason a
  * node could not run was reported on a different node from the one that failed. What is left of that
  * idea is this row: the node names what it needs, and probes it when it runs.
  */
-export const ProviderPick: React.FC<{ nodeId: string; kind: 'llm' | 'tts'; optional?: boolean }> = ({ nodeId, kind, optional }) => {
+export const ProviderPick: React.FC<{ nodeId: string; kind: 'tts'; optional?: boolean }> = ({ nodeId, kind, optional }) => {
   const t = useT();
-  const field = kind === 'llm' ? 'llmProvider' : 'ttsProvider';
+  const field = 'ttsProvider';
   const [p, set] = useParams<Record<string, unknown>>(nodeId);
   const options = useHost().providers(kind);
   const current = String(p[field] ?? '');
-  const settingsField = kind === 'llm' ? 'llmSettings' : 'ttsSettings';
+  const settingsField = 'ttsSettings';
 
   // A node dropped from the library starts empty; offer the first one rather than an error.
   React.useEffect(() => {
@@ -25,7 +26,7 @@ export const ProviderPick: React.FC<{ nodeId: string; kind: 'llm' | 'tts'; optio
 
   return (
     <Kv
-      k={t(kind === 'llm' ? 'node.llmProvider' : 'node.ttsProvider')}
+      k={t('node.ttsProvider')}
       v={
         <select
           className={`nc-select ${stopFlow}`}

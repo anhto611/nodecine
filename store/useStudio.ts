@@ -12,6 +12,7 @@ import { bootstrapClient } from '@/lib/bootstrap.client';
 import { loadTabs, loadUiPrefs, saveTabs, saveUiPrefs, PROJECT_SCHEMA_VERSION } from '@/lib/storage';
 import { workflowsApi } from '@/lib/workflows.client';
 import type { Locale } from '@/lib/i18n';
+import { setWorkflowModel, type WorkflowModel } from '@/contracts/workflow-model';
 
 export type Panel = 'workflows' | 'library' | 'history' | null;
 
@@ -127,6 +128,8 @@ export interface StudioState {
   setProjectName(name: string): void;
   setPanel(panel: Panel): void;
   toggleLogs(): void;
+  /** The model the whole workflow writes with: its agent, and every node that leaves its own empty. */
+  setWorkflowModel(model: WorkflowModel): void;
   setSettingsOpen(open: boolean): void;
   select(nodeId: string | null): void;
   markLogsRead(): void;
@@ -489,7 +492,7 @@ export const useStudio = create<StudioState>((set, get) => {
     removeNodes(ids) {
       const g = get().graph;
       const drop = new Set(ids);
-      refresh({ nodes: g.nodes.filter((n) => !drop.has(n.id)), edges: g.edges.filter((e) => !drop.has(e.source) && !drop.has(e.target)) });
+      refresh({ ...g, nodes: g.nodes.filter((n) => !drop.has(n.id)), edges: g.edges.filter((e) => !drop.has(e.source) && !drop.has(e.target)) });
     },
 
     removeEdges(ids) {
@@ -654,6 +657,12 @@ export const useStudio = create<StudioState>((set, get) => {
     toggleLogs() {
       set((s) => ({ logsOpen: !s.logsOpen, unreadErrors: 0 }));
       persistUi();
+    },
+    setWorkflowModel(model) {
+      const graph = get().graph;
+      // The nodes that write with the workflow's model have a new model: their answers are stale.
+      for (const n of graph.nodes) if (n.params.llmProvider === '') get().executor?.invalidate(n.id);
+      refresh(setWorkflowModel(graph, model));
     },
     setOverlay(target) {
       set({ overlay: target });

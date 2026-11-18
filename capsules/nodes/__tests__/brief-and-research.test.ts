@@ -61,13 +61,15 @@ describe('a workflow whose Storyboard Writer held its brief', () => {
     const { graph, notes } = migrateGraph(structuredClone(saved));
     const byType = (type: string) => graph.nodes.find((n) => n.type === type)!;
     expect(byType('brief').params).toEqual({ about: 'Kimi K2.7 https://kimi.com', hint: { vi: 'Dán link bài viết', en: 'Paste the article link' } });
-    expect(byType('research').params).toMatchObject({ llmProvider: 'claude-code', llmSettings: { model: 'opus' } });
+    // The model the writer named is the workflow's now, and every node writes with it.
+    expect(graph.settings?.llm).toEqual({ provider: 'claude-code', settings: { model: 'opus' } });
+    expect(byType('research').params).toMatchObject({ llmProvider: '', llmSettings: {} });
     expect(Object.keys(byType('storyboard-writer').params).sort()).toEqual(['attempt', 'durationSeconds', 'edits', 'language', 'llmProvider', 'llmSettings', 'notes', 'rewrites', 'subject', 'tone']);
     expect(byType('storyboard-writer').params).toMatchObject({ durationSeconds: 90, language: 'vi', tone: 'expert', notes: 'không nói giá' });
     const wire = (e: { source: string; sourcePort: string; target: string; targetPort: string }) => `${e.source}.${e.sourcePort} → ${e.target}.${e.targetPort}`;
     expect(graph.edges.map(wire)).toEqual(expect.arrayContaining(['brief.brief → research.brief', 'brief.brief → writer.brief', 'research.research → writer.research', 'brief.brief → assets.brief']));
     expect(graph.edges.some((e) => e.target === 'assets' && e.targetPort === 'research')).toBe(false);
-    expect(byType('assets').params).toMatchObject({ llmProvider: 'claude-code', llmSettings: { model: 'opus' } });
+    expect(byType('assets').params).toMatchObject({ llmProvider: '', llmSettings: {} });
     expect(graph.edges.some((e) => e.target === byType('research').id && e.targetPort === 'composition')).toBe(false);
     expect(validateGraph(graph).filter((i) => i.severity === 'error')).toEqual([]);
     expect(notes.some((n) => n.nodeId === 'writer' && n.code === 'NODE_REPLACED')).toBe(true);
@@ -121,7 +123,8 @@ describe('a workflow whose Research brought the pictures', () => {
     const { graph: after } = migrateGraph(graph);
     const wire = (e: { source: string; sourcePort: string; target: string; targetPort: string }) => `${e.source}.${e.sourcePort} → ${e.target}.${e.targetPort}`;
     expect(after.edges.map(wire).sort()).toEqual(['brief.brief → assets.brief', 'brief.brief → research.brief']);
-    expect(after.nodes.find((n) => n.id === 'assets')!.params).toMatchObject({ pictures: 6, llmProvider: 'claude-code' });
+    expect(after.nodes.find((n) => n.id === 'assets')!.params).toMatchObject({ pictures: 6, llmProvider: '' });
+    expect(after.settings?.llm).toMatchObject({ provider: 'claude-code' });
     expect('pictures' in after.nodes.find((n) => n.id === 'research')!.params).toBe(false);
     expect(validateGraph(after).filter((i) => i.severity === 'error')).toEqual([]);
   });

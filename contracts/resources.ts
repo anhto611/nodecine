@@ -37,7 +37,8 @@ export async function resolveLLM(
   params: { llmProvider: string; llmSettings?: Record<string, unknown> },
   requires: readonly string[] = LLM_NEEDS,
 ): Promise<LLMRef> {
-  if (!params.llmProvider.trim()) throw new NodeError(ErrorCode.INPUT_EMPTY, 'no language model chosen', false).withFix('choose a language model on this node');
+  // The server fills the workflow's model into a node that leaves its own empty, so empty here means neither has one.
+  if (!params.llmProvider.trim()) throw new NodeError(ErrorCode.INPUT_EMPTY, 'no language model chosen', false).withFix("choose the workflow's model in the agent panel, or one on this node");
   const ref = await services.probeLLM(params.llmProvider, params.llmSettings ?? {});
   need(ref, requires, 'language model');
   return ref;

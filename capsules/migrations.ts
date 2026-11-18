@@ -280,6 +280,25 @@ function researchOffAssets(graph: Graph, notes: { nodeId?: string; code: string;
   return { ...graph, edges: graph.edges.filter((e) => !gone.includes(e)) };
 }
 
+/**
+ * Each node that wrote with a model chose its own until 2026-11-18; the workflow chooses one for all
+ * of them now (`contracts/workflow-model.ts`). The first model a node named becomes the workflow's,
+ * unless the workflow already has one, and every node goes back to writing with the workflow's.
+ */
+function modelOntoTheWorkflow(graph: Graph, notes: { nodeId?: string; code: string; message: string }[]): Graph {
+  const named = graph.nodes.filter((n) => typeof n.params.llmProvider === 'string' && n.params.llmProvider);
+  if (!named.length) return graph;
+  const first = named[0]!.params;
+  const llm = (graph.settings?.llm as { provider?: unknown } | undefined)?.provider ? graph.settings!.llm : { provider: first.llmProvider, settings: first.llmSettings ?? {} };
+  const ids = new Set(named.map((n) => n.id));
+  for (const n of named) notes.push({ nodeId: n.id, code: 'PARAMS_RESET', message: `${n.params.llmProvider} now comes from the workflow's model` });
+  return {
+    ...graph,
+    settings: { ...graph.settings, llm },
+    nodes: graph.nodes.map((n) => (ids.has(n.id) ? { ...n, params: { ...n.params, llmProvider: '', llmSettings: {} } } : n)),
+  };
+}
+
 export function registerDocMigrations(): void {
   registerResourceFolds();
   registerGraphStep(mergeCaptionsIntoTranscribe);
@@ -289,6 +308,7 @@ export function registerDocMigrations(): void {
   registerGraphStep(researchOffAssets);
   registerGraphStep(captionsOffDataMerge);
   registerGraphStep(writerChoicesOntoTheWriter);
+  registerGraphStep(modelOntoTheWorkflow);
   registerDocMigration(1, (doc: SavedDoc): SavedDoc => ({
     ...doc,
     graph: {

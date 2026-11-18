@@ -23,7 +23,7 @@ const NodeInstanceSchema = z.object({
   pinned: z.object({ outputs: z.record(z.string(), z.unknown()), at: z.string().min(1) }).optional(),
 });
 const EdgeSchema = z.object({ id: z.string().min(1), source: z.string(), sourcePort: z.string(), target: z.string(), targetPort: z.string() });
-export const GraphSchema = z.object({ nodes: z.array(NodeInstanceSchema), edges: z.array(EdgeSchema) });
+export const GraphSchema = z.object({ nodes: z.array(NodeInstanceSchema), edges: z.array(EdgeSchema), settings: z.record(z.string(), z.unknown()).optional() });
 
 export const WorkflowDocumentSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),

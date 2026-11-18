@@ -110,6 +110,11 @@ export interface HubOptions {
    * every submission is validated and every executor is built, not once: see `server/contracts/register.ts`.
    */
   prepare?: () => void;
+  /**
+   * What a graph becomes before it is run: the host's chance to settle choices a person left to the
+   * workflow (a node's model left to the workflow's, say). Identity when absent.
+   */
+  prepareGraph?: (graph: Graph) => Graph;
 }
 
 const KEY = /^[a-zA-Z0-9_-]{1,80}$/;
@@ -132,6 +137,7 @@ export class JobHub {
   private readonly maxJobs: number;
   private readonly recorder: JobRecorder | undefined;
   private readonly prepare: () => void;
+  private readonly prepareGraph: (graph: Graph) => Graph;
   /** The last run job per key, so an export that follows can be filed under it. */
   private lastRun = new Map<string, string>();
   /** Submissions already accepted, by the browser's request id: a retry must not queue a second job. */
@@ -146,6 +152,7 @@ export class JobHub {
   ) {
     this.recorder = options.recorder;
     this.prepare = options.prepare ?? (() => {});
+    this.prepareGraph = options.prepareGraph ?? ((g) => g);
     this.cache = options.cache ?? new DiskResultCache();
     this.fingerprint = options.fingerprint;
     this.maxJobs = Math.max(1, Math.floor(options.maxJobs ?? (Number(process.env.NODECINE_MAX_PARALLEL_JOBS) || 2)));
@@ -248,7 +255,7 @@ export class JobHub {
       const logs = new LogBuffer();
       const holder: { slot?: Slot } = {};
       const executor = new Executor(
-        graph ?? { nodes: [], edges: [] },
+        this.prepareGraph(graph ?? { nodes: [], edges: [] }),
         this.servicesFor(() => (holder.slot ? { name: holder.slot.name, graph: holder.slot.executor.getGraph() } : null)),
         {
           onStateChange: (nodeId, runtime) => this.emit({ type: 'node', key, nodeId, runtime }),
@@ -265,7 +272,7 @@ export class JobHub {
       holder.slot = slot;
       this.slots.set(key, slot);
     } else if (graph) {
-      slot.executor.setGraph(graph);
+      slot.executor.setGraph(this.prepareGraph(graph));
       if (name) slot.name = name;
     }
     return slot;
@@ -306,7 +313,7 @@ export class JobHub {
       status: 'pending',
       createdAt: Date.now(),
     };
-    this.submissions.set(job.id, { graph: structuredClone(input.graph), name: input.name ?? input.key });
+    this.submissions.set(job.id, { graph: this.prepareGraph(structuredClone(input.graph)), name: input.name ?? input.key });
     this.jobs.set(job.id, job);
     if (input.requestId) this.byRequest.set(input.requestId, job.id);
     this.queue.push(job);

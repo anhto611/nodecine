@@ -3,7 +3,6 @@ import React from 'react';
 import { Btn, Kv, useT, stopFlow } from '@/capsules/sdk/ui';
 import { useParams, useRun, useRuntime, type BodyProps } from '@/capsules/sdk/host';
 import { FormBody } from '@/capsules/sdk/form-body';
-import { ProviderPick } from '@/capsules/sdk/pickers';
 
 const COUNTS = [0, 1, 2, 3, 4] as const;
 
@@ -26,12 +25,7 @@ export const ForgeBody: React.FC<BodyProps> = ({ nodeId }) => {
   };
   return (
     <div className={stopFlow} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <ProviderPick nodeId={nodeId} kind="llm" />
-      <FormBody
-        nodeId={nodeId}
-        fields={['max']}
-        widgets={{ max: { labelKey: 'node.forgeMax', options: COUNTS.map((n) => ({ value: n, label: String(n) })) } }}
-      />
+      <FormBody nodeId={nodeId} fields={['max']} widgets={{ max: { labelKey: 'node.forgeMax', options: COUNTS.map((n) => ({ value: n, label: String(n) })) } }} />
       {forged.length > 0 ? (
         <>
           <span className="nc-k">{t('node.forgeCount', { count: forged.length })}</span>

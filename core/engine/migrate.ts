@@ -151,6 +151,7 @@ function foldResourceNodes(graph: Graph, notes: MigrationNote[]): Graph {
     notes.push({ nodeId, code: 'NODE_RESOURCE_FOLDED', message: `${Object.keys(patch).join(' and ')} moved onto this node; the resource nodes it was wired to are gone` });
   }
   return {
+    ...graph,
     nodes: graph.nodes.filter((n) => !resources.has(n.id)).map((n) => (patches.has(n.id) ? { ...n, params: { ...n.params, ...patches.get(n.id) } } : n)),
     edges: graph.edges.filter((e) => !resources.has(e.source) && !resources.has(e.target)),
   };
