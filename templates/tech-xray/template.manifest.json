@@ -1,0 +1,20 @@
+{
+  "id": "tech-xray",
+  "group": "idea",
+  "tagline": {
+    "en": "Name a machine — a car, a gun, an engine, a lock; get a portrait explainer where the object glows as a neon-blue x-ray, each part lights up red as the voice reaches it, and the camera glides from part to part.",
+    "vi": "Ghi tên một cỗ máy — chiếc xe, khẩu súng, động cơ, ổ khoá; nhận một phim dọc giải thích, vật hiện lên như ảnh x-quang xanh neon, từng bộ phận sáng đỏ khi lời đọc nhắc tới, máy quay lướt từ bộ phận này sang bộ phận khác."
+  },
+  "tags": [
+    "9:16",
+    "~2 min",
+    {
+      "en": "Vietnamese narration",
+      "vi": "Giọng đọc tiếng Việt"
+    },
+    {
+      "en": "Needs a model and a voice",
+      "vi": "Cần model và giọng đọc"
+    }
+  ]
+}
