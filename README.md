@@ -59,6 +59,12 @@ Download workflow JSON from the Workflows panel to keep a backup. Referenced upl
 
 The **Templates** button opens a gallery dialog, separate from the Workflows sidebar. Select a template card to open a new unsaved draft; editing or saving that draft does not change the template. Bundled templates ship with the app under `templates/`; personal workflows remain under `.nodecine/workflows`.
 
+## The workflow agent
+
+Each workflow has its own agent in a chat column right of the canvas (**Agent**, or Ctrl+I). It thinks with the workflow's model, chosen at the top of the panel, and edits the canvas for you: adding and wiring nodes, setting them up, running the workflow. Ctrl+Z undoes what it did. Select a node, or press its agent button, to talk about that node.
+
+To make videos like one you already have, attach it with **Sample video**, or paste a link with **Link** (YouTube, TikTok, Facebook or a video file on the web; fetched with `yt-dlp`). The video is read by [rea-video](https://github.com/JuneYaooo/rea-video) (`npm run setup:rea-video`, about 320 MB): its scenes, captions, sound and speech. The agent looks at a still from every scene, sets the workflow's pipeline up for that kind of film, and, when no template looks like it, hands the look to a **kit builder**: a coding-agent session (Claude Code, Codex or Antigravity, whichever the workflow's model is) that writes a new HyperFrames kit in a folder of its own under `.nodecine/kits/`, following `server/contracts/kit/NODECINE-KIT.md`. NodeCine checks the kit and puts it into the Composition node. Use only videos you may use.
+
 ## Providers and optional tools
 
 Choose providers in the Studio settings. Install and configure only the providers you want to use.
@@ -85,6 +91,7 @@ npm run setup:matte     # downloads the matting model into .nodecine/models
 npm run setup:kokoro    # default voice model (132 MB), otherwise fetched on first use
 npm run setup:vieneu    # requires uv; Vietnamese voices
 npm run setup:omnivoice # requires uv; voice cloning add-on, about 8 GB
+npm run setup:rea-video # requires git and uv; reads sample videos for the workflow agent
 ```
 
 Alignment downloads a Whisper model on first use. These tools and their downloads are not needed for the starter preview. Models and external services have their own terms.

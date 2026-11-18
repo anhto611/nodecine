@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getNodeType } from '@/core/nodes/definition';
+import { holdsKit } from './kit';
 import type { Edge, Graph, NodeInstance } from '@/core/engine/graph';
 
 /**
@@ -20,6 +21,12 @@ const NodeRef = z.string().min(1).max(120);
 const Params = z.record(z.string(), z.unknown());
 
 export const AgentActionSchema = z.discriminatedUnion('op', [
+  /**
+   * Start over from a template: its nodes and wires take the place of the workflow's, the workflow's own
+   * settings (its model) stay. The model names the template; the server puts the template's graph in
+   * `graph` before anyone applies the edit, so both sides apply the same one.
+   */
+  z.object({ op: z.literal('useTemplate'), id: z.string().min(1).max(80), graph: z.unknown().optional() }),
   /** `ref` names the new node for the edits after it in the same answer. */
   z.object({ op: z.literal('add'), ref: NodeRef, type: z.string().min(1).max(120), params: Params.optional() }),
   z.object({ op: z.literal('remove'), node: NodeRef }),
@@ -32,6 +39,11 @@ export const AgentActionSchema = z.discriminatedUnion('op', [
   /** Run the whole workflow once the edits are in. `force` ignores the result cache. */
   z.object({ op: z.literal('run'), force: z.boolean().optional() }),
   z.object({ op: z.literal('runNode'), node: NodeRef }),
+  /**
+   * Have a coding agent build a new kit — the look and motion of the films — for a Composition node,
+   * from a precise request. It runs for minutes, apart from this turn; the agent hears when it is done.
+   */
+  z.object({ op: z.literal('buildKit'), node: NodeRef, request: z.string().min(1).max(8000) }),
 ]);
 export type AgentAction = z.infer<typeof AgentActionSchema>;
 
@@ -58,6 +70,8 @@ export interface Applied {
   touched: string[];
   /** The run the agent asked for, if any: the whole workflow, or one node. */
   run: { force: boolean } | { nodeId: string } | null;
+  /** A kit the agent asked to have built, if any. */
+  kit: { nodeId: string; request: string } | null;
   /** `ref` → id of each node added. */
   added: Record<string, string>;
 }
@@ -70,10 +84,12 @@ export function applyAgentActions(graph: Graph, actions: AgentAction[], opts: { 
   const idFor = opts.idFor ?? newId;
   let nodes: NodeInstance[] = graph.nodes.map((n) => ({ ...n }));
   let edges: Edge[] = graph.edges.map((e) => ({ ...e }));
+  let settings = graph.settings;
   const results: ActionResult[] = [];
   const touched = new Set<string>();
   const added: Record<string, string> = {};
   let run: Applied['run'] = null;
+  let kit: Applied['kit'] = null;
 
   const resolve = (ref: string): NodeInstance | undefined => nodes.find((n) => n.id === (added[ref] ?? ref));
   const fail = (note: string) => results.push({ ok: false, note });
@@ -100,6 +116,19 @@ export function applyAgentActions(graph: Graph, actions: AgentAction[], opts: { 
 
   for (const action of actions) {
     switch (action.op) {
+      case 'useTemplate': {
+        const template = action.graph as Graph | undefined;
+        if (!template || !Array.isArray(template.nodes) || !Array.isArray(template.edges)) {
+          fail(`useTemplate: no template "${action.id}"`);
+          break;
+        }
+        nodes = template.nodes.map((n) => ({ ...n, params: { ...n.params } }));
+        edges = template.edges.map((e) => ({ ...e }));
+        settings = { ...template.settings, ...graph.settings };
+        for (const n of nodes) touched.add(n.id);
+        ok(`started from the template ${action.id}: ${nodes.map((n) => `${n.id} (${n.type})`).join(', ')}`);
+        break;
+      }
       case 'add': {
         const def = getNodeType(action.type);
         if (!def) {
@@ -215,6 +244,16 @@ export function applyAgentActions(graph: Graph, actions: AgentAction[], opts: { 
         run = { force: action.force ?? false };
         ok(action.force ? 'run everything again' : 'run');
         break;
+      case 'buildKit': {
+        const node = resolve(action.node);
+        if (!node || !holdsKit(node.type)) {
+          fail(`buildKit: "${action.node}" is not a Composition node`);
+          break;
+        }
+        kit = { nodeId: node.id, request: action.request };
+        ok(`a coding agent builds a new kit for ${node.id}`);
+        break;
+      }
       case 'runNode': {
         const node = resolve(action.node);
         if (!node) {
@@ -228,7 +267,7 @@ export function applyAgentActions(graph: Graph, actions: AgentAction[], opts: { 
     }
   }
 
-  return { graph: { ...graph, nodes: placeNew(nodes, edges, new Set(Object.values(added))), edges }, results, touched: [...touched], run, added };
+  return { graph: { ...graph, ...(settings ? { settings } : {}), nodes: placeNew(nodes, edges, new Set(Object.values(added))), edges }, results, touched: [...touched], run, kit, added };
 }
 
 /** New nodes go to the right of what feeds them, or past the right edge of the workflow. */

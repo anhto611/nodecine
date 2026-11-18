@@ -1453,3 +1453,83 @@ body {
   color: var(--tx-2);
   margin-top: 2px;
 }
+.nc-agent-sample {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-hint);
+  color: var(--tx-2);
+  min-width: 0;
+}
+.nc-agent-sample .thumbs {
+  display: flex;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.nc-agent-sample img {
+  height: 40px;
+  border-radius: 2px;
+  background: #000;
+}
+.nc-agent-sample .warn {
+  color: var(--warn);
+}
+.nc-agent-sample.in-msg {
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+.nc-agent-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+  justify-content: space-between;
+}
+.nc-agent-actions .nc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.nc-agent-link {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+}
+.nc-agent-kit {
+  align-self: stretch;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: var(--fs-hint);
+  color: var(--tx-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nc-agent-kit .head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tx);
+}
+.nc-agent-kit .clock {
+  margin-left: auto;
+  color: var(--tx-3);
+  font-variant-numeric: tabular-nums;
+}
+.nc-agent-kit .line {
+  color: var(--tx-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nc-agent-kit .warn,
+.nc-agent-kit.failed .head {
+  color: var(--warn);
+}
+.nc-agent-kit.done {
+  border-color: var(--ok);
+}

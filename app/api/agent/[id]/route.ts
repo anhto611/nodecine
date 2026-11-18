@@ -19,6 +19,10 @@ const Turn = z.object({
   graph: GraphSchema,
   runtimes: z.record(z.string(), Runtime).default({}),
   running: z.boolean().default(false),
+  sample: z
+    .string()
+    .regex(/^[a-f0-9]{16}$/)
+    .optional(),
   focus: z.object({ nodeId: z.string().max(120), outputs: z.record(z.string(), z.string().max(40_000)) }).optional(),
 });
 

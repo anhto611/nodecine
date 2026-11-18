@@ -11,6 +11,12 @@ import { AgentTurnSchema, applyAgentActions, WORKFLOW_OWNED, type AgentTurn } fr
 import { AGENT_ID, brief, FOCUS_CHARS, summarizeGraph, type NodeFocus, type AgentChat, type AgentMessage, type RuntimeSummary } from '@/contracts/agent/chat';
 import { NODE_TRANSLATIONS } from '@/capsules/nodes/.generated/locales';
 import { ensureServerRegistrations } from './register';
+import { describeSample, type SampleProfile } from '@/contracts/agent/sample';
+import { readSample } from './video-sample';
+import { listTemplates, readTemplate } from '@/server/templates';
+import { assetPath, fileNameFromAssetUrl } from '@/server/paths';
+import type { LLMImage } from '@/contracts/providers/types';
+import type { Graph as GraphDoc } from '@/core/engine/graph';
 
 /**
  * Each workflow's own agent, on the server: its conversation on disk, and one turn of it.
@@ -157,6 +163,47 @@ export interface TurnInput {
   running: boolean;
   /** The node the person has selected on the canvas, if any. */
   focus?: NodeFocus;
+  /** A sample video the person attached to this message (its id in `.nodecine/samples`). */
+  sample?: string;
+}
+
+/** What a turn knows beyond the workflow: the templates there are, and the sample video in view. */
+export interface TurnContext {
+  templates?: string;
+  sample?: SampleProfile;
+  /** Whether the model is looking at the sample's stills this turn. */
+  seesFrames?: boolean;
+}
+
+const pick = (text: unknown): string => (typeof text === 'string' ? text : text && typeof text === 'object' ? String((text as Record<string, string>).en ?? Object.values(text)[0] ?? '') : '');
+let templatesText: Promise<string> | null = null;
+
+/** Every template, with the ids of its nodes, so the agent can start from one and set it up in the same answer. Read once. */
+export function templateCatalog(): Promise<string> {
+  templatesText ??= (async () => {
+    const list = await listTemplates(ensureServerRegistrations);
+    const lines = await Promise.all(
+      list.map(async (t) => {
+        const doc = await readTemplate(t.id, ensureServerRegistrations);
+        const nodes = doc?.graph.nodes.map((n) => `${n.id}:${n.type}`).join(', ') ?? '';
+        return `- ${t.id} "${pick(t.name)}": ${pick(t.tagline)}${t.description ? ` — ${pick(t.description)}` : ''}
+  nodes: ${nodes}`;
+      }),
+    );
+    return lines.join('\n');
+  })().catch((e) => {
+    templatesText = null;
+    throw e;
+  });
+  return templatesText;
+}
+
+function sampleSection(context: TurnContext): string {
+  if (!context.sample) return '';
+  return `
+
+SAMPLE VIDEO THE PERSON WANTS MORE OF${context.seesFrames ? ` (you are also given ${context.sample.frames.length} stills from it, one per segment, in order: ${context.sample.frames.map((f) => `${f.t} s`).join(', ')})` : ''}
+${describeSample(context.sample)}`;
 }
 
 /** The selected node in full: its parameters unshortened, and what it produced. */
@@ -176,7 +223,7 @@ function historyLines(messages: AgentMessage[]): string {
   return messages
     .slice(-RECALL)
     .map((m) => {
-      if (m.role === 'user') return `PERSON${m.focus ? ` (about ${m.focus})` : ''}: ${brief(m.text, 2000)}`;
+      if (m.role === 'user') return `PERSON${m.focus ? ` (about ${m.focus})` : ''}${m.sample ? ` (attached the sample video "${m.sample.name}")` : ''}: ${brief(m.text, 2000)}`;
       if (m.role === 'event') return `APP: ${brief(m.text, 2000)}`;
       if (m.error) return `YOU (failed): ${m.error.message}`;
       const done = (m.results ?? []).map((r) => `${r.ok ? '✓' : '✗'} ${r.note}`).join('; ');
@@ -185,7 +232,7 @@ function historyLines(messages: AgentMessage[]): string {
     .join('\n');
 }
 
-export function agentPrompt(chat: AgentChat, input: TurnInput): string {
+export function agentPrompt(chat: AgentChat, input: TurnInput, context: TurnContext = {}): string {
   return `You are the agent that looks after one NodeCine workflow, named "${input.workflowName}". NodeCine is a node-based video studio: a workflow is a graph of nodes wired output → input, and running it turns a brief into a video. The person you talk to may not code; never ask them to edit JSON, HTML or storyboard text — you make the changes yourself.
 
 You can change the workflow and run it. Answer with ONE JSON object and nothing else:
@@ -200,6 +247,8 @@ Edits (node = an existing node id, or the ref of a node you add earlier in the s
   {"op":"bypass","node":"…","bypassed":true|false}
   {"op":"run"} or {"op":"run","force":true}   run the whole workflow after the edits (force ignores cached results)
   {"op":"runNode","node":"…"}
+  {"op":"buildKit","node":"<composition node id>","request":"<a full brief for the kit>"}   a coding agent builds a new kit for that node, with its own tools, for minutes; it replaces the node's files when done
+  {"op":"useTemplate","id":"<template id>"}   replace the whole workflow with a template; its nodes keep the ids listed under TEMPLATES, so later edits in the same list can set them
 
 Rules:
 - Only use node types, ports and params from the catalog. Values must fit the param types.
@@ -208,9 +257,17 @@ Rules:
 - When you run the workflow, the app tells you how it went in a message starting with APP; then explain the outcome briefly, and fix and re-run only when the cause is clear and in your power.
 - Your edits from earlier turns are listed with ✓ (applied) or ✗ (refused, with why): correct the refused ones rather than assuming they landed.
 - Keep "reply" short and plain. Write it in the language the person writes in.
+- A workflow is two things: its pipeline (the nodes that research, write, voice and assemble a film) and its kit (the files of its Composition node: the look, the layout, the motion, the captions — every scene block). Templates give both, but a template's kit is its own style. Never present a template's kit as the style someone asked for.
+- When the person shows a SAMPLE VIDEO and wants videos like it: get the pipeline first — the nodes already there, or the closest template when the workflow is empty (useTemplate) — and set its nodes so the films come out like the sample: length, number and pace of scenes, language, tone, what the research and the script cover, the writer's notes. Then, unless a template's kit already looks like the sample, build a new kit for it with buildKit on the Composition node, in the same answer. Read the stills for what is on screen and the measurements for the structure.
+- A buildKit request is what a designer would need, written from the sample: orientation and size (1080×1920 vertical or 1920×1080 horizontal), background and palette, typography, the scene blocks to make (a hook, several scene or feature layouts, an outro — each with what it shows and the values it takes), how text and captions look and enter, the transitions, the motion language, and any 3D (three.js) or diagram work the sample shows. Never ask it to copy the sample's topic or words: the kit must work for any subject.
+- While a kit is being built, do not run the workflow. When it is done the app tells you (APP); then align the writer's notes with the new blocks if needed.
+- useTemplate throws away what the workflow holds: use it on an empty workflow, or when the person asked for a new one.
 
 NODE CATALOG
 ${nodeCatalog()}
+
+TEMPLATES
+${context.templates || '(none listed)'}
 
 THE WORKFLOW NOW
 ${JSON.stringify(summarizeGraph(input.graph))}
@@ -219,7 +276,7 @@ LAST RUN, PER NODE${input.running ? ' (a run is going on right now)' : ''}
 ${Object.keys(input.runtimes).length ? JSON.stringify(input.runtimes) : 'nothing has run yet in this session'}
 
 CONVERSATION SO FAR
-${historyLines(chat.messages) || '(none)'}${focusSection(input)}
+${historyLines(chat.messages) || '(none)'}${focusSection(input)}${sampleSection(context)}
 
 ${input.message.role === 'user' ? `PERSON${input.focus ? ` (about ${input.focus.nodeId})` : ''}` : 'APP'}: ${input.message.text}`;
 }
@@ -269,7 +326,13 @@ async function answerTurn(id: string, input: TurnInput, signal: AbortSignal): Pr
     text: input.message.text,
     ...(input.focus && input.message.role === 'user' ? { focus: input.focus.nodeId } : {}),
   };
-  const prompt = agentPrompt(chat, input);
+  // The sample in view: the one attached now, else the last one attached earlier in this conversation.
+  const attached = input.sample ? await readSample(input.sample) : null;
+  if (attached) asked.sample = { id: attached.id, name: attached.name, seconds: attached.durationSeconds, segments: attached.segments.length, thumbs: attached.frames.slice(0, 6).map((f) => f.url) };
+  const earlier = [...chat.messages].reverse().find((m) => m.sample)?.sample;
+  const sample = attached ?? (earlier ? await readSample(earlier.id) : null);
+  const templates = await templateCatalog().catch(() => '');
+  const history = chat;
   chat = { ...chat, messages: [...chat.messages, asked] };
 
   const answer = (m: Omit<AgentMessage, 'id' | 'at' | 'role'>): AgentMessage => ({ id: messageId(), at: new Date().toISOString(), role: 'assistant', ...m });
@@ -287,10 +350,21 @@ async function answerTurn(id: string, input: TurnInput, signal: AbortSignal): Pr
   let turn: AgentTurn | null = null;
   let failure: AgentMessage['error'];
   const provider = factory(model.settings);
+  // The stills go only with the message they came with, and only to a model that can see.
+  const images: LLMImage[] =
+    attached?.frames.length && (await provider.probe().catch(() => null))?.vision?.status === 'ready'
+      ? attached.frames.map((f) => ({ path: assetPath(fileNameFromAssetUrl(f.url)), mediaType: 'image/jpeg' }))
+      : [];
+  const prompt = agentPrompt(history, input, { templates, ...(sample ? { sample } : {}), seesFrames: images.length > 0 });
   // One retry for an answer that is not the JSON asked for, the same allowance the nodes give.
   for (let attempt = 0; attempt < 2 && !turn; attempt++) {
     try {
-      const raw = await provider.complete(attempt ? `${prompt}\n\nYour last answer was not the JSON object asked for. Answer with that JSON object only.` : prompt, RAW, signal);
+      const raw = await provider.complete(
+        attempt ? `${prompt}\n\nYour last answer was not the JSON object asked for. Answer with that JSON object only.` : prompt,
+        RAW,
+        signal,
+        images.length ? { images } : undefined,
+      );
       const parsed = AgentTurnSchema.safeParse(typeof raw === 'string' ? { reply: raw, actions: [] } : raw);
       if (parsed.success) turn = parsed.data;
       else
@@ -316,7 +390,13 @@ async function answerTurn(id: string, input: TurnInput, signal: AbortSignal): Pr
     chat = await writeChat({ ...chat, messages: [...chat.messages, answer({ text: '', error: failure ?? { code: ErrorCode.LLM_UPSTREAM, message: 'no answer' } })] });
     return { chat, turn: null };
   }
+  // A template the agent named is read here, so the browser applies the very graph the record describes.
+  for (const action of turn.actions) {
+    if (action.op === 'useTemplate') action.graph = (await readTemplate(action.id, ensureServerRegistrations).catch(() => null))?.graph as GraphDoc | undefined;
+  }
   const { results } = applyAgentActions(input.graph, turn.actions);
-  chat = await writeChat({ ...chat, messages: [...chat.messages, answer({ text: turn.reply, ...(turn.actions.length ? { actions: turn.actions, results } : {}) })] });
+  // The record keeps which template, not the whole of it.
+  const kept = turn.actions.map((a) => (a.op === 'useTemplate' ? { op: a.op, id: a.id } : a));
+  chat = await writeChat({ ...chat, messages: [...chat.messages, answer({ text: turn.reply, ...(kept.length ? { actions: kept, results } : {}) })] });
   return { chat, turn };
 }

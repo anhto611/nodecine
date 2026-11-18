@@ -72,6 +72,16 @@ function privateAddress(address: string): boolean {
   return true;
 }
 
+/**
+ * A link that may be handed to another program to fetch (a video downloader): http or https, no
+ * credentials, and a host that resolves only to public addresses. Refuses anything else.
+ */
+export async function publicLink(link: string): Promise<URL> {
+  const url = publicUrl(link.trim());
+  await publicAddress(url);
+  return url;
+}
+
 async function publicAddress(url: URL): Promise<string> {
   const host = url.hostname.replace(/^\[|\]$/g, '');
   const addresses = isIP(host) ? [host] : (await lookup(host, { all: true })).map((entry) => entry.address);

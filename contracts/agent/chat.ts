@@ -1,6 +1,8 @@
 import type { Graph } from '@/core/engine/graph';
 import type { NodeRuntime } from '@/core/engine/state';
 import { WORKFLOW_OWNED, type ActionResult, type AgentAction } from './actions';
+import { readBlock } from '@/contracts/storyboard/blocks';
+import { holdsKit } from './kit';
 
 /**
  * One workflow's conversation with its agent. Each workflow keeps its own: a saved workflow under its
@@ -15,6 +17,8 @@ export interface AgentMessage {
   text: string;
   /** On a person's message: the node they had selected, which an unnamed "this" refers to. */
   focus?: string;
+  /** On a person's message: the sample video they attached (`contracts/agent/sample.ts`). */
+  sample?: { id: string; name: string; seconds: number; segments: number; thumbs: string[] };
   /** On an assistant message: what it did, and how each edit went. */
   actions?: AgentAction[];
   results?: ActionResult[];
@@ -105,6 +109,22 @@ export function focusOf(nodeId: string, runtime: NodeRuntime | undefined, pinned
   return { nodeId, outputs: Object.fromEntries(payloads.map(([port, payload]) => [port, brief(payload, each)])) };
 }
 
+/**
+ * A kit as the agent reads it: what each block is for and the values it takes, the other files by size.
+ * The HTML itself would be cut short and unreadable; what the agent needs is what the kit offers.
+ */
+export function summarizeKit(files: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(files).map(([p, text]) => {
+      const t = typeof text === 'string' ? text : '';
+      const m = /^compositions\/([a-z][a-z0-9-]{1,40})\.html$/.exec(p);
+      if (!m) return [p, `${t.length} chars`];
+      const b = readBlock(m[1]!, t);
+      return [p, `block, ${b.role}: ${b.description || '(no description)'} · values: ${b.variables.map((v) => v.id).join(', ') || 'none'}`];
+    }),
+  );
+}
+
 /** The workflow as the agent reads it: nodes with their parameters, and the wires between them. */
 export function summarizeGraph(graph: Graph): { nodes: unknown[]; wires: string[] } {
   return {
@@ -113,7 +133,13 @@ export function summarizeGraph(graph: Graph): { nodes: unknown[]; wires: string[
       type: n.type,
       ...(n.bypassed ? { bypassed: true } : {}),
       ...(n.pinned ? { pinned: true } : {}),
-      params: shortenValue(Object.fromEntries(Object.entries(n.params).filter(([k]) => !WORKFLOW_OWNED.includes(k)))),
+      params: shortenValue(
+        Object.fromEntries(
+          Object.entries(n.params)
+            .filter(([k]) => !WORKFLOW_OWNED.includes(k))
+            .map(([k, v]) => (holdsKit(n.type) && k === 'files' && v && typeof v === 'object' ? [k, summarizeKit(v as Record<string, unknown>)] : [k, v])),
+        ),
+      ),
     })),
     wires: graph.edges.map((e) => `${e.source}.${e.sourcePort} → ${e.target}.${e.targetPort}`),
   };

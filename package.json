@@ -29,6 +29,7 @@
     "setup:kokoro": "node scripts/setup-voice.mjs kokoro",
     "setup:vieneu": "node scripts/setup-voice.mjs vieneu",
     "setup:omnivoice": "node scripts/setup-voice.mjs omnivoice",
+    "setup:rea-video": "node scripts/setup-rea-video.mjs",
     "providers:discover": "node scripts/discover-providers.mjs",
     "templates:discover": "node scripts/discover-templates.mjs"
   },

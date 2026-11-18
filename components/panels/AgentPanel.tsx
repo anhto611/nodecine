@@ -4,6 +4,9 @@ import { useStudio } from '@/store/useStudio';
 import { useAgent } from '@/store/useAgent';
 import { agentIdFor, type AgentMessage } from '@/contracts/agent/chat';
 import { workflowModel } from '@/contracts/workflow-model';
+import type { SampleProfile } from '@/contracts/agent/sample';
+import type { KitSession } from '@/contracts/agent/kit';
+import { agentApi } from '@/lib/agent.client';
 import { providersOfKind } from '@/capsules/providers/installed';
 import { Icon } from '@/capsules/sdk/icons';
 import { Btn, useT } from '@/capsules/sdk/ui';
@@ -31,6 +34,32 @@ export const AgentPanel: React.FC = () => {
   const providers = React.useMemo(() => providersOfKind('llm'), []);
   const [draft, setDraft] = React.useState('');
   const list = React.useRef<HTMLDivElement>(null);
+  // A sample video attached to the next message: read first (about two minutes for a new one), then sent with it.
+  const [attached, setAttached] = React.useState<SampleProfile | null>(null);
+  const [reading, setReading] = React.useState<string | null>(null);
+  const [readError, setReadError] = React.useState<string | null>(null);
+  const picker = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => {
+    setAttached(null);
+    setReadError(null);
+  }, [id]);
+  // A link instead of a file: pasted into a small box that opens under the message.
+  const [linkOpen, setLinkOpen] = React.useState(false);
+  const [link, setLink] = React.useState('');
+  const attach = async (from: File | string) => {
+    setReading(typeof from === 'string' ? from : from.name);
+    setReadError(null);
+    try {
+      setAttached(typeof from === 'string' ? await agentApi.sampleLink(id, from) : await agentApi.sample(id, from));
+      setLinkOpen(false);
+      setLink('');
+    } catch (e) {
+      const err = e as Error & { fix?: string };
+      setReadError(`${err.message}${err.fix ? ` · ${err.fix}` : ''}`);
+    } finally {
+      setReading(null);
+    }
+  };
 
   React.useEffect(() => {
     if (id && !useAgent.getState().slots[id]?.chat) void load(id);
@@ -49,10 +78,13 @@ export const AgentPanel: React.FC = () => {
   if (!tab) return null;
   const busy = !!slot?.busy;
   const submit = () => {
-    if (busy || !draft.trim()) return;
-    const text = draft;
+    if (busy || reading || (!draft.trim() && !attached)) return;
+    // A video sent with nothing typed asks for the obvious thing.
+    const text = draft.trim() || t('agent.sampleAsk');
+    const sample = attached ?? undefined;
     setDraft('');
-    void send(tab.key, text);
+    setAttached(null);
+    void send(tab.key, text, sample);
   };
 
   return (
@@ -108,6 +140,7 @@ export const AgentPanel: React.FC = () => {
             <Icon.spin /> {t('agent.thinking')}
           </div>
         )}
+        {slot?.kit && <KitCard kit={slot.kit} onStop={() => useAgent.getState().stopKit(id)} />}
         {slot?.notice && <div className="nc-agent-notice">{slot.notice}</div>}
       </div>
       <div className="nc-agent-input">
@@ -121,6 +154,67 @@ export const AgentPanel: React.FC = () => {
             </button>
           </div>
         )}
+        {(attached || reading || readError) && (
+          <div className="nc-agent-sample">
+            {reading ? (
+              <span>
+                <Icon.spin /> {t('agent.sampleReading', { name: reading })}
+              </span>
+            ) : readError ? (
+              <span className="warn">
+                <Icon.warn size={10} /> {readError}
+              </span>
+            ) : attached ? (
+              <>
+                <div className="thumbs">
+                  {attached.frames.slice(0, 6).map((f) => (
+                    <img key={f.url} src={f.url} alt="" />
+                  ))}
+                </div>
+                <span>{t('agent.sampleInfo', { name: attached.name, seconds: Math.round(attached.durationSeconds), segments: attached.segments.length })}</span>
+              </>
+            ) : null}
+            {!reading && (
+              <button
+                className="nc-chip"
+                style={{ border: 0, marginLeft: 'auto' }}
+                onClick={() => {
+                  setAttached(null);
+                  setReadError(null);
+                }}
+              >
+                <Icon.x size={10} />
+              </button>
+            )}
+          </div>
+        )}
+        {linkOpen && !reading && (
+          <input
+            className="nc-input nc-agent-link"
+            autoFocus
+            value={link}
+            placeholder={t('agent.sampleLinkPlaceholder')}
+            onChange={(e) => setLink(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && link.trim()) {
+                e.preventDefault();
+                void attach(link.trim());
+              }
+              if (e.key === 'Escape') setLinkOpen(false);
+            }}
+          />
+        )}
+        <input
+          ref={picker}
+          type="file"
+          accept="video/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) void attach(file);
+          }}
+        />
         <textarea
           ref={box}
           className="nc-input"
@@ -135,17 +229,68 @@ export const AgentPanel: React.FC = () => {
             }
           }}
         />
-        {busy ? (
-          <Btn danger small onClick={() => stop(id)}>
-            <Icon.stop /> {t('agent.stop')}
-          </Btn>
-        ) : (
-          <Btn primary small disabled={!draft.trim() || !model} onClick={submit}>
-            {t('agent.send')}
-          </Btn>
-        )}
+        <div className="nc-agent-actions">
+          <button className="nc-chip" title={t('agent.sampleAttach')} disabled={!!reading || busy} onClick={() => picker.current?.click()}>
+            <Icon.film size={12} /> {t('agent.sampleButton')}
+          </button>
+          <button className={`nc-chip ${linkOpen ? 'on' : ''}`} title={t('agent.sampleLinkHint')} disabled={!!reading || busy} onClick={() => setLinkOpen(!linkOpen)}>
+            {t('agent.sampleLink')}
+          </button>
+          <span style={{ flex: 1 }} />
+          {busy ? (
+            <Btn danger small onClick={() => stop(id)}>
+              <Icon.stop /> {t('agent.stop')}
+            </Btn>
+          ) : (
+            <Btn primary small disabled={(!draft.trim() && !attached) || !!reading || !model} onClick={submit}>
+              {t('agent.send')}
+            </Btn>
+          )}
+        </div>
       </div>
     </aside>
+  );
+};
+
+/** A kit a coding agent is building: how far it is, what it is doing, and a way to stop it. */
+const KitCard: React.FC<{ kit: KitSession; onStop: () => void }> = ({ kit, onStop }) => {
+  const t = useT();
+  const [now, setNow] = React.useState(Date.now());
+  React.useEffect(() => {
+    if (kit.state !== 'running') return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [kit.state]);
+  const seconds = Math.round(((kit.endedAt ? Date.parse(kit.endedAt) : now) - Date.parse(kit.startedAt)) / 1000);
+  const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  const title =
+    kit.state === 'running'
+      ? t(kit.phase === 'check' ? 'agent.kitChecking' : kit.round > 1 ? 'agent.kitRepairing' : 'agent.kitBuilding', { round: kit.round })
+      : kit.state === 'done'
+        ? t('agent.kitDone', { files: Object.keys(kit.files ?? {}).length })
+        : kit.state === 'cancelled'
+          ? t('agent.kitCancelled')
+          : t('agent.kitFailed', { why: kit.error ?? '' });
+  return (
+    <div className={`nc-agent-kit ${kit.state}`}>
+      <div className="head">
+        {kit.state === 'running' ? <Icon.spin /> : kit.state === 'done' ? <Icon.check /> : <Icon.warn size={10} />}
+        <span>{title}</span>
+        <span className="clock">{clock}</span>
+        {kit.state === 'running' && (
+          <button className="nc-chip" onClick={onStop}>
+            <Icon.stop /> {t('agent.stop')}
+          </button>
+        )}
+      </div>
+      {kit.state === 'running' &&
+        kit.log.slice(-3).map((l, i) => (
+          <div key={i} className="line">
+            {l}
+          </div>
+        ))}
+      {kit.state === 'done' && kit.problems?.length ? <div className="line warn">{t('agent.kitProblems', { n: kit.problems.length })}</div> : null}
+    </div>
   );
 };
 
@@ -204,6 +349,16 @@ const Message: React.FC<{ m: AgentMessage }> = ({ m }) => {
     return (
       <div className="nc-agent-msg user">
         {m.focus && <div className="nc-agent-about">@{m.focus}</div>}
+        {m.sample && (
+          <div className="nc-agent-sample in-msg">
+            <div className="thumbs">
+              {m.sample.thumbs.map((u) => (
+                <img key={u} src={u} alt="" />
+              ))}
+            </div>
+            <span>{t('agent.sampleInfo', { name: m.sample.name, seconds: Math.round(m.sample.seconds), segments: m.sample.segments })}</span>
+          </div>
+        )}
         {m.text}
       </div>
     );

@@ -199,6 +199,21 @@ export const en = {
   'agent.capWeb': 'searches the web',
   'agent.noWeb': 'A node here is set to search the web, which this model cannot do: it will only read the brief’s links. Pick a model that searches the web.',
   'agent.stopped': 'Stopped',
+  'agent.sampleButton': 'Sample video',
+  'agent.sampleAttach': 'Attach a video you want more like: the agent reads it and builds this workflow to make videos in its style',
+  'agent.sampleReading': 'Reading {name}… about two minutes the first time',
+  'agent.sampleInfo': '{name} · {seconds} s · {segments} segments',
+  'agent.sampleAsk': 'Build this workflow so it makes videos like this one.',
+  'agent.sampleLink': 'Link',
+  'agent.sampleLinkHint': 'A video at a link — YouTube, TikTok, Facebook or a video file on the web. Use only videos you may use.',
+  'agent.sampleLinkPlaceholder': 'Paste a video link, then Enter',
+  'agent.kitBuilding': 'Building a new kit…',
+  'agent.kitRepairing': 'Fixing the kit (round {round})…',
+  'agent.kitChecking': 'Checking the kit…',
+  'agent.kitDone': 'New kit in place: {files} files (Ctrl+Z undoes it)',
+  'agent.kitCancelled': 'Kit building stopped',
+  'agent.kitFailed': 'The kit could not be built: {why}',
+  'agent.kitProblems': '{n} problem(s) left after the repair rounds',
 } as const;
 
 export type DictKey = keyof typeof en;

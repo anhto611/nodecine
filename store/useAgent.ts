@@ -3,6 +3,9 @@ import { create } from 'zustand';
 import { applyAgentActions } from '@/contracts/agent/actions';
 import { agentIdFor, focusOf, summarizeRuntimes, type AgentChat, type AgentMessage } from '@/contracts/agent/chat';
 import { agentApi } from '@/lib/agent.client';
+import type { SampleProfile } from '@/contracts/agent/sample';
+import type { KitSession } from '@/contracts/agent/kit';
+import { summarizeKit } from '@/contracts/agent/chat';
 import { useStudio } from './useStudio';
 
 /**
@@ -21,13 +24,18 @@ export interface AgentSlot {
   notice?: string;
   /** A message typed but not yet answered, shown while the agent thinks. */
   pending?: AgentMessage;
+  /** A kit a coding agent is building for this workflow, followed until it is done. */
+  kit?: KitSession;
 }
 
 interface AgentState {
   slots: Record<string, AgentSlot>;
   load(id: string): Promise<void>;
-  send(tabKey: string, text: string): Promise<void>;
+  /** `sample`: a sample video the person attached, read already (`agentApi.sample`). */
+  send(tabKey: string, text: string, sample?: SampleProfile): Promise<void>;
   stop(id: string): void;
+  /** Stop the kit being built, if any. */
+  stopKit(id: string): void;
   clear(id: string): Promise<void>;
 }
 
@@ -42,7 +50,7 @@ export const useAgent = create<AgentState>((set, get) => {
   const patch = (id: string, p: Partial<AgentSlot>) => set((s) => ({ slots: { ...s.slots, [id]: { chat: null, busy: false, ...s.slots[id], ...p } } }));
 
   /** One question, then the edits on the canvas and the run the agent asked for. */
-  const turn = async (tabKey: string, message: { role: 'user' | 'event'; text: string }, depth: number): Promise<void> => {
+  const turn = async (tabKey: string, message: { role: 'user' | 'event'; text: string }, depth: number, sample?: SampleProfile): Promise<void> => {
     const studio = useStudio.getState();
     const tab = studio.tabs.find((t) => t.key === tabKey);
     if (!tab) return;
@@ -54,7 +62,12 @@ export const useAgent = create<AgentState>((set, get) => {
     const focus = selected ? focusOf(selected.id, studio.runtimes[selected.id], selected.pinned?.outputs) : undefined;
     const ticket = Symbol(id);
     waiting.set(id, ticket);
-    patch(id, { busy: true, notice: undefined, pending: { id: 'pending', at: new Date().toISOString(), role: message.role, text: message.text, ...(focus ? { focus: focus.nodeId } : {}) } });
+    const attached = sample ? { id: sample.id, name: sample.name, seconds: sample.durationSeconds, segments: sample.segments.length, thumbs: sample.frames.slice(0, 6).map((f) => f.url) } : undefined;
+    patch(id, {
+      busy: true,
+      notice: undefined,
+      pending: { id: 'pending', at: new Date().toISOString(), role: message.role, text: message.text, ...(focus ? { focus: focus.nodeId } : {}), ...(attached ? { sample: attached } : {}) },
+    });
     let answer: Awaited<ReturnType<typeof agentApi.turn>>;
     try {
       answer = await agentApi.turn(id, {
@@ -64,6 +77,7 @@ export const useAgent = create<AgentState>((set, get) => {
         runtimes: active ? summarizeRuntimes(studio.runtimes) : {},
         running: active && studio.running,
         ...(focus ? { focus } : {}),
+        ...(sample ? { sample: sample.id } : {}),
       });
     } catch (e) {
       if (waiting.get(id) !== ticket) return;
@@ -89,6 +103,11 @@ export const useAgent = create<AgentState>((set, get) => {
     const applied = applyAgentActions(current.graph, answer.turn.actions);
     const edits = answer.turn.actions.some((a) => a.op !== 'run' && a.op !== 'runNode');
     if (edits && applied.results.some((r) => r.ok)) now.applyAgentGraph(tabKey, applied.graph, applied.touched);
+    // A kit comes before any run: running would only show the old look.
+    if (applied.kit) {
+      await buildKit(tabKey, id, applied.kit, depth);
+      return;
+    }
     if (!applied.run) return;
 
     const later = useStudio.getState();
@@ -115,6 +134,56 @@ export const useAgent = create<AgentState>((set, get) => {
     await turn(tabKey, { role: 'event', text }, depth + 1);
   };
 
+  /**
+   * Hand the kit to a coding agent and follow it. When it is done the files go into the Composition
+   * node — one undo step — and the workflow's agent is told what came of it.
+   */
+  const buildKit = async (tabKey: string, id: string, kit: { nodeId: string; request: string }, depth: number): Promise<void> => {
+    const tab = useStudio.getState().tabs.find((t) => t.key === tabKey);
+    if (!tab) return;
+    const sample = [...(get().slots[id]?.chat?.messages ?? [])].reverse().find((m) => m.sample)?.sample?.id;
+    let session: KitSession;
+    try {
+      session = await agentApi.kitStart(id, { nodeId: kit.nodeId, request: kit.request, graph: tab.graph, ...(sample ? { sample } : {}) });
+    } catch (e) {
+      patch(id, { notice: `kit: ${e instanceof Error ? e.message : String(e)}` });
+      return;
+    }
+    patch(id, { kit: session });
+    while (session.state === 'running') {
+      await new Promise((r) => setTimeout(r, 3000));
+      try {
+        session = await agentApi.kitRead(id, session.id);
+      } catch {
+        // The server restarted, or the session is gone: there is nothing more to follow.
+        patch(id, { kit: { ...session, state: 'failed', error: 'the kit session was lost (the server restarted?)' } });
+        return;
+      }
+      patch(id, { kit: session });
+    }
+    if (session.state === 'cancelled') return;
+    if (session.state === 'done' && session.files) {
+      const studio = useStudio.getState();
+      const current = studio.tabs.find((t) => t.key === tabKey);
+      const node = current?.graph.nodes.find((n) => n.id === kit.nodeId);
+      if (current && node) {
+        const graph = { ...current.graph, nodes: current.graph.nodes.map((n) => (n.id === kit.nodeId ? { ...n, params: { ...n.params, files: session.files } } : n)) };
+        studio.applyAgentGraph(tabKey, graph, [kit.nodeId]);
+      }
+    }
+    if (depth + 1 >= MAX_FOLLOW_UPS) return;
+    const blocks = session.files
+      ? Object.entries(summarizeKit(session.files))
+          .filter(([, v]) => v.startsWith('block'))
+          .map(([p, v]) => `${p}: ${v}`)
+      : [];
+    const text =
+      session.state === 'done'
+        ? `The kit you asked for is built and now in ${kit.nodeId} (${Object.keys(session.files ?? {}).length} files).\nBlocks:\n${blocks.join('\n')}${session.problems?.length ? `\nStill wrong after the repair rounds:\n${session.problems.join('\n')}` : ''}${session.summary ? `\nThe coding agent said: ${session.summary}` : ''}`
+        : `The kit could not be built: ${session.error ?? 'unknown error'}.`;
+    await turn(tabKey, { role: 'event', text }, depth + 1);
+  };
+
   return {
     slots: {},
 
@@ -128,9 +197,14 @@ export const useAgent = create<AgentState>((set, get) => {
       }
     },
 
-    async send(tabKey, text) {
+    async send(tabKey, text, sample) {
       if (!text.trim()) return;
-      await turn(tabKey, { role: 'user', text: text.trim() }, 0);
+      await turn(tabKey, { role: 'user', text: text.trim() }, 0, sample);
+    },
+
+    stopKit(id) {
+      const kit = get().slots[id]?.kit;
+      if (kit?.state === 'running') void agentApi.kitCancel(id, kit.id).catch(() => undefined);
     },
 
     stop(id) {

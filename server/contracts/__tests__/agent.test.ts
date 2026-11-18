@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { registerLLMProvider } from '@/contracts/providers/registry';
@@ -208,5 +208,52 @@ describe('stopping a turn', () => {
     expect(turn).toBeNull();
     expect(chat.messages.at(-1)!.error!.code).toBe('CANCELLED');
     expect(cancelTurn('tab-stop')).toBe(false);
+  });
+});
+
+describe('a turn with a sample video', () => {
+  it('records the sample, shows it and the templates to the model, sends the stills to one that sees, and expands a template', async () => {
+    const samples = mkdtempSync(path.join(os.tmpdir(), 'nodecine-samples-'));
+    process.env.NODECINE_SAMPLES_DIR = samples;
+    const id = 'abcdef0123456789';
+    const profile = {
+      id,
+      name: 'promo.mp4',
+      durationSeconds: 30,
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      segments: [{ start: 0, end: 30, by: 'start' }],
+      frames: [{ t: 15, url: '/api/assets/abcdef012345678901.jpg' }],
+      audio: { present: false },
+    };
+    mkdirSync(path.join(samples, id), { recursive: true });
+    writeFileSync(path.join(samples, id, 'profile.json'), JSON.stringify(profile));
+
+    const seen: { prompt: string; images: number }[] = [];
+    const eye: LLMProvider = {
+      providerId: 'eye-agent',
+      displayName: 'Eye',
+      transport: 'cli',
+      probe: async () => ({ vision: { status: 'ready' } }) as never,
+      complete: async (prompt, _s, _sig, options) => {
+        seen.push({ prompt, images: options?.images?.length ?? 0 });
+        return { reply: 'Started from the template.', actions: [{ op: 'useTemplate', id: 'article-summary' }] } as never;
+      },
+    };
+    registerLLMProvider({ id: 'eye-agent', displayName: 'Eye', factory: () => eye, settingsSchema: { safeParse: () => ({ success: true, data: {} }) } as never });
+    const graph: Graph = { nodes: [], edges: [], settings: { llm: { provider: 'eye-agent', settings: {} } } };
+    const { chat, turn } = await agentTurn('tab-sample', { message: { role: 'user', text: 'like this' }, workflowName: 'W', graph, runtimes: {}, running: false, sample: id });
+
+    expect(seen[0]!.images).toBe(1);
+    expect(seen[0]!.prompt).toContain('SAMPLE VIDEO THE PERSON WANTS MORE OF (you are also given 1 stills');
+    expect(seen[0]!.prompt).toMatch(/TEMPLATES\n- [a-z-]+ "/);
+    expect(chat.messages[0]!.sample).toMatchObject({ id, name: 'promo.mp4', segments: 1 });
+    const used = turn!.actions[0] as { op: string; graph?: Graph };
+    expect(used.graph?.nodes.length).toBeGreaterThan(2);
+    expect(chat.messages[1]!.results![0]!.ok).toBe(true);
+    // The record keeps the template's id, not the whole of it.
+    expect(chat.messages[1]!.actions![0]).toEqual({ op: 'useTemplate', id: 'article-summary' });
+    rmSync(samples, { recursive: true, force: true });
   });
 });
