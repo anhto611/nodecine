@@ -30,7 +30,13 @@ export const PagesSchema = z.object({
     .array(z.object({ url: z.string().max(2000) }))
     .max(20)
     .default([]),
+  /** Searches for Wikimedia Commons, in English: where drawings, cutaways and free photographs are. */
+  commons: z.array(z.string().max(120)).max(6).default([]),
 });
+
+/** Commons searches made, at most, and the pictures taken from each. */
+export const MAX_COMMONS_SEARCHES = 3;
+const PER_SEARCH = 6;
 
 export const PicksSchema = z.object({
   language: z.string().min(2).max(35),
@@ -69,6 +75,13 @@ const nameFrom = (note: string, taken: string[]) =>
     taken,
   );
 
+/** One from each list in turn, until `max` are taken or every list is spent. */
+export function takeInTurn<T>(lists: T[][], max: number): T[] {
+  const out: T[] = [];
+  for (let i = 0; out.length < max && lists.some((l) => i < l.length); i++) for (const l of lists) if (i < l.length && out.length < max) out.push(l[i]!);
+  return out;
+}
+
 /** In small batches: a page shows many pictures, and a server asked for all at once may refuse. */
 async function inBatches<T, R>(items: T[], size: number, work: (item: T) => Promise<R>): Promise<R[]> {
   const out: R[] = [];
@@ -85,8 +98,9 @@ ${input.wanted.trim() ? `\nThe pictures this workflow's films need:\n${input.wan
 Rules:
 - List at most ${MAX_FOUND_PAGES} page addresses, the most useful first. Pages, not picture files.
 - Only pages about this subject; prefer its maker's own.
+- Also give up to ${MAX_COMMONS_SEARCHES} short searches in English for Wikimedia Commons that would find free pictures of the subject: its technical drawings, cutaways, diagrams, exploded views or clear photographs ("four-stroke engine cutaway", "turbofan diagram"). Leave the list empty when Commons would have nothing of it (a new app, a person's own product).
 Answer with the JSON object only, no commentary, no code fence, in this shape:
-{ "pages": [ { "url": "<page address>" } ] }`;
+{ "pages": [ { "url": "<page address>" } ], "commons": [ "<search>" ] }`;
 }
 
 export function picturesPrompt(input: SearchInput, candidates: Usable[], seen: boolean, existing: Asset[] = input.existing.slice(0, MAX_EXISTING)): string {
@@ -129,6 +143,7 @@ export async function findPictures(ctx: SearchContext, input: SearchInput): Prom
 
   // Pages the brief does not link to, found by a model that can search the web.
   let searched: string[] = [];
+  let commons: string[] = [];
   if (ref.capabilities.webSearch?.status === 'ready') {
     ctx.progress(0.05, 'searching for pages');
     const found = await completeStructured(
@@ -143,8 +158,9 @@ export async function findPictures(ctx: SearchContext, input: SearchInput): Prom
       input.brief.language,
     ).catch((e: unknown) => {
       log('warn', `could not search for pages: ${e instanceof Error ? e.message : String(e)}`);
-      return { pages: [] };
+      return { pages: [], commons: [] };
     });
+    commons = (found.commons ?? []).map((q) => q.trim()).filter(Boolean).slice(0, MAX_COMMONS_SEARCHES);
     searched = found.pages
       .map((p) => p.url)
       .filter((u) => /^https?:\/\//.test(u) && !given.includes(u))
@@ -154,7 +170,7 @@ export async function findPictures(ctx: SearchContext, input: SearchInput): Prom
     return [];
   }
   const links = [...given, ...searched].slice(0, MAX_PAGES);
-  if (!links.length) {
+  if (!links.length && !commons.length) {
     log('info', 'no pages to find pictures on');
     return [];
   }
@@ -169,8 +185,21 @@ export async function findPictures(ctx: SearchContext, input: SearchInput): Prom
     )
   ).filter((p): p is LinkedPage => !!p);
 
+  const searches = (
+    await Promise.all(
+      commons.map((q) =>
+        services.invoke<LinkedPage>('assets/search-commons', [q]).catch((e: unknown) => {
+          log('warn', `could not search Commons for "${q}": ${e instanceof Error ? e.message : String(e)}`);
+          return null;
+        }),
+      ),
+    )
+  ).filter((p): p is LinkedPage => !!p);
+  if (searches.length) log('info', `Commons: ${searches.map((p) => `${p.pictures.length} for "${p.title.replace(/^Wikimedia Commons: /, '')}"`).join(' · ')}`);
+
   ctx.progress(0.45, 'bringing the pictures');
-  const offered = pages.flatMap((p) => p.pictures.slice(0, PER_PAGE)).slice(0, MAX_CANDIDATES);
+  // Each Commons search and the pages, in turn, a picture from each: neither crowds the other out of the candidates.
+  const offered = takeInTurn([...searches.map((p) => p.pictures.slice(0, PER_SEARCH)), pages.flatMap((p) => p.pictures.slice(0, PER_PAGE))], MAX_CANDIDATES);
   const fetched = await inBatches(offered, 4, (picture) =>
     services.invoke<FetchedPicture>('assets/fetch-picture', [picture.url]).then(
       (f) => ({ picture, f }),

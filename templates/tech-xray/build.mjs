@@ -187,16 +187,22 @@ const ICON_MOTION = `var niMove=function(s,name,D,R){var A=function(c){return s.
  * One filter chain per look, all in the picture's own box (`x=0 y=0 width=100% height=100%`), so the
  * edge of the picture itself never reads as a line.
  *
- *   luminance → a slight blur (JPEG noise and fine texture fall below the edge threshold) → a Laplacian
- *   in both signs, summed (a line from either side of an edge) → its strength as alpha, gain 5 over a
- *   floor of .12 → dilated by a pixel, so a line holds at 1080 → that line in near-white, a blue copy
- *   bloomed at 3 and 12 px → under it all, the inverted luminance as a faint body ("holo" only).
+ *   darkness (1 − luminance) as alpha → a light blur (JPEG noise falls under the cut) → a morphological
+ *   gradient, dilated minus eroded by half a pixel: every edge and every thin drawn line becomes an
+ *   unbroken band → its strength cut hard → blurred and cut again, so a lone speck of noise falls away →
+ *   that line in near-white, a blue copy bloomed at 3 and 12 px → under it all, the inverted luminance as
+ *   a faint body ("holo" only).
+ *
+ *   Every radius is in the picture's own units, so the chain scales with the camera: zoomed in, Chrome
+ *   draws it at the zoomed size and the line stays a crisp line. A 3×3 Laplacian, the chain before
+ *   this, measured in device pixels: a thin drawn line broke into dots, a zoom made the dots blobs and
+ *   left a photograph dim.
  *
  * The red chain is the same with an ember core and a stronger body: the part reads filled, not traced.
  */
-const edges = `<feColorMatrix in="SourceGraphic" type="matrix" values=".3 .59 .11 0 0 .3 .59 .11 0 0 .3 .59 .11 0 0 0 0 0 0 1" result="L"/><feGaussianBlur in="L" stdDeviation=".8" result="Ls"/><feConvolveMatrix in="Ls" order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" edgeMode="duplicate" preserveAlpha="true" result="e1"/><feConvolveMatrix in="Ls" order="3" kernelMatrix="1 1 1 1 -8 1 1 1 1" edgeMode="duplicate" preserveAlpha="true" result="e2"/><feComposite in="e1" in2="e2" operator="arithmetic" k2="1" k3="1" result="E"/>`;
+const edges = `<feColorMatrix in="SourceGraphic" type="matrix" values=".3 .59 .11 0 0 .3 .59 .11 0 0 .3 .59 .11 0 0 0 0 0 0 1" result="L"/><feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -.3 -.59 -.11 0 1" result="LA"/><feGaussianBlur in="LA" stdDeviation=".5" result="Ls"/><feMorphology in="Ls" operator="dilate" radius=".5" result="Ld"/><feMorphology in="Ls" operator="erode" radius=".5" result="Le"/><feComposite in="Ld" in2="Le" operator="arithmetic" k2="1" k3="-1" result="E"/>`;
 const neon = (core, glow, id) =>
-  `<feColorMatrix in="E" type="matrix" values="0 0 0 0 ${core[0]} 0 0 0 0 ${core[1]} 0 0 0 0 ${core[2]} 5 0 0 0 -.12" result="${id}l0"/><feMorphology in="${id}l0" operator="dilate" radius=".7" result="${id}l"/><feColorMatrix in="${id}l" type="matrix" values="0 0 0 0 ${glow[0]} 0 0 0 0 ${glow[1]} 0 0 0 0 ${glow[2]} 0 0 0 1 0" result="${id}c"/><feGaussianBlur in="${id}c" stdDeviation="3" result="${id}g1"/><feGaussianBlur in="${id}c" stdDeviation="12" result="${id}g2"/>`;
+  `<feColorMatrix in="E" type="matrix" values="0 0 0 0 ${core[0]} 0 0 0 0 ${core[1]} 0 0 0 0 ${core[2]} 0 0 0 10 -.45" result="${id}l0"/><feGaussianBlur in="${id}l0" stdDeviation=".6" result="${id}l1"/><feComponentTransfer in="${id}l1" result="${id}l"><feFuncA type="linear" slope="3.2" intercept="-.75"/></feComponentTransfer><feColorMatrix in="${id}l" type="matrix" values="0 0 0 0 ${glow[0]} 0 0 0 0 ${glow[1]} 0 0 0 0 ${glow[2]} 0 0 0 1 0" result="${id}c"/><feGaussianBlur in="${id}c" stdDeviation="3" result="${id}g1"/><feGaussianBlur in="${id}c" stdDeviation="12" result="${id}g2"/>`;
 const body = (rgb, strength, id) =>
   `<feColorMatrix in="L" type="matrix" values="0 0 0 0 ${rgb[0]} 0 0 0 0 ${rgb[1]} 0 0 0 0 ${rgb[2]} -${strength} 0 0 0 ${strength}" result="${id}b0"/><feGaussianBlur in="${id}b0" stdDeviation="1.5" result="${id}b"/>`;
 const merge = (id, withBody) => `<feMerge>${withBody ? `<feMergeNode in="${id}b"/>` : ''}<feMergeNode in="${id}g2"/><feMergeNode in="${id}g1"/><feMergeNode in="${id}g1"/><feMergeNode in="${id}l"/></feMerge>`;

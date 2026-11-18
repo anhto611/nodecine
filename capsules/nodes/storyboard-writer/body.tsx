@@ -13,7 +13,7 @@ import { OUTPUT_LANGUAGES, resolveOutputLanguage } from '@/contracts/text/langua
 import type { Brief } from '@/contracts/types/brief';
 import { DURATIONS, TONES } from './node';
 
-type Params = { tone: (typeof TONES)[number]; subject: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
+type Params = { durationSeconds: number; tone: (typeof TONES)[number]; subject: string; attempt: number; rewrites: Record<string, number>; edits: Record<string, FrameEdit> };
 interface Scene {
   title: string;
   voiceover: string;
@@ -256,7 +256,8 @@ export const StoryboardWriterBody: React.FC<BodyProps> = ({ nodeId }) => {
         nodeId={nodeId}
         fields={['durationSeconds', 'language', 'tone', 'notes']}
         widgets={{
-          durationSeconds: { labelKey: 'node.writerDuration', options: DURATIONS.map((d) => ({ value: d, label: `${d} s` })) },
+          // A length set elsewhere (a template, the API) shows as itself, not as the first on the list.
+          durationSeconds: { labelKey: 'node.writerDuration', options: [...new Set<number>([...DURATIONS, p.durationSeconds])].sort((x, y) => x - y).map((d) => ({ value: d, label: `${d} s` })) },
           language: {
             labelKey: 'node.writerLanguage',
             options: OUTPUT_LANGUAGES.map((l) => ({ value: l, label: l === 'auto' ? t('node.writerLanguageAuto', { lang: nameOf(briefLanguage) }) : nameOf(l) })),

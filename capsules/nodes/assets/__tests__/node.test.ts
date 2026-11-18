@@ -44,11 +44,13 @@ const fetched: Record<string, { url: string; width?: number; height?: number }> 
   'https://kimi.com/chart.png': { url: asset(2), width: 1600, height: 900 },
   'https://kimi.com/icon.png': { url: asset(3), width: 64, height: 64 },
   'https://news.example/photo.jpg': { url: asset(5), width: 1200, height: 800 },
+  'https://upload.wikimedia.org/cutaway.jpg': { url: asset(6), width: 1280, height: 900 },
 };
 
-function searching(params: Record<string, unknown>, options: { web?: boolean; inputs?: Record<string, unknown> } = {}) {
+function searching(params: Record<string, unknown>, options: { web?: boolean; inputs?: Record<string, unknown>; commons?: string[] } = {}) {
   const calls: { prompt: string; images?: string[]; web?: boolean }[] = [];
   const read: string[] = [];
+  const commons: string[] = [];
   let patched: Record<string, unknown> = {};
   const services = {
     probeLLM: async () => ({
@@ -66,7 +68,7 @@ function searching(params: Record<string, unknown>, options: { web?: boolean; in
     }),
     complete: async (_ref: unknown, prompt: string, _schema: unknown, _signal: unknown, opts?: { images?: string[]; web?: boolean }) => {
       calls.push({ prompt, images: opts?.images, web: opts?.web });
-      if (prompt.includes('Search the web for the pages')) return { pages: [{ url: 'https://kimi.com/blog/k2-7' }, { url: 'https://news.example/k2-7' }] };
+      if (prompt.includes('Search the web for the pages')) return { pages: [{ url: 'https://kimi.com/blog/k2-7' }, { url: 'https://news.example/k2-7' }], commons: options.commons ?? [] };
       return {
         language: 'vi',
         pictures: [
@@ -77,6 +79,10 @@ function searching(params: Record<string, unknown>, options: { web?: boolean; in
       };
     },
     invoke: async (id: string, [link]: [string]) => {
+      if (id === 'assets/search-commons') {
+        commons.push(link);
+        return { url: 'https://commons.wikimedia.org', title: `Wikimedia Commons: ${link}`, text: '', pictures: [{ url: 'https://upload.wikimedia.org/cutaway.jpg', alt: 'Engine cutaway', page: 'https://commons.wikimedia.org/wiki/File:Cutaway.jpg' }] };
+      }
       if (id === 'assets/read-page') {
         read.push(link);
         return { url: link, title: '', text: '', pictures: pages[link] ?? [] };
@@ -101,7 +107,7 @@ function searching(params: Record<string, unknown>, options: { web?: boolean; in
         patched = { ...patched, ...p };
       },
     } as never) as Promise<{ assets: { items: { name: string; url: string; note: string; source?: string }[] } }>;
-  return { calls, read, run, patched: () => patched };
+  return { calls, read, commons, run, patched: () => patched };
 }
 
 describe('the Assets node finding pictures', () => {
@@ -119,6 +125,15 @@ describe('the Assets node finding pictures', () => {
       { name: 'bieu-do-toc-do-token', url: asset(2), note: 'Biểu đồ tốc độ token', width: 1600, height: 900, source: 'https://kimi.com/blog/k2-7' },
       { name: 'anh-trong-bai-bao', url: asset(5), note: 'Ảnh trong bài báo', width: 1200, height: 800, source: 'https://news.example/k2-7' },
     ]);
+  });
+
+  it("searches Commons as the model asks, and offers its pictures first, in turn with the pages' ones", async () => {
+    const { calls, commons, run } = searching({ pictures: 4 }, { commons: ['four-stroke engine cutaway', ' ', 'a', 'b', 'c'] });
+    await run();
+    expect(calls[0]!.prompt).toContain('Wikimedia Commons');
+    expect(commons).toEqual(['four-stroke engine cutaway', 'a', 'b']);
+    // The same picture from three searches is one candidate; it comes before the pages' own.
+    expect(calls[1]!.images).toEqual([asset(6), asset(1), asset(2), asset(5)]);
   });
 
   it("reads only the brief's links with a model that cannot search, and finds nothing without any", async () => {

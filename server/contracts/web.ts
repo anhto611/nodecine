@@ -256,6 +256,57 @@ export async function readPage(link: string): Promise<LinkedPage> {
   return { ...pageText(html, finalUrl), pictures: pagePictures(html, finalUrl) };
 }
 
+/**
+ * Wikimedia Commons searched for files, as a page of the pictures it found: each at 1280 px, described
+ * by its own title and description, and pointing at its file page. The largest free collection of
+ * technical drawings, cutaways and photographs there is; a page that only shows thumbnails of it (a
+ * category, an article) offers the first few, small, and often off the subject.
+ */
+export async function searchCommons(query: string): Promise<LinkedPage> {
+  const api = new URL('https://commons.wikimedia.org/w/api.php');
+  for (const [k, v] of Object.entries({
+    action: 'query',
+    format: 'json',
+    generator: 'search',
+    gsrnamespace: '6',
+    gsrlimit: '10',
+    gsrsearch: query.slice(0, 120),
+    prop: 'imageinfo',
+    iiprop: 'url|size|mime|extmetadata',
+    iiurlwidth: '1280',
+    iiextmetadatafilter: 'ImageDescription|ObjectName',
+  }))
+    api.searchParams.set(k, v);
+  const { res } = await fetchPublic(api.toString(), { headers: { 'user-agent': 'Mozilla/5.0 (NodeCine research)' }, signal: AbortSignal.timeout(15_000) }, MAX_PAGE_BYTES);
+  if (!res.ok) throw new Error(`Commons answered ${res.status}`);
+  const pictures = commonsPictures(JSON.parse(new TextDecoder().decode(await res.arrayBuffer())) as CommonsAnswer);
+  return { url: `https://commons.wikimedia.org/w/index.php?search=${encodeURIComponent(query)}`, title: `Wikimedia Commons: ${query}`, text: '', pictures };
+}
+
+export interface CommonsAnswer {
+  query?: { pages?: Record<string, { index?: number; title?: string; imageinfo?: { thumburl?: string; url?: string; mime?: string; width?: number; height?: number; descriptionurl?: string; extmetadata?: Record<string, { value?: string }> }[] }> };
+}
+
+/** The pictures in Commons' answer, in its order of relevance: each described by its title and its description. */
+export function commonsPictures(body: CommonsAnswer): FoundPicture[] {
+  const plain = (html = '') => decode(html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+  return Object.values(body.query?.pages ?? {})
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    .flatMap((p) => {
+      const info = p.imageinfo?.[0];
+      // A picture, not a sound, a video or a document; and large enough to fill a frame (a drawing is, at any size).
+      if (!info || !/^image\/(jpeg|png|webp|svg\+xml|tiff)$/.test(info.mime ?? '')) return [];
+      if (info.mime !== 'image/svg+xml' && Math.max(info.width ?? 0, info.height ?? 0) < MIN_COMMONS_SIDE) return [];
+      const link = info.thumburl || info.url;
+      if (!link) return [];
+      const title = (p.title ?? '').replace(/^File:/, '').replace(/\.[a-z0-9]+$/i, '');
+      const described = plain(info.extmetadata?.ImageDescription?.value);
+      return [{ url: link, alt: `${title}${described ? ` — ${described}` : ''}`.slice(0, 200), page: info.descriptionurl || 'https://commons.wikimedia.org' }];
+    });
+}
+/** Smaller than this on its long side, a Commons file is an icon, not a picture for a film. */
+const MIN_COMMONS_SIDE = 600;
+
 /** A picture's pixel size, read by ffprobe; undefined when it cannot be read. */
 async function sizeOf(file: string): Promise<{ width: number; height: number } | undefined> {
   const bin = await ffprobeBin();
@@ -266,10 +317,43 @@ async function sizeOf(file: string): Promise<{ width: number; height: number } |
 }
 
 /**
+ * The addresses to try for a picture, best first. Wikipedia shows Commons pictures as thumbnails a few
+ * hundred pixels wide (`…/commons/thumb/a/ab/Engine.jpg/250px-Engine.jpg`): a film panning and zooming
+ * over one gets a blur, and an edge filter turns its compression into speckle. So a thumbnail is asked for
+ * at 1280 px, one of the widths Wikimedia renders; then the original, for a picture smaller than that
+ * (a raster only: a drawing's original is an SVG); then the thumbnail as the page showed it.
+ */
+export function pictureCandidates(link: string): string[] {
+  // Commons serves thumbnails from upload.wikimedia.org and, lately, thumb.wikimedia.org, with tracking
+  // parameters after them (`?utm_source=…`); the original is always on upload.wikimedia.org.
+  const m = /^https?:\/\/(?:upload|thumb)\.wikimedia\.org\/(wikipedia\/[^/]+)\/thumb\/([0-9a-f]\/[0-9a-f]{2}\/)([^/]+)\/([^/?]*?)(\d+)px-([^/?]+)(?:\?.*)?$/i.exec(link);
+  if (!m) return [link];
+  const [, project, dir, file, prefix, width, rest] = m;
+  const base = `https://upload.wikimedia.org/${project}`;
+  const out: string[] = [];
+  if (Number(width) < 1280) out.push(`${base}/thumb/${dir}${file}/${prefix}1280px-${rest}`);
+  if (/\.(jpe?g|png|webp)$/i.test(decodeURIComponent(file!))) out.push(`${base}/${dir}${file}`);
+  out.push(link);
+  return out;
+}
+
+/**
  * A picture on the web brought onto this machine as an asset, named by its content like an upload, so
  * the same picture found twice is one file and a film never depends on someone else's server.
  */
 export async function fetchPicture(link: string): Promise<FetchedPicture> {
+  const tries = pictureCandidates(link);
+  for (const [i, candidate] of tries.entries()) {
+    try {
+      return await fetchOnePicture(candidate);
+    } catch (e) {
+      if (i === tries.length - 1) throw e;
+    }
+  }
+  throw new Error('no picture');
+}
+
+async function fetchOnePicture(link: string): Promise<FetchedPicture> {
   const { res } = await fetchPublic(
     link,
     {

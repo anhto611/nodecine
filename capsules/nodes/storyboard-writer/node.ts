@@ -24,7 +24,7 @@ const WORDS_PER_SECOND: Record<string, number> = { vi: 2.8, en: 2.5 };
 /** How the narration sounds. */
 export const TONES = ['energetic', 'trustworthy', 'playful', 'expert'] as const;
 /** Lengths offered for a video, in seconds. */
-export const DURATIONS = [15, 30, 45, 60, 90] as const;
+export const DURATIONS = [15, 30, 45, 60, 90, 120] as const;
 
 const Params = z.object({
   /** How long the video runs, which sets how much the narration says. */
