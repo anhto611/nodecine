@@ -1,6 +1,6 @@
 // Installs one local voice for the TTS node: `node scripts/setup-voice.mjs <kokoro|vieneu|omnivoice>`.
 // Idempotent: what is already on this machine (here, or installed by another app) is used, not fetched again.
-// Every download is checked against its pinned SHA-256. Python voices need `uv` (brew install uv).
+// Every download is checked against its pinned SHA-256. Python voices need `uv` (brew install uv, or winget install astral-sh.uv on Windows).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -71,14 +71,17 @@ function hasEnv(dir, pkg) {
       } catch {}
     }
     if (!libs) return false;
-    // The libraries are no use without the interpreter they were installed for: a venv whose base Python
-    // was removed (another app moving its Python, say) cannot run.
+    // The libraries are no use without an interpreter to run them, found the way the app finds it
+    // (findPythonEnv in capsules/providers/voice-workers.ts): a venv's base Python, or one in the folder.
+    // A bare library folder another app runs with its own Python, or a venv whose Python was removed, cannot run here.
+    let python;
     try {
       const home = /^home\s*=\s*(.+)$/m.exec(fs.readFileSync(path.join(r, 'pyvenv.cfg'), 'utf8'))?.[1]?.trim();
-      return !home || fs.existsSync(path.join(home, isWin ? 'python.exe' : 'python3'));
+      python = home ? path.join(home, isWin ? 'python.exe' : 'python3') : '';
     } catch {
-      return true;
+      python = path.join(r, isWin ? 'python.exe' : 'bin/python3');
     }
+    return !!python && fs.existsSync(python);
   });
 }
 
@@ -95,12 +98,17 @@ function sharedDir(name) {
 function pythonLibraries(name, pkg, lock, env = {}) {
   const found = [process.env[`NODECINE_${name.toUpperCase()}_DIR`], tools(name), sharedDir(name)].find((d) => hasEnv(d, pkg));
   if (found) return say(`${name}: libraries already installed in ${found}`);
-  if (spawnSync('uv', ['--version']).status !== 0) fail('uv is required: brew install uv');
+  if (spawnSync('uv', ['--version']).status !== 0) fail(`uv is required: ${isWin ? 'winget install astral-sh.uv' : 'brew install uv'}`);
   const venv = tools(name);
   say(`${name}: installing the libraries into ${venv} (a few minutes, once)…`);
   if (!fs.existsSync(path.join(venv, 'pyvenv.cfg'))) run('uv', ['venv', '--python', '3.12', venv]);
-  const python = path.join(venv, isWin ? 'Scripts/python.exe' : 'bin/python');
-  run('uv', ['pip', 'sync', '--python', python, '--require-hashes', lock], env);
+  if (isWin) {
+    // Windows Application Control can refuse the venv's own python.exe, a fresh unsigned launcher. The app
+    // runs the workers on the base interpreter anyway, so install with that one, into the venv's site-packages.
+    const home = /^home\s*=\s*(.+)$/m.exec(fs.readFileSync(path.join(venv, 'pyvenv.cfg'), 'utf8'))?.[1]?.trim();
+    if (!home) fail(`${venv}\\pyvenv.cfg names no base Python`);
+    run('uv', ['pip', 'sync', '--python', path.join(home, 'python.exe'), '--target', path.join(venv, 'Lib', 'site-packages'), '--require-hashes', lock], env);
+  } else run('uv', ['pip', 'sync', '--python', path.join(venv, 'bin/python'), '--require-hashes', lock], env);
 }
 
 /** Each pinned model file into the shared hub at its commit; files already there with the right hash are kept. */

@@ -12,12 +12,12 @@ describe('inspecting a composition', () => {
   });
 
   it('lints a block under compositions/ as the project linter does, and names the file a finding is in', async () => {
-    // A block with no size, which the linter refuses; a component beside it is elastic and carries none either, and that is fine.
-    const block = '<template><div id="root" data-composition-id="broken"></div></template>';
+    // A block with no composition id, which the linter refuses even unmounted; a component beside it carries no size, and that is fine.
+    const block = '<template><div id="root" data-width="1080" data-height="1920"></div></template>';
     const component =
       '<template><div id="root" data-composition-id="elastic"><script>window.__timelines = window.__timelines || {}; window.__timelines["elastic"] = gsap.timeline({ paused: true });</script></div></template>';
     const r = await inspectComposition({ 'index.html': STARTER_INDEX, 'compositions/broken.html': block, 'compositions/components/elastic.html': component });
-    expect(r.findings.some((f) => f.file === 'compositions/broken.html' && f.code === 'root_missing_dimensions')).toBe(true);
+    expect(r.findings.some((f) => f.file === 'compositions/broken.html' && f.code === 'root_missing_composition_id')).toBe(true);
     expect(r.findings.some((f) => f.file?.startsWith('compositions/components/'))).toBe(false);
   });
 });

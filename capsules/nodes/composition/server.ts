@@ -33,7 +33,8 @@ export async function inspectComposition(files: Record<string, string>): Promise
       await mkdir(path.dirname(target), { recursive: true });
       await writeFile(target, text, 'utf8');
     }
-    const lint = await lintProject(dir);
+    // A kit's blocks are a library the storyboard picks from, so most are not mounted by the entry; lint them all.
+    const lint = await lintProject(dir, undefined, undefined, { includeUnmounted: true });
     for (const { file, result } of lint.results) {
       for (const f of result.findings) {
         findings.push({ severity: f.severity, code: f.code, message: f.message, ...(f.fixHint ? { fixHint: f.fixHint } : {}), file });
